@@ -1,0 +1,29 @@
+{
+  "name": "EventContent",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Event title"
+    },
+    "blurb": {
+      "type": "string",
+      "description": "Event description"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Event photo URLs"
+    },
+    "is_coming_soon": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether event details are coming soon"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

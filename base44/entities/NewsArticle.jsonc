@@ -1,0 +1,35 @@
+{
+  "name": "NewsArticle",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "News headline"
+    },
+    "body": {
+      "type": "string",
+      "description": "Full news article content"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Article image URL"
+    },
+    "published_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Publish date"
+    },
+    "author": {
+      "type": "string",
+      "description": "Article author"
+    },
+    "is_published": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this article is visible publicly"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

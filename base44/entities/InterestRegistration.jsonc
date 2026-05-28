@@ -1,0 +1,41 @@
+{
+  "name": "InterestRegistration",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Full name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email address"
+    },
+    "postcode": {
+      "type": "string",
+      "description": "Postcode"
+    },
+    "team_supported": {
+      "type": "string",
+      "enum": [
+        "Eels",
+        "Tigers",
+        "Titans",
+        "Storm",
+        "Leopards",
+        "Bulls",
+        "Other"
+      ],
+      "description": "Rugby league team supported"
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "team_supported"
+  ]
+}

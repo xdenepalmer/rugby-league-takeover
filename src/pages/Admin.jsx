@@ -1,0 +1,54 @@
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import AdminShell from "@/components/admin/AdminShell";
+import NewsManager from "@/components/admin/NewsManager";
+import EventsManager from "@/components/admin/EventsManager";
+import RegistrationsTable from "@/components/admin/RegistrationsTable";
+
+export default function Admin() {
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    base44.auth.isAuthenticated().then(async (authed) => {
+      if (authed) setUser(await base44.auth.me());
+      setLoadingUser(false);
+    });
+  }, []);
+
+  const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50), enabled: user?.role === "admin" });
+  const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: user?.role === "admin" });
+  const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200), enabled: user?.role === "admin" });
+
+  if (loadingUser) {
+    return <div className="flex min-h-screen items-center justify-center bg-background text-foreground">Loading admin…</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-5 text-center text-foreground">
+        <div className="max-w-md border border-border bg-card p-8">
+          <h1 className="font-display text-4xl uppercase">Admin login required</h1>
+          <p className="mt-4 text-muted-foreground">Please log in to manage the Rugby League Takeover website.</p>
+          <Button className="mt-6 rounded-none bg-primary hover:bg-primary/90" onClick={() => base44.auth.redirectToLogin(window.location.href)}>Log In</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role !== "admin") {
+    return <div className="flex min-h-screen items-center justify-center bg-background px-5 text-center text-foreground">Admin access only.</div>;
+  }
+
+  return (
+    <AdminShell user={user}>
+      <div className="grid gap-8">
+        <NewsManager articles={news} />
+        <EventsManager event={events[0]} />
+        <RegistrationsTable registrations={registrations} />
+      </div>
+    </AdminShell>
+  );
+}
