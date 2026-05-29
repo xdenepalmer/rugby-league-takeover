@@ -31,7 +31,7 @@ export default function BackgroundVideo({ src }) {
       <video
         ref={videoRef}
         src={src}
-        className={`h-full w-full object-cover transition-opacity duration-500 ${playing ? "opacity-65" : "opacity-0"}`}
+        className={`h-full w-full object-cover opacity-65 transition-opacity duration-500 ${playing ? "" : "scale-[1.01]"}`}
         autoPlay
         muted
         loop
