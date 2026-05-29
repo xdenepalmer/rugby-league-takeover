@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import SiteNav from "@/components/public/SiteNav";
 import HeroSection from "@/components/public/HeroSection";
+import BackgroundVideo from "@/components/public/BackgroundVideo";
 import NewsSection from "@/components/public/NewsSection";
 import AboutSection from "@/components/public/AboutSection";
 import TravelSection from "@/components/public/TravelSection";
@@ -82,18 +83,7 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <video
-          src={stadiumVideoUrl}
-          className="h-full w-full object-cover opacity-65"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
-        <div className="absolute inset-0 bg-background/40" />
-      </div>
+      <BackgroundVideo src={stadiumVideoUrl} />
       <div className="relative z-10">
         <SiteNav />
         <HeroSection />
