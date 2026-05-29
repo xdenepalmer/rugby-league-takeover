@@ -3,13 +3,20 @@ import { motion } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 
 const logoUrl = "https://media.base44.com/images/public/user_6a1808166a6a8ea04ad51c2c/310b03a74_5B0781E5-F8D7-43EC-9088-1897E36AC8C6.png";
-const stadiumUrl = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2400&q=80";
+const stadiumVideoUrl = "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/bf55ac1e7_AllegiantStadiumParadiseNevadaclaytonhaamallegiantallegiantstadiumparadis.mp4";
 
 export default function HeroSection() {
   return (
     <section id="home" className="relative min-h-screen overflow-hidden bg-background">
       <div className="absolute inset-0">
-        <img src={stadiumUrl} alt="Las Vegas stadium atmosphere" className="h-full w-full object-cover opacity-40 grayscale" />
+        <video
+          src={stadiumVideoUrl}
+          className="h-full w-full object-cover opacity-45 grayscale"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:80px_80px] opacity-30" />
       </div>
