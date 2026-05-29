@@ -85,13 +85,13 @@ export default function Home() {
       <div className="fixed inset-0 z-0 pointer-events-none">
         <video
           src={stadiumVideoUrl}
-          className="h-full w-full object-cover opacity-35 grayscale"
+          className="h-full w-full object-cover opacity-45 grayscale"
           autoPlay
           muted
           loop
           playsInline
         />
-        <div className="absolute inset-0 bg-background/70" />
+        <div className="absolute inset-0 bg-background/55" />
       </div>
       <div className="relative z-10">
         <SiteNav />
