@@ -4,7 +4,7 @@ import SectionHeader from "./SectionHeader";
 
 export default function NewsSection({ articles }) {
   return (
-    <section id="news" className="border-t border-border bg-background/90 px-5 py-24 backdrop-blur-sm md:px-8 md:py-32">
+    <section id="news" className="border-t border-border bg-background/80 px-5 py-24 md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Latest News" title="From the strip">
           Fresh updates, announcements and supporter news for Rugby League Las Vegas.
