@@ -6,6 +6,9 @@ import AdminShell from "@/components/admin/AdminShell";
 import NewsManager from "@/components/admin/NewsManager";
 import EventsManager from "@/components/admin/EventsManager";
 import RegistrationsTable from "@/components/admin/RegistrationsTable";
+import ProductsManager from "@/components/admin/ProductsManager";
+import OrdersManager from "@/components/admin/OrdersManager";
+import ForumManager from "@/components/admin/ForumManager";
 
 export default function Admin() {
   const [user, setUser] = useState(null);
@@ -21,6 +24,9 @@ export default function Admin() {
   const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50), enabled: user?.role === "admin" });
   const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: user?.role === "admin" });
   const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200), enabled: user?.role === "admin" });
+  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200), enabled: user?.role === "admin" });
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200), enabled: user?.role === "admin" });
+  const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200), enabled: user?.role === "admin" });
 
   if (loadingUser) {
     return <div className="flex min-h-screen items-center justify-center bg-background text-foreground">Loading admin…</div>;
@@ -45,6 +51,9 @@ export default function Admin() {
   return (
     <AdminShell user={user}>
       <div className="grid gap-8">
+        <ProductsManager products={products} />
+        <OrdersManager orders={orders} />
+        <ForumManager posts={forumPosts} />
         <NewsManager articles={news} />
         <EventsManager event={events[0]} />
         <RegistrationsTable registrations={registrations} />

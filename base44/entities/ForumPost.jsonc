@@ -1,0 +1,36 @@
+{
+  "name": "ForumPost",
+  "type": "object",
+  "properties": {
+    "author_name": {
+      "type": "string",
+      "description": "Guest display name"
+    },
+    "title": {
+      "type": "string",
+      "description": "Post title"
+    },
+    "body": {
+      "type": "string",
+      "description": "Post content"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "Parent post ID for replies"
+    },
+    "is_published": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the post is visible publicly"
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the post is pinned"
+    }
+  },
+  "required": [
+    "author_name",
+    "body"
+  ]
+}

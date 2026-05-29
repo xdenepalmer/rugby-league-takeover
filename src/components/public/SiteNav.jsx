@@ -7,7 +7,8 @@ const links = [
   { label: "About Us", href: "#about" },
   { label: "Travel Packages", href: "#travel" },
   { label: "Events", href: "#events" },
-  { label: "Merch", href: "#merch" },
+  { label: "Merch", href: "/store" },
+  { label: "Forum", href: "/forum" },
 ];
 
 export default function SiteNav() {

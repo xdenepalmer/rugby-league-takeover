@@ -1,0 +1,52 @@
+{
+  "name": "StoreOrder",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name"
+    },
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Customer email"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid",
+        "packing",
+        "shipped",
+        "completed",
+        "cancelled",
+        "refunded"
+      ],
+      "default": "pending",
+      "description": "Order status"
+    },
+    "total_aud": {
+      "type": "number",
+      "description": "Order total in AUD"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Products purchased"
+    },
+    "stripe_session_id": {
+      "type": "string",
+      "description": "Stripe checkout session ID"
+    },
+    "shipping_notes": {
+      "type": "string",
+      "description": "Admin shipping notes or tracking details"
+    }
+  },
+  "required": [
+    "customer_email",
+    "total_aud"
+  ]
+}
