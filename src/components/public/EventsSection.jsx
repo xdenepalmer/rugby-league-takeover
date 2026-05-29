@@ -5,7 +5,7 @@ export default function EventsSection({ event }) {
   const photos = event?.photo_urls?.length ? event.photo_urls : ["https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=80"];
 
   return (
-    <section id="events" className="border-t border-border bg-secondary px-5 py-24 md:px-8 md:py-32">
+    <section id="events" className="border-t border-border bg-secondary/90 px-5 py-24 backdrop-blur-sm md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>

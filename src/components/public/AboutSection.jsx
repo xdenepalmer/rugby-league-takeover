@@ -3,7 +3,7 @@ import SectionHeader from "./SectionHeader";
 
 export default function AboutSection() {
   return (
-    <section id="about" className="border-t border-border bg-secondary px-5 py-24 md:px-8 md:py-32">
+    <section id="about" className="border-t border-border bg-secondary/90 px-5 py-24 backdrop-blur-sm md:px-8 md:py-32">
       <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
         <div>
           <SectionHeader eyebrow="About Us" title="Built by fans, for fans">

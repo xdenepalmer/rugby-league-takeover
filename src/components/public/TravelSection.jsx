@@ -28,7 +28,7 @@ export default function TravelSection({ packages }) {
   };
 
   return (
-    <section id="travel" className="border-t border-border bg-background px-5 py-24 md:px-8 md:py-32">
+    <section id="travel" className="border-t border-border bg-background/90 px-5 py-24 backdrop-blur-sm md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Travel Packages" title="Your Vegas base camp">
           Air, accommodation, events and more are coming soon. Register your interest to be first in line.

@@ -9,6 +9,8 @@ import TravelSection from "@/components/public/TravelSection";
 import EventsSection from "@/components/public/EventsSection";
 import MerchSection from "@/components/public/MerchSection";
 
+const stadiumVideoUrl = "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/bf55ac1e7_AllegiantStadiumParadiseNevadaclaytonhaamallegiantallegiantstadiumparadis.mp4";
+
 const defaultNews = [
   {
     title: "Rugby League Takeover lands in Las Vegas",
@@ -79,17 +81,30 @@ export default function Home() {
   const event = events[0] || defaultEvent;
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <SiteNav />
-      <HeroSection />
-      <NewsSection articles={visibleNews} />
-      <AboutSection />
-      <TravelSection packages={visiblePackages} />
-      <EventsSection event={event} />
-      <MerchSection />
-      <footer className="border-t border-border bg-secondary px-5 py-10 text-center text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">
-        Rugby League Takeover Las Vegas © 2026
-      </footer>
+    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <video
+          src={stadiumVideoUrl}
+          className="h-full w-full object-cover opacity-35 grayscale"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+        <div className="absolute inset-0 bg-background/70" />
+      </div>
+      <div className="relative z-10">
+        <SiteNav />
+        <HeroSection />
+        <NewsSection articles={visibleNews} />
+        <AboutSection />
+        <TravelSection packages={visiblePackages} />
+        <EventsSection event={event} />
+        <MerchSection />
+        <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground backdrop-blur-sm">
+          Rugby League Takeover Las Vegas © 2026
+        </footer>
+      </div>
     </main>
   );
 }

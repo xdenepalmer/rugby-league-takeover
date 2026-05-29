@@ -7,17 +7,9 @@ const stadiumVideoUrl = "https://media.base44.com/videos/public/6a18d49a2b8f40f0
 
 export default function HeroSection() {
   return (
-    <section id="home" className="relative min-h-screen overflow-hidden bg-background">
+    <section id="home" className="relative min-h-screen overflow-hidden">
       <div className="absolute inset-0">
-        <video
-          src={stadiumVideoUrl}
-          className="h-full w-full object-cover opacity-45 grayscale"
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/55 to-background/80" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:80px_80px] opacity-30" />
       </div>
 
