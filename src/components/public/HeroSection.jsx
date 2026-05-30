@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 
-const logoUrl = "https://media.base44.com/images/public/user_6a1808166a6a8ea04ad51c2c/310b03a74_5B0781E5-F8D7-43EC-9088-1897E36AC8C6.png";
+const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/9cdce9014_54A48537-2160-4821-9FD4-1C5699A60C7B.png";
 export default function HeroSection() {
   return (
     <section id="home" className="relative min-h-screen overflow-hidden">

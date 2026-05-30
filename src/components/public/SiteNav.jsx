@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/9cdce9014_54A48537-2160-4821-9FD4-1C5699A60C7B.png";
+
 const links = [
   { label: "Latest News", href: "#news" },
   { label: "About Us", href: "#about" },
@@ -25,8 +27,8 @@ export default function SiteNav() {
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/95 border-b border-border backdrop-blur-xl" : "bg-background/70 backdrop-blur-md"}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-8">
-        <a href="#home" className="font-display text-xl tracking-[0.28em] text-foreground">
-          RLT<span className="text-primary">LV</span>
+        <a href="#home" className="block">
+          <img src={logoUrl} alt="Rugby League Takeover Las Vegas" className="h-14 w-14 object-contain md:h-16 md:w-16" />
         </a>
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((link) => (

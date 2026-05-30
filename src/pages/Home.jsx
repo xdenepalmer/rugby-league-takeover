@@ -10,7 +10,7 @@ import TravelSection from "@/components/public/TravelSection";
 import EventsSection from "@/components/public/EventsSection";
 import MerchSection from "@/components/public/MerchSection";
 
-const stadiumVideoUrl = "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/bf55ac1e7_AllegiantStadiumParadiseNevadaclaytonhaamallegiantallegiantstadiumparadis.mp4";
+const stadiumVideoUrl = "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov";
 
 const defaultNews = [
   {
