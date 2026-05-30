@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 
-export default function BackgroundVideo({ src }) {
+export default function BackgroundVideo({ src, sources }) {
   const videoRef = useRef(null);
+  const videoSources = sources?.length ? sources : [src];
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
@@ -16,6 +18,7 @@ export default function BackgroundVideo({ src }) {
       video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
     };
 
+    video.load();
     playVideo();
     window.addEventListener("touchstart", playVideo, { once: true });
     window.addEventListener("click", playVideo, { once: true });
@@ -24,17 +27,17 @@ export default function BackgroundVideo({ src }) {
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
     };
-  }, []);
+  }, [currentIndex]);
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none bg-background">
       <video
         ref={videoRef}
-        src={src}
+        src={videoSources[currentIndex]}
         className={`h-full w-full object-cover opacity-65 transition-opacity duration-500 ${playing ? "" : "scale-[1.01]"}`}
         autoPlay
         muted
-        loop
+        onEnded={() => setCurrentIndex((currentIndex + 1) % videoSources.length)}
         playsInline
         preload="auto"
         controls={false}
