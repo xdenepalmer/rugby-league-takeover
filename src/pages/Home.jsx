@@ -97,7 +97,7 @@ export default function Home() {
         <MerchSection />
         <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center backdrop-blur-sm">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">Rugby League Takeover Las Vegas © 2026</p>
-          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">Base44</span></p>
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">DENEO.AI</span></p>
         </footer>
       </div>
     </main>
