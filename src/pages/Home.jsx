@@ -46,9 +46,12 @@ const defaultPackages = [
 ];
 
 const defaultEvent = {
-  title: "Events Coming Soon",
-  blurb: "A packed events calendar is on the way, including supporter gatherings, match-week experiences and Vegas fan moments.",
-  photo_urls: ["https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1600&q=80"],
+  title: "Stadium Swim",
+  blurb: "Stadium Swim plans are building for the end of February, with more fan meetups and Vegas supporter experiences to be announced soon.",
+  photo_urls: [
+    "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg",
+    "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/d22e13269_e3e79af1-bdf3-43c5-81a9-13e918072b94.jpg"
+  ],
   is_coming_soon: true,
 };
 
@@ -92,8 +95,9 @@ export default function Home() {
         <TravelSection packages={visiblePackages} />
         <EventsSection event={event} />
         <MerchSection />
-        <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground backdrop-blur-sm">
-          Rugby League Takeover Las Vegas © 2026
+        <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center backdrop-blur-sm">
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">Rugby League Takeover Las Vegas © 2026</p>
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">Base44</span></p>
         </footer>
       </div>
     </main>

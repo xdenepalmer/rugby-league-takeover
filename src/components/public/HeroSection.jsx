@@ -26,7 +26,7 @@ export default function HeroSection() {
             The annual<br />Vegas takeover
           </h1>
           <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg md:text-xl md:leading-8">
-            Join the world’s most passionate and loyal Rugby League supporter groups for an unforgettable Australian footy invasion of Las Vegas.
+            Join the world’s most passionate and loyal Rugby League supporter groups for an unforgettable global footy invasion of Las Vegas.
           </p>
         </motion.div>
         <a href="#news" className="mt-10 inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground transition-colors hover:text-foreground md:mt-14">
