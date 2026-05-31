@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FileText, CalendarDays, ShoppingBag,
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
   Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
-  Shield, Zap
+  Shield, Zap, Download, Keyboard
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { to: "/admin/overview", label: "Overview", icon: LayoutDashboard, shortcut: "⌘1" },
-  { to: "/admin/content", label: "Content", icon: FileText, shortcut: "⌘2" },
-  { to: "/admin/events", label: "Events", icon: CalendarDays, shortcut: "⌘3" },
-  { to: "/admin/store", label: "Store", icon: ShoppingBag, shortcut: "⌘4" },
-  { to: "/admin/community", label: "Community", icon: MessagesSquare, shortcut: "⌘5" },
-  { to: "/admin/people", label: "People", icon: Users, shortcut: "⌘6" },
-  { to: "/admin/settings", label: "Settings", icon: Settings, shortcut: "⌘7" },
+  { to: "/admin/overview",  label: "Overview",  icon: LayoutDashboard, shortcut: "⌘1", key: "1" },
+  { to: "/admin/content",   label: "Content",   icon: FileText,        shortcut: "⌘2", key: "2" },
+  { to: "/admin/events",    label: "Events",     icon: CalendarDays,    shortcut: "⌘3", key: "3" },
+  { to: "/admin/store",     label: "Store",      icon: ShoppingBag,     shortcut: "⌘4", key: "4", badgeKey: "store" },
+  { to: "/admin/community", label: "Community",  icon: MessagesSquare,  shortcut: "⌘5", key: "5", badgeKey: "community" },
+  { to: "/admin/people",    label: "People",     icon: Users,           shortcut: "⌘6", key: "6" },
+  { to: "/admin/settings",  label: "Settings",   icon: Settings,        shortcut: "⌘7", key: "7" },
 ];
 
-/* Live clock hook */
+/* ── Live clock hook ─────────────────────────────────────────── */
 function useLiveClock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -31,7 +31,7 @@ function useLiveClock() {
   return time;
 }
 
-/* System status mock – simulates live API / DB / CDN health */
+/* ── System status mock ──────────────────────────────────────── */
 function useSystemStatus() {
   const [statuses, setStatuses] = useState([
     { label: "API", ok: true },
@@ -49,7 +49,36 @@ function useSystemStatus() {
   return statuses;
 }
 
-/* Animated status dot */
+/* ── Badge counts hook (derive from data when available) ──── */
+function useBadgeCounts() {
+  const [counts, setCounts] = useState({ community: 0, store: 0 });
+  useEffect(() => {
+    // Try to derive pending counts from the base44 API
+    let cancelled = false;
+    async function fetchCounts() {
+      try {
+        const [posts, orders] = await Promise.allSettled([
+          base44.entities?.ForumPost?.list?.() || Promise.resolve([]),
+          base44.entities?.StoreOrder?.list?.() || Promise.resolve([]),
+        ]);
+        if (cancelled) return;
+        const pendingPosts = (posts.status === "fulfilled" ? posts.value : [])
+          .filter((p) => p && p.is_published === false).length;
+        const pendingOrders = (orders.status === "fulfilled" ? orders.value : [])
+          .filter((o) => o && (o.status === "pending" || o.status === "new")).length;
+        setCounts({ community: pendingPosts, store: pendingOrders });
+      } catch {
+        // Silently fail — badges simply won't show
+      }
+    }
+    fetchCounts();
+    const id = setInterval(fetchCounts, 60000); // refresh every minute
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+  return counts;
+}
+
+/* ── Animated status dot ─────────────────────────────────────── */
 function StatusDot({ ok, label }) {
   return (
     <div className="flex items-center gap-1.5" title={`${label}: ${ok ? "Operational" : "Degraded"}`}>
@@ -63,11 +92,30 @@ function StatusDot({ ok, label }) {
   );
 }
 
+/* ── Badge pill ──────────────────────────────────────────────── */
+function NavBadge({ count }) {
+  if (!count || count <= 0) return null;
+  return (
+    <motion.span
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      className="ml-auto flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-primary px-1 text-[8px] font-bold tabular-nums text-primary-foreground"
+    >
+      {count > 99 ? "99+" : count}
+    </motion.span>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   AdminLayout
+   ════════════════════════════════════════════════════════════════ */
 export default function AdminLayout({ children }) {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const clock = useLiveClock();
   const statuses = useSystemStatus();
+  const badgeCounts = useBadgeCounts();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
@@ -90,13 +138,31 @@ export default function AdminLayout({ children }) {
     location.pathname.startsWith(item.to)
   )?.label || "Dashboard";
 
+  /* ── Keyboard shortcuts (Ctrl+1-7) ─────────────────────────── */
+  const handleKeyboard = useCallback(
+    (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      const item = navItems.find((n) => n.key === e.key);
+      if (item) {
+        e.preventDefault();
+        navigate(item.to);
+      }
+    },
+    [navigate]
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  }, [handleKeyboard]);
+
   return (
     <div className="min-h-screen bg-background text-foreground cmd-grid-bg">
       {/* ── Top Accent Bar ── */}
       <div className="cmd-accent-bar h-[2px] w-full" />
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-40 border-b border-border">
+      <header className="sticky top-0 z-40 border-b border-border relative">
         <div className="cmd-glass px-4 py-3 md:px-6">
           <div className="flex items-center justify-between">
             {/* Left: Branding + Mobile Toggle */}
@@ -190,6 +256,9 @@ export default function AdminLayout({ children }) {
             </div>
           </div>
         </div>
+
+        {/* Animated gradient border at bottom of header */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] cmd-accent-bar opacity-40" />
       </header>
 
       {/* ── Body ── */}
@@ -222,7 +291,7 @@ export default function AdminLayout({ children }) {
 
           {/* Nav Items */}
           <nav className="flex-1 py-2 px-2 space-y-0.5 cmd-scrollbar overflow-y-auto">
-            {navItems.map(({ to, label, icon: Icon, shortcut }, i) => (
+            {navItems.map(({ to, label, icon: Icon, shortcut, badgeKey }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -236,28 +305,85 @@ export default function AdminLayout({ children }) {
                 onMouseEnter={() => setHoveredNav(to)}
                 onMouseLeave={() => setHoveredNav(null)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && (
+                {({ isActive }) => (
                   <>
-                    <span className="flex-1">{label}</span>
-                    <span className="text-[8px] font-mono text-muted-foreground/50 group-hover:text-muted-foreground/80 transition-colors">
-                      {shortcut}
-                    </span>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{label}</span>
+                        {/* Badge count */}
+                        {badgeKey && badgeCounts[badgeKey] > 0 && (
+                          <NavBadge count={badgeCounts[badgeKey]} />
+                        )}
+                        {/* Shortcut (hide when badge is showing) */}
+                        {!(badgeKey && badgeCounts[badgeKey] > 0) && (
+                          <span className="text-[8px] font-mono text-muted-foreground/50 group-hover:text-muted-foreground/80 transition-colors">
+                            {shortcut}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {/* Collapsed badge dot */}
+                    {collapsed && badgeKey && badgeCounts[badgeKey] > 0 && (
+                      <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary cmd-pulse" />
+                    )}
+                    {/* Active glow effect */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="nav-glow"
+                        className="absolute inset-0 -z-10 border-l-2 border-primary bg-primary/5"
+                        style={{ boxShadow: "inset 3px 0 12px -4px hsl(var(--primary) / 0.3)" }}
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    {/* Tooltip for collapsed mode */}
+                    {collapsed && hoveredNav === to && (
+                      <div className="absolute left-full ml-2 z-50 px-2.5 py-1.5 bg-card border border-border shadow-lg">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-foreground whitespace-nowrap">
+                          {label}
+                        </span>
+                        {badgeKey && badgeCounts[badgeKey] > 0 && (
+                          <span className="ml-2 inline-flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-primary px-1 text-[8px] font-bold tabular-nums text-primary-foreground">
+                            {badgeCounts[badgeKey]}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </>
-                )}
-                {/* Tooltip for collapsed mode */}
-                {collapsed && hoveredNav === to && (
-                  <div className="absolute left-full ml-2 z-50 px-2.5 py-1.5 bg-card border border-border shadow-lg">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground whitespace-nowrap">
-                      {label}
-                    </span>
-                  </div>
                 )}
               </NavLink>
             ))}
           </nav>
 
-          {/* Sidebar Footer */}
+          {/* ── Quick Actions ── */}
+          {!collapsed && (
+            <div className="border-t border-border/50 px-3 py-2.5">
+              <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                Quick Actions
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to="/"
+                  className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
+                             transition-all hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
+                >
+                  <ExternalLink className="h-3 w-3" /> View Site
+                </Link>
+                <button
+                  onClick={() => {
+                    // Trigger a synthetic CSV export event the active page can listen for
+                    window.dispatchEvent(new CustomEvent("admin:export-data"));
+                  }}
+                  className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
+                             transition-all hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
+                >
+                  <Download className="h-3 w-3" /> Export
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Sidebar Footer ── */}
           <div className="border-t border-border/50 px-3 py-3">
             {!collapsed ? (
               <div className="space-y-1.5">
@@ -272,6 +398,10 @@ export default function AdminLayout({ children }) {
                   <span className="text-[9px] font-mono text-muted-foreground">
                     Live Data Feed
                   </span>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-[8px] font-mono text-muted-foreground/40">
+                  <Keyboard className="h-3 w-3" />
+                  <span>Ctrl+1‑7 to navigate</span>
                 </div>
               </div>
             ) : (
@@ -291,7 +421,8 @@ export default function AdminLayout({ children }) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+                className="fixed inset-0 z-30 lg:hidden"
+                style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", background: "rgba(0,0,0,0.55)" }}
                 onClick={() => setMobileOpen(false)}
               />
               <motion.aside
@@ -299,7 +430,7 @@ export default function AdminLayout({ children }) {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="fixed left-0 top-0 z-40 h-full w-64 border-r border-border bg-card cmd-scrollbar overflow-y-auto lg:hidden"
+                className="fixed left-0 top-0 z-40 h-full w-64 border-r border-border cmd-glass cmd-scrollbar overflow-y-auto lg:hidden"
               >
                 <div className="flex items-center justify-between px-4 py-4 border-b border-border">
                   <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary">
@@ -313,7 +444,7 @@ export default function AdminLayout({ children }) {
                   </button>
                 </div>
                 <nav className="py-2 px-2 space-y-0.5">
-                  {navItems.map(({ to, label, icon: Icon }) => (
+                  {navItems.map(({ to, label, icon: Icon, badgeKey }) => (
                     <NavLink
                       key={to}
                       to={to}
@@ -327,10 +458,37 @@ export default function AdminLayout({ children }) {
                       }
                     >
                       <Icon className="h-4 w-4" />
-                      <span>{label}</span>
+                      <span className="flex-1">{label}</span>
+                      {badgeKey && badgeCounts[badgeKey] > 0 && (
+                        <NavBadge count={badgeCounts[badgeKey]} />
+                      )}
                     </NavLink>
                   ))}
                 </nav>
+
+                {/* Mobile quick actions */}
+                <div className="border-t border-border/50 mx-2 px-3 py-3 mt-2">
+                  <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    Quick Actions
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      to="/"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
+                                 transition-all hover:border-primary/40 hover:text-foreground"
+                    >
+                      <ExternalLink className="h-3 w-3" /> View Site
+                    </Link>
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent("admin:export-data"))}
+                      className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
+                                 transition-all hover:border-primary/40 hover:text-foreground"
+                    >
+                      <Download className="h-3 w-3" /> Export
+                    </button>
+                  </div>
+                </div>
               </motion.aside>
             </>
           )}

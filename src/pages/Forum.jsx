@@ -546,7 +546,14 @@ function ForumPostCard({
                         <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-primary transition-colors flex items-center gap-1">
                           <ThumbsUp className="h-2.5 w-2.5" /> Like
                         </button>
-                        <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!replyOpen) onToggleReply();
+                            onUpdateReply({ body: `@${reply.author_name || "Member"} ` });
+                          }}
+                          className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1"
+                        >
                           <Reply className="h-2.5 w-2.5" /> Reply
                         </button>
                       </div>

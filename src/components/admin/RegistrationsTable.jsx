@@ -1,17 +1,43 @@
 import React, { useMemo, useState } from "react";
-import { format } from "date-fns";
-import { Download, Search } from "lucide-react";
+import { format, isToday } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Download, Search, ClipboardList, Users, CalendarCheck,
+  Hash, Check, X, Phone, MapPin, Mail, Shield
+} from "lucide-react";
 import { downloadCsv } from "@/lib/csv";
 import { SUPPORTED_TEAMS } from "@/lib/public-forms";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+/* ── Team colour map ─────────────────────────────────────────── */
+const TEAM_COLORS = {
+  Eels:     { bg: "bg-blue-500/15",  text: "text-blue-400",    border: "border-blue-500/30",  ring: "bg-blue-500"    },
+  Tigers:   { bg: "bg-amber-500/15", text: "text-amber-400",   border: "border-amber-500/30", ring: "bg-amber-500"   },
+  Titans:   { bg: "bg-cyan-500/15",  text: "text-cyan-400",    border: "border-cyan-500/30",  ring: "bg-cyan-500"    },
+  Storm:    { bg: "bg-purple-500/15",text: "text-purple-400",  border: "border-purple-500/30",ring: "bg-purple-500"  },
+  Leopards: { bg: "bg-yellow-500/15",text: "text-yellow-400",  border: "border-yellow-500/30",ring: "bg-yellow-500"  },
+  Bulls:    { bg: "bg-red-500/15",   text: "text-red-400",     border: "border-red-500/30",   ring: "bg-red-500"     },
+  Other:    { bg: "bg-zinc-500/15",  text: "text-zinc-400",    border: "border-zinc-500/30",  ring: "bg-zinc-500"    },
+};
+
+const teamColor = (team) => TEAM_COLORS[team] || TEAM_COLORS.Other;
+
+/* ── Stagger animation variants ──────────────────────────────── */
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.04 } },
+};
+
+const cardVariant = {
+  hidden: { opacity: 0, y: 16, scale: 0.97 },
+  show:   { opacity: 1, y: 0,  scale: 1, transition: { type: "spring", stiffness: 400, damping: 28 } },
+};
+
+/* ── Component ───────────────────────────────────────────────── */
 export default function RegistrationsTable({ registrations }) {
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState("all");
 
+  /* Filter logic (unchanged) */
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
     return registrations.filter((item) => {
@@ -20,6 +46,7 @@ export default function RegistrationsTable({ registrations }) {
     });
   }, [registrations, search, teamFilter]);
 
+  /* CSV export (unchanged) */
   const exportCsv = () => {
     const headers = ["Name", "Email", "Phone", "Postcode", "Team", "Consented", "Date"];
     const rows = filtered.map((item) => [
@@ -30,60 +57,239 @@ export default function RegistrationsTable({ registrations }) {
     downloadCsv("rugby-league-takeover-registrations.csv", headers, rows);
   };
 
+  /* Stats */
+  const uniqueTeams = useMemo(
+    () => new Set(registrations.map((r) => r.team_supported)).size,
+    [registrations]
+  );
+  const todayCount = useMemo(
+    () => registrations.filter((r) => r.created_date && isToday(new Date(r.created_date))).length,
+    [registrations]
+  );
+
   return (
-    <section id="registrations-admin" className="scroll-mt-28 border border-border bg-card p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="font-display text-4xl uppercase">Interest Registrations</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{filtered.length} of {registrations.length} shown · your marketing list for the ticket drop</p>
-        </div>
-        <Button variant="outline" className="rounded-none" onClick={exportCsv} disabled={!filtered.length}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
-        </Button>
-      </div>
+    <section id="registrations-admin" className="scroll-mt-28">
+      {/* ── Glassmorphic wrapper ── */}
+      <div className="cmd-glass border border-border overflow-hidden">
+        {/* Gradient accent bar */}
+        <div className="cmd-accent-bar h-[3px] w-full" />
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search name, email or postcode" value={search} onChange={(e) => setSearch(e.target.value)} className="rounded-none pl-10" />
-        </div>
-        <Select value={teamFilter} onValueChange={setTeamFilter}>
-          <SelectTrigger className="rounded-none sm:w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All teams</SelectItem>
-            {SUPPORTED_TEAMS.map((team) => <SelectItem key={team} value={team}>{team}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
+        {/* ── Header ── */}
+        <div className="px-5 pt-5 pb-4 md:px-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="relative mt-0.5">
+                <ClipboardList className="h-6 w-6 text-primary" />
+                <div className="absolute inset-0 h-6 w-6 rounded-full bg-primary/20 cmd-pulse" />
+              </div>
+              <div>
+                <h2 className="font-display text-2xl uppercase tracking-wide md:text-3xl">
+                  Interest Registrations
+                </h2>
+                <p className="mt-0.5 text-[11px] font-mono text-muted-foreground">
+                  {filtered.length} of {registrations.length} shown · marketing list for the ticket drop
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={exportCsv}
+              disabled={!filtered.length}
+              className="group flex items-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
+                         transition-all hover:border-primary/50 hover:bg-primary/5 disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <Download className="h-3.5 w-3.5 text-primary transition-transform group-hover:-translate-y-0.5" />
+              Export CSV
+            </button>
+          </div>
 
-      <div className="mt-6 overflow-x-auto border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Postcode</TableHead>
-              <TableHead>Team</TableHead>
-              <TableHead>Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>{item.email}</TableCell>
-                <TableCell>{item.phone}</TableCell>
-                <TableCell>{item.postcode}</TableCell>
-                <TableCell>{item.team_supported}</TableCell>
-                <TableCell>{item.created_date ? format(new Date(item.created_date), "dd MMM yyyy") : ""}</TableCell>
-              </TableRow>
+          {/* ── Stats bar ── */}
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[
+              { label: "Total Registrations", value: registrations.length, icon: Users,         color: "text-primary" },
+              { label: "Unique Teams",        value: uniqueTeams,          icon: Shield,        color: "text-accent"  },
+              { label: "Today's Sign-ups",    value: todayCount,           icon: CalendarCheck, color: "text-emerald-400" },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div
+                key={label}
+                className="flex items-center gap-3 border border-border/50 bg-card/40 px-3 py-2.5"
+              >
+                <Icon className={`h-4 w-4 ${color} shrink-0`} />
+                <div>
+                  <p className={`font-mono text-lg font-bold tabular-nums ${color} cmd-count-up`}>{value}</p>
+                  <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+                </div>
+              </div>
             ))}
-            {!filtered.length && (
-              <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">No registrations match your filters.</TableCell></TableRow>
+          </div>
+        </div>
+
+        {/* ── Filters ── */}
+        <div className="border-t border-border/40 px-5 py-4 md:px-6">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search name, email or postcode…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-border bg-card/50 py-2.5 pl-10 pr-4 text-sm font-mono
+                         placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
+                         transition-colors cmd-glass"
+            />
+          </div>
+
+          {/* Team pill filters */}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {["all", ...SUPPORTED_TEAMS].map((team) => {
+              const active = teamFilter === team;
+              const tc = team !== "all" ? teamColor(team) : null;
+              return (
+                <button
+                  key={team}
+                  onClick={() => setTeamFilter(team)}
+                  className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border transition-all duration-150
+                    ${active
+                      ? team === "all"
+                        ? "border-primary bg-primary/15 text-primary"
+                        : `${tc.border} ${tc.bg} ${tc.text}`
+                      : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground hover:bg-muted/30"
+                    }`}
+                >
+                  {team === "all" ? "All Teams" : team}
+                  {active && team === "all" && (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-sm bg-primary/20 px-1 text-[8px] tabular-nums">
+                      {registrations.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Registration Cards Grid ── */}
+        <div className="border-t border-border/40 px-5 py-5 md:px-6">
+          <AnimatePresence mode="wait">
+            {filtered.length > 0 ? (
+              <motion.div
+                key={`${teamFilter}-${search}`}
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                {filtered.map((item) => {
+                  const tc = teamColor(item.team_supported);
+                  const initial = (item.name || "?")[0].toUpperCase();
+                  return (
+                    <motion.div
+                      key={item.id}
+                      variants={cardVariant}
+                      layout
+                      className="group border border-border/60 bg-card/50 transition-all hover:border-primary/30 hover:bg-card/80"
+                    >
+                      {/* Card top accent */}
+                      <div className={`h-[2px] w-full ${tc.ring} opacity-40`} />
+
+                      <div className="p-4">
+                        {/* Avatar + Name row */}
+                        <div className="flex items-start gap-3">
+                          {/* Avatar circle */}
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center border ${tc.border} ${tc.bg}`}>
+                            <span className={`font-display text-base font-bold ${tc.text}`}>{initial}</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-sm font-bold text-foreground">{item.name}</h3>
+                            <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate text-[11px] font-mono">{item.email}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Team badge */}
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1.5 border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${tc.border} ${tc.bg} ${tc.text}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${tc.ring}`} />
+                            {item.team_supported}
+                          </span>
+                          {/* Consent indicator */}
+                          {item.consent_to_contact ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400">
+                              <Check className="h-3 w-3" /> Consented
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono text-red-400">
+                              <X className="h-3 w-3" /> No consent
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Details row */}
+                        <div className="mt-3 flex items-center gap-4 border-t border-border/30 pt-3">
+                          {item.postcode && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="text-[10px] font-mono">{item.postcode}</span>
+                            </div>
+                          )}
+                          {item.phone && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span className="text-[10px] font-mono">{item.phone}</span>
+                            </div>
+                          )}
+                          <div className="ml-auto text-[9px] font-mono text-muted-foreground/60">
+                            {item.created_date
+                              ? format(new Date(item.created_date), "dd MMM yyyy")
+                              : "—"}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              /* ── Empty state ── */
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center py-16 text-center"
+              >
+                <div className="relative mb-4">
+                  <ClipboardList className="h-12 w-12 text-muted-foreground/30" />
+                  <div className="absolute inset-0 h-12 w-12 rounded-full bg-muted/10 cmd-pulse" />
+                </div>
+                <p className="font-display text-lg uppercase tracking-wide text-muted-foreground">
+                  No registrations found
+                </p>
+                <p className="mt-1 text-[11px] font-mono text-muted-foreground/60">
+                  {search || teamFilter !== "all"
+                    ? "Try adjusting your search or clearing the team filter."
+                    : "Registrations will appear here once fans sign up."}
+                </p>
+              </motion.div>
             )}
-          </TableBody>
-        </Table>
+          </AnimatePresence>
+        </div>
+
+        {/* ── Footer count ── */}
+        {filtered.length > 0 && (
+          <div className="border-t border-border/30 px-5 py-2.5 md:px-6 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Hash className="h-3 w-3 text-muted-foreground/50" />
+              <span className="text-[9px] font-mono text-muted-foreground/60">
+                Showing {filtered.length} record{filtered.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground/40">
+              rlt–registrations
+            </span>
+          </div>
+        )}
       </div>
     </section>
   );
