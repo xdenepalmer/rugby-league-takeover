@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/9cdce9014_54A48537-2160-4821-9FD4-1C5699A60C7B.png";
+const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/390eddc5d_Untitled-31May2026at093306.png";
 
 const links = [
   { label: "Latest News", href: "#news" },
