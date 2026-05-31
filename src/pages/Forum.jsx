@@ -75,7 +75,7 @@ export default function Forum() {
   const getCategoryLabel = (value) => categories.find((category) => category.value === value)?.label || "General Chat";
 
   return (
-    <main className="relative min-h-screen bg-background px-5 py-8 text-foreground md:px-8">
+    <main className="relative min-h-screen bg-background px-5 pb-8 pt-28 text-foreground md:px-8">
       <div className="relative z-10 mx-auto max-w-5xl">
         <div className="flex items-center justify-between border-b border-border pb-6">
           <div>
