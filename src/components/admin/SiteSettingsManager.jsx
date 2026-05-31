@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import AdminSection from "./AdminSection";
 import FieldGroup from "./FieldGroup";
 import MediaUploader from "./MediaUploader";
+import DateTimePicker from "./DateTimePicker";
 
 const defaults = {
   site_logo_url: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/390eddc5d_Untitled-31May2026at093306.png",
@@ -216,7 +217,7 @@ export default function SiteSettingsManager({ settings }) {
                 className="md:col-span-2 grid gap-4 md:grid-cols-2 overflow-hidden"
               >
                 <LabeledField label="Takeover start date & time" help="The moment the countdown reaches zero.">
-                  <Input type="datetime-local" value={(draft.countdown_date || "").slice(0, 16)} onChange={(e) => update("countdown_date", e.target.value)} className="rounded-none" />
+                  <DateTimePicker value={draft.countdown_date || ""} onChange={(val) => update("countdown_date", val)} placeholder="Pick the takeover date & time" />
                 </LabeledField>
                 <LabeledField label="Heading" help="Text shown above the countdown digits.">
                   <Input placeholder="The takeover begins in" value={draft.countdown_title || ""} onChange={(e) => update("countdown_title", e.target.value)} className="rounded-none" />

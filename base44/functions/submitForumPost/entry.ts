@@ -7,6 +7,17 @@ const FORUM_CATEGORIES = ['General', 'Travel', 'Events', 'MatchDay', 'VegasTips'
 
 const trimToLength = (value, maxLength) => String(value ?? '').trim().slice(0, maxLength);
 
+// Automatic profanity censoring. Word-boundary match, keeps the first letter and
+// masks the rest (e.g. "shit" -> "s***"). Applied to post body and title.
+const PROFANITY = [
+  'fuck', 'fucker', 'fucking', 'motherfucker', 'shit', 'bullshit', 'bitch', 'cunt',
+  'asshole', 'arsehole', 'bastard', 'dickhead', 'piss', 'slut', 'whore', 'wanker',
+  'prick', 'bollocks', 'bugger', 'twat', 'fag', 'faggot', 'nigger', 'nigga', 'retard',
+];
+const PROFANITY_RE = new RegExp(`\\b(${PROFANITY.join('|')})\\b`, 'gi');
+const censorProfanity = (text) =>
+  String(text || '').replace(PROFANITY_RE, (match) => match[0] + '*'.repeat(Math.max(match.length - 1, 1)));
+
 const isLikelyBot = (input) => Boolean(trimToLength(input?.website, 256) || trimToLength(input?.company, 256));
 
 function resolveClientIp(req) {
@@ -108,7 +119,7 @@ Deno.serve(async (req) => {
     }
 
     const parentId = trimToLength(input?.parent_id, 120);
-    const body = trimToLength(input?.body, 2000);
+    const body = censorProfanity(trimToLength(input?.body, 2000));
     if (!body) {
       return Response.json({ error: 'Message is required' }, { status: 400 });
     }
@@ -130,7 +141,7 @@ Deno.serve(async (req) => {
 
     const post = await base44.asServiceRole.entities.ForumPost.create({
       author_name: authorName,
-      title: trimToLength(input?.title || (parentId ? 'Reply' : 'Discussion Thread'), 120),
+      title: censorProfanity(trimToLength(input?.title || (parentId ? 'Reply' : 'Discussion Thread'), 120)),
       body,
       category,
       parent_id: parentId,

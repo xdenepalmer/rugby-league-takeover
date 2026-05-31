@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import DateTimePicker from "./DateTimePicker";
 
 const emptyEvent = {
   title: "", event_date: "", start_time: "", location: "", address: "", blurb: "",
@@ -139,7 +140,7 @@ function EventFields({ draft, setDraft }) {
           <Input type="number" value={draft.sort_order ?? 1} onChange={(e) => set({ sort_order: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
         </LabeledField>
         <LabeledField label="Date & Time">
-          <Input type="datetime-local" value={draft.event_date || ""} onChange={(e) => set({ event_date: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+          <DateTimePicker value={draft.event_date || ""} onChange={(val) => set({ event_date: val })} placeholder="Pick event date & time" />
         </LabeledField>
         <LabeledField label="Display Time" help="e.g. Doors 6pm, Kickoff 7:30pm">
           <Input placeholder="Doors 6pm" value={draft.start_time || ""} onChange={(e) => set({ start_time: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
