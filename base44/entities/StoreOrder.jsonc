@@ -55,11 +55,11 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Email of the authenticated buyer (empty for guest checkout)"
+      "description": "Authenticated buyer email (empty for guest checkout)"
     },
     "user_id": {
       "type": "string",
-      "description": "ID of the authenticated buyer (empty for guest checkout)"
+      "description": "Authenticated buyer id"
     }
   },
   "required": [
@@ -69,9 +69,16 @@
   "rls": {
     "create": true,
     "read": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
       "user_condition": {
