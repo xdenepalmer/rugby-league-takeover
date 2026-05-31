@@ -10,7 +10,7 @@ import {
   isPaidSessionForOrder,
   normalizeCheckoutItems,
   resolveCheckoutOrigin,
-} from "../base44/functions/_shared/checkout-rules.js";
+} from "./checkout-rules.mjs";
 
 test("normalizes cart quantities and removes malformed items", () => {
   const items = normalizeCheckoutItems([
