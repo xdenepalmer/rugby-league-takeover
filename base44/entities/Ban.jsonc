@@ -9,33 +9,55 @@
         "email",
         "user"
       ],
-      "description": "What the ban matches on"
+      "description": "Type of ban"
     },
     "value": {
       "type": "string",
-      "description": "Normalized (lowercased, trimmed) IP address, email, or user id to block"
+      "description": "IP address, email address, or user ID to ban"
     },
     "reason": {
       "type": "string",
-      "description": "Why the ban was applied"
+      "description": "Reason for the ban"
     },
     "banned_by": {
       "type": "string",
-      "description": "Email of the admin who created the ban"
+      "description": "Admin who created the ban"
     },
     "expires_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Optional expiry. Empty means permanent."
+      "description": "When the ban expires"
     },
     "is_active": {
       "type": "boolean",
       "default": true,
-      "description": "Whether the ban is currently enforced"
+      "description": "Whether this ban is active"
     }
   },
   "required": [
     "ban_type",
     "value"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

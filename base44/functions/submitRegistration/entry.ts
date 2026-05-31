@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // Self-contained by design: Base44 deploys each function from its own directory
 // and does not support cross-function imports. This mirrors

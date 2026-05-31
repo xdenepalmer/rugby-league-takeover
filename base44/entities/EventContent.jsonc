@@ -32,7 +32,7 @@
     },
     "is_published": {
       "type": "boolean",
-      "default": false,
+      "default": true,
       "description": "Whether this event is visible publicly"
     },
     "sort_order": {
