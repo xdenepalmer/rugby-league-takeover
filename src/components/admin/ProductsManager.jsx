@@ -5,7 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Save, Trash2 } from "lucide-react";
+
+const LOW_STOCK = 5;
+const stockBadge = (qty) => {
+  const n = Number(qty);
+  if (!Number.isFinite(n) || n <= 0) return { label: "Out of stock", tone: "border-destructive/40 text-destructive" };
+  if (n <= LOW_STOCK) return { label: `Low · ${n} left`, tone: "border-amber-500/40 text-amber-400" };
+  return { label: `${n} in stock`, tone: "border-emerald-500/40 text-emerald-400" };
+};
 
 const emptyProduct = { name: "", description: "", image_url: "", price_aud: 0, stock_quantity: 0, is_active: true, sort_order: 1 };
 
@@ -33,6 +42,11 @@ export default function ProductsManager({ products }) {
   return (
     <section id="products-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="font-display text-4xl uppercase">Merch Products</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {products.length} products · {products.filter((p) => p.is_active !== false).length} active ·{" "}
+        <span className="text-amber-400">{products.filter((p) => Number(p.stock_quantity) > 0 && Number(p.stock_quantity) <= LOW_STOCK).length} low</span> ·{" "}
+        <span className="text-destructive">{products.filter((p) => !(Number(p.stock_quantity) > 0)).length} out of stock</span>
+      </p>
       <div className="mt-6 grid gap-3 md:grid-cols-2">
         <Input placeholder="Product name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="rounded-none" />
         <Input type="number" placeholder="Price AUD" value={draft.price_aud} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="rounded-none" />
@@ -49,8 +63,11 @@ export default function ProductsManager({ products }) {
       <div className="mt-8 grid gap-4">
         {products.map((product) => (
           <div key={product.id} className="grid gap-4 border border-border p-4 md:grid-cols-[80px_1fr_auto] md:items-center">
-            <div className="h-20 w-20 overflow-hidden bg-secondary">
-              {product.image_url && <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />}
+            <div className="grid gap-2">
+              <div className="h-20 w-20 overflow-hidden bg-secondary">
+                {product.image_url && <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />}
+              </div>
+              <Badge variant="outline" className={`w-fit rounded-none text-[10px] uppercase ${stockBadge(product.stock_quantity).tone}`}>{stockBadge(product.stock_quantity).label}</Badge>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <Input defaultValue={product.name || ""} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { name: e.target.value } })} className="rounded-none" />
