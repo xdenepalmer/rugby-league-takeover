@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import HeroSection from "@/components/public/HeroSection";
 import BackgroundVideo from "@/components/public/BackgroundVideo";
+import CountdownTimer from "@/components/public/CountdownTimer";
 import NewsSection from "@/components/public/NewsSection";
 import AboutSection from "@/components/public/AboutSection";
 import TravelSection from "@/components/public/TravelSection";
@@ -92,6 +93,7 @@ export default function Home() {
             ))}
           </div>
         </div>
+        <CountdownTimer settings={settings} />
         <NewsSection articles={visibleNews} settings={settings} />
         <AboutSection settings={settings} />
         <TravelSection packages={visiblePackages} settings={settings} />

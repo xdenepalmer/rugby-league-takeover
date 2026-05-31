@@ -112,6 +112,32 @@
     "footer_powered_by": {
       "type": "string",
       "description": "Footer powered-by text"
+    },
+    "countdown_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show the homepage countdown timer"
+    },
+    "countdown_title": {
+      "type": "string",
+      "description": "Countdown heading, e.g. 'The takeover begins in'"
+    },
+    "countdown_subtitle": {
+      "type": "string",
+      "description": "Countdown subtitle, e.g. 'Las Vegas • Allegiant Stadium'"
+    },
+    "countdown_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Target date/time the Las Vegas takeover begins"
+    },
+    "countdown_cta_label": {
+      "type": "string",
+      "description": "Optional button label under the countdown"
+    },
+    "countdown_cta_url": {
+      "type": "string",
+      "description": "Optional button link under the countdown"
     }
   },
   "required": [],

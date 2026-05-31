@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import AdminSection from "./AdminSection";
 import FieldGroup from "./FieldGroup";
 import MediaUploader from "./MediaUploader";
@@ -39,7 +40,13 @@ const defaults = {
   merch_title: "Wear the takeover",
   merch_description: "Browse official Rugby League Takeover merch and checkout securely in AUD.",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
-  footer_powered_by: "DENEO.AI"
+  footer_powered_by: "DENEO.AI",
+  countdown_enabled: true,
+  countdown_title: "The takeover begins in",
+  countdown_subtitle: "Las Vegas • NRL Takeover",
+  countdown_date: "",
+  countdown_cta_label: "",
+  countdown_cta_url: ""
 };
 
 export default function SiteSettingsManager({ settings }) {
@@ -68,6 +75,21 @@ export default function SiteSettingsManager({ settings }) {
           <Input placeholder="Hero button label" value={draft.hero_button_label || ""} onChange={(e) => update("hero_button_label", e.target.value)} className="rounded-none" />
           <Textarea placeholder="Hero title" value={draft.hero_title || ""} onChange={(e) => update("hero_title", e.target.value)} className="min-h-24 rounded-none md:col-span-2" />
           <Textarea placeholder="Hero description" value={draft.hero_description || ""} onChange={(e) => update("hero_description", e.target.value)} className="min-h-24 rounded-none md:col-span-2" />
+        </FieldGroup>
+
+        <FieldGroup title="Countdown timer" help="Set the date and time the Las Vegas takeover begins. The homepage shows a live countdown to this moment.">
+          <label className="flex items-center justify-between border border-border p-3 text-sm md:col-span-2">
+            Show countdown on homepage
+            <Switch checked={draft.countdown_enabled !== false} onCheckedChange={(value) => update("countdown_enabled", value)} />
+          </label>
+          <div className="grid gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Takeover start date &amp; time</span>
+            <Input type="datetime-local" value={(draft.countdown_date || "").slice(0, 16)} onChange={(e) => update("countdown_date", e.target.value)} className="rounded-none" />
+          </div>
+          <Input placeholder="Heading (e.g. The takeover begins in)" value={draft.countdown_title || ""} onChange={(e) => update("countdown_title", e.target.value)} className="rounded-none" />
+          <Input placeholder="Subtitle (e.g. Las Vegas • Allegiant Stadium)" value={draft.countdown_subtitle || ""} onChange={(e) => update("countdown_subtitle", e.target.value)} className="rounded-none md:col-span-2" />
+          <Input placeholder="Button label (optional)" value={draft.countdown_cta_label || ""} onChange={(e) => update("countdown_cta_label", e.target.value)} className="rounded-none" />
+          <Input placeholder="Button link (optional)" value={draft.countdown_cta_url || ""} onChange={(e) => update("countdown_cta_url", e.target.value)} className="rounded-none" />
         </FieldGroup>
 
         <FieldGroup title="Homepage background videos" help="Paste one video URL per line, or upload videos below and they will be added to the rotation.">
