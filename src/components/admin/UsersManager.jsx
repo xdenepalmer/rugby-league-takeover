@@ -18,7 +18,7 @@ export default function UsersManager() {
   const [roleFilter, setRoleFilter] = useState("all");
 
   const { data: users = [], isLoading } = useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list("-created_date", 200) });
-  const { data: bans = [] } = useQuery({ queryKey: ["bans"], queryFn: () => base44.entities.Ban.list("-created_date", 500) });
+  const { data: bans = [] } = useQuery({ queryKey: ["bans"], queryFn: () => base44.entities.Ban.list("-created_date", 500), retry: false, meta: { silent: true } });
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["users"] });
