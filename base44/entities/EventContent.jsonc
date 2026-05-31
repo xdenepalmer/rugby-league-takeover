@@ -22,13 +22,35 @@
       "format": "date-time",
       "description": "Event date and time"
     },
+    "start_time": {
+      "type": "string",
+      "description": "Optional display time, e.g. '7:00 PM' or 'Doors 6pm'"
+    },
     "location": {
       "type": "string",
-      "description": "Event location"
+      "description": "Venue name"
+    },
+    "address": {
+      "type": "string",
+      "description": "Full address / how to find it"
     },
     "ticket_url": {
       "type": "string",
-      "description": "Ticket or registration URL"
+      "description": "Legacy single ticket/registration URL (use tickets[] for multiple tiers)"
+    },
+    "tickets": {
+      "type": "array",
+      "description": "Ticket tiers, each linking to an external purchase page",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Tier name e.g. General Admission, VIP" },
+          "price_aud": { "type": "number", "description": "Display price in AUD" },
+          "url": { "type": "string", "description": "External purchase URL" },
+          "note": { "type": "string", "description": "Optional note e.g. 'Includes a drink'" },
+          "sold_out": { "type": "boolean", "default": false, "description": "Mark tier as sold out" }
+        }
+      }
     },
     "is_published": {
       "type": "boolean",
@@ -43,7 +65,7 @@
     "is_coming_soon": {
       "type": "boolean",
       "default": true,
-      "description": "Whether event details are coming soon"
+      "description": "Show a 'coming soon' badge instead of ticket buttons"
     }
   },
   "required": [
