@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 
-const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/390eddc5d_Untitled-31May2026at093306.png";
+const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/24c67d277_LASVEGAS.png";
 export default function HeroSection({ settings = {} }) {
   const title = settings.hero_title || "The annual\nVegas takeover";
 
