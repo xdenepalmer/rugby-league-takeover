@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import Stripe from 'npm:stripe@22.2.0';
 
 // NOTE: Base44 deploys each function from its own directory and does not support
@@ -39,11 +39,11 @@ function getNextStockQuantity(product, purchasedQuantity) {
 
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req);
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
     const signature = req.headers.get('stripe-signature');
     const body = await req.text();
     const event = await stripe.webhooks.constructEventAsync(body, signature, Deno.env.get('STRIPE_WEBHOOK_SECRET'));
-    const base44 = createClientFromRequest(req);
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;

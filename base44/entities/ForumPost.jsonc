@@ -39,18 +39,6 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the post is pinned"
-    },
-    "user_email": {
-      "type": "string",
-      "description": "Email of the authenticated author (empty for anonymous posts)"
-    },
-    "user_id": {
-      "type": "string",
-      "description": "ID of the authenticated author (empty for anonymous posts)"
-    },
-    "ip_address": {
-      "type": "string",
-      "description": "Client IP captured at submission for moderation (admin-only)"
     }
   },
   "required": [
