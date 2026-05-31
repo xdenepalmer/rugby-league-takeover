@@ -163,8 +163,8 @@ Deno.serve(async (req) => {
     const totalAud = calculateOrderTotalAud(lineItems);
     const origin = resolveCheckoutOrigin(
       req.headers.get('origin'),
-      Deno.env.get('CHECKOUT_ALLOWED_ORIGINS'),
-      Deno.env.get('CHECKOUT_DEFAULT_ORIGIN') || DEFAULT_CHECKOUT_ORIGIN
+      Deno.env.toObject().CHECKOUT_ALLOWED_ORIGINS,
+      Deno.env.toObject().CHECKOUT_DEFAULT_ORIGIN || DEFAULT_CHECKOUT_ORIGIN
     );
 
     const order = await base44.asServiceRole.entities.StoreOrder.create({

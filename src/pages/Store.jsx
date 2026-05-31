@@ -124,7 +124,7 @@ export default function Store() {
   };
 
   return (
-    <main className="relative min-h-screen bg-background px-5 py-8 text-foreground md:px-8">
+    <main className="relative min-h-screen bg-background px-5 pb-8 pt-28 text-foreground md:px-8">
       <div className="relative z-10 mx-auto max-w-7xl">
         <div className="flex items-center justify-between border-b border-border/80 pb-6">
           <div>

@@ -17,14 +17,15 @@
     "category": {
       "type": "string",
       "enum": [
-        "General",
-        "Travel",
-        "Events",
-        "MatchDay",
-        "VegasTips"
+        "general",
+        "travel",
+        "tickets",
+        "events",
+        "teams",
+        "merch"
       ],
-      "default": "General",
-      "description": "Discussion category"
+      "default": "general",
+      "description": "Forum post category"
     },
     "parent_id": {
       "type": "string",
@@ -33,7 +34,7 @@
     "is_published": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the post is visible publicly after moderation"
+      "description": "Whether the post is visible publicly"
     },
     "is_pinned": {
       "type": "boolean",
@@ -56,5 +57,30 @@
   "required": [
     "author_name",
     "body"
-  ]
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.is_published": true
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

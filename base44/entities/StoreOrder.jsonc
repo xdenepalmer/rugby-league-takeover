@@ -42,12 +42,12 @@
     },
     "stripe_payment_status": {
       "type": "string",
-      "description": "Verified Stripe payment status from webhook"
+      "description": "Stripe payment status from checkout/webhook"
     },
     "payment_verified_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Timestamp when the Stripe webhook verified this order"
+      "description": "When Stripe payment was verified"
     },
     "shipping_notes": {
       "type": "string",
@@ -65,5 +65,23 @@
   "required": [
     "customer_email",
     "total_aud"
-  ]
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

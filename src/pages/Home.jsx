@@ -2,7 +2,6 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
-import SiteNav from "@/components/public/SiteNav";
 import HeroSection from "@/components/public/HeroSection";
 import BackgroundVideo from "@/components/public/BackgroundVideo";
 import NewsSection from "@/components/public/NewsSection";
@@ -76,7 +75,6 @@ export default function Home() {
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <BackgroundVideo sources={videoSources} />
       <div className="relative z-10">
-        <SiteNav settings={settings} />
         <HeroSection settings={settings} />
         <div className="relative w-full overflow-hidden border-y border-border bg-secondary/80 py-4 backdrop-blur-md">
           <div className="animate-marquee flex gap-12 text-xs font-bold uppercase tracking-[0.3em] text-accent">

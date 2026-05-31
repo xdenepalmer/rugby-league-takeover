@@ -15,7 +15,7 @@ const links = [
   { label: "Travel Packages", href: "/#travel" },
   { label: "Events", href: "/#events" },
   { label: "Merch", href: "/store" },
-  { label: "Forum", href: "/forum" },
+  { label: "Forum", href: "/forum" }
 ];
 
 const initials = (user) => {
@@ -72,15 +72,15 @@ export default function SiteNav({ settings = {} }) {
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/95 border-b border-border backdrop-blur-xl" : "bg-background/40 border-b border-border/10 backdrop-blur-md"}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-8">
-        <a href="/" className="block">
+        <Link to="/" className="block">
           <img src={settings.site_logo_url || logoUrl} alt="Rugby League Takeover Las Vegas" className="h-14 w-14 object-contain md:h-16 md:w-16" />
-        </a>
+        </Link>
         <nav className="hidden items-center gap-8 lg:flex">
           {links.map((link) => (
-            <a key={link.href} href={link.href} className="group relative text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground transition-colors hover:text-foreground">
+            <Link key={link.href} to={link.href} className="group relative text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground transition-colors hover:text-foreground">
               {link.label}
               <span className="absolute -bottom-2 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="flex items-center gap-3">
@@ -94,9 +94,9 @@ export default function SiteNav({ settings = {} }) {
         <nav className="border-t border-border bg-background px-5 py-6 md:hidden">
           <div className="grid gap-5">
             {links.map((link) => (
-              <a key={link.href} href={link.href} onClick={() => setOpen(false)} className="font-display text-2xl uppercase tracking-wide text-foreground">
+              <Link key={link.href} to={link.href} onClick={() => setOpen(false)} className="font-display text-2xl uppercase tracking-wide text-foreground">
                 {link.label}
-              </a>
+              </Link>
             ))}
             <div className="mt-2 grid gap-3 border-t border-border pt-5">
               {isAuthenticated ? (
