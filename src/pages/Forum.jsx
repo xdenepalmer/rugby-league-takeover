@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
-  MessageSquare, Send, ArrowLeft, Pin, Search, Heart, MessageCircle,
-  TrendingUp, Users, Flame, ChevronDown, ChevronUp, Sparkles,
-  Clock, Eye, Filter, Hash, ArrowUpRight, X, Bookmark, Share2,
+  MessageSquare, Send, Pin, Search, Heart, MessageCircle,
+  TrendingUp, Users, Flame, Sparkles, Eye, ArrowUpRight, X, Bookmark, Share2,
   Zap, Radio
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -69,9 +68,21 @@ function UserAvatar({ name, size = "md" }) {
 }
 
 /* ─── Time Ago Helper ───────────────────────────────────── */
+// Base44 returns created_date in UTC, sometimes without a timezone marker. A bare
+// ISO string is parsed as LOCAL time by JS, which shows a just-posted item as
+// "10h ago" in AEST. Normalise to UTC when no timezone is present.
+function parseForumDate(dateStr) {
+  if (!dateStr) return null;
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(String(dateStr).trim());
+  const normalized = hasTz ? dateStr : `${String(dateStr).trim().replace(" ", "T")}Z`;
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? new Date(dateStr) : d;
+}
+
 function timeAgo(dateStr) {
-  if (!dateStr) return "Recently";
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const date = parseForumDate(dateStr);
+  if (!date) return "Recently";
+  const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
@@ -79,7 +90,7 @@ function timeAgo(dateStr) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+  return date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
 
 /* ─── Animated Stat Counter ─────────────────────────────── */
