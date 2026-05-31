@@ -1,11 +1,19 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { Users, Activity } from "lucide-react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, Activity, UserPlus, Ban } from "lucide-react";
 import UsersManager from "../UsersManager";
 import UserInviteManager from "../UserInviteManager";
 import BansManager from "../BansManager";
 
 export default function PeoplePanel() {
+  const [activeTab, setActiveTab] = useState("users");
+
+  const tabs = [
+    { id: "users", label: "User Accounts", icon: Users },
+    { id: "invites", label: "Invites & Handover", icon: UserPlus },
+    { id: "bans", label: "Bans & Blocks", icon: Ban },
+  ];
+
   return (
     <div className="grid gap-5">
       {/* Section Header */}
@@ -36,29 +44,73 @@ export default function PeoplePanel() {
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.4 }}
-      >
-        <UsersManager />
-      </motion.div>
+      {/* Tabs navigation bar */}
+      <div className="flex border-b border-border/60 overflow-x-auto cmd-scrollbar bg-secondary/15 backdrop-blur-sm p-1">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex items-center gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 select-none ${
+                isActive ? "text-foreground font-extrabold" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
+              <span>{tab.label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="people-subtabs-glow"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                  style={{ boxShadow: "0 0 10px hsl(var(--primary)/0.6)" }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-      >
-        <UserInviteManager />
-      </motion.div>
+      {/* Active Tab Panel */}
+      <div className="min-h-[250px]">
+        <AnimatePresence mode="wait">
+          {activeTab === "users" && (
+            <motion.div
+              key="users-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <UsersManager />
+            </motion.div>
+          )}
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.4 }}
-      >
-        <BansManager />
-      </motion.div>
+          {activeTab === "invites" && (
+            <motion.div
+              key="invites-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <UserInviteManager />
+            </motion.div>
+          )}
+
+          {activeTab === "bans" && (
+            <motion.div
+              key="bans-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <BansManager />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -2,17 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Save, Sparkles, Timer, Film, Newspaper, Users, PanelBottom,
+  Save, Timer, Film, Newspaper, Users, PanelBottom,
   Image as ImageIcon, CheckCircle2, AlertCircle, Type, FileText,
-  Plane, ShoppingBag, Quote, Captions,
+  Plane, ShoppingBag, Quote, Captions, ChevronLeft, LayoutGrid, Settings,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import AdminSection from "./AdminSection";
-import FieldGroup from "./FieldGroup";
 import MediaUploader from "./MediaUploader";
 import DateTimePicker from "./DateTimePicker";
 import ImageField from "./ImageField";
@@ -61,11 +59,11 @@ function LabeledField({ label, help, children, fullWidth, indicator }) {
   return (
     <div className={`grid gap-1.5 ${fullWidth ? "md:col-span-2" : ""}`}>
       <div className="flex items-center gap-2">
-        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-mono">
           {label}
         </label>
         {indicator && (
-          <span className={`inline-flex items-center gap-0.5 px-1.5 py-0 text-[8px] font-bold uppercase tracking-wider border ${
+          <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.25 text-[7px] font-bold uppercase tracking-wider border ${
             indicator === "custom"
               ? "text-primary border-primary/20 bg-primary/5"
               : "text-muted-foreground border-border/40 bg-muted/10"
@@ -87,6 +85,9 @@ function LabeledField({ label, help, children, fullWidth, indicator }) {
 /* ─── Image Preview Thumbnail ──────────────────────────────── */
 function ImagePreview({ url, alt }) {
   const [error, setError] = useState(false);
+  useEffect(() => {
+    setError(false);
+  }, [url]);
   if (!url || error) return null;
 
   return (
@@ -97,7 +98,7 @@ function ImagePreview({ url, alt }) {
     >
       <div className="flex items-center gap-2 mb-2">
         <ImageIcon className="h-3 w-3 text-muted-foreground" />
-        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Live Preview</span>
+        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground font-mono">Live Preview</span>
       </div>
       <div className="relative h-20 w-full overflow-hidden bg-background/50 border border-border/20">
         <img
@@ -115,7 +116,7 @@ function ImagePreview({ url, alt }) {
 function VideoCountBadge({ count }) {
   return (
     <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border border-border/30 bg-muted/10">
-      <Film className="h-3 w-3 text-accent" />
+      <Film className="h-3.5 w-3.5 text-primary" />
       <span className="text-[9px] font-mono text-muted-foreground">
         {count} video{count !== 1 ? "s" : ""} in rotation
       </span>
@@ -127,6 +128,7 @@ function VideoCountBadge({ count }) {
 /* ─── Main Component ───────────────────────────────────────── */
 export default function SiteSettingsManager({ settings }) {
   const [draft, setDraft] = useState({ ...defaults, ...(settings || {}) });
+  const [activeCategory, setActiveCategory] = useState("overview");
   const [saveFlash, setSaveFlash] = useState(false);
   const queryClient = useQueryClient();
 
@@ -152,271 +154,449 @@ export default function SiteSettingsManager({ settings }) {
     return settings[field] !== undefined && settings[field] !== defaults[field];
   };
 
+  const categories = [
+    {
+      id: "hero",
+      title: "Brand & Hero",
+      desc: "Upload logo, main headings, descriptions, and hero buttons on the landing view.",
+      icon: Type,
+      summary: isCustom("site_logo_url") ? "Logo: Custom" : "Logo: Default",
+    },
+    {
+      id: "countdown",
+      title: "Countdown Timer",
+      desc: "Live countdown timer settings, target start dates, heading text, and custom CTA links.",
+      icon: Timer,
+      summary: draft.countdown_enabled !== false ? "Live: Enabled" : "Live: Disabled",
+    },
+    {
+      id: "media",
+      title: "Background Media",
+      desc: "Manage homepage rotating video backgrounds, URLs, and direct file uploads.",
+      icon: Film,
+      summary: `${(draft.background_video_urls || []).length} Video(s)`,
+    },
+    {
+      id: "sections",
+      title: "News, Travel & Merch Copy",
+      desc: "Configure eyebrows, titles, and body texts for content feed modules.",
+      icon: Newspaper,
+      summary: `Title: "${draft.news_title || ""}"`,
+    },
+    {
+      id: "about",
+      title: "About & Registration",
+      desc: "Edit about statements, captions, imagery uploads, and registry descriptions.",
+      icon: Users,
+      summary: `Headline: "${draft.about_title || ""}"`,
+    },
+    {
+      id: "footer",
+      title: "Footer & Attribution",
+      desc: "Copyright lines, attribution brand labels, and powered-by text.",
+      icon: PanelBottom,
+      summary: `Powered by: ${draft.footer_powered_by || "None"}`,
+    },
+  ];
+
+  const handleBackToOverview = () => {
+    setActiveCategory("overview");
+  };
+
   return (
-    <AdminSection
-      id="site-settings"
-      eyebrow="Step 1"
-      title="Website settings"
-      description="Edit homepage wording, logo, images, videos and footer content. Changes save to the live site after pressing Save."
-      icon={Sparkles}
-    >
-      <div className="grid gap-4">
-
-        {/* ── 1. Brand & Hero ─────────────────────────── */}
-        <FieldGroup
-          title="Brand and hero"
-          help="Logo, headline, and hero section on the homepage."
-          step={1}
-          icon={Type}
-        >
-          <LabeledField label="Logo URL" help="Direct URL to your site logo image." indicator={isCustom("site_logo_url") ? "custom" : "default"}>
-            <Input placeholder="https://example.com/logo.png" value={draft.site_logo_url || ""} onChange={(e) => update("site_logo_url", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <MediaUploader label="Upload logo" accept="image/*" onUploaded={(url) => update("site_logo_url", url)} />
-
-          {/* Live logo preview */}
-          <ImagePreview url={draft.site_logo_url} alt="Site logo" />
-
-          <LabeledField label="Hero Eyebrow" help="Small text above the main heading.">
-            <Input placeholder="Las Vegas • Rugby League" value={draft.hero_eyebrow || ""} onChange={(e) => update("hero_eyebrow", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Hero Button Label" help="Call-to-action button text.">
-            <Input placeholder="Enter the site" value={draft.hero_button_label || ""} onChange={(e) => update("hero_button_label", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Hero Title" help="Use line breaks to split across multiple lines." fullWidth>
-            <Textarea placeholder="The annual&#10;Vegas takeover" value={draft.hero_title || ""} onChange={(e) => update("hero_title", e.target.value)} className="min-h-24 rounded-none" />
-          </LabeledField>
-          <LabeledField label="Hero Description" help="Supporting paragraph below the title." fullWidth>
-            <Textarea placeholder="Join the world's most passionate supporter groups..." value={draft.hero_description || ""} onChange={(e) => update("hero_description", e.target.value)} className="min-h-24 rounded-none" />
-          </LabeledField>
-        </FieldGroup>
-
-        {/* ── 2. Countdown Timer ──────────────────────── */}
-        <FieldGroup
-          title="Countdown timer"
-          help="Live countdown clock displayed on the homepage."
-          step={2}
-          icon={Timer}
-        >
-          <div className="md:col-span-2">
-            <div className="flex items-center justify-between border border-border/60 bg-muted/10 p-3.5 transition-colors hover:border-border">
-              <div className="flex items-center gap-2.5">
-                <div className={`h-2 w-2 rounded-full ${draft.countdown_enabled !== false ? "bg-emerald-400 cmd-blink" : "bg-muted-foreground/40"}`} />
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground">Show countdown on homepage</span>
+    <div className="relative">
+      <AnimatePresence mode="wait">
+        {activeCategory === "overview" ? (
+          /* ─── Dashboard Overview Grid ─── */
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
+            className="grid gap-5"
+          >
+            {/* Header section card */}
+            <div className="border border-border/60 bg-card/60 p-5 cmd-glass relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                <Settings className="h-28 w-28 text-primary" />
               </div>
-              <Switch checked={draft.countdown_enabled !== false} onCheckedChange={(value) => update("countdown_enabled", value)} />
+              <div className="flex items-center gap-2 mb-2">
+                <Settings className="h-4 w-4 text-primary" />
+                <span className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary font-mono">Control Centre</span>
+              </div>
+              <h2 className="font-display text-2xl md:text-3xl uppercase leading-none tracking-wide text-foreground">
+                Website Configuration Room
+              </h2>
+              <p className="mt-2 max-w-2xl text-xs text-muted-foreground leading-relaxed">
+                Click on any of the configuration modules below to customize logos, backgrounds, countdown timers, and sections copy across the public site.
+              </p>
             </div>
-          </div>
 
-          <AnimatePresence>
-            {draft.countdown_enabled !== false && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25 }}
-                className="md:col-span-2 grid gap-4 md:grid-cols-2 overflow-hidden"
-              >
-                <LabeledField label="Takeover start date & time" help="The moment the countdown reaches zero.">
-                  <DateTimePicker value={draft.countdown_date || ""} onChange={(val) => update("countdown_date", val)} placeholder="Pick the takeover date & time" />
-                </LabeledField>
-                <LabeledField label="Heading" help="Text shown above the countdown digits.">
-                  <Input placeholder="The takeover begins in" value={draft.countdown_title || ""} onChange={(e) => update("countdown_title", e.target.value)} className="rounded-none" />
-                </LabeledField>
-                <LabeledField label="Subtitle" fullWidth help="Secondary text beneath the heading.">
-                  <Input placeholder="Las Vegas • Allegiant Stadium" value={draft.countdown_subtitle || ""} onChange={(e) => update("countdown_subtitle", e.target.value)} className="rounded-none" />
-                </LabeledField>
-                <LabeledField label="Button Label" help="Optional CTA button.">
-                  <Input placeholder="Register now" value={draft.countdown_cta_label || ""} onChange={(e) => update("countdown_cta_label", e.target.value)} className="rounded-none" />
-                </LabeledField>
-                <LabeledField label="Button Link" help="URL for the CTA button.">
-                  <Input placeholder="https://..." value={draft.countdown_cta_url || ""} onChange={(e) => update("countdown_cta_url", e.target.value)} className="rounded-none" />
-                </LabeledField>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </FieldGroup>
+            {/* Grid modules list */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {categories.map((c, i) => {
+                const Icon = c.icon;
+                return (
+                  <motion.div
+                    key={c.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    onClick={() => setActiveCategory(c.id)}
+                    className="group border border-border bg-card/40 cmd-glass p-5 flex flex-col justify-between hover:border-primary/30 transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(249,115,22,0.05)] relative overflow-hidden"
+                  >
+                    {/* Tiny scan overlay on hover */}
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent cmd-scan-line" />
+                    </div>
 
-        {/* ── 3. Background Videos ────────────────────── */}
-        <FieldGroup
-          title="Homepage background videos"
-          help="Paste one video URL per line, or upload below."
-          step={3}
-          icon={Film}
-        >
-          <LabeledField label="Video URLs" help="One URL per line. Videos rotate automatically on the homepage." fullWidth>
-            <Textarea value={videoText} onChange={(e) => update("background_video_urls", e.target.value.split("\n").map((url) => url.trim()).filter(Boolean))} className="min-h-28 rounded-none font-mono text-xs" />
-          </LabeledField>
-          <VideoCountBadge count={(draft.background_video_urls || []).length} />
-          <MediaUploader label="Upload background video" accept="video/*" onUploaded={(url) => update("background_video_urls", [...(draft.background_video_urls || []), url])} />
-        </FieldGroup>
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="p-2 border border-border/60 bg-muted/20 text-muted-foreground group-hover:text-primary group-hover:border-primary/20 transition-all">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-primary/60 bg-primary/5 px-2 py-0.5 border border-primary/10">
+                          {c.summary}
+                        </span>
+                      </div>
+                      <h3 className="font-display text-base uppercase tracking-wide text-foreground group-hover:text-primary transition-colors">
+                        {c.title}
+                      </h3>
+                      <p className="mt-1.5 text-xs text-muted-foreground leading-normal line-clamp-3">
+                        {c.desc}
+                      </p>
+                    </div>
 
-        {/* ── 4. News / Travel / Merch ────────────────── */}
-        <FieldGroup
-          title="News, travel and merch sections"
-          help="Section headings and copy for the three content blocks."
-          step={4}
-          icon={Newspaper}
-        >
-          {/* News subsection */}
-          <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border-l-2 border-primary/40 bg-primary/5">
-            <Captions className="h-3 w-3 text-primary" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">News</span>
-          </div>
-          <LabeledField label="News Eyebrow">
-            <Input placeholder="Latest News" value={draft.news_eyebrow || ""} onChange={(e) => update("news_eyebrow", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="News Title">
-            <Input placeholder="From the strip" value={draft.news_title || ""} onChange={(e) => update("news_title", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="News Description" fullWidth>
-            <Textarea placeholder="Fresh updates and announcements..." value={draft.news_description || ""} onChange={(e) => update("news_description", e.target.value)} className="rounded-none" />
-          </LabeledField>
+                    <div className="mt-5 border-t border-border/30 pt-3 flex items-center justify-between">
+                      <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">Configure Module</span>
+                      <ChevronLeft className="h-3.5 w-3.5 rotate-185 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        ) : (
+          /* ─── Editor View Layout (Split Nav + Content Area) ─── */
+          <motion.div
+            key="editor"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col gap-4"
+          >
+            {/* Header path + Back link */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-border/50 bg-secondary/15 p-4 cmd-glass">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBackToOverview}
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors border border-border/60 bg-muted/15 px-2.5 py-1"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Back to Dashboard
+                </button>
+                <span className="text-[10px] text-muted-foreground/30">/</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Editor</span>
+                <span className="text-[10px] text-muted-foreground/30">/</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary font-mono">
+                  {categories.find((c) => c.id === activeCategory)?.title}
+                </span>
+              </div>
 
-          {/* Travel subsection */}
-          <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border-l-2 border-accent/40 bg-accent/5 mt-2">
-            <Plane className="h-3 w-3 text-accent" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Travel</span>
-          </div>
-          <LabeledField label="Travel Eyebrow">
-            <Input placeholder="Travel Packages" value={draft.travel_eyebrow || ""} onChange={(e) => update("travel_eyebrow", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Travel Title">
-            <Input placeholder="Your Vegas base camp" value={draft.travel_title || ""} onChange={(e) => update("travel_title", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Travel Description" fullWidth>
-            <Textarea placeholder="Air, accommodation, events and more..." value={draft.travel_description || ""} onChange={(e) => update("travel_description", e.target.value)} className="rounded-none" />
-          </LabeledField>
+              <div className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground/45">
+                <LayoutGrid className="h-3 w-3" /> Grid editor active
+              </div>
+            </div>
 
-          {/* Merch subsection */}
-          <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border-l-2 border-emerald-500/40 bg-emerald-500/5 mt-2">
-            <ShoppingBag className="h-3 w-3 text-emerald-400" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-emerald-400">Merch</span>
-          </div>
-          <LabeledField label="Merch Eyebrow">
-            <Input placeholder="Merch" value={draft.merch_eyebrow || ""} onChange={(e) => update("merch_eyebrow", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Merch Title">
-            <Input placeholder="Wear the takeover" value={draft.merch_title || ""} onChange={(e) => update("merch_title", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Merch Description" fullWidth>
-            <Textarea placeholder="Browse official merch and checkout securely..." value={draft.merch_description || ""} onChange={(e) => update("merch_description", e.target.value)} className="rounded-none" />
-          </LabeledField>
-        </FieldGroup>
+            {/* Split side navigation + Form container */}
+            <div className="grid gap-5 md:grid-cols-[200px_1fr]">
+              {/* Desktop Side Navigation */}
+              <aside className="hidden md:flex flex-col gap-1 border-r border-border/60 pr-4">
+                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2 px-2.5">Modules</span>
+                {categories.map((c) => {
+                  const Icon = c.icon;
+                  const isCurrent = c.id === activeCategory;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setActiveCategory(c.id)}
+                      className={`flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider transition-all duration-200 border-l-2 ${
+                        isCurrent
+                          ? "bg-primary/10 text-foreground border-primary"
+                          : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
+                      }`}
+                    >
+                      <Icon className={`h-3.5 w-3.5 ${isCurrent ? "text-primary" : "text-muted-foreground/50"}`} />
+                      <span className="truncate">{c.title}</span>
+                    </button>
+                  );
+                })}
+              </aside>
 
-        {/* ── 5. About & Registration ─────────────────── */}
-        <FieldGroup
-          title="About section and registration"
-          help="About us content, imagery, and interest registration copy."
-          step={5}
-          icon={Users}
-        >
-          {/* About subsection */}
-          <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border-l-2 border-primary/40 bg-primary/5">
-            <FileText className="h-3 w-3 text-primary" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">About Us</span>
-          </div>
-          <LabeledField label="About Eyebrow">
-            <Input placeholder="About Us" value={draft.about_eyebrow || ""} onChange={(e) => update("about_eyebrow", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="About Title">
-            <Input placeholder="Built by fans, for fans" value={draft.about_title || ""} onChange={(e) => update("about_title", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="About Description" fullWidth>
-            <Textarea placeholder="Rugby League Takeover Las Vegas brings together..." value={draft.about_description || ""} onChange={(e) => update("about_description", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="About Body" fullWidth help="Extended paragraph content for the about section.">
-            <Textarea placeholder="Expect flags, chants, mateship..." value={draft.about_body || ""} onChange={(e) => update("about_body", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="About Highlight" help="Pullout quote or key message.">
-            <Input placeholder="Join the world's most passionate..." value={draft.about_highlight || ""} onChange={(e) => update("about_highlight", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Image Caption">
-            <Input placeholder="Las Vegas will hear us." value={draft.about_image_caption || ""} onChange={(e) => update("about_image_caption", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="About Image" help="Upload an image or paste a URL — preview updates instantly. Remember to Save." indicator={isCustom("about_image_url") ? "custom" : "default"} fullWidth>
-            <ImageField value={draft.about_image_url || ""} onChange={(url) => update("about_image_url", url)} />
-          </LabeledField>
-
-          {/* Registration subsection */}
-          <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border-l-2 border-accent/40 bg-accent/5 mt-2">
-            <Quote className="h-3 w-3 text-accent" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Registration</span>
-          </div>
-          <LabeledField label="Registration Eyebrow">
-            <Input placeholder="Register interest" value={draft.registration_eyebrow || ""} onChange={(e) => update("registration_eyebrow", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Registration Title">
-            <Input placeholder="Don't miss the drop." value={draft.registration_title || ""} onChange={(e) => update("registration_title", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Registration Description" fullWidth>
-            <Textarea placeholder="Leave your details and the team will contact you..." value={draft.registration_description || ""} onChange={(e) => update("registration_description", e.target.value)} className="rounded-none" />
-          </LabeledField>
-        </FieldGroup>
-
-        {/* ── 6. Footer ───────────────────────────────── */}
-        <FieldGroup
-          title="Footer"
-          help="Copyright text and attribution."
-          step={6}
-          icon={PanelBottom}
-        >
-          <LabeledField label="Footer Text" help="Displayed in the site footer." indicator={isCustom("footer_text") ? "custom" : "default"}>
-            <Input placeholder="Rugby League Takeover Las Vegas © 2026" value={draft.footer_text || ""} onChange={(e) => update("footer_text", e.target.value)} className="rounded-none" />
-          </LabeledField>
-          <LabeledField label="Powered By" help="Attribution line.">
-            <Input placeholder="DENEO.AI" value={draft.footer_powered_by || ""} onChange={(e) => update("footer_powered_by", e.target.value)} className="rounded-none" />
-          </LabeledField>
-        </FieldGroup>
-
-        {/* ── Sticky Save Bar ─────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="sticky bottom-4 z-20"
-        >
-          <div className="relative overflow-hidden border border-primary/30 bg-card/90 cmd-glass">
-            {/* Top accent */}
-            <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] animate-[cmd-data-stream_3s_linear_infinite]" />
-
-            <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`h-2 w-2 rounded-full ${saveMutation.isPending ? "bg-accent cmd-pulse" : saveFlash ? "bg-emerald-400" : "bg-muted-foreground/40"}`} />
+              {/* Form editing pane */}
+              <div className="border border-border/60 bg-card/35 p-5 md:p-6 cmd-glass min-h-[300px] flex flex-col justify-between">
                 <div>
-                  <p className="text-xs font-bold text-foreground">
-                    {saveFlash ? "Settings saved successfully!" : "Preview the public site after saving to check your changes."}
-                  </p>
-                  <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
-                    Changes deploy instantly to the live site
-                  </p>
+                  {activeCategory === "hero" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">Brand and Hero Settings</h3>
+                        <p className="text-[10px] text-muted-foreground">Adjust branding assets and the initial landing section of the homepage.</p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <LabeledField label="Logo URL" help="Direct URL to your site logo image." indicator={isCustom("site_logo_url") ? "custom" : "default"}>
+                          <Input placeholder="https://example.com/logo.png" value={draft.site_logo_url || ""} onChange={(e) => update("site_logo_url", e.target.value)} />
+                        </LabeledField>
+                        <div className="flex flex-col justify-end">
+                          <MediaUploader label="Upload logo" accept="image/*" onUploaded={(url) => update("site_logo_url", url)} />
+                        </div>
+                      </div>
+                      <ImagePreview url={draft.site_logo_url} alt="Site logo" />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <LabeledField label="Hero Eyebrow" help="Small text above the main heading.">
+                          <Input placeholder="Las Vegas • Rugby League" value={draft.hero_eyebrow || ""} onChange={(e) => update("hero_eyebrow", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Hero Button Label" help="Call-to-action button text.">
+                          <Input placeholder="Enter the site" value={draft.hero_button_label || ""} onChange={(e) => update("hero_button_label", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="Hero Title" help="Use line breaks to split across multiple lines." fullWidth>
+                        <Textarea placeholder="The annual&#10;Vegas takeover" value={draft.hero_title || ""} onChange={(e) => update("hero_title", e.target.value)} className="min-h-24" />
+                      </LabeledField>
+                      <LabeledField label="Hero Description" help="Supporting paragraph below the title." fullWidth>
+                        <Textarea placeholder="Join the world's most passionate supporter groups..." value={draft.hero_description || ""} onChange={(e) => update("hero_description", e.target.value)} className="min-h-24" />
+                      </LabeledField>
+                    </div>
+                  )}
+
+                  {activeCategory === "countdown" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">Countdown Timer Settings</h3>
+                        <p className="text-[10px] text-muted-foreground">Configure the live countdown timer on the homepage.</p>
+                      </div>
+                      <div className="flex items-center justify-between border border-border/60 bg-muted/10 p-3.5 transition-colors hover:border-border">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`h-2 w-2 rounded-full ${draft.countdown_enabled !== false ? "bg-emerald-400 cmd-blink" : "bg-muted-foreground/40"}`} />
+                          <span className="text-xs font-bold uppercase tracking-wider text-foreground">Show countdown on homepage</span>
+                        </div>
+                        <Switch checked={draft.countdown_enabled !== false} onCheckedChange={(value) => update("countdown_enabled", value)} />
+                      </div>
+                      {draft.countdown_enabled !== false && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <LabeledField label="Takeover start date & time" help="The moment the countdown reaches zero.">
+                            <DateTimePicker value={draft.countdown_date || ""} onChange={(val) => update("countdown_date", val)} placeholder="Pick the takeover date & time" />
+                          </LabeledField>
+                          <LabeledField label="Heading" help="Text shown above the countdown digits.">
+                            <Input placeholder="The takeover begins in" value={draft.countdown_title || ""} onChange={(e) => update("countdown_title", e.target.value)} />
+                          </LabeledField>
+                          <LabeledField label="Subtitle" fullWidth help="Secondary text beneath the heading.">
+                            <Input placeholder="Las Vegas • Allegiant Stadium" value={draft.countdown_subtitle || ""} onChange={(e) => update("countdown_subtitle", e.target.value)} />
+                          </LabeledField>
+                          <LabeledField label="Button Label" help="Optional CTA button.">
+                            <Input placeholder="Register now" value={draft.countdown_cta_label || ""} onChange={(e) => update("countdown_cta_label", e.target.value)} />
+                          </LabeledField>
+                          <LabeledField label="Button Link" help="URL for the CTA button." fullWidth>
+                            <Input placeholder="https://..." value={draft.countdown_cta_url || ""} onChange={(e) => update("countdown_cta_url", e.target.value)} />
+                          </LabeledField>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeCategory === "media" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">Homepage Background Videos</h3>
+                        <p className="text-[10px] text-muted-foreground">Manage background video rotation URLs and direct file uploads.</p>
+                      </div>
+                      <LabeledField label="Video URLs" help="One URL per line. Videos rotate automatically on the homepage." fullWidth>
+                        <Textarea value={videoText} onChange={(e) => update("background_video_urls", e.target.value.split("\n").map((url) => url.trim()).filter(Boolean))} className="min-h-28 font-mono text-xs" />
+                      </LabeledField>
+                      <VideoCountBadge count={(draft.background_video_urls || []).length} />
+                      <div className="mt-3">
+                        <MediaUploader label="Upload background video" accept="video/*" onUploaded={(url) => update("background_video_urls", [...(draft.background_video_urls || []), url])} />
+                      </div>
+                    </div>
+                  )}
+
+                  {activeCategory === "sections" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">Homepage Sections Copy</h3>
+                        <p className="text-[10px] text-muted-foreground">Change the title texts and descriptions for public modules.</p>
+                      </div>
+                      {/* News */}
+                      <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-primary/40 bg-primary/5">
+                        <Captions className="h-3 w-3 text-primary" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">News</span>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <LabeledField label="News Eyebrow">
+                          <Input placeholder="Latest News" value={draft.news_eyebrow || ""} onChange={(e) => update("news_eyebrow", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="News Title">
+                          <Input placeholder="From the strip" value={draft.news_title || ""} onChange={(e) => update("news_title", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="News Description" fullWidth>
+                        <Textarea placeholder="Fresh updates and announcements..." value={draft.news_description || ""} onChange={(e) => update("news_description", e.target.value)} />
+                      </LabeledField>
+
+                      {/* Travel */}
+                      <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-accent/40 bg-accent/5 mt-4">
+                        <Plane className="h-3 w-3 text-accent" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Travel</span>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <LabeledField label="Travel Eyebrow">
+                          <Input placeholder="Travel Packages" value={draft.travel_eyebrow || ""} onChange={(e) => update("travel_eyebrow", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Travel Title">
+                          <Input placeholder="Your Vegas base camp" value={draft.travel_title || ""} onChange={(e) => update("travel_title", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="Travel Description" fullWidth>
+                        <Textarea placeholder="Air, accommodation, events and more..." value={draft.travel_description || ""} onChange={(e) => update("travel_description", e.target.value)} />
+                      </LabeledField>
+
+                      {/* Merch */}
+                      <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-emerald-500/40 bg-emerald-500/5 mt-4">
+                        <ShoppingBag className="h-3 w-3 text-emerald-400" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-emerald-400">Merch</span>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <LabeledField label="Merch Eyebrow">
+                          <Input placeholder="Merch" value={draft.merch_eyebrow || ""} onChange={(e) => update("merch_eyebrow", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Merch Title">
+                          <Input placeholder="Wear the takeover" value={draft.merch_title || ""} onChange={(e) => update("merch_title", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="Merch Description" fullWidth>
+                        <Textarea placeholder="Browse official merch and checkout securely..." value={draft.merch_description || ""} onChange={(e) => update("merch_description", e.target.value)} />
+                      </LabeledField>
+                    </div>
+                  )}
+
+                  {activeCategory === "about" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">About Us & Registrations</h3>
+                        <p className="text-[10px] text-muted-foreground">Modify details about the organization and support forms.</p>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-primary/40 bg-primary/5">
+                        <FileText className="h-3 w-3 text-primary" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">About Us</span>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <LabeledField label="About Eyebrow">
+                          <Input placeholder="About Us" value={draft.about_eyebrow || ""} onChange={(e) => update("about_eyebrow", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="About Title">
+                          <Input placeholder="Built by fans, for fans" value={draft.about_title || ""} onChange={(e) => update("about_title", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="About Description" fullWidth>
+                        <Textarea placeholder="Rugby League Takeover Las Vegas brings together..." value={draft.about_description || ""} onChange={(e) => update("about_description", e.target.value)} />
+                      </LabeledField>
+                      <LabeledField label="About Body" fullWidth help="Extended paragraph content for the about section.">
+                        <Textarea placeholder="Expect flags, chants, mateship..." value={draft.about_body || ""} onChange={(e) => update("about_body", e.target.value)} className="min-h-24" />
+                      </LabeledField>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <LabeledField label="About Highlight" help="Pullout quote or key message.">
+                          <Input placeholder="Join the world's most passionate..." value={draft.about_highlight || ""} onChange={(e) => update("about_highlight", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Image Caption">
+                          <Input placeholder="Las Vegas will hear us." value={draft.about_image_caption || ""} onChange={(e) => update("about_image_caption", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="About Image" help="Upload an image or paste a URL." indicator={isCustom("about_image_url") ? "custom" : "default"} fullWidth>
+                        <ImageField value={draft.about_image_url || ""} onChange={(url) => update("about_image_url", url)} />
+                      </LabeledField>
+
+                      <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-accent/40 bg-accent/5 mt-4">
+                        <Quote className="h-3 w-3 text-accent" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Registration</span>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <LabeledField label="Registration Eyebrow">
+                          <Input placeholder="Register interest" value={draft.registration_eyebrow || ""} onChange={(e) => update("registration_eyebrow", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Registration Title">
+                          <Input placeholder="Don't miss the drop." value={draft.registration_title || ""} onChange={(e) => update("registration_title", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="Registration Description" fullWidth>
+                        <Textarea placeholder="Leave your details and the team will contact you..." value={draft.registration_description || ""} onChange={(e) => update("registration_description", e.target.value)} />
+                      </LabeledField>
+                    </div>
+                  )}
+
+                  {activeCategory === "footer" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">Footer and Copyright</h3>
+                        <p className="text-[10px] text-muted-foreground">Adjust labels displayed at the bottom of public pages.</p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <LabeledField label="Footer Text" help="Displayed in the site footer." indicator={isCustom("footer_text") ? "custom" : "default"}>
+                          <Input placeholder="Rugby League Takeover Las Vegas © 2026" value={draft.footer_text || ""} onChange={(e) => update("footer_text", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Powered By" help="Attribution line.">
+                          <Input placeholder="DENEO.AI" value={draft.footer_powered_by || ""} onChange={(e) => update("footer_powered_by", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* ── Sticky Save Bar ─────────────────────────── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="mt-8 border-t border-border/30 pt-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-2 w-2 rounded-full ${saveMutation.isPending ? "bg-accent cmd-pulse" : saveFlash ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          {saveFlash ? "Settings saved successfully!" : "Preview the public site after saving to check your changes."}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
+                          Changes deploy instantly to the live site
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => saveMutation.mutate(draft)}
+                      disabled={saveMutation.isPending}
+                      className="rounded-none bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)] h-9 text-xs uppercase tracking-wider font-bold"
+                    >
+                      {saveMutation.isPending ? (
+                        <>
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
+                            <Save className="h-4 w-4" />
+                          </motion.div>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </motion.div>
               </div>
-
-              <Button
-                onClick={() => saveMutation.mutate(draft)}
-                disabled={saveMutation.isPending}
-                className="rounded-none bg-primary hover:bg-primary/90 transition-all duration-200 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
-              >
-                {saveMutation.isPending ? (
-                  <>
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
-                      <Save className="h-4 w-4" />
-                    </motion.div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Website Settings
-                  </>
-                )}
-              </Button>
             </div>
-          </div>
-        </motion.div>
-
-      </div>
-    </AdminSection>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

@@ -1,14 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { MessagesSquare, Activity } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessagesSquare, Activity, UserCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ForumManager from "../ForumManager";
 import RegistrationsTable from "../RegistrationsTable";
 
 export default function CommunityPanel() {
+  const [activeTab, setActiveTab] = useState("forum");
   const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200) });
   const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200) });
+
+  const tabs = [
+    { id: "forum", label: "Forum Moderation", icon: MessagesSquare, count: forumPosts.length },
+    { id: "registrations", label: "Interest Registrations", icon: UserCheck, count: registrations.length },
+  ];
 
   return (
     <div className="grid gap-5">
@@ -40,21 +46,64 @@ export default function CommunityPanel() {
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.4 }}
-      >
-        <ForumManager posts={forumPosts} />
-      </motion.div>
+      {/* Tabs navigation bar */}
+      <div className="flex border-b border-border/60 overflow-x-auto cmd-scrollbar bg-secondary/15 backdrop-blur-sm p-1">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex items-center gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 select-none ${
+                isActive ? "text-foreground font-extrabold" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
+              <span>{tab.label}</span>
+              <span className={`text-[9px] font-mono px-1.5 py-0.25 ${isActive ? "bg-primary/20 text-primary border border-primary/25" : "bg-muted/30 text-muted-foreground border border-border/40"}`}>
+                {tab.count}
+              </span>
+              {isActive && (
+                <motion.div
+                  layoutId="community-subtabs-glow"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                  style={{ boxShadow: "0 0 10px hsl(var(--primary)/0.6)" }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-      >
-        <RegistrationsTable registrations={registrations} />
-      </motion.div>
+      {/* Active Tab Panel */}
+      <div className="min-h-[250px]">
+        <AnimatePresence mode="wait">
+          {activeTab === "forum" && (
+            <motion.div
+              key="forum-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ForumManager posts={forumPosts} />
+            </motion.div>
+          )}
+
+          {activeTab === "registrations" && (
+            <motion.div
+              key="registrations-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <RegistrationsTable registrations={registrations} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
