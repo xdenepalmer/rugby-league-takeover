@@ -4,10 +4,10 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useInView, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
   MessageSquare, Send, Pin, Search, Heart, MessageCircle,
-  TrendingUp, Users, Flame, Sparkles, Clock, Eye, ArrowUpRight,
+  TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp,
-  Trophy, Star, Activity, Hash, Filter, BarChart3, Globe,
-  Plane, MapPin, ThumbsUp, Reply, MoreHorizontal, AlertCircle
+  Trophy, Activity, BarChart3, Globe,
+  Plane, MapPin, ThumbsUp, Reply
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -39,12 +39,12 @@ const categories = [
 ];
 
 const getEngagement = (post) => {
-  const seedText = `${post.id || ""}${post.created_date || ""}${post.title || ""}`;
-  const seed = [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0);
+  const likes = Number(post.like_count ?? (Array.isArray(post.liked_by) ? post.liked_by.length : 0)) || 0;
+  const views = Number(post.view_count || 0);
   return {
-    likes: post.is_pinned ? 42 : (seed % 15) + 1,
-    views: post.is_pinned ? 318 : ((seed * 7) % 200) + 20,
-    hot: post.is_pinned || ((seed % 5) === 0),
+    likes,
+    views,
+    hot: post.is_pinned === true || likes >= 10,
   };
 };
 
@@ -305,7 +305,23 @@ function ForumPostCard({
   const MetaIcon = meta.icon;
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-30px" });
-  const [liked, setLiked] = useState(false);
+  const queryClient = useQueryClient();
+  const isLiked = isAuthenticated && Array.isArray(post.liked_by) && post.liked_by.includes(user?.id);
+  const likeMutation = useMutation({
+    mutationFn: () => base44.functions.invoke("forumAction", { action: "like", postId: post.id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
+  });
+  const toggleLike = () => {
+    if (!isAuthenticated) { window.location.href = "/login?next=/forum"; return; }
+    if (!likeMutation.isPending) likeMutation.mutate();
+  };
+  useEffect(() => {
+    if (!isInView || !post.id || typeof window === "undefined") return;
+    const key = `rlt_viewed_${post.id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    base44.functions.invoke("forumAction", { action: "view", postId: post.id }).catch(() => {});
+  }, [isInView, post.id]);
   const [expanded, setExpanded] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
 
@@ -419,18 +435,19 @@ function ForumPostCard({
         <div className="mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
           <motion.button
             type="button"
-            onClick={() => setLiked(!liked)}
+            onClick={toggleLike}
+            disabled={likeMutation.isPending}
             whileTap={{ scale: 0.9 }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all duration-200 ${
-              liked
+              isLiked
                 ? "bg-primary/10 text-primary border border-primary/20"
                 : "text-muted-foreground/50 hover:text-primary hover:bg-primary/5 border border-transparent"
             }`}
           >
-            <motion.div animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
-              <Heart className={`h-3.5 w-3.5 ${liked ? "fill-primary" : ""}`} />
+            <motion.div animate={isLiked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
+              <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-primary" : ""}`} />
             </motion.div>
-            <span className="tabular-nums">{engagement.likes + (liked ? 1 : 0)}</span>
+            <span className="tabular-nums">{engagement.likes}</span>
           </motion.button>
 
           <button

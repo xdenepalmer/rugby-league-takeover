@@ -51,6 +51,21 @@
     "ip_address": {
       "type": "string",
       "description": "Client IP captured at submission (admin-only)"
+    },
+    "like_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of likes"
+    },
+    "liked_by": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "User ids who liked this post"
+    },
+    "view_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of views"
     }
   },
   "required": [
