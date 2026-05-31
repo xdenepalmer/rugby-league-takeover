@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { isLikelyBotSubmission, normalizeInterestRegistration } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
 import SectionHeader from "./SectionHeader";
-import { motion } from "framer-motion";
-import { Plane, ShieldCheck, Heart } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Heart, Loader2, Plane, ShieldCheck } from "lucide-react";
 
 const teams = ["Eels", "Tigers", "Titans", "Storm", "Leopards", "Bulls", "Other"];
 
