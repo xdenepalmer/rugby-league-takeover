@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { LayoutDashboard, FileText, ShoppingBag, MessagesSquare, Users, Settings, ExternalLink, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, FileText, CalendarDays, ShoppingBag, MessagesSquare, Users, Settings, ExternalLink, LogOut, Menu, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { to: "/admin/overview", label: "Overview", icon: LayoutDashboard },
   { to: "/admin/content", label: "Content", icon: FileText },
+  { to: "/admin/events", label: "Events", icon: CalendarDays },
   { to: "/admin/store", label: "Store", icon: ShoppingBag },
   { to: "/admin/community", label: "Community", icon: MessagesSquare },
   { to: "/admin/people", label: "People", icon: Users },
