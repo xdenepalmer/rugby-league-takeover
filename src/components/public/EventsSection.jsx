@@ -2,8 +2,8 @@ import React from "react";
 import SectionHeader from "./SectionHeader";
 
 const stadiumSwimPhotos = [
-  "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg",
-  "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/d22e13269_e3e79af1-bdf3-43c5-81a9-13e918072b94.jpg"
+  "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/f0655d20b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg",
+  "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/ac7fcf2a7_e3e79af1-bdf3-43c5-81a9-13e918072b94.jpg"
 ];
 
 export default function EventsSection({ event }) {
