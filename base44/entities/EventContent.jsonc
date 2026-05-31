@@ -6,6 +6,44 @@
       "type": "string",
       "description": "Event title"
     },
+    "start_time": {
+      "type": "string",
+      "description": "Optional display time, e.g. '7:00 PM' or 'Doors 6pm'"
+    },
+    "address": {
+      "type": "string",
+      "description": "Full address / how to find it"
+    },
+    "tickets": {
+      "type": "array",
+      "description": "Ticket tiers, each linking to an external purchase page",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Tier name e.g. General Admission, VIP"
+          },
+          "price_aud": {
+            "type": "number",
+            "description": "Display price in AUD"
+          },
+          "url": {
+            "type": "string",
+            "description": "External purchase URL"
+          },
+          "note": {
+            "type": "string",
+            "description": "Optional note"
+          },
+          "sold_out": {
+            "type": "boolean",
+            "default": false,
+            "description": "Mark tier as sold out"
+          }
+        }
+      }
+    },
     "blurb": {
       "type": "string",
       "description": "Event description"
@@ -22,35 +60,13 @@
       "format": "date-time",
       "description": "Event date and time"
     },
-    "start_time": {
-      "type": "string",
-      "description": "Optional display time, e.g. '7:00 PM' or 'Doors 6pm'"
-    },
     "location": {
       "type": "string",
-      "description": "Venue name"
-    },
-    "address": {
-      "type": "string",
-      "description": "Full address / how to find it"
+      "description": "Event location"
     },
     "ticket_url": {
       "type": "string",
-      "description": "Legacy single ticket/registration URL (use tickets[] for multiple tiers)"
-    },
-    "tickets": {
-      "type": "array",
-      "description": "Ticket tiers, each linking to an external purchase page",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string", "description": "Tier name e.g. General Admission, VIP" },
-          "price_aud": { "type": "number", "description": "Display price in AUD" },
-          "url": { "type": "string", "description": "External purchase URL" },
-          "note": { "type": "string", "description": "Optional note e.g. 'Includes a drink'" },
-          "sold_out": { "type": "boolean", "default": false, "description": "Mark tier as sold out" }
-        }
-      }
+      "description": "Ticket or registration URL"
     },
     "is_published": {
       "type": "boolean",
@@ -65,7 +81,7 @@
     "is_coming_soon": {
       "type": "boolean",
       "default": true,
-      "description": "Show a 'coming soon' badge instead of ticket buttons"
+      "description": "Whether event details are coming soon"
     }
   },
   "required": [
