@@ -36,7 +36,7 @@ export default function HeroSection({ settings = {} }) {
   const titleLines = title.split("\n");
 
   return (
-    <section id="home" className="relative min-h-screen overflow-hidden flex items-center justify-center bg-background">
+    <section id="home" className="relative min-h-screen overflow-hidden flex items-center justify-center bg-transparent">
       {/* Background Gradients and scan overlays */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/45 to-background/95 z-10" />
