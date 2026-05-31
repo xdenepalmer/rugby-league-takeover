@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Package description"
     },
+    "image_url": {
+      "type": "string",
+      "description": "Package image URL"
+    },
     "is_coming_soon": {
       "type": "boolean",
       "default": true,

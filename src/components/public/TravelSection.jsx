@@ -46,11 +46,18 @@ export default function TravelSection({ packages, settings = {} }) {
         </SectionHeader>
         <div className="grid gap-5 md:grid-cols-3">
           {packages.map((pkg, index) => (
-            <div key={pkg.id || index} className="border border-border bg-card p-7">
+            <div key={pkg.id || index} className="border border-border bg-card">
+              {pkg.image_url && (
+                <div className="aspect-[16/10] overflow-hidden border-b border-border bg-secondary">
+                  <img src={pkg.image_url} alt={pkg.name} className="h-full w-full object-cover" />
+                </div>
+              )}
+              <div className="p-7">
               <p className="mb-8 text-xs font-bold uppercase tracking-[0.28em] text-primary">Package 0{index + 1}</p>
               <h3 className="font-display text-4xl uppercase leading-none text-foreground">{pkg.name}</h3>
               <p className="mt-5 min-h-20 text-sm leading-6 text-muted-foreground">{pkg.description}</p>
               <div className="mt-8 border-t border-border pt-5 text-xs font-bold uppercase tracking-[0.24em] text-foreground">Coming Soon</div>
+              </div>
             </div>
           ))}
         </div>

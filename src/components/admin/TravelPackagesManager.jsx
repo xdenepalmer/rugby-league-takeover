@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import AdminSection from "./AdminSection";
+import ImageField from "./ImageField";
 
-const emptyPackage = { name: "", description: "", is_coming_soon: true, sort_order: 1 };
+const emptyPackage = { name: "", description: "", image_url: "", is_coming_soon: true, sort_order: 1 };
 
 export default function TravelPackagesManager({ packages }) {
   const [draft, setDraft] = useState(emptyPackage);
@@ -25,6 +26,7 @@ export default function TravelPackagesManager({ packages }) {
           <Input placeholder="Package name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="rounded-none" />
           <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="rounded-none" />
           <Textarea placeholder="Package description" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} className="min-h-24 rounded-none md:col-span-2" />
+          <ImageField label="Package image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} className="md:col-span-2" />
           <label className="flex items-center justify-between border border-border p-4 text-sm md:col-span-2">
             Show as coming soon
             <Switch checked={draft.is_coming_soon !== false} onCheckedChange={(value) => setDraft({ ...draft, is_coming_soon: value })} />
@@ -36,14 +38,17 @@ export default function TravelPackagesManager({ packages }) {
 
         <div className="grid gap-4">
           {packages.map((pkg) => (
-            <div key={pkg.id} className="grid gap-3 border border-border p-4 lg:grid-cols-[1fr_1fr_120px_auto] lg:items-center">
-              <Input defaultValue={pkg.name || ""} onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { name: e.target.value } })} className="rounded-none" />
-              <Textarea defaultValue={pkg.description || ""} onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { description: e.target.value } })} className="min-h-20 rounded-none" />
-              <Input type="number" defaultValue={pkg.sort_order || 1} onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
-              <div className="flex items-center gap-3">
-                <Switch checked={pkg.is_coming_soon !== false} onCheckedChange={(value) => updateMutation.mutate({ id: pkg.id, data: { is_coming_soon: value } })} />
-                <Button variant="destructive" size="icon" className="rounded-none" onClick={() => deleteMutation.mutate(pkg.id)}><Trash2 className="h-4 w-4" /></Button>
+            <div key={pkg.id} className="grid gap-3 border border-border p-4">
+              <div className="grid gap-3 lg:grid-cols-[1fr_1fr_120px_auto] lg:items-start">
+                <Input defaultValue={pkg.name || ""} onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { name: e.target.value } })} className="rounded-none" />
+                <Textarea defaultValue={pkg.description || ""} onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { description: e.target.value } })} className="min-h-20 rounded-none" />
+                <Input type="number" defaultValue={pkg.sort_order || 1} onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
+                <div className="flex items-center gap-3">
+                  <Switch checked={pkg.is_coming_soon !== false} onCheckedChange={(value) => updateMutation.mutate({ id: pkg.id, data: { is_coming_soon: value } })} />
+                  <Button variant="destructive" size="icon" className="rounded-none" onClick={() => deleteMutation.mutate(pkg.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
               </div>
+              <ImageField label="Package image" value={pkg.image_url} onChange={(url) => updateMutation.mutate({ id: pkg.id, data: { image_url: url } })} />
             </div>
           ))}
         </div>
