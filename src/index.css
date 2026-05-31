@@ -152,7 +152,7 @@
 /* Grid line reveal */
 @keyframes cmd-grid-reveal {
   from { opacity: 0; }
-  to { opacity: 0.06; }
+  to { opacity: 1; }
 }
 
 /* Stagger-in for cards */
