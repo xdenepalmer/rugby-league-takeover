@@ -49,15 +49,15 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Email of the authenticated submitter (empty for anonymous)"
+      "description": "Authenticated submitter email (empty for guests)"
     },
     "user_id": {
       "type": "string",
-      "description": "ID of the authenticated submitter (empty for anonymous)"
+      "description": "Authenticated submitter id"
     },
     "ip_address": {
       "type": "string",
-      "description": "Client IP captured at submission for moderation (admin-only)"
+      "description": "Client IP captured at submission (admin-only)"
     }
   },
   "required": [
@@ -68,9 +68,16 @@
   "rls": {
     "create": true,
     "read": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
       "user_condition": {
