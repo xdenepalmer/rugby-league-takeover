@@ -95,7 +95,7 @@ export default function Home() {
         <NewsSection articles={visibleNews} settings={settings} />
         <AboutSection settings={settings} />
         <TravelSection packages={visiblePackages} settings={settings} />
-        <EventsSection event={event} />
+        <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
         <MerchSection settings={settings} />
         <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center backdrop-blur-sm">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
