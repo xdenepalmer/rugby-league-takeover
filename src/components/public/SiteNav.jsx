@@ -48,11 +48,12 @@ export default function SiteNav({ settings = {} }) {
       <div className="hidden md:block">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 border border-border px-2 py-1.5 transition-colors hover:border-primary">
+            <button aria-label="Open account menu" className="flex items-center gap-2 border border-border px-2 py-1.5 transition-colors hover:border-primary">
               <Avatar className="h-8 w-8 rounded-none">
                 <AvatarImage src={user?.avatar_url} alt={user?.full_name || user?.email} />
                 <AvatarFallback className="rounded-none bg-secondary text-xs">{initials(user)}</AvatarFallback>
               </Avatar>
+              <span className="hidden text-xs font-bold uppercase tracking-wider text-muted-foreground xl:inline">Account</span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-none">
@@ -84,6 +85,11 @@ export default function SiteNav({ settings = {} }) {
           ))}
         </nav>
         <div className="flex items-center gap-3">
+          {isAdmin && (
+            <Button asChild variant="outline" size="sm" className="hidden rounded-none text-xs font-bold uppercase tracking-wider md:inline-flex">
+              <Link to="/admin"><ShieldCheck className="mr-2 h-4 w-4" /> Admin</Link>
+            </Button>
+          )}
           <AccountArea />
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

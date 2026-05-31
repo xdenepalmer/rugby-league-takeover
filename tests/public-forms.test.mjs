@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildForumThreads,
   buildPendingForumPost,
   isLikelyBotSubmission,
   normalizeInterestRegistration,
@@ -23,6 +24,38 @@ test("builds forum posts as unpublished moderation submissions", () => {
     is_published: false,
     is_pinned: false,
   });
+});
+
+test("builds forum replies with a parent post id", () => {
+  const reply = buildPendingForumPost({
+    author_name: "  Sam  ",
+    body: " Count me in. ",
+    category: "Events",
+    parent_id: " parent-123 ",
+  });
+
+  assert.deepEqual(reply, {
+    author_name: "Sam",
+    title: "Reply",
+    body: "Count me in.",
+    category: "Events",
+    parent_id: "parent-123",
+    is_published: false,
+    is_pinned: false,
+  });
+});
+
+test("groups published forum replies under their parent thread", () => {
+  const threads = buildForumThreads([
+    { id: "reply-hidden", parent_id: "post-1", body: "Hidden", is_published: false },
+    { id: "reply-2", parent_id: "post-1", body: "Second", is_published: true, created_date: "2026-02-02T00:00:00.000Z" },
+    { id: "post-1", title: "Vegas", body: "Hello", is_published: true, created_date: "2026-02-01T00:00:00.000Z" },
+    { id: "reply-1", parent_id: "post-1", body: "First", is_published: true, created_date: "2026-02-01T12:00:00.000Z" },
+  ]);
+
+  assert.equal(threads.length, 1);
+  assert.equal(threads[0].id, "post-1");
+  assert.deepEqual(threads[0].replies.map((reply) => reply.id), ["reply-1", "reply-2"]);
 });
 
 test("rejects invalid forum categories", () => {

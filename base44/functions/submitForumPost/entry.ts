@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forum category is not supported' }, { status: 400 });
     }
 
+    const parentId = trimToLength(input?.parent_id, 120);
     const body = trimToLength(input?.body, 2000);
     if (!body) {
       return Response.json({ error: 'Message is required' }, { status: 400 });
@@ -71,9 +72,10 @@ Deno.serve(async (req) => {
 
     const post = await base44.asServiceRole.entities.ForumPost.create({
       author_name: authorName,
-      title: trimToLength(input?.title || 'Discussion Thread', 120),
+      title: trimToLength(input?.title || (parentId ? 'Reply' : 'Discussion Thread'), 120),
       body,
       category,
+      parent_id: parentId,
       is_published: false,
       is_pinned: false,
       ip_address: ip,

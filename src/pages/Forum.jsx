@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FORUM_CATEGORIES, buildPendingForumPost } from "@/lib/public-forms";
+import { FORUM_CATEGORIES, buildForumThreads, buildPendingForumPost } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 
 const emptyPost = { author_name: "", title: "", body: "", category: "General" };
+const emptyReply = { author_name: "", body: "" };
 
 const categories = [
   { value: "All", label: "All Topics" },
@@ -32,7 +33,6 @@ const getEngagement = (post) => {
   const seed = [...seedText].reduce((total, char) => total + char.charCodeAt(0), 0);
   return {
     likes: post.is_pinned ? 42 : (seed % 15) + 1,
-    replies: post.is_pinned ? 12 : seed % 5,
   };
 };
 
@@ -42,6 +42,8 @@ export default function Forum() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [submittedForReview, setSubmittedForReview] = useState(false);
+  const [activeReplyId, setActiveReplyId] = useState(null);
+  const [replyDrafts, setReplyDrafts] = useState({});
   const queryClient = useQueryClient();
 
   const { data: posts = [] } = useQuery({
@@ -55,36 +57,61 @@ export default function Forum() {
       // Validate client-side for fast feedback; the function re-sanitises,
       // captures the client IP, and enforces bans server-side.
       const authorName = isAuthenticated ? (user?.full_name || "Member") : data.author_name;
-      buildPendingForumPost({ ...data, author_name: authorName });
+      const post = buildPendingForumPost({ ...data, author_name: authorName });
       const response = await base44.functions.invoke("submitForumPost", {
-        author_name: data.author_name,
-        title: data.title,
-        body: data.body,
-        category: data.category,
+        author_name: post.author_name,
+        title: post.title,
+        body: post.body,
+        category: post.category,
+        parent_id: post.parent_id,
       });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
       setDraft(emptyPost);
+      setReplyDrafts({});
+      setActiveReplyId(null);
       setSubmittedForReview(true);
     },
   });
 
   const handlePost = (e) => {
     e.preventDefault();
-    if ((!isAuthenticated && !draft.author_name) || !draft.body) return;
+    if ((!isAuthenticated && !draft.author_name) || !draft.title || !draft.body) return;
     createMutation.mutate(draft);
   };
 
-  const filteredPosts = posts
-    .filter((post) => post.is_published !== false)
+  const getReplyDraft = (postId) => replyDrafts[postId] || emptyReply;
+
+  const updateReplyDraft = (postId, updates) => {
+    setReplyDrafts((current) => ({
+      ...current,
+      [postId]: { ...emptyReply, ...current[postId], ...updates },
+    }));
+  };
+
+  const handleReply = (post, e) => {
+    e.preventDefault();
+    const reply = getReplyDraft(post.id);
+    if (!post.id || (!isAuthenticated && !reply.author_name) || !reply.body) return;
+
+    createMutation.mutate({
+      author_name: reply.author_name,
+      title: `Re: ${post.title || "Discussion Thread"}`,
+      body: reply.body,
+      category: post.category || "General",
+      parent_id: post.id,
+    });
+  };
+
+  const filteredThreads = buildForumThreads(posts)
     .filter((post) => selectedCategory === "All" || post.category === selectedCategory)
     .filter((post) => {
-      const matchText = `${post.title || ""} ${post.body || ""} ${post.author_name || ""}`.toLowerCase();
+      const replyText = (post.replies || []).map((reply) => `${reply.body || ""} ${reply.author_name || ""}`).join(" ");
+      const matchText = `${post.title || ""} ${post.body || ""} ${post.author_name || ""} ${replyText}`.toLowerCase();
       return matchText.includes(searchQuery.toLowerCase());
-    })
-    .sort((a, b) => Number(b.is_pinned === true) - Number(a.is_pinned === true));
+    });
 
   const getCategoryLabel = (value) => categories.find((category) => category.value === value)?.label || "General Chat";
 
@@ -133,11 +160,24 @@ export default function Forum() {
             </div>
 
             <div className="grid gap-4">
-              {filteredPosts.map((post) => (
-                <ForumPostCard key={post.id} post={post} getCategoryLabel={getCategoryLabel} />
+              {filteredThreads.map((post) => (
+                <ForumPostCard
+                  key={post.id}
+                  post={post}
+                  getCategoryLabel={getCategoryLabel}
+                  isAuthenticated={isAuthenticated}
+                  user={user}
+                  appReady={appParams.hasBase44Config}
+                  isSubmitting={createMutation.isPending}
+                  replyOpen={activeReplyId === post.id}
+                  replyDraft={getReplyDraft(post.id)}
+                  onToggleReply={() => setActiveReplyId(activeReplyId === post.id ? null : post.id)}
+                  onUpdateReply={(updates) => updateReplyDraft(post.id, updates)}
+                  onReply={(e) => handleReply(post, e)}
+                />
               ))}
 
-              {filteredPosts.length === 0 && (
+              {filteredThreads.length === 0 && (
                 <div className="border border-border bg-card p-12 text-center text-muted-foreground">
                   No discussions found matching your filter options. Start a new chat below.
                 </div>
@@ -214,7 +254,7 @@ export default function Forum() {
 
               <Button
                 type="submit"
-                disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.body || createMutation.isPending}
+                disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending}
                 className="h-12 rounded-none bg-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/90"
               >
                 <Send className="mr-2 h-4 w-4" /> {createMutation.isPending ? "Sending..." : "Send for moderation"}
@@ -227,8 +267,21 @@ export default function Forum() {
   );
 }
 
-function ForumPostCard({ post, getCategoryLabel }) {
+function ForumPostCard({
+  post,
+  getCategoryLabel,
+  isAuthenticated,
+  user,
+  appReady,
+  isSubmitting,
+  replyOpen,
+  replyDraft,
+  onToggleReply,
+  onUpdateReply,
+  onReply,
+}) {
   const engagement = getEngagement(post);
+  const replies = post.replies || [];
 
   return (
     <article
@@ -260,10 +313,61 @@ function ForumPostCard({ post, getCategoryLabel }) {
         <button type="button" className="flex items-center gap-2 hover:text-primary">
           <Heart className="h-4 w-4" /> <span>{engagement.likes} Likes</span>
         </button>
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-4 w-4" /> <span>{engagement.replies} Replies</span>
-        </div>
+        <button type="button" onClick={onToggleReply} className="flex items-center gap-2 hover:text-primary">
+          <MessageCircle className="h-4 w-4" /> <span>{replies.length} {replies.length === 1 ? "Comment" : "Comments"}</span>
+        </button>
       </div>
+
+      {replies.length > 0 && (
+        <div className="mt-5 grid gap-3 border-t border-border/40 pt-5">
+          {replies.map((reply) => (
+            <div key={reply.id} className="border-l-2 border-primary/40 bg-background/50 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-accent">{reply.author_name || "Member"}</span>
+                <span>{reply.created_date ? new Date(reply.created_date).toLocaleDateString("en-AU", { day: "numeric", month: "short" }) : "Recently"}</span>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{reply.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {replyOpen && (
+        <form onSubmit={onReply} className="mt-5 grid gap-3 border-t border-border/40 pt-5">
+          {isAuthenticated ? (
+            <p className="border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+              Commenting as <span className="font-semibold text-foreground">{user?.full_name || user?.email}</span>
+            </p>
+          ) : (
+            <Input
+              required
+              placeholder="Your name"
+              value={replyDraft.author_name}
+              onChange={(e) => onUpdateReply({ author_name: e.target.value })}
+              className="h-11 rounded-none border-border bg-background text-sm"
+            />
+          )}
+          <Textarea
+            required
+            placeholder={`Reply to ${post.author_name || "this thread"}...`}
+            value={replyDraft.body}
+            onChange={(e) => onUpdateReply({ body: e.target.value })}
+            className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onToggleReply} className="h-10 rounded-none border-border text-xs font-bold uppercase tracking-wider">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
+              className="h-10 rounded-none bg-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/90"
+            >
+              <Send className="mr-2 h-4 w-4" /> {isSubmitting ? "Sending..." : "Send comment"}
+            </Button>
+          </div>
+        </form>
+      )}
     </article>
   );
 }

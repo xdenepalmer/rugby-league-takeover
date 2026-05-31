@@ -17,14 +17,13 @@
     "category": {
       "type": "string",
       "enum": [
-        "general",
-        "travel",
-        "tickets",
-        "events",
-        "teams",
-        "merch"
+        "General",
+        "Travel",
+        "Events",
+        "MatchDay",
+        "VegasTips"
       ],
-      "default": "general",
+      "default": "General",
       "description": "Forum post category"
     },
     "parent_id": {

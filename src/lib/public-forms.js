@@ -25,17 +25,53 @@ export function buildPendingForumPost(input) {
     throw new Error("Forum category is not supported");
   }
 
+  const parentId = trimToLength(input?.parent_id, 120);
   assertPresent(input?.author_name, "Name");
   assertPresent(input?.body, "Message");
 
-  return {
+  const post = {
     author_name: trimToLength(input.author_name, 80),
-    title: trimToLength(input.title || "Discussion Thread", 120),
+    title: trimToLength(input.title || (parentId ? "Reply" : "Discussion Thread"), 120),
     body: trimToLength(input.body, 2000),
     category,
     is_published: false,
     is_pinned: false,
   };
+
+  if (parentId) {
+    post.parent_id = parentId;
+  }
+
+  return post;
+}
+
+const forumDateValue = (post) => {
+  const value = new Date(post?.created_date || 0).getTime();
+  return Number.isFinite(value) ? value : 0;
+};
+
+export function buildForumThreads(posts = []) {
+  const repliesByParent = new Map();
+  const threads = [];
+
+  for (const post of posts || []) {
+    if (!post || post.is_published === false) continue;
+
+    if (post.parent_id) {
+      const replies = repliesByParent.get(post.parent_id) || [];
+      replies.push(post);
+      repliesByParent.set(post.parent_id, replies);
+    } else {
+      threads.push(post);
+    }
+  }
+
+  return [...threads]
+    .sort((a, b) => Number(b.is_pinned === true) - Number(a.is_pinned === true) || forumDateValue(b) - forumDateValue(a))
+    .map((thread) => ({
+      ...thread,
+      replies: [...(repliesByParent.get(thread.id) || [])].sort((a, b) => forumDateValue(a) - forumDateValue(b)),
+    }));
 }
 
 export function normalizeInterestRegistration(input, timestamp = new Date().toISOString()) {
