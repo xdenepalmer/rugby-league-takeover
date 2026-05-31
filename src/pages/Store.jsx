@@ -21,6 +21,7 @@ import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
+import StoreFaq from "@/components/public/StoreFaq";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -446,6 +447,7 @@ export default function Store() {
               ))}
             </div>
           )}
+          <StoreFaq />
         </div>
       </div>
 

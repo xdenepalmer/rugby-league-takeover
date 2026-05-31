@@ -10,6 +10,7 @@ import AboutSection from "@/components/public/AboutSection";
 import TravelSection from "@/components/public/TravelSection";
 import EventsSection from "@/components/public/EventsSection";
 import MerchSection from "@/components/public/MerchSection";
+import PartnersSection from "@/components/public/PartnersSection";
 
 const stadiumVideoUrls = [
   "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
@@ -99,6 +100,7 @@ export default function Home() {
         <TravelSection packages={visiblePackages} settings={settings} />
         <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
         <MerchSection settings={settings} />
+        <PartnersSection settings={settings} />
         <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center backdrop-blur-sm">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
           <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">{settings.footer_powered_by || "DENEO.AI"}</span></p>

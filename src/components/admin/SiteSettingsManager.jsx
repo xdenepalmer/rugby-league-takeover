@@ -15,6 +15,7 @@ import AdminSection from "./AdminSection";
 import FieldGroup from "./FieldGroup";
 import MediaUploader from "./MediaUploader";
 import DateTimePicker from "./DateTimePicker";
+import ImageField from "./ImageField";
 
 const defaults = {
   site_logo_url: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/24c67d277_LASVEGAS.png",
@@ -333,13 +334,9 @@ export default function SiteSettingsManager({ settings }) {
           <LabeledField label="Image Caption">
             <Input placeholder="Las Vegas will hear us." value={draft.about_image_caption || ""} onChange={(e) => update("about_image_caption", e.target.value)} className="rounded-none" />
           </LabeledField>
-          <LabeledField label="About Image URL" indicator={isCustom("about_image_url") ? "custom" : "default"}>
-            <Input placeholder="https://images.unsplash.com/..." value={draft.about_image_url || ""} onChange={(e) => update("about_image_url", e.target.value)} className="rounded-none" />
+          <LabeledField label="About Image" help="Upload an image or paste a URL — preview updates instantly. Remember to Save." indicator={isCustom("about_image_url") ? "custom" : "default"} fullWidth>
+            <ImageField value={draft.about_image_url || ""} onChange={(url) => update("about_image_url", url)} />
           </LabeledField>
-          <MediaUploader label="Upload about image" accept="image/*" onUploaded={(url) => update("about_image_url", url)} />
-
-          {/* Live about image preview */}
-          <ImagePreview url={draft.about_image_url} alt="About section" />
 
           {/* Registration subsection */}
           <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border-l-2 border-accent/40 bg-accent/5 mt-2">

@@ -16,6 +16,7 @@ const links = [
   { label: "About Us", href: "/#about" },
   { label: "Travel Packages", href: "/#travel" },
   { label: "Events", href: "/#events" },
+  { label: "Partners", href: "/#partners" },
   { label: "Merch", href: "/store" },
   { label: "Forum", href: "/forum" }
 ];

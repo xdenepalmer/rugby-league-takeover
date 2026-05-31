@@ -5,10 +5,12 @@ import { FileText, Activity } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import NewsManager from "../NewsManager";
 import TravelPackagesManager from "../TravelPackagesManager";
+import PartnersManager from "../PartnersManager";
 
 export default function ContentPanel() {
   const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50) });
   const { data: packages = [] } = useQuery({ queryKey: ["packages"], queryFn: () => base44.entities.TravelPackage.list("sort_order", 200) });
+  const { data: partners = [] } = useQuery({ queryKey: ["partners"], queryFn: () => base44.entities.Partner.list("sort_order", 200), retry: false, meta: { silent: true } });
 
   return (
     <div className="grid gap-5">
@@ -54,6 +56,14 @@ export default function ContentPanel() {
         transition={{ delay: 0.2, duration: 0.4 }}
       >
         <TravelPackagesManager packages={packages} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <PartnersManager partners={partners} />
       </motion.div>
     </div>
   );

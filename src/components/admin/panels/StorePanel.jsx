@@ -5,10 +5,12 @@ import { ShoppingBag, Activity } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ProductsManager from "../ProductsManager";
 import OrdersManager from "../OrdersManager";
+import FaqManager from "../FaqManager";
 
 export default function StorePanel() {
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200) });
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200) });
+  const { data: faqs = [] } = useQuery({ queryKey: ["faqs"], queryFn: () => base44.entities.Faq.list("sort_order", 200), retry: false, meta: { silent: true } });
 
   return (
     <div className="grid gap-5">
@@ -54,6 +56,14 @@ export default function StorePanel() {
         transition={{ delay: 0.2, duration: 0.4 }}
       >
         <OrdersManager orders={orders} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <FaqManager faqs={faqs} />
       </motion.div>
     </div>
   );
