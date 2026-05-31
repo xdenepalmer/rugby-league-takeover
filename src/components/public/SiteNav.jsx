@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, UserPlus } from "lucide-react";
+import { LogOut, Menu, Shield, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
 
 const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/390eddc5d_Untitled-31May2026at093306.png";
 
@@ -11,11 +12,11 @@ const links = [
   { label: "Travel Packages", href: "/#travel" },
   { label: "Events", href: "/#events" },
   { label: "Merch", href: "/store" },
-  { label: "Forum", href: "/forum" },
-  { label: "Login", href: "/login" },
+  { label: "Forum", href: "/forum" }
 ];
 
 export default function SiteNav({ settings = {} }) {
+  const { user, isAuthenticated, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -41,9 +42,27 @@ export default function SiteNav({ settings = {} }) {
           ))}
         </nav>
         <div className="hidden items-center gap-3 md:flex">
-          <Button asChild className="rounded-none bg-primary text-xs font-bold uppercase tracking-[0.18em] hover:bg-primary/90">
-            <Link to="/register"><UserPlus className="mr-2 h-4 w-4" /> Register</Link>
-          </Button>
+          {isAuthenticated ? (
+            <>
+              {user?.role === "admin" && (
+                <Button asChild variant="outline" className="rounded-none text-xs font-bold uppercase tracking-[0.18em]">
+                  <Link to="/admin"><Shield className="mr-2 h-4 w-4" /> Admin</Link>
+                </Button>
+              )}
+              <Button onClick={() => logout(true)} className="rounded-none bg-primary text-xs font-bold uppercase tracking-[0.18em] hover:bg-primary/90">
+                <LogOut className="mr-2 h-4 w-4" /> Logout
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button asChild variant="outline" className="rounded-none text-xs font-bold uppercase tracking-[0.18em]">
+                <Link to="/login">Login</Link>
+              </Button>
+              <Button asChild className="rounded-none bg-primary text-xs font-bold uppercase tracking-[0.18em] hover:bg-primary/90">
+                <Link to="/register"><UserPlus className="mr-2 h-4 w-4" /> Register</Link>
+              </Button>
+            </>
+          )}
         </div>
         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(!open)}>
           {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -57,9 +76,27 @@ export default function SiteNav({ settings = {} }) {
                 {link.label}
               </Link>
             ))}
-            <Button asChild className="mt-2 h-12 rounded-none bg-primary font-bold uppercase tracking-[0.18em] hover:bg-primary/90">
-              <Link to="/register" onClick={() => setOpen(false)}><UserPlus className="mr-2 h-4 w-4" /> Register</Link>
-            </Button>
+            {isAuthenticated ? (
+              <>
+                {user?.role === "admin" && (
+                  <Button asChild variant="outline" className="mt-2 h-12 rounded-none font-bold uppercase tracking-[0.18em]">
+                    <Link to="/admin" onClick={() => setOpen(false)}><Shield className="mr-2 h-4 w-4" /> Admin</Link>
+                  </Button>
+                )}
+                <Button onClick={() => { setOpen(false); logout(true); }} className="mt-2 h-12 rounded-none bg-primary font-bold uppercase tracking-[0.18em] hover:bg-primary/90">
+                  <LogOut className="mr-2 h-4 w-4" /> Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild variant="outline" className="mt-2 h-12 rounded-none font-bold uppercase tracking-[0.18em]">
+                  <Link to="/login" onClick={() => setOpen(false)}>Login</Link>
+                </Button>
+                <Button asChild className="mt-2 h-12 rounded-none bg-primary font-bold uppercase tracking-[0.18em] hover:bg-primary/90">
+                  <Link to="/register" onClick={() => setOpen(false)}><UserPlus className="mr-2 h-4 w-4" /> Register</Link>
+                </Button>
+              </>
+            )}
           </div>
         </nav>
       )}
