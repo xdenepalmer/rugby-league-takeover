@@ -70,6 +70,23 @@
           }
         }
       }
+    },
+    "like_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of likes on the post"
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "User IDs or emails that liked the post"
+    },
+    "view_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of views on the post"
     }
   },
   "required": [

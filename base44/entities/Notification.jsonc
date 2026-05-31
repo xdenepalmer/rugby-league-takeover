@@ -4,66 +4,94 @@
   "properties": {
     "recipient_id": {
       "type": "string",
-      "description": "User id who receives this notification"
+      "description": "User ID of the notification recipient"
     },
     "recipient_email": {
       "type": "string",
-      "description": "Recipient email (fallback match)"
+      "description": "Email of the notification recipient"
     },
     "type": {
       "type": "string",
-      "enum": ["reply", "mention", "system"],
+      "enum": [
+        "reply",
+        "mention",
+        "system"
+      ],
       "default": "system",
       "description": "Notification type"
     },
     "title": {
       "type": "string",
-      "description": "Short headline, e.g. 'New reply to your post'"
+      "description": "Notification title"
     },
     "preview": {
       "type": "string",
-      "description": "Snippet of the related content"
+      "description": "Short notification preview text"
     },
     "actor_name": {
       "type": "string",
-      "description": "Who triggered it"
+      "description": "Name of the user who triggered the notification"
     },
     "post_id": {
       "type": "string",
-      "description": "Linked forum post/thread id"
+      "description": "Related forum post ID"
     },
     "link": {
       "type": "string",
-      "description": "Relative URL to open when clicked"
+      "description": "Notification destination link"
     },
     "is_read": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the recipient has read it"
+      "description": "Whether the notification has been read"
     }
   },
-  "required": ["recipient_id"],
+  "required": [
+    "recipient_id"
+  ],
   "rls": {
     "create": {
-      "user_condition": { "role": "admin" }
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
       "$or": [
-        { "user_condition": { "role": "admin" } },
-        { "data.recipient_id": "{{user.id}}" },
-        { "data.recipient_email": "{{user.email}}" }
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.recipient_id": "{{user.id}}"
+        },
+        {
+          "data.recipient_email": "{{user.email}}"
+        }
       ]
     },
     "update": {
       "$or": [
-        { "user_condition": { "role": "admin" } },
-        { "data.recipient_id": "{{user.id}}" }
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.recipient_id": "{{user.id}}"
+        }
       ]
     },
     "delete": {
       "$or": [
-        { "user_condition": { "role": "admin" } },
-        { "data.recipient_id": "{{user.id}}" }
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.recipient_id": "{{user.id}}"
+        }
       ]
     }
   }
