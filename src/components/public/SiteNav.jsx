@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu, X, User as UserIcon, ShieldCheck, LogOut, ShoppingBag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -90,6 +91,7 @@ export default function SiteNav({ settings = {} }) {
               <Link to="/admin"><ShieldCheck className="mr-2 h-4 w-4" /> Admin</Link>
             </Button>
           )}
+          <NotificationBell />
           <AccountArea />
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(!open)}>
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

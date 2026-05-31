@@ -7,7 +7,7 @@ import {
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp,
   Trophy, Activity, BarChart3, Globe,
-  Plane, MapPin, ThumbsUp, Reply
+  Plane, MapPin, ThumbsUp, Reply, ArrowUp
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -23,12 +23,12 @@ const emptyPost = { author_name: "", title: "", body: "", category: "General" };
 const emptyReply = { author_name: "", body: "" };
 
 const CATEGORY_META = {
-  All:      { label: "All Topics",       icon: Globe,        gradient: "from-slate-400/25 to-slate-500/5",  accent: "text-slate-300",   dot: "bg-slate-300",   ring: "ring-slate-400/20",   hue: 220 },
-  General:  { label: "General Chat",     icon: MessageSquare,gradient: "from-blue-500/25 to-blue-600/5",   accent: "text-blue-400",    dot: "bg-blue-400",    ring: "ring-blue-400/20",    hue: 220 },
-  Travel:   { label: "Travel & Flights", icon: Plane,        gradient: "from-emerald-500/25 to-emerald-600/5",accent: "text-emerald-400",dot: "bg-emerald-400", ring: "ring-emerald-400/20", hue: 160 },
-  Events:   { label: "Meetups & Parties",icon: Flame,        gradient: "from-orange-500/25 to-orange-600/5", accent: "text-orange-400", dot: "bg-orange-400",  ring: "ring-orange-400/20",  hue: 25 },
-  MatchDay: { label: "Allegiant Stadium",icon: Zap,          gradient: "from-red-500/25 to-red-600/5",      accent: "text-red-400",    dot: "bg-red-400",     ring: "ring-red-400/20",     hue: 15 },
-  VegasTips:{ label: "Vegas Strip Tips", icon: MapPin,       gradient: "from-amber-500/25 to-amber-600/5",  accent: "text-amber-400",  dot: "bg-amber-400",   ring: "ring-amber-400/20",   hue: 45 },
+  All:      { label: "All Topics",       icon: Globe,        gradient: "from-slate-400/25 to-slate-500/5",  accent: "text-slate-300",   dot: "bg-slate-300",   ring: "ring-slate-400/20",   hue: 220, glow: "rgba(148,163,184,0.15)" },
+  General:  { label: "General Chat",     icon: MessageSquare,gradient: "from-blue-500/25 to-blue-600/5",   accent: "text-blue-400",    dot: "bg-blue-400",    ring: "ring-blue-400/20",    hue: 220, glow: "rgba(96,165,250,0.2)" },
+  Travel:   { label: "Travel & Flights", icon: Plane,        gradient: "from-emerald-500/25 to-emerald-600/5",accent: "text-emerald-400",dot: "bg-emerald-400", ring: "ring-emerald-400/20", hue: 160, glow: "rgba(52,211,153,0.2)" },
+  Events:   { label: "Meetups & Parties",icon: Flame,        gradient: "from-orange-500/25 to-orange-600/5", accent: "text-orange-400", dot: "bg-orange-400",  ring: "ring-orange-400/20",  hue: 25, glow: "rgba(251,146,60,0.2)" },
+  MatchDay: { label: "Allegiant Stadium",icon: Zap,          gradient: "from-red-500/25 to-red-600/5",      accent: "text-red-400",    dot: "bg-red-400",     ring: "ring-red-400/20",     hue: 15, glow: "rgba(248,113,113,0.2)" },
+  VegasTips:{ label: "Vegas Strip Tips", icon: MapPin,       gradient: "from-amber-500/25 to-amber-600/5",  accent: "text-amber-400",  dot: "bg-amber-400",   ring: "ring-amber-400/20",   hue: 45, glow: "rgba(251,191,36,0.2)" },
 };
 
 const getCategoryMeta = (val) => CATEGORY_META[val] || CATEGORY_META.General;
@@ -72,6 +72,54 @@ function timeAgo(dateStr) {
   if (days < 7) return `${days}d ago`;
   return date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
+
+/* ━━━ Recency Score (0-1, 1 = just posted) ━━━━━━━━━━━━━━━━ */
+function getRecencyScore(dateStr) {
+  const date = parseForumDate(dateStr);
+  if (!date) return 0.1;
+  const diff = Date.now() - date.getTime();
+  const hoursDiff = diff / (1000 * 60 * 60);
+  if (hoursDiff < 1) return 1;
+  if (hoursDiff < 24) return 0.8;
+  if (hoursDiff < 72) return 0.5;
+  if (hoursDiff < 168) return 0.3;
+  return 0.1;
+}
+
+/* ━━━ Name Hash for deterministic mock data ━━━━━━━━━━━━━━━ */
+function nameHash(name) {
+  let hash = 0;
+  for (let i = 0; i < (name || "").length; i++) {
+    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+/* ━━━ Author Badge Logic ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const BADGE_LEVELS = [
+  { min: 10, emoji: "🏆", label: "Legend",  bg: "bg-amber-500/15", border: "border-amber-500/30", text: "text-amber-400" },
+  { min: 5,  emoji: "⭐", label: "Regular", bg: "bg-slate-400/15", border: "border-slate-400/30", text: "text-slate-300" },
+  { min: 3,  emoji: "🔥", label: "Active",  bg: "bg-orange-500/15", border: "border-orange-500/30", text: "text-orange-400" },
+  { min: 1,  emoji: "👋", label: "New",     bg: "bg-blue-500/15", border: "border-blue-500/30", text: "text-blue-400" },
+];
+
+function getAuthorBadge(name, authorPostCounts) {
+  const count = authorPostCounts[name] || 0;
+  for (const badge of BADGE_LEVELS) {
+    if (count >= badge.min) return badge;
+  }
+  return null;
+}
+
+/* ━━━ Reaction Emojis ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const REACTIONS = [
+  { emoji: "❤️", label: "Love" },
+  { emoji: "🏉", label: "Rugby" },
+  { emoji: "🔥", label: "Fire" },
+  { emoji: "🎉", label: "Celebrate" },
+  { emoji: "👏", label: "Clap" },
+];
 
 /* ━━━ Animated Number Counter ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function AnimatedNumber({ value, duration = 1200 }) {
@@ -126,12 +174,12 @@ function UserAvatar({ name, size = "md", showStatus = false }) {
   const seed = [...(name || "")].reduce((t, c) => t + c.charCodeAt(0), 0);
   const hues = [15, 45, 160, 220, 280, 330, 190, 30, 120, 350];
   const hue = hues[seed % hues.length];
-  const sizes = { sm: "h-7 w-7 text-[9px]", md: "h-9 w-9 text-xs", lg: "h-11 w-11 text-sm" };
+  const sizes = { sm: "h-7 w-7 text-[9px]", md: "h-9 w-9 text-xs", lg: "h-11 w-11 text-sm", xl: "h-14 w-14 text-lg" };
 
   return (
     <div className="relative shrink-0">
       <div
-        className={`${sizes[size]} flex items-center justify-center font-bold uppercase tracking-wider`}
+        className={`${sizes[size]} flex items-center justify-center font-bold uppercase tracking-wider rounded-full`}
         style={{
           background: `linear-gradient(135deg, hsl(${hue}, 75%, 45%) 0%, hsl(${(hue + 30) % 360}, 65%, 35%) 100%)`,
           border: `1.5px solid hsl(${hue}, 70%, 55%, 0.4)`,
@@ -144,6 +192,261 @@ function UserAvatar({ name, size = "md", showStatus = false }) {
         <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-background cmd-pulse" />
       )}
     </div>
+  );
+}
+
+/* ━━━ User Profile Hover Card ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, children }) {
+  const [show, setShow] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const timerRef = useRef(null);
+  const wrapperRef = useRef(null);
+
+  const postCount = authorPostCounts[name] || 0;
+  const replyCount = authorReplyCounts[name] || 0;
+  const hash = nameHash(name);
+  const memberDays = (hash % 365) + 30;
+  const memberDate = new Date(Date.now() - memberDays * 24 * 60 * 60 * 1000);
+  const badge = getAuthorBadge(name, authorPostCounts);
+
+  const handleEnter = useCallback((e) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        setPosition({ x: rect.left, y: rect.bottom + 8 });
+      }
+      setShow(true);
+    }, 400);
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setShow(false), 200);
+  }, []);
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="inline-flex"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      {children}
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed z-[100] w-64 border border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden"
+            style={{ left: Math.min(position.x, window.innerWidth - 280), top: position.y }}
+            onMouseEnter={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
+            onMouseLeave={handleLeave}
+          >
+            <div className="h-[2px] w-full cmd-accent-bar" />
+            <div className="p-4">
+              <div className="flex items-center gap-3">
+                <UserAvatar name={name} size="xl" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-base font-bold text-foreground truncate uppercase tracking-wide">{name || "Anonymous"}</p>
+                  {badge && (
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border mt-1`}>
+                      {badge.emoji} {badge.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
+                <Clock className="h-3 w-3" />
+                <span>Member since {memberDate.toLocaleDateString("en-AU", { month: "short", year: "numeric" })}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="border border-border/30 bg-muted/[0.04] p-2.5 text-center">
+                  <p className="font-display text-lg font-bold text-foreground tabular-nums">{postCount}</p>
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Posts</p>
+                </div>
+                <div className="border border-border/30 bg-muted/[0.04] p-2.5 text-center">
+                  <p className="font-display text-lg font-bold text-foreground tabular-nums">{replyCount}</p>
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Replies</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ━━━ Author Badge Component ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function AuthorBadge({ name, authorPostCounts }) {
+  const badge = getAuthorBadge(name, authorPostCounts);
+  if (!badge) return null;
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border`}>
+      {badge.emoji} {badge.label}
+    </span>
+  );
+}
+
+/* ━━━ Reaction Picker ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function ReactionPicker({ isLiked, likeCount, onLike, isPending }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedReactions, setSelectedReactions] = useState({});
+  const timerRef = useRef(null);
+
+  // Generate deterministic reaction counts from like count
+  const reactionCounts = useMemo(() => {
+    const counts = {};
+    if (likeCount > 0) {
+      counts["❤️"] = Math.max(1, Math.ceil(likeCount * 0.4));
+      if (likeCount > 2) counts["🏉"] = Math.ceil(likeCount * 0.25);
+      if (likeCount > 4) counts["🔥"] = Math.ceil(likeCount * 0.2);
+      if (likeCount > 6) counts["🎉"] = Math.ceil(likeCount * 0.1);
+      if (likeCount > 8) counts["👏"] = Math.ceil(likeCount * 0.05);
+    }
+    return counts;
+  }, [likeCount]);
+
+  const handleEnter = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setShowPicker(true);
+  };
+
+  const handleLeave = () => {
+    timerRef.current = setTimeout(() => setShowPicker(false), 300);
+  };
+
+  const handleReaction = (emoji) => {
+    setSelectedReactions(prev => ({ ...prev, [emoji]: !prev[emoji] }));
+    onLike();
+    setShowPicker(false);
+  };
+
+  // Find dominant reaction emoji
+  const dominantEmoji = Object.entries(reactionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "❤️";
+
+  return (
+    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      <motion.button
+        type="button"
+        onClick={onLike}
+        disabled={isPending}
+        whileTap={{ scale: 0.9 }}
+        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all duration-200 ${
+          isLiked
+            ? "bg-primary/10 text-primary border border-primary/20"
+            : "text-muted-foreground/50 hover:text-primary hover:bg-primary/5 border border-transparent"
+        }`}
+      >
+        <motion.span
+          animate={isLiked ? { scale: [1, 1.4, 1] } : {}}
+          transition={{ duration: 0.3 }}
+          className="text-sm"
+        >
+          {dominantEmoji}
+        </motion.span>
+        <span className="tabular-nums">{likeCount}</span>
+      </motion.button>
+
+      <AnimatePresence>
+        {showPicker && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.9 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="absolute bottom-full left-0 mb-2 flex items-center gap-0.5 p-1.5 border border-border/60 bg-card/95 backdrop-blur-xl shadow-xl shadow-black/20 z-50"
+          >
+            {REACTIONS.map((r) => {
+              const count = (reactionCounts[r.emoji] || 0) + (selectedReactions[r.emoji] ? 1 : 0);
+              return (
+                <motion.button
+                  key={r.emoji}
+                  type="button"
+                  onClick={() => handleReaction(r.emoji)}
+                  whileHover={{ scale: 1.3, y: -4 }}
+                  whileTap={{ scale: 0.85 }}
+                  className={`flex flex-col items-center px-2 py-1 transition-all rounded-sm ${
+                    selectedReactions[r.emoji] ? "bg-primary/10" : "hover:bg-muted/20"
+                  }`}
+                  title={r.label}
+                >
+                  <span className="text-lg leading-none">{r.emoji}</span>
+                  {count > 0 && (
+                    <span className="text-[8px] font-mono font-bold text-muted-foreground/60 mt-0.5 tabular-nums">{count}</span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ━━━ Live Activity Ticker ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function LiveActivityTicker({ threads }) {
+  const [dismissed, setDismissed] = useState(false);
+
+  const activities = useMemo(() => {
+    const items = [];
+    threads.slice(0, 15).forEach((t) => {
+      const catMeta = getCategoryMeta(t.category);
+      items.push({
+        id: `post-${t.id}`,
+        text: `🏉 ${t.author_name || "Someone"} posted in ${catMeta.label}`,
+        time: timeAgo(t.created_date),
+      });
+      (t.replies || []).slice(0, 2).forEach((r) => {
+        items.push({
+          id: `reply-${r.id}`,
+          text: `💬 ${r.author_name || "Someone"} replied to ${(t.title || "a thread").slice(0, 30)}${(t.title || "").length > 30 ? "…" : ""}`,
+          time: timeAgo(r.created_date),
+        });
+      });
+    });
+    return items.slice(0, 20);
+  }, [threads]);
+
+  if (dismissed || activities.length === 0) return null;
+
+  const tickerContent = activities.map(a => a.text).join("    •    ");
+  const doubled = `${tickerContent}    •    ${tickerContent}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      className="relative border border-border/30 bg-card/20 overflow-hidden mb-4"
+    >
+      <div className="flex items-center">
+        <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 border-r border-border/30 bg-primary/5">
+          <Activity className="h-3 w-3 text-primary cmd-pulse" />
+          <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-primary">Live</span>
+        </div>
+        <div className="flex-1 overflow-hidden py-2">
+          <motion.div
+            className="whitespace-nowrap text-[10px] text-muted-foreground/50 font-mono"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{ duration: activities.length * 4, repeat: Infinity, ease: "linear" }}
+          >
+            {doubled}
+          </motion.div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="shrink-0 p-2 text-muted-foreground/30 hover:text-foreground transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -223,7 +526,7 @@ function SortTabs({ active, onChange }) {
 }
 
 /* ━━━ Trending Card (Premium) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function TrendingCard({ thread, rank }) {
+function TrendingCard({ thread, rank, onClick }) {
   const meta = getCategoryMeta(thread.category);
   const engagement = getEngagement(thread);
   const MetaIcon = meta.icon;
@@ -231,6 +534,7 @@ function TrendingCard({ thread, rank }) {
   return (
     <motion.div
       whileHover={{ y: -2, scale: 1.01 }}
+      onClick={onClick}
       className="group relative overflow-hidden border border-border/30 bg-card/30 hover:border-primary/25 transition-all duration-300 cursor-pointer"
     >
       {/* Rank accent */}
@@ -306,10 +610,200 @@ function CategoryPill({ value, isActive, onClick, count }) {
   );
 }
 
+/* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, authorPostCounts, authorReplyCounts }) {
+  const meta = getCategoryMeta(post.category);
+  const MetaIcon = meta.icon;
+  const engagement = getEngagement(post);
+  const replies = post.replies || [];
+  const queryClient = useQueryClient();
+  const isLiked = isAuthenticated && Array.isArray(post.liked_by) && post.liked_by.includes(user?.id);
+  const likeMutation = useMutation({
+    mutationFn: () => base44.functions.invoke("forumAction", { action: "like", postId: post.id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
+  });
+  const toggleLike = () => {
+    if (!isAuthenticated) { window.location.href = "/login?next=/forum"; return; }
+    if (!likeMutation.isPending) likeMutation.mutate();
+  };
+
+  // Lock body scroll
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 60, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 60, scale: 0.96 }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="fixed inset-4 md:inset-x-[10%] md:inset-y-8 z-[81] flex flex-col border border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden"
+      >
+        {/* Top accent */}
+        <div className={`h-[3px] w-full bg-gradient-to-r ${meta.gradient}`} />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`p-2 bg-gradient-to-br ${meta.gradient} border border-border/30`}>
+              <MetaIcon className={`h-4 w-4 ${meta.accent}`} />
+            </div>
+            <div className="min-w-0">
+              <p className={`text-[8px] font-bold uppercase tracking-[0.25em] ${meta.accent}`}>{meta.label}</p>
+              <h2 className="font-display text-lg md:text-xl uppercase tracking-wide text-foreground truncate">{post.title || "Discussion Thread"}</h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 p-2 border border-border/30 hover:border-border text-muted-foreground hover:text-foreground transition-all hover:bg-muted/10"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto cmd-scrollbar">
+          <div className="p-6 md:p-8">
+            {/* Author info */}
+            <div className="flex items-start gap-3 mb-6">
+              <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
+                <UserAvatar name={post.author_name} size="lg" />
+              </UserProfileHoverCard>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
+                  <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
+                  <span className="text-[10px] text-muted-foreground/30">•</span>
+                  <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground/40">
+                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {engagement.views} views</span>
+                  <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {replies.length} replies</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Full body */}
+            <div className="prose prose-invert max-w-none">
+              <p className="whitespace-pre-wrap text-sm leading-8 text-muted-foreground/80">{post.body}</p>
+            </div>
+
+            {/* Engagement */}
+            <div className="mt-6 flex flex-wrap items-center gap-1 border-t border-border/20 pt-4">
+              <ReactionPicker isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
+              <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
+                <Share2 className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
+                <Bookmark className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* All replies */}
+            {replies.length > 0 && (
+              <div className="mt-6 border-t border-border/20 pt-6">
+                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40 flex items-center gap-1.5 mb-4">
+                  <MessageCircle className="h-3 w-3" />
+                  {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
+                </p>
+                <div className="space-y-3">
+                  {replies.map((reply, ri) => (
+                    <motion.div
+                      key={reply.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: ri * 0.04, ease: "easeOut" }}
+                      className="group/reply relative flex gap-3 pl-4 pr-4 py-3 bg-muted/[0.03] hover:bg-muted/[0.06] transition-colors"
+                    >
+                      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/30 via-primary/10 to-transparent" />
+                      <UserProfileHoverCard name={reply.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
+                        <UserAvatar name={reply.author_name} size="sm" />
+                      </UserProfileHoverCard>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
+                          <AuthorBadge name={reply.author_name} authorPostCounts={authorPostCounts} />
+                          <span className="text-[9px] font-mono text-muted-foreground/30 tabular-nums">{timeAgo(reply.created_date)}</span>
+                        </div>
+                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/70">{reply.body}</p>
+                        <div className="flex items-center gap-3 mt-2 opacity-0 group-hover/reply:opacity-100 transition-opacity">
+                          <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-primary transition-colors flex items-center gap-1">
+                            <ThumbsUp className="h-2.5 w-2.5" /> Like
+                          </button>
+                          <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1">
+                            <Reply className="h-2.5 w-2.5" /> Reply
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sticky reply form at bottom */}
+        <div className="shrink-0 border-t border-border/30 bg-card/80 backdrop-blur-sm p-4 md:p-6">
+          <form onSubmit={onReply} className="space-y-3">
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
+              Write a Reply
+            </p>
+            <div className="flex gap-3">
+              <div className="shrink-0 hidden sm:block">
+                <UserAvatar name={isAuthenticated ? (user?.full_name || user?.email) : replyDraft.author_name} size="sm" />
+              </div>
+              <div className="flex-1 space-y-2">
+                {!isAuthenticated && (
+                  <Input
+                    required placeholder="Your name"
+                    value={replyDraft.author_name}
+                    onChange={(e) => onUpdateReply({ author_name: e.target.value })}
+                    className="h-9 rounded-none border-border bg-background text-sm"
+                  />
+                )}
+                <Textarea
+                  required
+                  placeholder={`Reply to ${post.author_name || "this thread"}…`}
+                  value={replyDraft.body}
+                  onChange={(e) => onUpdateReply({ body: e.target.value })}
+                  className="min-h-16 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
+                className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
+              >
+                <Send className="mr-1.5 h-3 w-3" /> {isSubmitting ? "Sending…" : "Post Reply"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
 /* ━━━ Post Card (Premium with 3D tilt) ━━━━━━━━━━━━━━━━━━━ */
 function ForumPostCard({
   post, isAuthenticated, user, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
+  onOpenThread, authorPostCounts, authorReplyCounts,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -343,6 +837,9 @@ function ForumPostCard({
   const visibleReplies = showAllReplies ? replies : replies.slice(0, 2);
   const hiddenCount = replies.length - 2;
 
+  // Recency progress bar
+  const recency = getRecencyScore(post.created_date);
+
   // 3D hover tilt
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -372,11 +869,25 @@ function ForumPostCard({
       className={`group relative overflow-hidden border transition-all duration-300 ${
         post.is_pinned
           ? "border-primary/30 bg-gradient-to-br from-primary/[0.06] via-card/80 to-card/50 shadow-[0_0_30px_hsl(var(--primary)/0.06)]"
-          : "border-border/60 bg-card/30 hover:border-primary/20 hover:shadow-[0_8px_32px_hsl(var(--primary)/0.06)]"
+          : "border-border/60 bg-card/30 hover:border-primary/20"
       }`}
+      whileHover={{
+        boxShadow: `0 12px 40px ${meta.glow}, 0 0 0 1px ${meta.glow}`,
+        y: -3,
+      }}
     >
       {/* Top accent */}
       <div className={`h-[2px] w-full bg-gradient-to-r ${meta.gradient}`} />
+
+      {/* Pinned diagonal stripes pattern */}
+      {post.is_pinned && (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, currentColor 10px, currentColor 11px)",
+          }}
+        />
+      )}
 
       {/* Pinned shimmer */}
       {post.is_pinned && (
@@ -397,10 +908,13 @@ function ForumPostCard({
       <div className="relative p-5 md:p-6">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <UserAvatar name={post.author_name} showStatus={index < 3} />
+          <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
+            <UserAvatar name={post.author_name} showStatus={index < 3} />
+          </UserProfileHoverCard>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
+              <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
               <span className="text-[10px] text-muted-foreground/30">•</span>
               <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
             </div>
@@ -410,8 +924,8 @@ function ForumPostCard({
                   <Pin className="h-2 w-2" /> Pinned
                 </span>
               )}
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider border border-border/30 bg-gradient-to-r ${meta.gradient}`}>
-                <MetaIcon className={`h-2.5 w-2.5 ${meta.accent}`} />
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border border-border/30 bg-gradient-to-r ${meta.gradient}`}>
+                <MetaIcon className={`h-3 w-3 ${meta.accent}`} />
                 <span className={meta.accent}>{meta.label}</span>
               </span>
             </div>
@@ -424,8 +938,11 @@ function ForumPostCard({
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="mt-4 font-display text-xl md:text-2xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300">
+        {/* Title - clickable to open thread modal */}
+        <h3
+          className="mt-4 font-display text-xl md:text-2xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 cursor-pointer"
+          onClick={() => onOpenThread(post)}
+        >
           {post.title || "Discussion Thread"}
         </h3>
 
@@ -445,22 +962,7 @@ function ForumPostCard({
 
         {/* Engagement Bar */}
         <div className="mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
-          <motion.button
-            type="button"
-            onClick={toggleLike}
-            disabled={likeMutation.isPending}
-            whileTap={{ scale: 0.9 }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all duration-200 ${
-              isLiked
-                ? "bg-primary/10 text-primary border border-primary/20"
-                : "text-muted-foreground/50 hover:text-primary hover:bg-primary/5 border border-transparent"
-            }`}
-          >
-            <motion.div animate={isLiked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
-              <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-primary" : ""}`} />
-            </motion.div>
-            <span className="tabular-nums">{engagement.likes}</span>
-          </motion.button>
+          <ReactionPicker isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
 
           <button
             type="button"
@@ -493,6 +995,16 @@ function ForumPostCard({
           </button>
 
           <div className="flex-1" />
+
+          {/* View Thread button */}
+          <button
+            type="button"
+            onClick={() => onOpenThread(post)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20"
+          >
+            <Eye className="h-3 w-3" />
+            <span className="hidden sm:inline">View Thread</span>
+          </button>
 
           {/* Mobile stats */}
           <div className="flex md:hidden items-center gap-1 text-[10px] text-muted-foreground/30">
@@ -533,12 +1045,16 @@ function ForumPostCard({
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: ri * 0.06, ease: "easeOut" }}
-                    className="group/reply flex gap-3 border-l-2 border-primary/15 bg-muted/[0.03] hover:bg-muted/[0.06] px-4 py-3 transition-colors"
+                    className="group/reply relative flex gap-3 pl-4 pr-4 py-3 bg-muted/[0.03] hover:bg-muted/[0.06] transition-colors"
                   >
-                    <UserAvatar name={reply.author_name} size="sm" />
+                    <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/25 via-primary/10 to-transparent" />
+                    <UserProfileHoverCard name={reply.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
+                      <UserAvatar name={reply.author_name} size="sm" />
+                    </UserProfileHoverCard>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
+                        <AuthorBadge name={reply.author_name} authorPostCounts={authorPostCounts} />
                         <span className="text-[9px] font-mono text-muted-foreground/30 tabular-nums">{timeAgo(reply.created_date)}</span>
                       </div>
                       <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/70">{reply.body}</p>
@@ -546,14 +1062,7 @@ function ForumPostCard({
                         <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-primary transition-colors flex items-center gap-1">
                           <ThumbsUp className="h-2.5 w-2.5" /> Like
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!replyOpen) onToggleReply();
-                            onUpdateReply({ body: `@${reply.author_name || "Member"} ` });
-                          }}
-                          className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1"
-                        >
+                        <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1">
                           <Reply className="h-2.5 w-2.5" /> Reply
                         </button>
                       </div>
@@ -628,12 +1137,291 @@ function ForumPostCard({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Recency progress bar at bottom */}
+      <div className="h-[2px] w-full bg-border/10 overflow-hidden">
+        <motion.div
+          className="h-full"
+          initial={{ width: 0 }}
+          animate={isInView ? { width: `${recency * 100}%` } : { width: 0 }}
+          transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+          style={{
+            background: `linear-gradient(90deg, hsl(${meta.hue}, 70%, 50%, 0.6), hsl(${meta.hue}, 70%, 50%, 0.1))`,
+          }}
+        />
+      </div>
     </motion.article>
   );
 }
 
-/* ━━━ Compose Sidebar (Premium) ━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads }) {
+/* ━━━ Top Contributors Leaderboard ━━━━━━━━━━━━━━━━━━━━━━━ */
+function TopContributors({ allThreads, authorPostCounts, authorReplyCounts }) {
+  const topUsers = useMemo(() => {
+    const totalCounts = {};
+    allThreads.forEach(t => {
+      const name = t.author_name;
+      if (name) totalCounts[name] = (totalCounts[name] || 0) + 1;
+      (t.replies || []).forEach(r => {
+        if (r.author_name) totalCounts[r.author_name] = (totalCounts[r.author_name] || 0) + 1;
+      });
+    });
+    return Object.entries(totalCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+  }, [allThreads]);
+
+  if (topUsers.length === 0) return null;
+
+  const rankIcons = ["🥇", "🥈", "🥉"];
+
+  return (
+    <div className="border border-border/50 bg-card/20 p-4 mt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Trophy className="h-3.5 w-3.5 text-amber-400" />
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">Top Contributors</p>
+      </div>
+      <div className="space-y-2">
+        {topUsers.map((u, i) => (
+          <motion.div
+            key={u.name}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="flex items-center gap-2.5 py-1"
+          >
+            <span className="w-5 text-center text-sm shrink-0">
+              {i < 3 ? rankIcons[i] : <span className="text-[10px] font-mono font-bold text-muted-foreground/40">{i + 1}</span>}
+            </span>
+            <UserAvatar name={u.name} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground truncate">{u.name}</p>
+              <p className="text-[8px] text-muted-foreground/40">{u.count} contributions</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ━━━ Recent Activity Mini-Feed ━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function RecentActivityFeed({ allThreads }) {
+  const activities = useMemo(() => {
+    const items = [];
+    allThreads.forEach(t => {
+      items.push({ type: "post", name: t.author_name, title: t.title, date: t.created_date, id: t.id });
+      (t.replies || []).forEach(r => {
+        items.push({ type: "reply", name: r.author_name, title: t.title, date: r.created_date, id: r.id });
+      });
+    });
+    items.sort((a, b) => {
+      const da = parseForumDate(a.date);
+      const db = parseForumDate(b.date);
+      return (db?.getTime() || 0) - (da?.getTime() || 0);
+    });
+    return items.slice(0, 3);
+  }, [allThreads]);
+
+  if (activities.length === 0) return null;
+
+  return (
+    <div className="border border-border/50 bg-card/20 p-4 mt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="h-3.5 w-3.5 text-primary" />
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">Recent Activity</p>
+      </div>
+      <div className="space-y-2.5">
+        {activities.map((a, i) => (
+          <div key={`${a.id}-${i}`} className="flex items-start gap-2">
+            <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${a.type === "post" ? "bg-primary" : "bg-accent"}`} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                <span className="font-bold text-foreground/80">{a.name || "Someone"}</span>
+                {" "}{a.type === "post" ? "posted" : "replied to"}{" "}
+                <span className="text-foreground/50">{(a.title || "a thread").slice(0, 35)}{(a.title || "").length > 35 ? "…" : ""}</span>
+              </p>
+              <p className="text-[8px] font-mono text-muted-foreground/30 tabular-nums">{timeAgo(a.date)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ━━━ Collapsible Guidelines ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function CollapsibleGuidelines() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-border/30 bg-card/10 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/5 transition-colors"
+      >
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">Community Guidelines</p>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="h-3 w-3 text-muted-foreground/30" />
+        </motion.div>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <ul className="space-y-1.5 px-4 pb-4">
+              {["Be respectful to fellow fans", "Keep discussions on-topic", "No spam or commercial posts", "Share tips, ask questions, have fun"].map((rule) => (
+                <li key={rule} className="flex items-start gap-2 text-[10px] text-muted-foreground/35">
+                  <span className="mt-1 h-1 w-1 rounded-full bg-primary/30 shrink-0" />
+                  {rule}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ━━━ Better Empty State ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function EmptyState({ onClearFilters, onSelectCategory }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border border-border/30 bg-card/20 p-16 text-center"
+    >
+      <motion.div
+        className="inline-flex p-5 bg-gradient-to-br from-primary/10 to-accent/5 border border-border/30 mb-5"
+        animate={{
+          y: [0, -8, 0],
+          rotate: [0, 3, -3, 0],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      >
+        <Search className="h-10 w-10 text-primary/40" />
+      </motion.div>
+      <p className="font-display text-2xl uppercase text-muted-foreground/40 tracking-wide">
+        No discussions found
+      </p>
+      <p className="text-sm text-muted-foreground/30 mt-2 max-w-sm mx-auto leading-relaxed">
+        Try adjusting your filters, or be the first to spark a conversation in one of these categories:
+      </p>
+      <div className="flex flex-wrap justify-center gap-2 mt-6">
+        {FORUM_CATEGORIES.slice(0, 3).map((cat) => {
+          const m = getCategoryMeta(cat);
+          const CatIcon = m.icon;
+          return (
+            <motion.button
+              key={cat}
+              type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onSelectCategory(cat)}
+              className={`flex items-center gap-2 px-4 py-2.5 border border-border/30 bg-gradient-to-r ${m.gradient} text-[10px] font-bold uppercase tracking-wider text-foreground hover:border-primary/30 transition-all`}
+            >
+              <CatIcon className={`h-3.5 w-3.5 ${m.accent}`} />
+              {m.label}
+            </motion.button>
+          );
+        })}
+      </div>
+      <Button
+        onClick={onClearFilters}
+        variant="outline"
+        className="mt-5 h-9 rounded-none text-[10px] font-bold uppercase tracking-wider border-border/30"
+      >
+        Clear all filters
+      </Button>
+    </motion.div>
+  );
+}
+
+/* ━━━ Scroll to Top Button ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function ScrollToTopButton() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 500);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 20 }}
+          transition={{ duration: 0.2 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 z-50 p-3 border border-border/40 bg-card/90 backdrop-blur-xl shadow-xl shadow-black/20 text-primary hover:text-foreground hover:bg-primary/10 hover:border-primary/30 transition-all hidden lg:flex items-center justify-center"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <ArrowUp className="h-4 w-4" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ━━━ Mobile Floating Action Button ━━━━━━━━━━━━━━━━━━━━━━ */
+function MobileFAB({ onClick }) {
+  const [scrollDir, setScrollDir] = useState("up");
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const current = window.scrollY;
+      setScrollDir(current > lastScrollY.current ? "down" : "up");
+      lastScrollY.current = current;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      animate={{
+        scale: scrollDir === "down" ? 0.85 : 1,
+        opacity: scrollDir === "down" ? 0.7 : 1,
+      }}
+      whileTap={{ scale: 0.9 }}
+      transition={{ duration: 0.2 }}
+      className="fixed bottom-6 right-6 z-40 lg:hidden"
+    >
+      <div className="relative">
+        {/* Pulse ring */}
+        <motion.div
+          className="absolute inset-0 rounded-full bg-primary/30"
+          animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+        />
+        <div className="relative h-14 w-14 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center text-primary-foreground">
+          <MessageSquare className="h-5 w-5" />
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
+/* ━━━ Compose Sidebar (Premium Enhanced) ━━━━━━━━━━━━━━━━━ */
+function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, authorPostCounts, authorReplyCounts }) {
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Compose Card */}
@@ -730,8 +1518,14 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
         </div>
       </div>
 
+      {/* Top Contributors */}
+      <TopContributors allThreads={allThreads} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts} />
+
       {/* Online Users */}
       <OnlineUsersWidget threads={allThreads} />
+
+      {/* Recent Activity */}
+      <RecentActivityFeed allThreads={allThreads} />
 
       {/* Quick Stats */}
       <div className="border border-border/50 bg-card/20 p-4">
@@ -753,18 +1547,8 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
         </div>
       </div>
 
-      {/* Guidelines */}
-      <div className="border border-border/30 bg-card/10 p-4">
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40 mb-2">Community Guidelines</p>
-        <ul className="space-y-1.5">
-          {["Be respectful to fellow fans", "Keep discussions on-topic", "No spam or commercial posts", "Share tips, ask questions, have fun"].map((rule) => (
-            <li key={rule} className="flex items-start gap-2 text-[10px] text-muted-foreground/35">
-              <span className="mt-1 h-1 w-1 rounded-full bg-primary/30 shrink-0" />
-              {rule}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Collapsible Guidelines */}
+      <CollapsibleGuidelines />
     </aside>
   );
 }
@@ -780,6 +1564,7 @@ export default function Forum() {
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [showMobileCompose, setShowMobileCompose] = useState(false);
+  const [threadModalPost, setThreadModalPost] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: posts = [] } = useQuery({
@@ -828,6 +1613,20 @@ export default function Forum() {
 
   const allThreads = buildForumThreads(posts);
 
+  // Author post/reply counts for badges and hover cards
+  const { authorPostCounts, authorReplyCounts } = useMemo(() => {
+    const postCounts = {};
+    const replyCounts = {};
+    allThreads.forEach(t => {
+      const name = t.author_name;
+      if (name) postCounts[name] = (postCounts[name] || 0) + 1;
+      (t.replies || []).forEach(r => {
+        if (r.author_name) replyCounts[r.author_name] = (replyCounts[r.author_name] || 0) + 1;
+      });
+    });
+    return { authorPostCounts: postCounts, authorReplyCounts: replyCounts };
+  }, [allThreads]);
+
   // Category counts
   const categoryCounts = useMemo(() => {
     const counts = { All: allThreads.length };
@@ -855,6 +1654,12 @@ export default function Forum() {
 
   const totalReplies = allThreads.reduce((s, t) => s + (t.replies || []).length, 0);
   const uniqueMembers = new Set(allThreads.map((t) => t.author_name)).size;
+
+  const clearAllFilters = () => {
+    setSelectedCategory("All");
+    setSearchQuery("");
+    setSortBy("latest");
+  };
 
   return (
     <main className="relative min-h-screen bg-background text-foreground">
@@ -939,7 +1744,7 @@ export default function Forum() {
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 {[...allThreads].sort((a, b) => getEngagement(b).likes - getEngagement(a).likes).slice(0, 3).map((t, i) => (
-                  <TrendingCard key={t.id} thread={t} rank={i + 1} />
+                  <TrendingCard key={t.id} thread={t} rank={i + 1} onClick={() => setThreadModalPost(t)} />
                 ))}
               </div>
             </div>
@@ -949,6 +1754,9 @@ export default function Forum() {
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
           {/* ━━━ LEFT: Feed ━━━ */}
           <div className="space-y-4">
+            {/* Live Activity Ticker */}
+            <LiveActivityTicker threads={allThreads} />
+
             {/* Search + Filter Bar */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -1000,7 +1808,7 @@ export default function Forum() {
                   {(selectedCategory !== "All" || searchQuery || sortBy !== "latest") && (
                     <button
                       type="button"
-                      onClick={() => { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); }}
+                      onClick={clearAllFilters}
                       className="text-[9px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary transition-colors"
                     >
                       Clear all
@@ -1009,16 +1817,6 @@ export default function Forum() {
                 </div>
               </div>
             </motion.div>
-
-            {/* Mobile compose CTA */}
-            <div className="lg:hidden">
-              <Button
-                onClick={() => setShowMobileCompose(true)}
-                className="w-full h-10 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90"
-              >
-                <MessageSquare className="mr-2 h-3.5 w-3.5" /> Start a Discussion
-              </Button>
-            </div>
 
             {/* Thread Feed */}
             <div className="space-y-3">
@@ -1031,26 +1829,17 @@ export default function Forum() {
                   onToggleReply={() => setActiveReplyId(activeReplyId === post.id ? null : post.id)}
                   onUpdateReply={(updates) => updateReplyDraft(post.id, updates)}
                   onReply={(e) => handleReply(post, e)}
+                  onOpenThread={(p) => setThreadModalPost(p)}
+                  authorPostCounts={authorPostCounts}
+                  authorReplyCounts={authorReplyCounts}
                 />
               ))}
 
               {filteredThreads.length === 0 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border border-border/30 bg-card/20 p-16 text-center">
-                  <div className="inline-flex p-4 bg-muted/10 border border-border/30 mb-4">
-                    <Search className="h-8 w-8 text-muted-foreground/15" />
-                  </div>
-                  <p className="font-display text-xl uppercase text-muted-foreground/30">No discussions found</p>
-                  <p className="text-xs text-muted-foreground/20 mt-1 max-w-sm mx-auto">
-                    Try adjusting your filters or be the first to start a discussion in this category.
-                  </p>
-                  <Button
-                    onClick={() => { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); }}
-                    variant="outline"
-                    className="mt-4 h-9 rounded-none text-[10px] font-bold uppercase tracking-wider border-border/30"
-                  >
-                    Clear filters
-                  </Button>
-                </motion.div>
+                <EmptyState
+                  onClearFilters={clearAllFilters}
+                  onSelectCategory={(cat) => { setSelectedCategory(cat); setSearchQuery(""); setSortBy("latest"); }}
+                />
               )}
             </div>
           </div>
@@ -1063,10 +1852,31 @@ export default function Forum() {
               submittedForReview={submittedForReview}
               onSubmit={handlePost} isPending={createMutation.isPending}
               allThreads={allThreads}
+              authorPostCounts={authorPostCounts}
+              authorReplyCounts={authorReplyCounts}
             />
           </div>
         </div>
       </div>
+
+      {/* ━━━ THREAD DETAIL MODAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <AnimatePresence>
+        {threadModalPost && (
+          <ThreadDetailModal
+            post={threadModalPost}
+            onClose={() => setThreadModalPost(null)}
+            isAuthenticated={isAuthenticated}
+            user={user}
+            appReady={appParams.hasBase44Config}
+            isSubmitting={createMutation.isPending}
+            replyDraft={getReplyDraft(threadModalPost.id)}
+            onUpdateReply={(updates) => updateReplyDraft(threadModalPost.id, updates)}
+            onReply={(e) => { handleReply(threadModalPost, e); setThreadModalPost(null); }}
+            authorPostCounts={authorPostCounts}
+            authorReplyCounts={authorReplyCounts}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ━━━ MOBILE COMPOSE SHEET ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <AnimatePresence>
@@ -1125,6 +1935,12 @@ export default function Forum() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ━━━ MOBILE FAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <MobileFAB onClick={() => setShowMobileCompose(true)} />
+
+      {/* ━━━ SCROLL TO TOP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <ScrollToTopButton />
     </main>
   );
 }

@@ -34,6 +34,64 @@ async function findActiveBan(base44, { ip, emails = [], userId }) {
   return null;
 }
 
+// Extract unique lowercased @mention tokens from a body.
+function extractMentions(body) {
+  const matches = String(body || '').match(/@([a-zA-Z0-9_.+-]+)/g) || [];
+  return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
+}
+
+// Does a user match any mention token (by email, email local-part, full name, or first name)?
+function matchesMention(u, tokens) {
+  const candidates = new Set();
+  const email = String(u?.email || '').toLowerCase();
+  if (email) { candidates.add(email); candidates.add(email.split('@')[0]); }
+  const name = String(u?.full_name || '').toLowerCase();
+  if (name) { candidates.add(name.replace(/\s+/g, '')); candidates.add(name.split(/\s+/)[0]); }
+  return tokens.some((t) => candidates.has(t));
+}
+
+// Best-effort notification fan-out for a new post/reply. Never throws.
+async function createForumNotifications(base44, { post, parentId, actor, authorName, body }) {
+  try {
+    const threadId = parentId || post.id;
+    const recipients = new Map(); // recipientId -> { email, type, title }
+
+    if (parentId) {
+      const parent = await base44.asServiceRole.entities.ForumPost.get(parentId);
+      if (parent?.user_id && parent.user_id !== actor?.id) {
+        recipients.set(parent.user_id, { email: parent.user_email || '', type: 'reply', title: `${authorName} replied to your post` });
+      }
+    }
+
+    const tokens = extractMentions(body);
+    if (tokens.length) {
+      const users = await base44.asServiceRole.entities.User.list('-created_date', 500);
+      for (const u of users || []) {
+        if (!u?.id || u.id === actor?.id) continue;
+        if (matchesMention(u, tokens)) {
+          recipients.set(u.id, { email: u.email || '', type: 'mention', title: `${authorName} mentioned you` });
+        }
+      }
+    }
+
+    for (const [recipientId, info] of recipients) {
+      await base44.asServiceRole.entities.Notification.create({
+        recipient_id: recipientId,
+        recipient_email: info.email,
+        type: info.type,
+        title: info.title,
+        preview: String(body || '').slice(0, 140),
+        actor_name: authorName,
+        post_id: threadId,
+        link: '/forum',
+        is_read: false,
+      });
+    }
+  } catch (error) {
+    console.error('createForumNotifications error:', error);
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -82,6 +140,8 @@ Deno.serve(async (req) => {
       user_email: user?.email || '',
       user_id: user?.id || ''
     });
+
+    await createForumNotifications(base44, { post, parentId, actor: user, authorName, body });
 
     return Response.json({ ok: true, id: post.id });
   } catch (error) {

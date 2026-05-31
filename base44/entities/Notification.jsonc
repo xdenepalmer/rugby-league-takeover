@@ -1,0 +1,70 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "recipient_id": {
+      "type": "string",
+      "description": "User id who receives this notification"
+    },
+    "recipient_email": {
+      "type": "string",
+      "description": "Recipient email (fallback match)"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["reply", "mention", "system"],
+      "default": "system",
+      "description": "Notification type"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short headline, e.g. 'New reply to your post'"
+    },
+    "preview": {
+      "type": "string",
+      "description": "Snippet of the related content"
+    },
+    "actor_name": {
+      "type": "string",
+      "description": "Who triggered it"
+    },
+    "post_id": {
+      "type": "string",
+      "description": "Linked forum post/thread id"
+    },
+    "link": {
+      "type": "string",
+      "description": "Relative URL to open when clicked"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the recipient has read it"
+    }
+  },
+  "required": ["recipient_id"],
+  "rls": {
+    "create": {
+      "user_condition": { "role": "admin" }
+    },
+    "read": {
+      "$or": [
+        { "user_condition": { "role": "admin" } },
+        { "data.recipient_id": "{{user.id}}" },
+        { "data.recipient_email": "{{user.email}}" }
+      ]
+    },
+    "update": {
+      "$or": [
+        { "user_condition": { "role": "admin" } },
+        { "data.recipient_id": "{{user.id}}" }
+      ]
+    },
+    "delete": {
+      "$or": [
+        { "user_condition": { "role": "admin" } },
+        { "data.recipient_id": "{{user.id}}" }
+      ]
+    }
+  }
+}
