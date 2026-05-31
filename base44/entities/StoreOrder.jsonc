@@ -55,11 +55,12 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Authenticated buyer email (empty for guest checkout)"
+      "format": "email",
+      "description": "Linked app user email"
     },
     "user_id": {
       "type": "string",
-      "description": "Authenticated buyer id"
+      "description": "Linked app user ID"
     }
   },
   "required": [

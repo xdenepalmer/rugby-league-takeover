@@ -21,7 +21,13 @@
         "Travel",
         "Events",
         "MatchDay",
-        "VegasTips"
+        "VegasTips",
+        "general",
+        "travel",
+        "tickets",
+        "events",
+        "teams",
+        "merch"
       ],
       "default": "General",
       "description": "Forum post category"
@@ -42,30 +48,28 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Authenticated author email (empty for guests)"
+      "format": "email",
+      "description": "Linked app user email"
     },
     "user_id": {
       "type": "string",
-      "description": "Authenticated author id"
+      "description": "Linked app user ID"
     },
     "ip_address": {
       "type": "string",
-      "description": "Client IP captured at submission (admin-only)"
-    },
-    "like_count": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of likes"
-    },
-    "liked_by": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "User ids who liked this post"
-    },
-    "view_count": {
-      "type": "number",
-      "default": 0,
-      "description": "Number of views"
+      "description": "Submitter IP address",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": [

@@ -49,15 +49,28 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Authenticated submitter email (empty for guests)"
+      "format": "email",
+      "description": "Linked app user email"
     },
     "user_id": {
       "type": "string",
-      "description": "Authenticated submitter id"
+      "description": "Linked app user ID"
     },
     "ip_address": {
       "type": "string",
-      "description": "Client IP captured at submission (admin-only)"
+      "description": "Submitter IP address",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": [
