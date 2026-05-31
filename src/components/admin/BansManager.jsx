@@ -20,7 +20,7 @@ export default function BansManager() {
   const [newValue, setNewValue] = useState("");
   const [newReason, setNewReason] = useState("");
 
-  const { data: bans = [], isLoading } = useQuery({ queryKey: ["bans"], queryFn: () => base44.entities.Ban.list("-created_date", 500) });
+  const { data: bans = [], isLoading, isError } = useQuery({ queryKey: ["bans"], queryFn: () => base44.entities.Ban.list("-created_date", 500), retry: false, meta: { silent: true } });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["bans"] });
 
   const addBan = useMutation({
@@ -48,6 +48,12 @@ export default function BansManager() {
     <section className="border border-border bg-card p-6">
       <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><ShieldX className="h-6 w-6 text-destructive" /> Bans</h2>
       <p className="mt-2 text-sm text-muted-foreground">Block by IP, email or account. IP bans are best-effort (VPNs/shared connections can evade them), so prefer time-limited bans and lift them when no longer needed.</p>
+
+      {isError && (
+        <p className="mt-4 border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          The ban system activates once the latest changes are deployed to the app. Until then, bans can't be created or listed.
+        </p>
+      )}
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4 md:grid-cols-[140px_1fr_1fr_auto]">
         <Select value={newType} onValueChange={setNewType}>
