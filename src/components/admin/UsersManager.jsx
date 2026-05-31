@@ -17,7 +17,15 @@ export default function UsersManager() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
-  const { data: users = [], isLoading, isError } = useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list("-created_date", 200), retry: false, meta: { silent: true } });
+  const { data: users = [], isLoading, isError } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("adminUsers", { action: "list" });
+      return response?.data?.users || [];
+    },
+    retry: false,
+    meta: { silent: true },
+  });
   const { data: bans = [] } = useQuery({ queryKey: ["bans"], queryFn: () => base44.entities.Ban.list("-created_date", 500), retry: false, meta: { silent: true } });
 
   const refresh = () => {
@@ -26,14 +34,14 @@ export default function UsersManager() {
   };
 
   const updateUser = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke("adminUsers", { action: "update", userId: id, data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   const banUser = useMutation({
     mutationFn: async ({ targetUser, reason, expiresAt }) => {
       const common = { reason: reason || "Banned by admin", banned_by: me?.email || "", expires_at: expiresAt || "", is_active: true };
-      await base44.entities.User.update(targetUser.id, { disabled: true });
+      await base44.functions.invoke("adminUsers", { action: "update", userId: targetUser.id, data: { disabled: true } });
       await base44.entities.Ban.create({ ban_type: "email", value: String(targetUser.email || "").toLowerCase(), ...common });
       await base44.entities.Ban.create({ ban_type: "user", value: String(targetUser.id).toLowerCase(), ...common });
       // Best-effort IP ban from the user's most recent forum post.
@@ -46,7 +54,7 @@ export default function UsersManager() {
 
   const unbanUser = useMutation({
     mutationFn: async (targetUser) => {
-      await base44.entities.User.update(targetUser.id, { disabled: false });
+      await base44.functions.invoke("adminUsers", { action: "update", userId: targetUser.id, data: { disabled: false } });
       const related = bans.filter((b) => b.is_active && ((b.ban_type === "email" && b.value === String(targetUser.email || "").toLowerCase()) || (b.ban_type === "user" && b.value === String(targetUser.id).toLowerCase())));
       for (const ban of related) await base44.entities.Ban.update(ban.id, { is_active: false });
     },
@@ -68,7 +76,7 @@ export default function UsersManager() {
       <section className="border border-border bg-card p-6">
         <h2 className="font-display text-3xl uppercase">Users</h2>
         <p className="mt-4 border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
-          User management needs the <span className="font-mono">User</span> entity to allow admin read/update. Deploy the updated <span className="font-mono">User</span> permissions (RLS) and refresh to manage roles, access and bans here.
+          User management runs through the <span className="font-mono">adminUsers</span> backend function. Deploy/publish it, then refresh to manage roles, access and bans here.
         </p>
       </section>
     );
