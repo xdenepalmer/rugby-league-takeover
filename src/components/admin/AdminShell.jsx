@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { base44 } from "@/api/base44Client";
 
 export default function AdminShell({ user, children }) {
   return (
@@ -11,11 +12,12 @@ export default function AdminShell({ user, children }) {
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Admin Dashboard</p>
             <h1 className="font-display text-4xl uppercase leading-none">Rugby League Takeover</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <p className="hidden text-sm text-muted-foreground md:block">{user?.email}</p>
             <Button asChild variant="outline" className="rounded-none">
               <Link to="/">View Site</Link>
             </Button>
+            <Button variant="ghost" className="rounded-none" onClick={() => base44.auth.logout("/")}>Log Out</Button>
           </div>
         </div>
       </header>

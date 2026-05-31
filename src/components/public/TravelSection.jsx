@@ -8,7 +8,7 @@ import SectionHeader from "./SectionHeader";
 
 const teams = ["Eels", "Tigers", "Titans", "Storm", "Leopards", "Bulls", "Other"];
 
-export default function TravelSection({ packages }) {
+export default function TravelSection({ packages, settings = {} }) {
   const [form, setForm] = useState({ name: "", phone: "", email: "", postcode: "", team_supported: "" });
   const [submitted, setSubmitted] = useState(false);
   const queryClient = useQueryClient();
@@ -30,8 +30,8 @@ export default function TravelSection({ packages }) {
   return (
     <section id="travel" className="border-t border-border bg-background/80 px-5 py-24 md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="Travel Packages" title="Your Vegas base camp">
-          Air, accommodation, events and more are coming soon. Register your interest to be first in line.
+        <SectionHeader eyebrow={settings.travel_eyebrow || "Travel Packages"} title={settings.travel_title || "Your Vegas base camp"}>
+          {settings.travel_description || "Air, accommodation, events and more are coming soon. Register your interest to be first in line."}
         </SectionHeader>
         <div className="grid gap-5 md:grid-cols-3">
           {packages.map((pkg, index) => (
@@ -46,9 +46,9 @@ export default function TravelSection({ packages }) {
 
         <div className="mt-12 grid gap-8 border border-border bg-secondary p-6 md:grid-cols-[0.8fr_1.2fr] md:p-10">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-primary">Register interest</p>
-            <h3 className="mt-4 font-display text-5xl uppercase leading-none text-foreground">Don’t miss the drop.</h3>
-            <p className="mt-5 text-muted-foreground">Leave your details and the team will contact you when packages go live.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-primary">{settings.registration_eyebrow || "Register interest"}</p>
+            <h3 className="mt-4 font-display text-5xl uppercase leading-none text-foreground">{settings.registration_title || "Don’t miss the drop."}</h3>
+            <p className="mt-5 text-muted-foreground">{settings.registration_description || "Leave your details and the team will contact you when packages go live."}</p>
             {submitted && <p className="mt-6 border border-primary bg-primary/10 p-4 text-sm font-semibold text-foreground">Thanks — your interest has been registered.</p>}
           </div>
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">

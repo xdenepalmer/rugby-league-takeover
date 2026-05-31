@@ -9,6 +9,12 @@ import RegistrationsTable from "@/components/admin/RegistrationsTable";
 import ProductsManager from "@/components/admin/ProductsManager";
 import OrdersManager from "@/components/admin/OrdersManager";
 import ForumManager from "@/components/admin/ForumManager";
+import AdminOverview from "@/components/admin/AdminOverview";
+import SiteSettingsManager from "@/components/admin/SiteSettingsManager";
+import TravelPackagesManager from "@/components/admin/TravelPackagesManager";
+import LivePreviewPanel from "@/components/admin/LivePreviewPanel";
+import QuickLinks from "@/components/admin/QuickLinks";
+import UserInviteManager from "@/components/admin/UserInviteManager";
 
 export default function Admin() {
   const [user, setUser] = useState(null);
@@ -21,8 +27,10 @@ export default function Admin() {
     });
   }, []);
 
+  const { data: settingsRecords = [] } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1), enabled: user?.role === "admin" });
   const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50), enabled: user?.role === "admin" });
   const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: user?.role === "admin" });
+  const { data: packages = [] } = useQuery({ queryKey: ["packages"], queryFn: () => base44.entities.TravelPackage.list("sort_order", 200), enabled: user?.role === "admin" });
   const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200), enabled: user?.role === "admin" });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200), enabled: user?.role === "admin" });
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200), enabled: user?.role === "admin" });
@@ -50,13 +58,19 @@ export default function Admin() {
 
   return (
     <AdminShell user={user}>
-      <div className="grid gap-8">
+      <QuickLinks />
+      <div className="grid gap-8 pt-8">
+        <AdminOverview counts={{ news: news.length, products: products.length, orders: orders.length, registrations: registrations.length, posts: forumPosts.length }} />
+        <UserInviteManager />
+        <SiteSettingsManager settings={settingsRecords[0]} />
         <ProductsManager products={products} />
         <OrdersManager orders={orders} />
-        <ForumManager posts={forumPosts} />
+        <TravelPackagesManager packages={packages} />
         <NewsManager articles={news} />
         <EventsManager event={events[0]} />
         <RegistrationsTable registrations={registrations} />
+        <ForumManager posts={forumPosts} />
+        <LivePreviewPanel />
       </div>
     </AdminShell>
   );

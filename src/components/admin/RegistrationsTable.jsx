@@ -19,7 +19,7 @@ export default function RegistrationsTable({ registrations }) {
   };
 
   return (
-    <section className="border border-border bg-card p-6">
+    <section id="registrations-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h2 className="font-display text-4xl uppercase">Interest Registrations</h2>
         <Button variant="outline" className="rounded-none" onClick={exportCsv} disabled={!registrations.length}>

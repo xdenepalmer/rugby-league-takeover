@@ -15,7 +15,7 @@ export default function OrdersManager({ orders }) {
   });
 
   return (
-    <section className="border border-border bg-card p-6">
+    <section id="orders-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="font-display text-4xl uppercase">Orders Admin</h2>
       <div className="mt-6 grid gap-4">
         {orders.length === 0 && <p className="text-sm text-muted-foreground">No orders yet.</p>}

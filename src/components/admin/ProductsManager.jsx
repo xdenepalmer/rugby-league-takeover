@@ -28,7 +28,7 @@ export default function ProductsManager({ products }) {
   };
 
   return (
-    <section className="border border-border bg-card p-6">
+    <section id="products-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="font-display text-4xl uppercase">Merch Products</h2>
       <div className="mt-6 grid gap-3 md:grid-cols-2">
         <Input placeholder="Product name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="rounded-none" />
@@ -38,7 +38,7 @@ export default function ProductsManager({ products }) {
         <Textarea placeholder="Product description" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} className="min-h-24 rounded-none md:col-span-2" />
         <Input type="number" placeholder="Stock quantity" value={draft.stock_quantity} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="rounded-none" />
         <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="rounded-none" />
-        <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || !draft.price_aud || createMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90 md:col-span-2">
+        <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90 md:col-span-2">
           <Save className="mr-2 h-4 w-4" /> Add Product
         </Button>
       </div>
@@ -49,9 +49,13 @@ export default function ProductsManager({ products }) {
             <div className="h-20 w-20 overflow-hidden bg-secondary">
               {product.image_url && <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />}
             </div>
-            <div>
-              <h3 className="text-lg font-semibold">{product.name}</h3>
-              <p className="text-sm text-muted-foreground">${Number(product.price_aud || 0).toFixed(2)} AUD · Stock {product.stock_quantity || 0}</p>
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input defaultValue={product.name || ""} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { name: e.target.value } })} className="rounded-none" />
+              <Input type="number" defaultValue={product.price_aud || 0} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { price_aud: Number(e.target.value) } })} className="rounded-none" />
+              <Input type="number" defaultValue={product.stock_quantity || 0} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { stock_quantity: Number(e.target.value) } })} className="rounded-none" />
+              <Input type="number" defaultValue={product.sort_order || 1} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
+              <Textarea defaultValue={product.description || ""} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { description: e.target.value } })} className="min-h-20 rounded-none md:col-span-2" />
+              <Input defaultValue={product.image_url || ""} onBlur={(e) => updateMutation.mutate({ id: product.id, data: { image_url: e.target.value } })} className="rounded-none md:col-span-2" />
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={product.is_active !== false} onCheckedChange={(value) => updateMutation.mutate({ id: product.id, data: { is_active: value } })} />

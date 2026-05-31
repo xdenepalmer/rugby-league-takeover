@@ -61,6 +61,7 @@ const defaultEvent = {
 export default function Home() {
   const queryClient = useQueryClient();
 
+  const { data: settingsRecords = [] } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1) });
   const { data: news = [], isLoading: newsLoading } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 20) });
   const { data: packages = [], isLoading: packagesLoading } = useQuery({ queryKey: ["packages"], queryFn: () => base44.entities.TravelPackage.list("sort_order", 20) });
   const { data: events = [], isLoading: eventsLoading } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5) });
@@ -83,24 +84,26 @@ export default function Home() {
     if (loaded && !seedMutation.isPending && !news.length && !packages.length && !events.length) seedMutation.mutate();
   }, [newsLoading, packagesLoading, eventsLoading, news.length, packages.length, events.length]);
 
+  const settings = settingsRecords[0] || {};
   const visibleNews = (news.length ? news : defaultNews).filter((article) => article.is_published !== false).slice(0, 6);
   const visiblePackages = packages.length ? packages : defaultPackages;
   const event = events[0] || defaultEvent;
+  const videoSources = settings.background_video_urls?.length ? settings.background_video_urls : stadiumVideoUrls;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <BackgroundVideo sources={stadiumVideoUrls} />
+      <BackgroundVideo sources={videoSources} />
       <div className="relative z-10">
-        <SiteNav />
-        <HeroSection />
-        <NewsSection articles={visibleNews} />
-        <AboutSection />
-        <TravelSection packages={visiblePackages} />
+        <SiteNav settings={settings} />
+        <HeroSection settings={settings} />
+        <NewsSection articles={visibleNews} settings={settings} />
+        <AboutSection settings={settings} />
+        <TravelSection packages={visiblePackages} settings={settings} />
         <EventsSection event={event} />
-        <MerchSection />
+        <MerchSection settings={settings} />
         <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center backdrop-blur-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">Rugby League Takeover Las Vegas © 2026</p>
-          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">DENEO.AI</span></p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
+          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">{settings.footer_powered_by || "DENEO.AI"}</span></p>
         </footer>
       </div>
     </main>

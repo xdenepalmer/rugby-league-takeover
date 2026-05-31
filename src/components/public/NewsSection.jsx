@@ -2,12 +2,12 @@ import React from "react";
 import { format } from "date-fns";
 import SectionHeader from "./SectionHeader";
 
-export default function NewsSection({ articles }) {
+export default function NewsSection({ articles, settings = {} }) {
   return (
     <section id="news" className="border-t border-border bg-background/80 px-5 py-24 md:px-8 md:py-32">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="Latest News" title="From the strip">
-          Fresh updates, announcements and supporter news for Rugby League Las Vegas.
+        <SectionHeader eyebrow={settings.news_eyebrow || "Latest News"} title={settings.news_title || "From the strip"}>
+          {settings.news_description || "Fresh updates, announcements and supporter news for Rugby League Las Vegas."}
         </SectionHeader>
         <div className="grid gap-6 md:grid-cols-3">
           {articles.map((article, index) => (

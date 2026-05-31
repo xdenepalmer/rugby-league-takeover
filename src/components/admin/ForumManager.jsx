@@ -13,7 +13,7 @@ export default function ForumManager({ posts }) {
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.ForumPost.delete(id), onSuccess: refresh });
 
   return (
-    <section className="border border-border bg-card p-6">
+    <section id="forum-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="font-display text-4xl uppercase">Forum Moderation</h2>
       <div className="mt-6 grid gap-4">
         {posts.length === 0 && <p className="text-sm text-muted-foreground">No forum posts yet.</p>}

@@ -28,7 +28,7 @@ export default function NewsManager({ articles }) {
   };
 
   return (
-    <section className="border border-border bg-card p-6">
+    <section id="news-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="font-display text-4xl uppercase">News Articles</h2>
       <div className="mt-6 grid gap-3 md:grid-cols-2">
         <Input placeholder="Title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="rounded-none" />
@@ -44,10 +44,12 @@ export default function NewsManager({ articles }) {
       <div className="mt-8 grid gap-4">
         {articles.map((article) => (
           <div key={article.id} className="grid gap-4 border border-border p-4 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-primary">{article.published_date ? format(new Date(article.published_date), "dd MMM yyyy") : "No date"}</p>
-              <h3 className="mt-2 text-lg font-semibold">{article.title}</h3>
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{article.body}</p>
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input defaultValue={article.title || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { title: e.target.value } })} className="rounded-none" />
+              <Input type="date" defaultValue={article.published_date || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { published_date: e.target.value } })} className="rounded-none" />
+              <Input defaultValue={article.author || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { author: e.target.value } })} className="rounded-none" />
+              <Input defaultValue={article.image_url || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { image_url: e.target.value } })} className="rounded-none" />
+              <Textarea defaultValue={article.body || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { body: e.target.value } })} className="min-h-24 rounded-none md:col-span-2" />
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={article.is_published !== false} onCheckedChange={(value) => updateMutation.mutate({ id: article.id, data: { is_published: value } })} />
