@@ -35,22 +35,40 @@
     "consent_to_contact": {
       "type": "boolean",
       "default": false,
-      "description": "Whether the visitor consented to be contacted about packages"
+      "description": "Whether the person consented to be contacted"
     },
     "consent_timestamp": {
       "type": "string",
       "format": "date-time",
-      "description": "Timestamp when consent was captured"
+      "description": "When contact consent was recorded"
     },
     "source": {
       "type": "string",
-      "description": "Registration source"
+      "default": "website",
+      "description": "Where the registration came from"
     }
   },
   "required": [
     "name",
     "email",
-    "team_supported",
-    "consent_to_contact"
-  ]
+    "team_supported"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

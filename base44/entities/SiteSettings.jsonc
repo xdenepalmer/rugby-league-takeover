@@ -4,23 +4,23 @@
   "properties": {
     "site_logo_url": {
       "type": "string",
-      "description": "Public logo image URL"
+      "description": "Main website logo URL"
     },
     "hero_eyebrow": {
       "type": "string",
-      "description": "Hero eyebrow text"
+      "description": "Small hero text above the main heading"
     },
     "hero_title": {
       "type": "string",
-      "description": "Hero heading text"
+      "description": "Main homepage hero title"
     },
     "hero_description": {
       "type": "string",
-      "description": "Hero supporting copy"
+      "description": "Homepage hero description"
     },
     "hero_button_label": {
       "type": "string",
-      "description": "Hero CTA label"
+      "description": "Hero call-to-action label"
     },
     "background_video_urls": {
       "type": "array",
@@ -51,15 +51,15 @@
     },
     "about_description": {
       "type": "string",
-      "description": "About section description"
+      "description": "About section main description"
     },
     "about_body": {
       "type": "string",
-      "description": "About section body copy"
+      "description": "About section supporting text"
     },
     "about_highlight": {
       "type": "string",
-      "description": "About section highlighted copy"
+      "description": "About section highlighted line"
     },
     "about_image_url": {
       "type": "string",
@@ -67,7 +67,7 @@
     },
     "about_image_caption": {
       "type": "string",
-      "description": "About section image caption"
+      "description": "Text shown over the about image"
     },
     "travel_eyebrow": {
       "type": "string",
@@ -107,11 +107,30 @@
     },
     "footer_text": {
       "type": "string",
-      "description": "Footer text"
+      "description": "Footer copyright text"
     },
     "footer_powered_by": {
       "type": "string",
-      "description": "Footer powered-by label"
+      "description": "Footer powered-by text"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
