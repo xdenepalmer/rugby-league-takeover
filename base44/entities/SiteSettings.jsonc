@@ -1,0 +1,117 @@
+{
+  "name": "SiteSettings",
+  "type": "object",
+  "properties": {
+    "site_logo_url": {
+      "type": "string",
+      "description": "Public logo image URL"
+    },
+    "hero_eyebrow": {
+      "type": "string",
+      "description": "Hero eyebrow text"
+    },
+    "hero_title": {
+      "type": "string",
+      "description": "Hero heading text"
+    },
+    "hero_description": {
+      "type": "string",
+      "description": "Hero supporting copy"
+    },
+    "hero_button_label": {
+      "type": "string",
+      "description": "Hero CTA label"
+    },
+    "background_video_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Homepage background video URLs"
+    },
+    "news_eyebrow": {
+      "type": "string",
+      "description": "News section eyebrow"
+    },
+    "news_title": {
+      "type": "string",
+      "description": "News section title"
+    },
+    "news_description": {
+      "type": "string",
+      "description": "News section description"
+    },
+    "about_eyebrow": {
+      "type": "string",
+      "description": "About section eyebrow"
+    },
+    "about_title": {
+      "type": "string",
+      "description": "About section title"
+    },
+    "about_description": {
+      "type": "string",
+      "description": "About section description"
+    },
+    "about_body": {
+      "type": "string",
+      "description": "About section body copy"
+    },
+    "about_highlight": {
+      "type": "string",
+      "description": "About section highlighted copy"
+    },
+    "about_image_url": {
+      "type": "string",
+      "description": "About section image URL"
+    },
+    "about_image_caption": {
+      "type": "string",
+      "description": "About section image caption"
+    },
+    "travel_eyebrow": {
+      "type": "string",
+      "description": "Travel section eyebrow"
+    },
+    "travel_title": {
+      "type": "string",
+      "description": "Travel section title"
+    },
+    "travel_description": {
+      "type": "string",
+      "description": "Travel section description"
+    },
+    "registration_eyebrow": {
+      "type": "string",
+      "description": "Registration form eyebrow"
+    },
+    "registration_title": {
+      "type": "string",
+      "description": "Registration form title"
+    },
+    "registration_description": {
+      "type": "string",
+      "description": "Registration form description"
+    },
+    "merch_eyebrow": {
+      "type": "string",
+      "description": "Merch section eyebrow"
+    },
+    "merch_title": {
+      "type": "string",
+      "description": "Merch section title"
+    },
+    "merch_description": {
+      "type": "string",
+      "description": "Merch section description"
+    },
+    "footer_text": {
+      "type": "string",
+      "description": "Footer text"
+    },
+    "footer_powered_by": {
+      "type": "string",
+      "description": "Footer powered-by label"
+    }
+  }
+}

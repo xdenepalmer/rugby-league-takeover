@@ -40,6 +40,15 @@
       "type": "string",
       "description": "Stripe checkout session ID"
     },
+    "stripe_payment_status": {
+      "type": "string",
+      "description": "Verified Stripe payment status from webhook"
+    },
+    "payment_verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the Stripe webhook verified this order"
+    },
     "shipping_notes": {
       "type": "string",
       "description": "Admin shipping notes or tracking details"

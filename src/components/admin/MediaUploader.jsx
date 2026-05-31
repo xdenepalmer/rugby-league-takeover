@@ -10,9 +10,12 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
   const upload = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    onUploaded(file_url);
-    setUploading(false);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      onUploaded(file_url);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

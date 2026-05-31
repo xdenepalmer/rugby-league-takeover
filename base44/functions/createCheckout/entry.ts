@@ -1,31 +1,50 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import Stripe from 'npm:stripe@17.5.0';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import Stripe from 'npm:stripe@22.2.0';
+import {
+  DEFAULT_CHECKOUT_ORIGIN,
+  buildCheckoutLineItems,
+  buildOrderMetadata,
+  calculateOrderTotalAud,
+  normalizeCheckoutItems,
+  resolveCheckoutOrigin,
+} from '../_shared/checkout-rules.js';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
-    const { productId, quantity = 1, customerName = '', customerEmail = '' } = await req.json();
+    const { items, customerName = '', customerEmail = '' } = await req.json();
+    const normalizedItems = normalizeCheckoutItems(items);
 
-    if (!productId || !customerEmail) {
-      return Response.json({ error: 'Product and email are required' }, { status: 400 });
+    if (!normalizedItems.length || !customerEmail) {
+      return Response.json({ error: 'Cart items and email are required' }, { status: 400 });
     }
 
-    const product = await base44.asServiceRole.entities.Product.get(productId);
-    if (!product || product.is_active === false) {
-      return Response.json({ error: 'Product is not available' }, { status: 404 });
+    const productsById = new Map();
+
+    for (const item of normalizedItems) {
+      productsById.set(item.productId, await base44.asServiceRole.entities.Product.get(item.productId));
     }
 
-    const safeQuantity = Math.max(1, Math.min(Number(quantity) || 1, 20));
-    const totalAud = Number(product.price_aud) * safeQuantity;
-    const origin = req.headers.get('origin') || 'https://rugbyleagetakeover.base44.app';
+    const lineItemResult = buildCheckoutLineItems(normalizedItems, (productId) => productsById.get(productId));
+    if (!lineItemResult.ok) {
+      return Response.json({ error: lineItemResult.error }, { status: lineItemResult.status });
+    }
+
+    const { lineItems, stripeLineItems } = lineItemResult;
+    const totalAud = calculateOrderTotalAud(lineItems);
+    const origin = resolveCheckoutOrigin(
+      req.headers.get('origin'),
+      Deno.env.get('CHECKOUT_ALLOWED_ORIGINS'),
+      Deno.env.get('CHECKOUT_DEFAULT_ORIGIN') || DEFAULT_CHECKOUT_ORIGIN
+    );
 
     const order = await base44.asServiceRole.entities.StoreOrder.create({
       customer_name: customerName,
       customer_email: customerEmail,
       status: 'pending',
       total_aud: totalAud,
-      line_items: [{ product_id: product.id, name: product.name, quantity: safeQuantity, price_aud: product.price_aud }]
+      line_items: lineItems
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -33,21 +52,13 @@ Deno.serve(async (req) => {
       customer_email: customerEmail,
       success_url: `${origin}/store?success=true`,
       cancel_url: `${origin}/store?cancelled=true`,
-      line_items: [{
-        quantity: safeQuantity,
-        price_data: {
-          currency: 'aud',
-          unit_amount: Math.round(Number(product.price_aud) * 100),
-          product_data: {
-            name: product.name,
-            description: product.description || undefined,
-            images: product.image_url ? [product.image_url] : undefined
-          }
-        }
-      }],
+      line_items: stripeLineItems,
       metadata: {
-        base44_app_id: Deno.env.get('BASE44_APP_ID'),
-        order_id: order.id
+        ...buildOrderMetadata({
+          appId: Deno.env.get('BASE44_APP_ID'),
+          orderId: order.id,
+          totalAud,
+        }),
       }
     });
 

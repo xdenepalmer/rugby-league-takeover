@@ -22,9 +22,12 @@ export default function ProductsManager({ products }) {
   const uploadImage = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setDraft((current) => ({ ...current, image_url: file_url }));
-    setUploading(false);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setDraft((current) => ({ ...current, image_url: file_url }));
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

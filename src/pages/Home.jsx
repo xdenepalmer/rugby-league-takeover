@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
 import SiteNav from "@/components/public/SiteNav";
 import HeroSection from "@/components/public/HeroSection";
 import BackgroundVideo from "@/components/public/BackgroundVideo";
@@ -59,30 +60,11 @@ const defaultEvent = {
 };
 
 export default function Home() {
-  const queryClient = useQueryClient();
-
-  const { data: settingsRecords = [] } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1) });
-  const { data: news = [], isLoading: newsLoading } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 20) });
-  const { data: packages = [], isLoading: packagesLoading } = useQuery({ queryKey: ["packages"], queryFn: () => base44.entities.TravelPackage.list("sort_order", 20) });
-  const { data: events = [], isLoading: eventsLoading } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5) });
-
-  const seedMutation = useMutation({
-    mutationFn: async () => {
-      if (!news.length) await base44.entities.NewsArticle.bulkCreate(defaultNews);
-      if (!packages.length) await base44.entities.TravelPackage.bulkCreate(defaultPackages);
-      if (!events.length) await base44.entities.EventContent.create(defaultEvent);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["news"] });
-      queryClient.invalidateQueries({ queryKey: ["packages"] });
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-    },
-  });
-
-  useEffect(() => {
-    const loaded = !newsLoading && !packagesLoading && !eventsLoading;
-    if (loaded && !seedMutation.isPending && !news.length && !packages.length && !events.length) seedMutation.mutate();
-  }, [newsLoading, packagesLoading, eventsLoading, news.length, packages.length, events.length]);
+  const queriesEnabled = appParams.hasBase44Config;
+  const { data: settingsRecords = [] } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1), enabled: queriesEnabled });
+  const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 20), enabled: queriesEnabled });
+  const { data: packages = [] } = useQuery({ queryKey: ["packages"], queryFn: () => base44.entities.TravelPackage.list("sort_order", 20), enabled: queriesEnabled });
+  const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: queriesEnabled });
 
   const settings = settingsRecords[0] || {};
   const visibleNews = (news.length ? news : defaultNews).filter((article) => article.is_published !== false).slice(0, 6);
@@ -96,6 +78,22 @@ export default function Home() {
       <div className="relative z-10">
         <SiteNav settings={settings} />
         <HeroSection settings={settings} />
+        <div className="relative w-full overflow-hidden border-y border-border bg-secondary/80 py-4 backdrop-blur-md">
+          <div className="animate-marquee flex gap-12 text-xs font-bold uppercase tracking-[0.3em] text-accent">
+            {Array(4).fill([
+              "LAS VEGAS TAKEOVER 2026",
+              "RUGBY LEAGUE GLOBAL INVASION",
+              "VIP TRAVEL PACKAGES DROPPING SOON",
+              "EXCLUSIVE FAN EVENTS & MEETUPS",
+              "STADIUM SWIM PARTIES",
+            ]).flat().map((text, idx) => (
+              <span key={idx} className="flex items-center gap-12">
+                <span>{text}</span>
+                <span className="text-primary font-extrabold">•</span>
+              </span>
+            ))}
+          </div>
+        </div>
         <NewsSection articles={visibleNews} settings={settings} />
         <AboutSection settings={settings} />
         <TravelSection packages={visiblePackages} settings={settings} />

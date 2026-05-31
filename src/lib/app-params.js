@@ -49,6 +49,9 @@ const getAppParams = () => {
 }
 
 
+const params = getAppParams();
+
 export const appParams = {
-	...getAppParams()
+	...params,
+	hasBase44Config: Boolean(params.appId)
 }

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +21,12 @@ export default function NewsManager({ articles }) {
   const uploadImage = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setDraft((current) => ({ ...current, image_url: file_url }));
-    setUploading(false);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setDraft((current) => ({ ...current, image_url: file_url }));
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

@@ -31,11 +31,26 @@
         "Other"
       ],
       "description": "Rugby league team supported"
+    },
+    "consent_to_contact": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the visitor consented to be contacted about packages"
+    },
+    "consent_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when consent was captured"
+    },
+    "source": {
+      "type": "string",
+      "description": "Registration source"
     }
   },
   "required": [
     "name",
     "email",
-    "team_supported"
+    "team_supported",
+    "consent_to_contact"
   ]
 }

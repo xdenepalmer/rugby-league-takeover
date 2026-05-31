@@ -23,9 +23,12 @@ export default function EventsManager({ event }) {
   const uploadPhoto = async (file) => {
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setDraft((current) => ({ ...current, photo_urls: [...(current.photo_urls || []), file_url] }));
-    setUploading(false);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setDraft((current) => ({ ...current, photo_urls: [...(current.photo_urls || []), file_url] }));
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

@@ -4,21 +4,28 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { isLikelyBotSubmission, normalizeInterestRegistration } from "@/lib/public-forms";
+import { appParams } from "@/lib/app-params";
 import SectionHeader from "./SectionHeader";
 
 const teams = ["Eels", "Tigers", "Titans", "Storm", "Leopards", "Bulls", "Other"];
 
 export default function TravelSection({ packages, settings = {} }) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", postcode: "", team_supported: "" });
+  const emptyForm = { name: "", phone: "", email: "", postcode: "", team_supported: "", consent_to_contact: false, website: "" };
+  const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (data) => base44.entities.InterestRegistration.create(data),
+    mutationFn: (data) => {
+      if (!appParams.hasBase44Config) return Promise.resolve({ skipped: true });
+      if (isLikelyBotSubmission(data)) return Promise.resolve({ skipped: true });
+      return base44.entities.InterestRegistration.create(normalizeInterestRegistration(data));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["registrations"] });
       setSubmitted(true);
-      setForm({ name: "", phone: "", email: "", postcode: "", team_supported: "" });
+      setForm(emptyForm);
     },
   });
 
@@ -52,6 +59,15 @@ export default function TravelSection({ packages, settings = {} }) {
             {submitted && <p className="mt-6 border border-primary bg-primary/10 p-4 text-sm font-semibold text-foreground">Thanks — your interest has been registered.</p>}
           </div>
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+            <input
+              aria-hidden="true"
+              tabIndex="-1"
+              autoComplete="off"
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
+              className="hidden"
+              name="website"
+            />
             <Input required placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-12 rounded-none bg-background" />
             <Input placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-12 rounded-none bg-background" />
             <Input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-12 rounded-none bg-background" />
@@ -64,7 +80,17 @@ export default function TravelSection({ packages, settings = {} }) {
                 {teams.map((team) => <SelectItem key={team} value={team}>{team}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button disabled={mutation.isPending} className="h-12 rounded-none bg-primary font-bold uppercase tracking-[0.2em] hover:bg-primary/90 md:col-span-2">
+            <label className="flex items-start gap-3 border border-border bg-background p-4 text-sm leading-6 text-muted-foreground md:col-span-2">
+              <input
+                required
+                type="checkbox"
+                checked={form.consent_to_contact}
+                onChange={(e) => setForm({ ...form, consent_to_contact: e.target.checked })}
+                className="mt-1 h-4 w-4 accent-primary"
+              />
+              <span>I agree to be contacted about Rugby League Takeover travel packages and related event updates.</span>
+            </label>
+            <Button disabled={!appParams.hasBase44Config || mutation.isPending} className="h-12 rounded-none bg-primary font-bold uppercase tracking-[0.2em] hover:bg-primary/90 md:col-span-2">
               {mutation.isPending ? "Submitting..." : "Register Interest"}
             </Button>
           </form>

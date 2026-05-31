@@ -14,10 +14,16 @@ export default function UserInviteManager() {
 
   const invite = async () => {
     setSending(true);
-    await base44.users.inviteUser(email, role);
-    setStatus(`Invite sent to ${email}`);
-    setEmail("");
-    setSending(false);
+    setStatus("");
+    try {
+      await base44.users.inviteUser(email, role);
+      setStatus(`Invite sent to ${email}`);
+      setEmail("");
+    } catch (error) {
+      setStatus(error?.message || "Invite could not be sent");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (

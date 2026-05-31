@@ -14,14 +14,26 @@
       "type": "string",
       "description": "Post content"
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "General",
+        "Travel",
+        "Events",
+        "MatchDay",
+        "VegasTips"
+      ],
+      "default": "General",
+      "description": "Discussion category"
+    },
     "parent_id": {
       "type": "string",
       "description": "Parent post ID for replies"
     },
     "is_published": {
       "type": "boolean",
-      "default": true,
-      "description": "Whether the post is visible publicly"
+      "default": false,
+      "description": "Whether the post is visible publicly after moderation"
     },
     "is_pinned": {
       "type": "boolean",

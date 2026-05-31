@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/390eddc5d_Untitled-31May2026at093306.png";
 
 const links = [
-  { label: "Latest News", href: "#news" },
-  { label: "About Us", href: "#about" },
-  { label: "Travel Packages", href: "#travel" },
-  { label: "Events", href: "#events" },
+  { label: "Latest News", href: "/#news" },
+  { label: "About Us", href: "/#about" },
+  { label: "Travel Packages", href: "/#travel" },
+  { label: "Events", href: "/#events" },
   { label: "Merch", href: "/store" },
   { label: "Forum", href: "/forum" },
 ];
@@ -25,9 +25,9 @@ export default function SiteNav({ settings = {} }) {
   }, []);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/95 border-b border-border backdrop-blur-xl" : "bg-background/70 backdrop-blur-md"}`}>
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background/95 border-b border-border backdrop-blur-xl" : "bg-background/40 border-b border-border/10 backdrop-blur-md"}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-8">
-        <a href="#home" className="block">
+        <a href="/" className="block">
           <img src={settings.site_logo_url || logoUrl} alt="Rugby League Takeover Las Vegas" className="h-14 w-14 object-contain md:h-16 md:w-16" />
         </a>
         <nav className="hidden items-center gap-8 md:flex">
