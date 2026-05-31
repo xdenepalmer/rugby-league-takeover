@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
 import Stripe from 'npm:stripe@22.2.0';
 
 // NOTE: Base44 deploys each function from its own directory and does not support
@@ -119,6 +119,13 @@ function resolveCheckoutOrigin(originHeader, allowlistEnv, fallback = DEFAULT_CH
   return allowedOrigins.has(requestedOrigin) ? requestedOrigin : fallbackOrigin;
 }
 
+function resolveCheckoutCustomer({ customerName = '', customerEmail = '', user = null } = {}) {
+  return {
+    name: toTrimmedString(customerName || user?.full_name),
+    email: toTrimmedString(customerEmail || user?.email),
+  };
+}
+
 function buildOrderMetadata({ appId, orderId, totalAud }) {
   return {
     base44_app_id: toTrimmedString(appId),
@@ -134,8 +141,14 @@ Deno.serve(async (req) => {
     const { items, customerName = '', customerEmail = '' } = await req.json();
     const normalizedItems = normalizeCheckoutItems(items);
 
-    const resolvedName = String(customerName || '').trim();
-    const resolvedEmail = String(customerEmail || '').trim();
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch {
+      user = null;
+    }
+
+    const { name: resolvedName, email: resolvedEmail } = resolveCheckoutCustomer({ customerName, customerEmail, user });
 
     if (!normalizedItems.length || !resolvedEmail) {
       return Response.json({ error: 'Cart items and email are required' }, { status: 400 });
@@ -164,7 +177,9 @@ Deno.serve(async (req) => {
       customer_email: resolvedEmail,
       status: 'pending',
       total_aud: totalAud,
-      line_items: lineItems
+      line_items: lineItems,
+      user_email: user?.email || '',
+      user_id: user?.id || ''
     });
 
     const session = await stripe.checkout.sessions.create({

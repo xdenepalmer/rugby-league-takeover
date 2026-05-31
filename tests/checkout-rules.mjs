@@ -104,6 +104,13 @@ export function resolveCheckoutOrigin(originHeader, allowlistEnv, fallback = DEF
   return allowedOrigins.has(requestedOrigin) ? requestedOrigin : fallbackOrigin;
 }
 
+export function resolveCheckoutCustomer({ customerName = "", customerEmail = "", user = null } = {}) {
+  return {
+    name: toTrimmedString(customerName || user?.full_name),
+    email: toTrimmedString(customerEmail || user?.email),
+  };
+}
+
 export function buildOrderMetadata({ appId, orderId, totalAud }) {
   return {
     base44_app_id: toTrimmedString(appId),

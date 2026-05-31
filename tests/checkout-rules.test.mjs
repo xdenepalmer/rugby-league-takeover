@@ -9,6 +9,7 @@ import {
   getNextStockQuantity,
   isPaidSessionForOrder,
   normalizeCheckoutItems,
+  resolveCheckoutCustomer,
   resolveCheckoutOrigin,
 } from "./checkout-rules.mjs";
 
@@ -58,6 +59,26 @@ test("resolves checkout redirects only to allowlisted origins", () => {
   assert.equal(resolveCheckoutOrigin("https://www.rugbyleagetakeover.com", allowlist, fallback), "https://www.rugbyleagetakeover.com");
   assert.equal(resolveCheckoutOrigin("https://evil.example", allowlist, fallback), fallback);
   assert.equal(resolveCheckoutOrigin("not a url", allowlist, fallback), fallback);
+});
+
+test("falls back to signed-in customer details during checkout", () => {
+  assert.deepEqual(
+    resolveCheckoutCustomer({
+      customerName: "",
+      customerEmail: "",
+      user: { full_name: "Dene Palmer", email: "dene@example.com" },
+    }),
+    { name: "Dene Palmer", email: "dene@example.com" }
+  );
+
+  assert.deepEqual(
+    resolveCheckoutCustomer({
+      customerName: " Guest ",
+      customerEmail: " guest@example.com ",
+      user: { full_name: "Dene Palmer", email: "dene@example.com" },
+    }),
+    { name: "Guest", email: "guest@example.com" }
+  );
 });
 
 test("accepts paid webhook sessions only when order, amount, currency, app, and session match", () => {
