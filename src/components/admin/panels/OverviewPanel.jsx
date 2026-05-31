@@ -11,7 +11,7 @@ export default function OverviewPanel() {
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200) });
   const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50) });
   const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200) });
-  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list("-created_date", 200) });
+  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list("-created_date", 200), retry: false, meta: { silent: true } });
 
   const counts = { news: news.length, products: products.length, orders: orders.length, registrations: registrations.length, posts: forumPosts.length };
   const pendingPosts = forumPosts.filter((p) => p.is_published !== true).length;

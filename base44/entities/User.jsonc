@@ -34,5 +34,18 @@
   },
   "required": [
     "role"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        { "user_condition": { "role": "admin" } },
+        { "created_by": "{{user.email}}" }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

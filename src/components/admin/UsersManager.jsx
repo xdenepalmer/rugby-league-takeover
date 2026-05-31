@@ -17,7 +17,7 @@ export default function UsersManager() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
-  const { data: users = [], isLoading } = useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list("-created_date", 200) });
+  const { data: users = [], isLoading, isError } = useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list("-created_date", 200), retry: false, meta: { silent: true } });
   const { data: bans = [] } = useQuery({ queryKey: ["bans"], queryFn: () => base44.entities.Ban.list("-created_date", 500), retry: false, meta: { silent: true } });
 
   const refresh = () => {
@@ -62,6 +62,17 @@ export default function UsersManager() {
   }, [users, search, roleFilter]);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading users…</p>;
+
+  if (isError) {
+    return (
+      <section className="border border-border bg-card p-6">
+        <h2 className="font-display text-3xl uppercase">Users</h2>
+        <p className="mt-4 border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          User management needs the <span className="font-mono">User</span> entity to allow admin read/update. Deploy the updated <span className="font-mono">User</span> permissions (RLS) and refresh to manage roles, access and bans here.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="border border-border bg-card p-6">

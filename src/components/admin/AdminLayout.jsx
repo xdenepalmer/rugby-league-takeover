@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FileText, CalendarDays, ShoppingBag,
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
-  Menu, X, Activity, Radio, Wifi, ChevronLeft, ChevronRight,
+  Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
   Shield, Zap
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
