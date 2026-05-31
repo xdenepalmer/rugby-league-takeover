@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       body,
       category,
       parent_id: parentId,
-      is_published: false,
+      is_published: true,
       is_pinned: false,
       ip_address: ip,
       user_email: user?.email || '',
