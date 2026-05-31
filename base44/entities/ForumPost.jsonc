@@ -42,15 +42,15 @@
     },
     "user_email": {
       "type": "string",
-      "description": "Email of the authenticated author (empty for anonymous posts)"
+      "description": "Authenticated author email (empty for guests)"
     },
     "user_id": {
       "type": "string",
-      "description": "ID of the authenticated author (empty for anonymous posts)"
+      "description": "Authenticated author id"
     },
     "ip_address": {
       "type": "string",
-      "description": "Client IP captured at submission for moderation (admin-only)"
+      "description": "Client IP captured at submission (admin-only)"
     }
   },
   "required": [
@@ -68,6 +68,9 @@
         },
         {
           "data.is_published": true
+        },
+        {
+          "data.user_email": "{{user.email}}"
         }
       ]
     },
