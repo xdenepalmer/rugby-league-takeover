@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function Register() {
-  const navigate = useNavigate();
   const { checkUserAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +23,8 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [searchParams] = useSearchParams();
-  const nextUrl = searchParams.get("next") || "/account";
+  const requestedNext = searchParams.get("next");
+  const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ export default function Register() {
         base44.auth.setToken(result.access_token);
       }
       await checkUserAuth();
-      window.location.href = nextUrl;
+      window.location.assign(nextUrl);
     } catch (err) {
       setError(err.message || "Invalid verification code");
     } finally {
