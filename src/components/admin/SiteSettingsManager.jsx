@@ -17,7 +17,7 @@ import MediaUploader from "./MediaUploader";
 import DateTimePicker from "./DateTimePicker";
 
 const defaults = {
-  site_logo_url: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/390eddc5d_Untitled-31May2026at093306.png",
+  site_logo_url: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/24c67d277_LASVEGAS.png",
   hero_eyebrow: "Las Vegas • Rugby League • Supporter Takeover",
   hero_title: "The annual\nVegas takeover",
   hero_description: "Join the world's most passionate and loyal Rugby League supporter groups for an unforgettable global footy invasion of Las Vegas.",
