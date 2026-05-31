@@ -102,3 +102,160 @@
   width: max-content;
   animation: marquee 30s linear infinite;
 }
+
+/* ─── Admin Command Centre Animations ─────────────────────── */
+
+/* Scanning line that moves top-to-bottom across panels */
+@keyframes cmd-scan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(400%); opacity: 0; }
+}
+
+/* Pulsing glow for live-status indicators */
+@keyframes cmd-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px currentColor; }
+  50% { opacity: 0.4; box-shadow: 0 0 12px currentColor; }
+}
+
+/* Subtle breathing border glow */
+@keyframes cmd-border-breathe {
+  0%, 100% { border-color: hsl(var(--border)); }
+  50% { border-color: hsl(var(--primary) / 0.5); }
+}
+
+/* Radar sweep for status widgets */
+@keyframes cmd-radar {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Metric counter animation */
+@keyframes cmd-count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Horizontal data stream */
+@keyframes cmd-data-stream {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Subtle float */
+@keyframes cmd-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Grid line reveal */
+@keyframes cmd-grid-reveal {
+  from { opacity: 0; }
+  to { opacity: 0.06; }
+}
+
+/* Stagger-in for cards */
+@keyframes cmd-card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Sidebar nav item hover glow line */
+@keyframes cmd-nav-glow {
+  0% { width: 0; opacity: 0; }
+  50% { opacity: 1; }
+  100% { width: 100%; opacity: 0.6; }
+}
+
+/* Status dot blink */
+@keyframes cmd-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* Ring expand for click feedback */
+@keyframes cmd-ring-expand {
+  from { transform: scale(0.8); opacity: 0.6; }
+  to { transform: scale(1.4); opacity: 0; }
+}
+
+/* Utility classes */
+.cmd-scan-line { animation: cmd-scan 4s ease-in-out infinite; }
+.cmd-pulse { animation: cmd-pulse 2s ease-in-out infinite; }
+.cmd-breathe { animation: cmd-border-breathe 3s ease-in-out infinite; }
+.cmd-radar { animation: cmd-radar 6s linear infinite; }
+.cmd-count-up { animation: cmd-count-up 0.5s ease-out forwards; }
+.cmd-float { animation: cmd-float 4s ease-in-out infinite; }
+.cmd-card-in { animation: cmd-card-in 0.4s ease-out forwards; }
+.cmd-blink { animation: cmd-blink 1.5s ease-in-out infinite; }
+
+/* Stagger delays for sequential card reveals */
+.cmd-delay-1 { animation-delay: 0.05s; opacity: 0; }
+.cmd-delay-2 { animation-delay: 0.1s; opacity: 0; }
+.cmd-delay-3 { animation-delay: 0.15s; opacity: 0; }
+.cmd-delay-4 { animation-delay: 0.2s; opacity: 0; }
+.cmd-delay-5 { animation-delay: 0.25s; opacity: 0; }
+.cmd-delay-6 { animation-delay: 0.3s; opacity: 0; }
+
+/* Glassmorphic card overlay */
+.cmd-glass {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--card) / 0.8) 0%,
+    hsl(var(--card) / 0.4) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Grid background pattern */
+.cmd-grid-bg {
+  background-image:
+    linear-gradient(hsl(var(--border) / 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: cmd-grid-reveal 0.8s ease-out forwards;
+}
+
+/* Gradient accent bar */
+.cmd-accent-bar {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--accent)) 50%,
+    hsl(var(--primary)) 100%
+  );
+  background-size: 200% 100%;
+  animation: cmd-data-stream 3s linear infinite;
+}
+
+/* Nav active glow */
+.cmd-nav-active {
+  position: relative;
+}
+.cmd-nav-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+  opacity: 0.7;
+}
+
+/* Scrollbar styling for admin panels */
+.cmd-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.cmd-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cmd-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 2px;
+}
+.cmd-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}

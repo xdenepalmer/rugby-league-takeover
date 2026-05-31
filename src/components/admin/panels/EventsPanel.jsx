@@ -1,18 +1,29 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Eye, Ticket } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarDays, Eye, Ticket, Activity } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import EventsManager from "../EventsManager";
 
-function Stat({ icon: Icon, label, value }) {
+function Stat({ icon: Icon, label, value, color = "from-primary to-primary/60", delay = 0 }) {
   return (
-    <div className="flex items-center justify-between border border-border bg-card/40 p-5">
-      <div>
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
-        <p className="mt-1 font-display text-3xl text-foreground">{value}</p>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4 }}
+      className="group relative overflow-hidden border border-border bg-card/60 cmd-glass hover:border-primary/30 transition-all duration-300"
+    >
+      <div className={`h-[2px] w-full bg-gradient-to-r ${color}`} />
+      <div className="p-5 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
+          <p className="mt-1 font-display text-3xl text-foreground">{value}</p>
+        </div>
+        <div className="p-2 border border-border/50 bg-muted/30">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
       </div>
-      <Icon className="h-8 w-8 stroke-1 text-primary" />
-    </div>
+    </motion.div>
   );
 }
 
@@ -23,22 +34,50 @@ export default function EventsPanel() {
   const withTickets = events.filter((e) => (e.tickets || []).some((t) => t?.url) || e.ticket_url).length;
 
   return (
-    <div className="grid gap-6">
-      <div className="border border-border bg-card p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-accent">Events</p>
-        <h2 className="mt-2 font-display text-4xl uppercase leading-none">Event management</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-          Build out the full Vegas calendar — meetups, Stadium Swim, match-week parties and more. Each event can carry its own date, venue, photos, description and external ticket links across multiple price tiers.
-        </p>
-      </div>
+    <div className="grid gap-5">
+      {/* Section Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden border border-border bg-card/60 cmd-glass"
+      >
+        <div className="cmd-accent-bar h-[2px] w-full" />
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary font-mono">
+              Events Module
+            </p>
+            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-primary/5 border border-primary/10">
+              <Activity className="h-2.5 w-2.5 text-primary cmd-pulse" />
+              <span className="text-[8px] font-bold uppercase tracking-wider text-primary">Live</span>
+            </span>
+          </div>
+          <h2 className="font-display text-3xl md:text-4xl uppercase leading-none tracking-wide">
+            Event Management
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+            Build out the full Vegas calendar — meetups, Stadium Swim, match-week parties and more.
+            Each event can carry its own date, venue, photos, description and external ticket links across multiple price tiers.
+          </p>
+        </div>
+      </motion.div>
 
+      {/* Stats Row */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat icon={CalendarDays} label="Total events" value={events.length} />
-        <Stat icon={Eye} label="Published (live)" value={published} />
-        <Stat icon={Ticket} label="With ticket links" value={withTickets} />
+        <Stat icon={CalendarDays} label="Total events" value={events.length} color="from-primary to-primary/60" delay={0.1} />
+        <Stat icon={Eye} label="Published (live)" value={published} color="from-emerald-500 to-emerald-500/60" delay={0.15} />
+        <Stat icon={Ticket} label="With ticket links" value={withTickets} color="from-accent to-accent/60" delay={0.2} />
       </div>
 
-      <EventsManager events={events} />
+      {/* Manager */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
+      >
+        <EventsManager events={events} />
+      </motion.div>
     </div>
   );
 }

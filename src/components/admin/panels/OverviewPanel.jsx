@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users as UsersIcon, ShieldAlert } from "lucide-react";
+import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import AdminOverview from "../AdminOverview";
 
@@ -16,23 +17,54 @@ export default function OverviewPanel() {
   const pendingPosts = forumPosts.filter((p) => p.is_published !== true).length;
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-5">
       <AdminOverview counts={counts} registrations={registrations} orders={orders} />
+
+      {/* Additional stats row */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex items-center justify-between border border-border bg-card/40 p-5">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Registered accounts</p>
-            <p className="mt-1 font-display text-3xl text-foreground">{users.length}</p>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.4 }}
+          className="group relative overflow-hidden border border-border bg-card/60 cmd-glass hover:border-primary/30 transition-all duration-300"
+        >
+          <div className="h-[2px] w-full bg-gradient-to-r from-violet-500 via-violet-400 to-violet-500" />
+          <div className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                Registered accounts
+              </p>
+              <p className="mt-1 font-display text-3xl text-foreground">{users.length}</p>
+              <p className="text-[9px] font-mono text-muted-foreground mt-1">Platform users</p>
+            </div>
+            <div className="p-2 border border-border/50 bg-muted/30">
+              <UsersIcon className="h-5 w-5 text-violet-400" />
+            </div>
           </div>
-          <UsersIcon className="h-8 w-8 stroke-1 text-primary" />
-        </div>
-        <div className="flex items-center justify-between border border-border bg-card/40 p-5">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Posts awaiting moderation</p>
-            <p className="mt-1 font-display text-3xl text-foreground">{pendingPosts}</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.4 }}
+          className="group relative overflow-hidden border border-border bg-card/60 cmd-glass hover:border-accent/30 transition-all duration-300"
+        >
+          <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
+          <div className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                Posts awaiting moderation
+              </p>
+              <p className="mt-1 font-display text-3xl text-foreground">{pendingPosts}</p>
+              <p className="text-[9px] font-mono text-muted-foreground mt-1">
+                {pendingPosts > 0 ? "Requires attention" : "All clear"}
+              </p>
+            </div>
+            <div className="p-2 border border-border/50 bg-muted/30">
+              <ShieldAlert className={`h-5 w-5 ${pendingPosts > 0 ? "text-amber-400 cmd-pulse" : "text-muted-foreground"}`} />
+            </div>
           </div>
-          <ShieldAlert className="h-8 w-8 stroke-1 text-accent" />
-        </div>
+        </motion.div>
       </div>
     </div>
   );
