@@ -124,12 +124,12 @@
     },
     "countdown_subtitle": {
       "type": "string",
-      "description": "Countdown subtitle, e.g. 'Las Vegas • Allegiant Stadium'"
+      "description": "Countdown subtitle, e.g. 'Las Vegas \u2022 Allegiant Stadium'"
     },
     "countdown_date": {
       "type": "string",
       "format": "date-time",
-      "description": "Target date/time the Las Vegas takeover begins"
+      "description": "Target date/time the takeover begins"
     },
     "countdown_cta_label": {
       "type": "string",
