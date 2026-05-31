@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FORUM_CATEGORIES, buildPendingForumPost } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
+import { useAuth } from "@/lib/AuthContext";
 
 const emptyPost = { author_name: "", title: "", body: "", category: "General" };
 
@@ -36,6 +37,7 @@ const getEngagement = (post) => {
 };
 
 export default function Forum() {
+  const { isAuthenticated, user } = useAuth();
   const [draft, setDraft] = useState(emptyPost);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,7 +51,19 @@ export default function Forum() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ForumPost.create(buildPendingForumPost(data)),
+    mutationFn: async (data) => {
+      // Validate client-side for fast feedback; the function re-sanitises,
+      // captures the client IP, and enforces bans server-side.
+      const authorName = isAuthenticated ? (user?.full_name || "Member") : data.author_name;
+      buildPendingForumPost({ ...data, author_name: authorName });
+      const response = await base44.functions.invoke("submitForumPost", {
+        author_name: data.author_name,
+        title: data.title,
+        body: data.body,
+        category: data.category,
+      });
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
       setDraft(emptyPost);
@@ -59,7 +73,7 @@ export default function Forum() {
 
   const handlePost = (e) => {
     e.preventDefault();
-    if (!draft.author_name || !draft.body) return;
+    if ((!isAuthenticated && !draft.author_name) || !draft.body) return;
     createMutation.mutate(draft);
   };
 
@@ -145,16 +159,22 @@ export default function Forum() {
             )}
 
             <form onSubmit={handlePost} className="mt-6 grid gap-4">
-              <div className="grid gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your Name</label>
-                <Input
-                  required
-                  placeholder="e.g. Tommy R."
-                  value={draft.author_name}
-                  onChange={(e) => setDraft({ ...draft, author_name: e.target.value })}
-                  className="h-11 rounded-none border-border bg-background text-sm"
-                />
-              </div>
+              {isAuthenticated ? (
+                <p className="border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                  Posting as <span className="font-semibold text-foreground">{user?.full_name || user?.email}</span>
+                </p>
+              ) : (
+                <div className="grid gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your Name</label>
+                  <Input
+                    required
+                    placeholder="e.g. Tommy R."
+                    value={draft.author_name}
+                    onChange={(e) => setDraft({ ...draft, author_name: e.target.value })}
+                    className="h-11 rounded-none border-border bg-background text-sm"
+                  />
+                </div>
+              )}
 
               <div className="grid gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Topic Category</label>
@@ -194,7 +214,7 @@ export default function Forum() {
 
               <Button
                 type="submit"
-                disabled={!appParams.hasBase44Config || !draft.author_name || !draft.body || createMutation.isPending}
+                disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.body || createMutation.isPending}
                 className="h-12 rounded-none bg-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/90"
               >
                 <Send className="mr-2 h-4 w-4" /> {createMutation.isPending ? "Sending..." : "Send for moderation"}

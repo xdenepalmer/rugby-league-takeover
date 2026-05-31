@@ -52,6 +52,14 @@
     "shipping_notes": {
       "type": "string",
       "description": "Admin shipping notes or tracking details"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the authenticated buyer (empty for guest checkout)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID of the authenticated buyer (empty for guest checkout)"
     }
   },
   "required": [

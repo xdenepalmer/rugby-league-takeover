@@ -1,0 +1,41 @@
+{
+  "name": "Ban",
+  "type": "object",
+  "properties": {
+    "ban_type": {
+      "type": "string",
+      "enum": [
+        "ip",
+        "email",
+        "user"
+      ],
+      "description": "What the ban matches on"
+    },
+    "value": {
+      "type": "string",
+      "description": "Normalized (lowercased, trimmed) IP address, email, or user id to block"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the ban was applied"
+    },
+    "banned_by": {
+      "type": "string",
+      "description": "Email of the admin who created the ban"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional expiry. Empty means permanent."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the ban is currently enforced"
+    }
+  },
+  "required": [
+    "ban_type",
+    "value"
+  ]
+}

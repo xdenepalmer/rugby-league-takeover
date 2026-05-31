@@ -45,6 +45,18 @@
     "source": {
       "type": "string",
       "description": "Registration source"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the authenticated submitter (empty for anonymous)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID of the authenticated submitter (empty for anonymous)"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Client IP captured at submission for moderation (admin-only)"
     }
   },
   "required": [

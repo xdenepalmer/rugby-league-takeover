@@ -141,10 +141,27 @@ export const AuthProvider = ({ children }) => {
     base44.auth.redirectToLogin(window.location.href);
   };
 
+  // Re-fetch the current user (e.g. after a profile or password change).
+  const refreshUser = async () => {
+    const currentUser = await base44.auth.me();
+    setUser(currentUser);
+    setIsAuthenticated(true);
+    return currentUser;
+  };
+
+  // Persist profile / custom user fields, then refresh local state.
+  const updateProfile = async (data) => {
+    await base44.auth.updateMe(data);
+    return refreshUser();
+  };
+
+  const isAdmin = user?.role === 'admin';
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      isAdmin,
       isLoadingAuth,
       isLoadingPublicSettings,
       authError,
@@ -153,7 +170,9 @@ export const AuthProvider = ({ children }) => {
       logout,
       navigateToLogin,
       checkUserAuth,
-      checkAppState
+      checkAppState,
+      refreshUser,
+      updateProfile
     }}>
       {children}
     </AuthContext.Provider>

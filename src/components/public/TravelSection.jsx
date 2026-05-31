@@ -17,10 +17,14 @@ export default function TravelSection({ packages, settings = {} }) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (data) => {
-      if (!appParams.hasBase44Config) return Promise.resolve({ skipped: true });
-      if (isLikelyBotSubmission(data)) return Promise.resolve({ skipped: true });
-      return base44.entities.InterestRegistration.create(normalizeInterestRegistration(data));
+    mutationFn: async (data) => {
+      if (!appParams.hasBase44Config) return { skipped: true };
+      if (isLikelyBotSubmission(data)) return { skipped: true };
+      // Validate client-side for fast feedback; the function re-sanitises,
+      // captures the client IP, links the account and enforces bans server-side.
+      const clean = normalizeInterestRegistration(data);
+      const response = await base44.functions.invoke("submitRegistration", { ...clean, website: data.website });
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["registrations"] });

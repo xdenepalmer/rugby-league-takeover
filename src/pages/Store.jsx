@@ -5,6 +5,7 @@ import { ShoppingCart, ShoppingBag, Plus, Minus, Trash2, ArrowLeft, CheckCircle2
 import { AnimatePresence, motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -18,6 +19,7 @@ export default function Store() {
       return [];
     }
   });
+  const { user } = useAuth();
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutName, setCheckoutName] = useState("");
   const [checkoutEmail, setCheckoutEmail] = useState("");
@@ -34,6 +36,14 @@ export default function Store() {
   useEffect(() => {
     localStorage.setItem("rlt_cart", JSON.stringify(cart));
   }, [cart]);
+
+  // Prefill checkout details for signed-in buyers (they can still edit them).
+  useEffect(() => {
+    if (user?.email) {
+      setCheckoutName((current) => current || user.full_name || "");
+      setCheckoutEmail((current) => current || user.email || "");
+    }
+  }, [user?.email, user?.full_name]);
 
   const addToCart = (product) => {
     const stock = Number(product.stock_quantity);

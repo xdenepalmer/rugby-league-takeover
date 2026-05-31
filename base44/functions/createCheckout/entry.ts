@@ -134,7 +134,18 @@ Deno.serve(async (req) => {
     const { items, customerName = '', customerEmail = '' } = await req.json();
     const normalizedItems = normalizeCheckoutItems(items);
 
-    if (!normalizedItems.length || !customerEmail) {
+    // Link the order to the buyer's account when they are signed in, and fall
+    // back to their profile details if the form omitted them.
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch {
+      user = null;
+    }
+    const resolvedName = String(customerName || user?.full_name || '').trim();
+    const resolvedEmail = String(customerEmail || user?.email || '').trim();
+
+    if (!normalizedItems.length || !resolvedEmail) {
       return Response.json({ error: 'Cart items and email are required' }, { status: 400 });
     }
 
@@ -157,16 +168,18 @@ Deno.serve(async (req) => {
     );
 
     const order = await base44.asServiceRole.entities.StoreOrder.create({
-      customer_name: customerName,
-      customer_email: customerEmail,
+      customer_name: resolvedName,
+      customer_email: resolvedEmail,
       status: 'pending',
       total_aud: totalAud,
-      line_items: lineItems
+      line_items: lineItems,
+      user_email: user?.email || '',
+      user_id: user?.id || ''
     });
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      customer_email: customerEmail,
+      customer_email: resolvedEmail,
       success_url: `${origin}/store?success=true`,
       cancel_url: `${origin}/store?cancelled=true`,
       line_items: stripeLineItems,
