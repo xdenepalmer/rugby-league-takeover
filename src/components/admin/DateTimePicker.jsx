@@ -4,6 +4,7 @@ import { CalendarClock, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const pad = (n) => String(n).padStart(2, "0");
 // Emits a local "YYYY-MM-DDTHH:mm" string (same shape the countdown/event fields use).
@@ -12,6 +13,7 @@ const toLocalValue = (d) =>
 
 export default function DateTimePicker({ value, onChange, placeholder = "Pick a date & time" }) {
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
   const current = value ? new Date(value) : null;
   const valid = current && isValid(current);
   const timeStr = valid ? `${pad(current.getHours())}:${pad(current.getMinutes())}` : "19:00";
@@ -31,6 +33,20 @@ export default function DateTimePicker({ value, onChange, placeholder = "Pick a 
     base.setHours(Number(h) || 0, Number(m) || 0, 0, 0);
     onChange(toLocalValue(base));
   };
+
+  if (isMobile) {
+    return (
+      <label className="grid gap-1.5">
+        <span className="sr-only">{placeholder}</span>
+        <Input
+          type="datetime-local"
+          value={valid ? toLocalValue(current) : ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-11 rounded-none border-border bg-background text-sm"
+        />
+      </label>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

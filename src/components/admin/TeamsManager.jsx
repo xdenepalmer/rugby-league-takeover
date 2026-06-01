@@ -45,10 +45,10 @@ export default function TeamsManager({ teams = [] }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Shield className="h-6 w-6 text-primary" /> Teams</h2>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="rounded-none" onClick={() => loadLibrary.mutate(NRL_TEAMS)} disabled={loadLibrary.isPending}>
+          <Button variant="outline" size="mobile" className="rounded-none" onClick={() => loadLibrary.mutate(NRL_TEAMS)} disabled={loadLibrary.isPending}>
             <Library className="mr-2 h-4 w-4" /> Load NRL ({NRL_TEAMS.length})
           </Button>
-          <Button variant="outline" size="sm" className="rounded-none" onClick={() => loadLibrary.mutate(SUPER_LEAGUE_TEAMS)} disabled={loadLibrary.isPending}>
+          <Button variant="outline" size="mobile" className="rounded-none" onClick={() => loadLibrary.mutate(SUPER_LEAGUE_TEAMS)} disabled={loadLibrary.isPending}>
             <Library className="mr-2 h-4 w-4" /> Load Super League ({SUPER_LEAGUE_TEAMS.length})
           </Button>
         </div>
@@ -58,14 +58,14 @@ export default function TeamsManager({ teams = [] }) {
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a team</p>
         <div className="grid gap-3 md:grid-cols-[1fr_1fr_110px]">
-          <Input placeholder="Team name (e.g. Parramatta Eels)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="rounded-none" />
-          <Input placeholder="Short name (e.g. Eels)" value={draft.short_name} onChange={(e) => setDraft({ ...draft, short_name: e.target.value })} className="rounded-none" />
-          <Input type="number" placeholder="Order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="rounded-none" />
+          <Input placeholder="Team name (e.g. Parramatta Eels)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none" />
+          <Input placeholder="Short name (e.g. Eels)" value={draft.short_name} onChange={(e) => setDraft({ ...draft, short_name: e.target.value })} className="h-11 rounded-none" />
+          <Input type="number" placeholder="Order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none" />
         </div>
         <ImageField label="Team logo" value={draft.logo_url} onChange={(url) => setDraft({ ...draft, logo_url: url })} />
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">Active <Switch checked={draft.is_active !== false} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} /></label>
-          <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} className="ml-auto rounded-none bg-primary hover:bg-primary/90">
+          <label className="flex min-h-11 items-center gap-2 text-sm">Active <Switch checked={draft.is_active !== false} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} /></label>
+          <Button size="mobile" onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} className="ml-auto w-full rounded-none bg-primary hover:bg-primary/90 sm:w-auto">
             <Plus className="mr-2 h-4 w-4" /> Add team
           </Button>
         </div>
@@ -76,12 +76,12 @@ export default function TeamsManager({ teams = [] }) {
         {sorted.map((team) => (
           <div key={team.id} className="grid items-center gap-3 border border-border p-3 md:grid-cols-[56px_1fr_1fr_90px_auto]">
             <TeamCrest name={team.name} short={team.short_name} logo={team.logo_url} className="h-12 w-12 text-sm" />
-            <Input defaultValue={team.name || ""} onBlur={(e) => updateMutation.mutate({ id: team.id, data: { name: e.target.value } })} className="rounded-none" />
-            <Input defaultValue={team.short_name || ""} placeholder="Short name" onBlur={(e) => updateMutation.mutate({ id: team.id, data: { short_name: e.target.value } })} className="rounded-none" />
-            <Input type="number" defaultValue={team.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: team.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
+            <Input defaultValue={team.name || ""} onBlur={(e) => updateMutation.mutate({ id: team.id, data: { name: e.target.value } })} className="h-11 rounded-none" />
+            <Input defaultValue={team.short_name || ""} placeholder="Short name" onBlur={(e) => updateMutation.mutate({ id: team.id, data: { short_name: e.target.value } })} className="h-11 rounded-none" />
+            <Input type="number" defaultValue={team.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: team.id, data: { sort_order: Number(e.target.value) } })} className="h-11 rounded-none" />
             <div className="flex items-center gap-2">
               <Switch checked={team.is_active !== false} onCheckedChange={(v) => updateMutation.mutate({ id: team.id, data: { is_active: v } })} />
-              <Button variant="destructive" size="icon" className="rounded-none" onClick={() => deleteMutation.mutate(team.id)}><Trash2 className="h-4 w-4" /></Button>
+              <Button variant="destructive" size="mobileIcon" className="rounded-none" onClick={() => deleteMutation.mutate(team.id)}><Trash2 className="h-4 w-4" /></Button>
             </div>
             <ImageField label="" value={team.logo_url} onChange={(url) => updateMutation.mutate({ id: team.id, data: { logo_url: url } })} className="md:col-span-5" />
           </div>

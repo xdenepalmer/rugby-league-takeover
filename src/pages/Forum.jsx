@@ -340,7 +340,7 @@ function ReactionPicker({ isLiked, likeCount, onLike, isPending }) {
         onClick={onLike}
         disabled={isPending}
         whileTap={{ scale: 0.9 }}
-        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all duration-200 ${
+        className={`flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 ${
           isLiked
             ? "bg-primary/10 text-primary border border-primary/20"
             : "text-muted-foreground/50 hover:text-primary hover:bg-primary/5 border border-transparent"
@@ -374,7 +374,7 @@ function ReactionPicker({ isLiked, likeCount, onLike, isPending }) {
                   onClick={() => handleReaction(r.emoji)}
                   whileHover={{ scale: 1.3, y: -4 }}
                   whileTap={{ scale: 0.85 }}
-                  className={`flex flex-col items-center px-2 py-1 transition-all rounded-sm ${
+                  className={`flex min-h-11 min-w-11 flex-col items-center justify-center px-2 py-1 transition-all rounded-sm ${
                     selectedReactions[r.emoji] ? "bg-primary/10" : "hover:bg-muted/20"
                   }`}
                   title={r.label}
@@ -502,7 +502,7 @@ const SORT_OPTIONS = [
 
 function SortTabs({ active, onChange }) {
   return (
-    <div className="flex items-center border border-border/50 bg-card/30 p-0.5">
+    <div className="grid grid-cols-3 border border-border/50 bg-card/30 p-0.5 sm:flex sm:items-center">
       {SORT_OPTIONS.map((opt) => {
         const isActive = active === opt.id;
         return (
@@ -510,7 +510,7 @@ function SortTabs({ active, onChange }) {
             key={opt.id}
             type="button"
             onClick={() => onChange(opt.id)}
-            className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+            className={`relative flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
               isActive ? "text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"
             }`}
           >
@@ -589,7 +589,7 @@ function CategoryPill({ value, isActive, onClick, count }) {
       onClick={onClick}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.96 }}
-      className={`relative flex items-center gap-2 border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-250 ${
+      className={`relative flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-250 ${
         isActive
           ? `border-primary/40 bg-gradient-to-r ${meta.gradient} text-foreground shadow-[0_0_16px_hsl(var(--primary)/0.12),inset_0_1px_0_hsl(var(--primary)/0.1)]`
           : `border-border/50 bg-card/20 text-muted-foreground hover:text-foreground hover:bg-card/40 hover:border-border`
@@ -653,13 +653,13 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 60, scale: 0.96 }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-4 md:inset-x-[10%] md:inset-y-8 z-[81] flex flex-col border border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl shadow-black/30 overflow-hidden"
+        className="ios-sheet fixed inset-x-0 bottom-0 z-[81] flex max-h-[92dvh] flex-col overflow-hidden border-t border-border/60 bg-card/95 shadow-2xl shadow-black/30 md:inset-x-[10%] md:inset-y-8 md:max-h-none md:border"
       >
         {/* Top accent */}
         <div className={`h-[3px] w-full bg-gradient-to-r ${meta.gradient}`} />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 shrink-0">
+        <div className="flex items-center justify-between border-b border-border/30 px-4 py-3 shrink-0 sm:px-6 sm:py-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className={`p-2 bg-gradient-to-br ${meta.gradient} border border-border/30`}>
               <MetaIcon className={`h-4 w-4 ${meta.accent}`} />
@@ -672,15 +672,16 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 p-2 border border-border/30 hover:border-border text-muted-foreground hover:text-foreground transition-all hover:bg-muted/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center border border-border/30 hover:border-border text-muted-foreground hover:text-foreground transition-all hover:bg-muted/10"
+            aria-label="Close thread"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto cmd-scrollbar">
-          <div className="p-6 md:p-8">
+        <div className="ios-scroll flex-1 overflow-y-auto cmd-scrollbar">
+          <div className="p-4 sm:p-6 md:p-8">
             {/* Author info */}
             <div className="flex items-start gap-3 mb-6">
               <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
@@ -709,10 +710,10 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             {/* Engagement */}
             <div className="mt-6 flex flex-wrap items-center gap-1 border-t border-border/20 pt-4">
               <ReactionPicker isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
-              <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
+              <button type="button" className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
                 <Share2 className="h-3.5 w-3.5" />
               </button>
-              <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
+              <button type="button" className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
                 <Bookmark className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -731,7 +732,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
         </div>
 
         {/* Sticky reply form at bottom */}
-        <div className="shrink-0 border-t border-border/30 bg-card/80 backdrop-blur-sm p-4 md:p-6">
+        <div className="ios-keyboard-spacer shrink-0 border-t border-border/30 bg-card/80 p-4 backdrop-blur-sm md:p-6">
           <form onSubmit={onReply} className="space-y-3">
             <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
               Write a Reply
@@ -746,7 +747,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                     required placeholder="Your name"
                     value={replyDraft.author_name}
                     onChange={(e) => onUpdateReply({ author_name: e.target.value })}
-                    className="h-9 rounded-none border-border bg-background text-sm"
+                    className="h-11 rounded-none border-border bg-background text-sm"
                   />
                 )}
                 <Textarea
@@ -761,10 +762,11 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             <div className="flex justify-end">
               <Button
                 type="submit"
+                size="mobile"
                 disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
-                className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
+                className="rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
               >
-                <Send className="mr-1.5 h-3 w-3" /> {isSubmitting ? "Sending…" : "Post Reply"}
+                <Send className="mr-1.5 h-3.5 w-3.5" /> {isSubmitting ? "Sending…" : "Post Reply"}
               </Button>
             </div>
           </form>
@@ -841,7 +843,7 @@ function ForumPostCard({
       style={{ rotateX, rotateY, transformPerspective: 1200 }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`group relative overflow-hidden border transition-all duration-300 ${
+      className={`forum-post-card group relative overflow-hidden border transition-all duration-300 ${
         post.is_pinned
           ? "border-primary/30 bg-gradient-to-br from-primary/[0.06] via-card/80 to-card/50 shadow-[0_0_30px_hsl(var(--primary)/0.06)]"
           : "border-border/60 bg-card/30 hover:border-primary/20"
@@ -880,7 +882,7 @@ function ForumPostCard({
         </div>
       )}
 
-      <div className="relative p-5 md:p-6">
+      <div className="relative p-4 sm:p-5 md:p-6">
         {/* Header */}
         <div className="flex items-start gap-3">
           <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
@@ -888,7 +890,7 @@ function ForumPostCard({
           </UserProfileHoverCard>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
+              <span className="min-w-0 truncate text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
               <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
               <span className="text-[10px] text-muted-foreground/30">•</span>
               <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
@@ -937,35 +939,34 @@ function ForumPostCard({
         </div>
 
         {/* Engagement Bar */}
-        <div className="mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
+        <div className="forum-engagement-bar mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
           <ReactionPicker isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
 
           <button
             type="button"
             onClick={onToggleReply}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all duration-200 border ${
+            className={`flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 border ${
               replyOpen
                 ? "bg-accent/10 text-accent border-accent/20"
                 : "text-muted-foreground/50 hover:text-accent hover:bg-accent/5 border-transparent"
             }`}
+            aria-label="Write a reply"
           >
             <Reply className="h-3.5 w-3.5" />
-            <span className="tabular-nums">{replies.length}</span>
-            <span className="hidden sm:inline text-[10px] uppercase tracking-wider">
-              {replies.length === 1 ? "Reply" : "Replies"}
-            </span>
+            <span className="text-[10px] uppercase tracking-wider">Reply</span>
+            {replies.length > 0 && <span className="rounded-sm bg-muted/30 px-1.5 py-0.5 tabular-nums">{replies.length}</span>}
           </button>
 
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent"
+            className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent"
           >
             <Share2 className="h-3.5 w-3.5" />
           </button>
 
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent"
+            className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent"
           >
             <Bookmark className="h-3.5 w-3.5" />
           </button>
@@ -974,27 +975,27 @@ function ForumPostCard({
             <button
               type="button"
               onClick={() => onDeletePost(post)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-destructive transition-colors border border-transparent"
+              className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-muted-foreground/30 hover:text-destructive transition-colors border border-transparent"
               title="Remove this thread"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
 
-          <div className="flex-1" />
+          <div className="hidden flex-1 sm:block" />
 
           {/* View Thread button */}
           <button
             type="button"
             onClick={() => onOpenThread(post)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20"
+            className="hidden min-h-11 items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20 sm:flex"
           >
             <Eye className="h-3 w-3" />
             <span className="hidden sm:inline">View Thread</span>
           </button>
 
           {/* Mobile stats */}
-          <div className="flex md:hidden items-center gap-1 text-[10px] text-muted-foreground/30">
+          <div className="flex min-h-11 items-center justify-center gap-1 text-[10px] text-muted-foreground/30 md:hidden">
             <Eye className="h-3 w-3" />
             <span className="font-mono tabular-nums">{engagement.views}</span>
           </div>
@@ -1068,7 +1069,7 @@ function ForumPostCard({
                     required placeholder="Your name"
                     value={replyDraft.author_name}
                     onChange={(e) => onUpdateReply({ author_name: e.target.value })}
-                    className="h-10 rounded-none border-border bg-background text-sm"
+                    className="h-11 rounded-none border-border bg-background text-sm"
                   />
                 )}
                 <Textarea
@@ -1079,15 +1080,16 @@ function ForumPostCard({
                   className="min-h-20 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
                 />
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" onClick={onToggleReply} className="h-8 rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <Button type="button" variant="ghost" size="mobile" onClick={onToggleReply} className="rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Cancel
                   </Button>
                   <Button
                     type="submit"
+                    size="mobile"
                     disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
-                    className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
+                    className="rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
                   >
-                    <Send className="mr-1.5 h-3 w-3" /> {isSubmitting ? "Sending…" : "Post Reply"}
+                    <Send className="mr-1.5 h-3.5 w-3.5" /> {isSubmitting ? "Sending…" : "Post Reply"}
                   </Button>
                 </div>
               </div>
@@ -1286,7 +1288,7 @@ function EmptyState({ onClearFilters, onSelectCategory }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onSelectCategory(cat)}
-              className={`flex items-center gap-2 px-4 py-2.5 border border-border/30 bg-gradient-to-r ${m.gradient} text-[10px] font-bold uppercase tracking-wider text-foreground hover:border-primary/30 transition-all`}
+              className={`flex min-h-11 items-center gap-2 px-4 py-2.5 border border-border/30 bg-gradient-to-r ${m.gradient} text-[10px] font-bold uppercase tracking-wider text-foreground hover:border-primary/30 transition-all`}
             >
               <CatIcon className={`h-3.5 w-3.5 ${m.accent}`} />
               {m.label}
@@ -1297,7 +1299,8 @@ function EmptyState({ onClearFilters, onSelectCategory }) {
       <Button
         onClick={onClearFilters}
         variant="outline"
-        className="mt-5 h-9 rounded-none text-[10px] font-bold uppercase tracking-wider border-border/30"
+        size="mobile"
+        className="mt-5 rounded-none text-[10px] font-bold uppercase tracking-wider border-border/30"
       >
         Clear all filters
       </Button>
@@ -1361,7 +1364,8 @@ function MobileFAB({ onClick }) {
       }}
       whileTap={{ scale: 0.9 }}
       transition={{ duration: 0.2 }}
-      className="fixed bottom-6 right-6 z-40 lg:hidden"
+      className="forum-compose-fab fixed bottom-[calc(5.5rem+var(--safe-bottom))] right-5 z-40 lg:hidden"
+      aria-label="Start a discussion"
     >
       <div className="relative">
         {/* Pulse ring */}
@@ -1429,14 +1433,14 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
             ) : (
               <div className="space-y-1">
                 <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Your Name</label>
-                <Input required placeholder="e.g. Tommy R." value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-9 rounded-none border-border bg-background text-sm" />
+                <Input required placeholder="e.g. Tommy R." value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
               </div>
             )}
 
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Category</label>
               <Select value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v })}>
-                <SelectTrigger className="h-9 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {categories.filter((c) => c.value !== "All").map((c) => {
                     const m = getCategoryMeta(c.value);
@@ -1455,7 +1459,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
 
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Topic Title</label>
-              <Input required placeholder="What's on your mind?" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-9 rounded-none border-border bg-background text-sm" />
+              <Input required placeholder="What's on your mind?" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
             </div>
 
             <div className="space-y-1">
@@ -1470,7 +1474,8 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
             <Button
               type="submit"
               disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || isPending}
-              className="w-full h-10 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90 transition-all group"
+              size="mobile"
+              className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90 transition-all group"
             >
               <Send className="mr-2 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               {isPending ? "Submitting…" : "Submit for Review"}
@@ -1548,6 +1553,7 @@ export default function Forum() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
       setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true);
+      setShowMobileCompose(false);
     },
   });
 
@@ -1650,16 +1656,16 @@ export default function Forum() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+    <main className="forum-mobile-shell relative min-h-screen overflow-x-hidden bg-background text-foreground">
       {/* ━━━ HERO SECTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="relative overflow-hidden border-b border-border/50">
+      <section className="forum-mobile-hero relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 cmd-grid-bg opacity-40" />
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-background" />
         <FloatingParticles />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-5 pb-10 pt-28 md:px-8 md:pt-32 md:pb-12">
+        <div className="relative z-10 mx-auto max-w-6xl px-3 pb-5 pt-20 sm:px-5 sm:pb-10 sm:pt-28 md:px-8 md:pt-32 md:pb-12">
           {/* Breadcrumb */}
-          <motion.nav initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-5">
+          <motion.nav initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-5 hidden items-center gap-2 sm:flex">
             <Link to="/" className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/30 hover:text-primary transition-colors">Home</Link>
             <span className="text-muted-foreground/20">/</span>
             <span className="text-[10px] font-mono uppercase tracking-wider text-primary font-bold">Forum</span>
@@ -1674,11 +1680,11 @@ export default function Forum() {
                   <Activity className="h-2 w-2" /> Live
                 </span>
               </div>
-              <h1 className="font-display text-5xl sm:text-6xl md:text-7xl uppercase tracking-tight leading-[0.9]">
+              <h1 className="font-display text-4xl sm:text-6xl md:text-7xl uppercase tracking-tight leading-[0.92]">
                 <span className="block">Aussies in</span>
                 <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">Vegas</span>
               </h1>
-              <p className="mt-4 max-w-md text-sm text-muted-foreground/60 leading-relaxed">
+              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground/60 sm:mt-4 sm:leading-relaxed">
                 Connect with fellow Rugby League fans heading to Las Vegas. Share tips, plan meetups, and get the inside word on the takeover.
               </p>
             </motion.div>
@@ -1688,15 +1694,15 @@ export default function Forum() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.5 }}
-              className="flex border border-border/40 bg-card/20 cmd-glass divide-x divide-border/30"
+              className="grid w-full grid-cols-3 border border-border/40 bg-card/20 cmd-glass divide-x divide-border/30 lg:w-auto"
             >
               {[
                 { icon: MessageSquare, value: allThreads.length, label: "Threads" },
                 { icon: MessageCircle, value: totalReplies, label: "Replies" },
                 { icon: Users, value: uniqueMembers, label: "Members" },
               ].map(({ icon: SIcon, value, label }) => (
-                <div key={label} className="flex items-center gap-3 px-4 py-3 md:px-5">
-                  <div className="p-1.5 bg-muted/20 border border-border/30">
+                <div key={label} className="flex min-w-0 items-center gap-2 px-2 py-3 sm:gap-3 sm:px-4 md:px-5">
+                  <div className="shrink-0 p-1.5 bg-muted/20 border border-border/30">
                     <SIcon className="h-3.5 w-3.5 text-primary/70" />
                   </div>
                   <div>
@@ -1713,7 +1719,7 @@ export default function Forum() {
       </section>
 
       {/* ━━━ MAIN CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="mx-auto max-w-6xl px-5 py-6 md:px-8 md:py-8">
+      <div className="mx-auto max-w-6xl px-3 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
         {/* Trending */}
         {allThreads.length >= 3 && (
           <motion.div
@@ -1752,16 +1758,16 @@ export default function Forum() {
               transition={{ delay: 0.1 }}
               className="border border-border/40 bg-card/20 cmd-glass overflow-hidden"
             >
-              <div className="p-4 space-y-3">
+              <div className="space-y-3 p-3 sm:p-4">
                 {/* Search + Sort row */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/30" />
                     <Input
                       placeholder="Search discussions, topics, or users…"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-9 rounded-none border-border/50 bg-background/60 pl-9 text-sm"
+                      className="h-11 rounded-none border-border/50 bg-background/60 pl-9 text-sm"
                     />
                     {searchQuery && (
                       <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors">
@@ -1773,7 +1779,7 @@ export default function Forum() {
                 </div>
 
                 {/* Categories */}
-                <div className="flex flex-wrap gap-1.5">
+                <div className="forum-filter-rail -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                   {categories.map((cat) => (
                     <CategoryPill
                       key={cat.value}
@@ -1786,7 +1792,7 @@ export default function Forum() {
                 </div>
 
                 {/* Summary */}
-                <div className="flex items-center justify-between pt-1 border-t border-border/20">
+                <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border/20 pt-1">
                   <p className="text-[9px] font-mono text-muted-foreground/30">
                     {filteredThreads.length} {filteredThreads.length === 1 ? "thread" : "threads"}
                     {selectedCategory !== "All" ? ` in ${getCategoryMeta(selectedCategory).label}` : ""}
@@ -1877,16 +1883,19 @@ export default function Forum() {
             <motion.div
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[88vh] overflow-y-auto bg-card border-t border-border cmd-scrollbar lg:hidden"
+              className="ios-sheet ios-scroll fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto border-t border-border bg-card/95 pb-[calc(1.25rem+var(--safe-bottom))] cmd-scrollbar lg:hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="forum-mobile-compose-title"
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1">
-                <div className="h-1 w-10 rounded-full bg-border/50" />
+                <div className="ios-home-indicator" />
               </div>
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
-                  <button type="button" onClick={() => setShowMobileCompose(false)} className="p-1.5 text-muted-foreground hover:text-foreground border border-border/30 hover:border-border transition-colors">
+                  <h2 id="forum-mobile-compose-title" className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
+                  <button type="button" onClick={() => setShowMobileCompose(false)} className="touch-target flex items-center justify-center border border-border/30 text-muted-foreground transition-colors hover:border-border hover:text-foreground" aria-label="Close composer">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -1902,22 +1911,23 @@ export default function Forum() {
                   )}
                 </AnimatePresence>
 
-                <form onSubmit={(e) => { handlePost(e); setShowMobileCompose(false); }} className="space-y-3">
+                <form onSubmit={handlePost} className="space-y-3">
                   {isAuthenticated ? (
                     <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
                       <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus />
                       <span className="text-xs font-bold text-foreground">{user?.full_name || user?.email}</span>
                     </div>
                   ) : (
-                    <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-9 rounded-none border-border bg-background text-sm" />
+                    <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
                   )}
                   <Select value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v })}>
-                    <SelectTrigger className="h-9 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{categories.filter((c) => c.value !== "All").map((c) => <SelectItem key={c.value} value={c.value}>{getCategoryMeta(c.value).label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Input required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-9 rounded-none border-border bg-background text-sm" />
+                  <Input required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
                   <Textarea required placeholder="What's on your mind?" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
-                  <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending} className="w-full h-10 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
+                  <MediaAttach value={draft.media_url} onChange={(url) => setDraft({ ...draft, media_url: url })} />
+                  <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending} size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
                     <Send className="mr-2 h-3 w-3" /> {createMutation.isPending ? "Submitting…" : "Submit for Review"}
                   </Button>
                 </form>

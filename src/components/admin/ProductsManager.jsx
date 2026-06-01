@@ -12,9 +12,9 @@ import ImageField from "./ImageField";
 const LOW_STOCK = 5;
 const stockBadge = (qty) => {
   const n = Number(qty);
-  if (!Number.isFinite(n) || n <= 0) return { label: "Out of stock", tone: "border-destructive/30 text-destructive bg-destructive/5", icon: "🔴" };
-  if (n <= LOW_STOCK) return { label: `Low · ${n} left`, tone: "border-amber-500/30 text-amber-400 bg-amber-500/5", icon: "🟡" };
-  return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5", icon: "🟢" };
+  if (!Number.isFinite(n) || n <= 0) return { label: "Out of stock", tone: "border-destructive/30 text-destructive bg-destructive/5" };
+  if (n <= LOW_STOCK) return { label: `Low · ${n} left`, tone: "border-amber-500/30 text-amber-400 bg-amber-500/5" };
+  return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
 const emptyProduct = { name: "", description: "", image_url: "", price_aud: 0, stock_quantity: 0, is_active: true, sort_order: 1 };
@@ -43,7 +43,7 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
     >
       {!editing ? (
         /* ── Preview Mode ── */
-        <div className="flex gap-4 p-4">
+        <div className="flex flex-col gap-4 p-4 sm:flex-row">
           {/* Image */}
           <div className="h-20 w-20 shrink-0 bg-muted/10 border border-border/20 overflow-hidden flex items-center justify-center">
             {product.image_url ? (
@@ -80,20 +80,22 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col items-center gap-1 shrink-0">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:flex-col">
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="p-1.5 border border-border/30 text-muted-foreground/30 hover:text-foreground hover:border-border transition-colors"
+              className="touch-target flex items-center justify-center border border-border/30 text-muted-foreground/50 transition-colors hover:border-border hover:text-foreground"
+              aria-label="Edit product"
             >
-              <Edit3 className="h-3 w-3" />
+              <Edit3 className="h-4 w-4" />
             </button>
             <button
               type="button"
               onClick={() => onDelete(product.id)}
-              className="p-1.5 border border-border/30 text-muted-foreground/30 hover:text-destructive hover:border-destructive/30 transition-colors"
+              className="touch-target flex items-center justify-center border border-border/30 text-muted-foreground/50 transition-colors hover:border-destructive/30 hover:text-destructive"
+              aria-label="Delete product"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -104,7 +106,7 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary/60 flex items-center gap-1.5">
               <Edit3 className="h-3 w-3" /> Editing Product
             </p>
-            <button type="button" onClick={() => { setDraft(product); setEditing(false); }} className="text-muted-foreground/30 hover:text-foreground">
+            <button type="button" onClick={() => { setDraft(product); setEditing(false); }} className="touch-target flex items-center justify-center text-muted-foreground/50 hover:text-foreground" aria-label="Cancel editing">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -112,19 +114,19 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Product Name</label>
-              <Input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+              <Input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Price (AUD)</label>
-              <Input type="number" value={draft.price_aud || 0} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+              <Input type="number" value={draft.price_aud || 0} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Stock Quantity</label>
-              <Input type="number" value={draft.stock_quantity || 0} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+              <Input type="number" value={draft.stock_quantity || 0} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sort Order</label>
-              <Input type="number" value={draft.sort_order || 1} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+              <Input type="number" value={draft.sort_order || 1} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
           </div>
 
@@ -136,13 +138,13 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
           <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <label className="inline-flex items-center gap-2 px-2.5 py-1.5 border border-border/30 bg-muted/5 cursor-pointer text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+            <label className="touch-target inline-flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
               {draft.is_active !== false ? <Eye className="h-3 w-3 text-emerald-400" /> : <EyeOff className="h-3 w-3 text-muted-foreground/30" />}
               Active
-              <Switch checked={draft.is_active !== false} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} className="scale-75" />
+              <Switch checked={draft.is_active !== false} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} />
             </label>
             <div className="flex-1" />
-            <Button onClick={handleSave} className="h-8 rounded-none bg-primary hover:bg-primary/90 text-[9px] font-bold uppercase tracking-wider">
+            <Button onClick={handleSave} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
               <Save className="mr-1.5 h-3 w-3" /> Save
             </Button>
           </div>
@@ -191,7 +193,8 @@ export default function ProductsManager({ products }) {
 
           <Button
             onClick={() => setShowCreate(!showCreate)}
-            className={`h-8 rounded-none text-[9px] font-bold uppercase tracking-wider ${showCreate ? "bg-muted text-foreground hover:bg-muted/80" : "bg-primary hover:bg-primary/90"}`}
+            size="mobile"
+            className={`rounded-none text-[9px] font-bold uppercase tracking-wider ${showCreate ? "bg-muted text-foreground hover:bg-muted/80" : "bg-primary hover:bg-primary/90"}`}
           >
             {showCreate ? <><X className="mr-1 h-3 w-3" /> Cancel</> : <><Plus className="mr-1 h-3 w-3" /> Add Product</>}
           </Button>
@@ -230,11 +233,11 @@ export default function ProductsManager({ products }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Product Name</label>
-                    <Input placeholder="e.g. Takeover Tee" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+                    <Input placeholder="e.g. Takeover Tee" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Price (AUD)</label>
-                    <Input type="number" value={draft.price_aud} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+                    <Input type="number" value={draft.price_aud} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                 </div>
                 <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
@@ -245,14 +248,14 @@ export default function ProductsManager({ products }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Stock Quantity</label>
-                    <Input type="number" value={draft.stock_quantity} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+                    <Input type="number" value={draft.stock_quantity} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sort Order</label>
-                    <Input type="number" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+                    <Input type="number" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                 </div>
-                <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} className="h-9 rounded-none bg-primary hover:bg-primary/90 text-[9px] font-bold uppercase tracking-wider">
+                <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
                   <Plus className="mr-1.5 h-3 w-3" /> {createMutation.isPending ? "Adding…" : "Add Product"}
                 </Button>
               </div>

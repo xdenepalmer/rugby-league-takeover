@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import AdminStickyActionBar from "./AdminStickyActionBar";
+import MobileActionDrawer from "./MobileActionDrawer";
 
 const durations = [
   { value: "0", label: "Permanent" },
@@ -29,32 +30,42 @@ export default function BanDialog({ trigger, title, description, confirmLabel = 
     setDays("0");
   };
 
+  const triggerElement = React.isValidElement(trigger)
+    ? React.cloneElement(trigger, {
+        onClick: (event) => {
+          trigger.props?.onClick?.(event);
+          if (!event.defaultPrevented) setOpen(true);
+        },
+      })
+    : null;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="rounded-none">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-display text-2xl uppercase"><BanIcon className="h-5 w-5 text-destructive" /> {title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
-        </DialogHeader>
+    <>
+      {triggerElement}
+      <MobileActionDrawer
+        open={open}
+        onOpenChange={setOpen}
+        title={<span className="flex items-center gap-2"><BanIcon className="h-5 w-5 text-destructive" /> {title}</span>}
+        description={description}
+      >
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label>Reason</Label>
-            <Input placeholder="e.g. Repeated spam" value={reason} onChange={(e) => setReason(e.target.value)} className="rounded-none" />
+            <Input placeholder="e.g. Repeated spam" value={reason} onChange={(e) => setReason(e.target.value)} className="h-11 rounded-none" />
           </div>
           <div className="grid gap-2">
             <Label>Duration</Label>
             <Select value={days} onValueChange={setDays}>
-              <SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>
               <SelectContent>{durations.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" className="rounded-none" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="destructive" className="rounded-none" onClick={confirm} disabled={pending}>{pending ? "Applying..." : confirmLabel}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <AdminStickyActionBar className="mt-4">
+          <Button variant="ghost" size="mobile" className="rounded-none" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="destructive" size="mobile" className="rounded-none" onClick={confirm} disabled={pending}>{pending ? "Applying..." : confirmLabel}</Button>
+        </AdminStickyActionBar>
+      </MobileActionDrawer>
+    </>
   );
 }

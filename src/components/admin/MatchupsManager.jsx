@@ -14,7 +14,7 @@ const emptyMatchup = { home_team: "", home_logo: "", away_team: "", away_logo: "
 function TeamSelect({ teams, valueName, onPick, placeholder }) {
   return (
     <Select value={valueName || ""} onValueChange={(id) => { const t = teams.find((x) => x.id === id); if (t) onPick(t); }}>
-      <SelectTrigger className="rounded-none"><SelectValue placeholder={placeholder}>{valueName || placeholder}</SelectValue></SelectTrigger>
+      <SelectTrigger className="h-11 rounded-none"><SelectValue placeholder={placeholder}>{valueName || placeholder}</SelectValue></SelectTrigger>
       <SelectContent>
         {teams.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add teams first</div>}
         {teams.map((t) => (
@@ -61,14 +61,14 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <DateTimePicker value={draft.kickoff} onChange={(val) => setDraft({ ...draft, kickoff: val })} placeholder="Kickoff date & time" />
-          <Input placeholder="Label (e.g. Double Header Game 1)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="rounded-none" />
-          <Input placeholder="Venue (optional)" value={draft.venue} onChange={(e) => setDraft({ ...draft, venue: e.target.value })} className="rounded-none" />
-          <Input placeholder="Tickets link (optional)" value={draft.ticket_url} onChange={(e) => setDraft({ ...draft, ticket_url: e.target.value })} className="rounded-none" />
-          <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="rounded-none" />
+          <Input placeholder="Label (e.g. Double Header Game 1)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="h-11 rounded-none" />
+          <Input placeholder="Venue (optional)" value={draft.venue} onChange={(e) => setDraft({ ...draft, venue: e.target.value })} className="h-11 rounded-none" />
+          <Input placeholder="Tickets link (optional)" value={draft.ticket_url} onChange={(e) => setDraft({ ...draft, ticket_url: e.target.value })} className="h-11 rounded-none" />
+          <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none" />
         </div>
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">Published <Switch checked={draft.is_published !== false} onCheckedChange={(v) => setDraft({ ...draft, is_published: v })} /></label>
-          <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.home_team || !draft.away_team || createMutation.isPending} className="ml-auto rounded-none bg-primary hover:bg-primary/90">
+          <label className="flex min-h-11 items-center gap-2 text-sm">Published <Switch checked={draft.is_published !== false} onCheckedChange={(v) => setDraft({ ...draft, is_published: v })} /></label>
+          <Button size="mobile" onClick={() => createMutation.mutate(draft)} disabled={!draft.home_team || !draft.away_team || createMutation.isPending} className="ml-auto w-full rounded-none bg-primary hover:bg-primary/90 sm:w-auto">
             <Plus className="mr-2 h-4 w-4" /> Add match-up
           </Button>
         </div>
@@ -89,8 +89,8 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
             </div>
             <span className="text-xs text-muted-foreground">{m.label}{m.venue ? ` · ${m.venue}` : ""}</span>
             <div className="ml-auto flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={m.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: m.id, data: { is_published: v } })} /></label>
-              <Button variant="destructive" size="icon" className="rounded-none" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4" /></Button>
+              <label className="flex min-h-11 items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={m.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: m.id, data: { is_published: v } })} /></label>
+              <Button variant="destructive" size="mobileIcon" className="rounded-none" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4" /></Button>
             </div>
           </div>
         ))}

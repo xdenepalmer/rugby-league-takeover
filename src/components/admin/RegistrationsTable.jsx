@@ -94,7 +94,7 @@ export default function RegistrationsTable({ registrations }) {
             <button
               onClick={exportCsv}
               disabled={!filtered.length}
-              className="group flex items-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
+              className="group flex min-h-11 items-center justify-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
                          transition-all hover:border-primary/50 hover:bg-primary/5 disabled:opacity-30 disabled:pointer-events-none"
             >
               <Download className="h-3.5 w-3.5 text-primary transition-transform group-hover:-translate-y-0.5" />
@@ -103,7 +103,7 @@ export default function RegistrationsTable({ registrations }) {
           </div>
 
           {/* ── Stats bar ── */}
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {[
               { label: "Total Registrations", value: registrations.length, icon: Users,         color: "text-primary" },
               { label: "Unique Teams",        value: uniqueTeams,          icon: Shield,        color: "text-accent"  },
@@ -148,7 +148,7 @@ export default function RegistrationsTable({ registrations }) {
                 <button
                   key={team}
                   onClick={() => setTeamFilter(team)}
-                  className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border transition-all duration-150
+                  className={`min-h-11 px-3 py-2 text-[10px] font-bold uppercase tracking-wider border transition-all duration-150
                     ${active
                       ? team === "all"
                         ? "border-primary bg-primary/15 text-primary"

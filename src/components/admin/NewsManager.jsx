@@ -69,21 +69,22 @@ function ArticleCard({ article, index, updateMutation, deleteMutation }) {
             </div>
             <button
               onClick={() => setEditing(false)}
-              className="p-1.5 border border-border/50 hover:border-primary/30 hover:text-primary transition-colors"
+              className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-primary/30 hover:text-primary transition-colors"
+              title="Close editor"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <FieldLabel label="Title">
-              <Input defaultValue={article.title || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { title: e.target.value } })} className="rounded-none" />
+              <Input defaultValue={article.title || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { title: e.target.value } })} className="h-11 rounded-none" />
             </FieldLabel>
             <FieldLabel label="Published Date">
-              <Input type="date" defaultValue={article.published_date || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { published_date: e.target.value } })} className="rounded-none" />
+              <Input type="date" defaultValue={article.published_date || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { published_date: e.target.value } })} className="h-11 rounded-none" />
             </FieldLabel>
             <FieldLabel label="Author">
-              <Input defaultValue={article.author || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { author: e.target.value } })} className="rounded-none" />
+              <Input defaultValue={article.author || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { author: e.target.value } })} className="h-11 rounded-none" />
             </FieldLabel>
             <div className="flex items-end gap-3 pb-1">
               <FieldLabel label="Published">
@@ -158,33 +159,34 @@ function ArticleCard({ article, index, updateMutation, deleteMutation }) {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setEditing(true)}
-                  className="p-2 border border-border/50 hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
+                  className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-primary/30 hover:text-primary transition-colors text-muted-foreground"
                   title="Edit article"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4" />
                 </button>
 
                 {!confirmDelete ? (
                   <button
                     onClick={() => setConfirmDelete(true)}
-                    className="p-2 border border-border/50 hover:border-destructive/30 hover:text-destructive transition-colors text-muted-foreground"
+                    className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-destructive/30 hover:text-destructive transition-colors text-muted-foreground"
                     title="Delete article"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 ) : (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => deleteMutation.mutate(article.id)}
-                      className="px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 transition-colors"
+                      className="min-h-11 px-3 py-2 text-[10px] font-bold uppercase tracking-wider bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 transition-colors"
                     >
                       Confirm
                     </button>
                     <button
                       onClick={() => setConfirmDelete(false)}
-                      className="p-1.5 border border-border/50 hover:border-border text-muted-foreground transition-colors"
+                      className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-border text-muted-foreground transition-colors"
+                      title="Cancel delete"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -318,13 +320,13 @@ export default function NewsManager({ articles }) {
               <div className="border-t border-border/50 p-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <FieldLabel label="Title">
-                    <Input placeholder="Article title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="rounded-none" />
+                    <Input placeholder="Article title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none" />
                   </FieldLabel>
                   <FieldLabel label="Published Date">
-                    <Input type="date" value={draft.published_date} onChange={(e) => setDraft({ ...draft, published_date: e.target.value })} className="rounded-none" />
+                    <Input type="date" value={draft.published_date} onChange={(e) => setDraft({ ...draft, published_date: e.target.value })} className="h-11 rounded-none" />
                   </FieldLabel>
                   <FieldLabel label="Author">
-                    <Input placeholder="Author name" value={draft.author} onChange={(e) => setDraft({ ...draft, author: e.target.value })} className="rounded-none" />
+                    <Input placeholder="Author name" value={draft.author} onChange={(e) => setDraft({ ...draft, author: e.target.value })} className="h-11 rounded-none" />
                   </FieldLabel>
                   <FieldLabel label="Status">
                     <div className="flex items-center gap-3 h-10">
@@ -340,6 +342,7 @@ export default function NewsManager({ articles }) {
                   </FieldLabel>
                   <div className="md:col-span-2">
                     <Button
+                      size="mobile"
                       onClick={() => createMutation.mutate(draft)}
                       disabled={!draft.title || createMutation.isPending}
                       className="rounded-none bg-primary hover:bg-primary/90 w-full sm:w-auto"

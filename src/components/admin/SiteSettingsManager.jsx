@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import MediaUploader from "./MediaUploader";
 import DateTimePicker from "./DateTimePicker";
 import ImageField from "./ImageField";
+import AdminStickyActionBar from "./AdminStickyActionBar";
 
 const defaults = {
   site_logo_url: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/24c67d277_LASVEGAS.png",
@@ -270,7 +271,7 @@ export default function SiteSettingsManager({ settings }) {
 
                     <div className="mt-5 border-t border-border/30 pt-3 flex items-center justify-between">
                       <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">Configure Module</span>
-                      <ChevronLeft className="h-3.5 w-3.5 rotate-185 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      <ChevronLeft className="h-3.5 w-3.5 rotate-180 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
                     </div>
                   </motion.div>
                 );
@@ -571,25 +572,28 @@ export default function SiteSettingsManager({ settings }) {
                       </div>
                     </div>
 
-                    <Button
-                      onClick={() => saveMutation.mutate(draft)}
-                      disabled={saveMutation.isPending}
-                      className="rounded-none bg-primary hover:bg-primary/90 text-white transition-all duration-200 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)] h-9 text-xs uppercase tracking-wider font-bold"
-                    >
-                      {saveMutation.isPending ? (
-                        <>
-                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
-                            <Save className="h-4 w-4" />
-                          </motion.div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
+                    <AdminStickyActionBar className="sm:min-w-52">
+                      <Button
+                        onClick={() => saveMutation.mutate(draft)}
+                        disabled={saveMutation.isPending}
+                        size="mobile"
+                        className="col-span-2 rounded-none bg-primary font-bold uppercase tracking-wider text-white transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
+                      >
+                        {saveMutation.isPending ? (
+                          <>
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
+                              <Save className="h-4 w-4" />
+                            </motion.div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save Changes
+                          </>
+                        )}
+                      </Button>
+                    </AdminStickyActionBar>
                   </div>
                 </motion.div>
               </div>

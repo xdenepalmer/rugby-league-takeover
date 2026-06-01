@@ -5,11 +5,18 @@ import {
   LayoutDashboard, FileText, CalendarDays, ShoppingBag,
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
   Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
-  Shield, Zap, Download, Keyboard
+  Shield, Zap, Download, Keyboard, MoreHorizontal
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
+import AdminOfflineBanner from "./AdminOfflineBanner";
+import {
+  getActiveMobileAdminTab,
+  getAdminSectionLabel,
+  mobileMoreAdminItems,
+  mobilePrimaryAdminTabs,
+} from "@/lib/admin-mobile-nav";
 
 const navItems = [
   { to: "/admin/overview",  label: "Overview",  icon: LayoutDashboard, shortcut: "⌘1", key: "1" },
@@ -21,6 +28,19 @@ const navItems = [
   { to: "/admin/settings",  label: "Settings",   icon: Settings,        shortcut: "⌘7", key: "7" },
 ];
 
+const mobileIconMap = {
+  LayoutDashboard,
+  FileText,
+  CalendarDays,
+  ShoppingBag,
+  MessagesSquare,
+  Users,
+  Settings,
+  ExternalLink,
+  Download,
+  MoreHorizontal,
+};
+
 /* ── Live clock hook ─────────────────────────────────────────── */
 function useLiveClock() {
   const [time, setTime] = useState(new Date());
@@ -31,22 +51,24 @@ function useLiveClock() {
   return time;
 }
 
-/* ── System status mock ──────────────────────────────────────── */
 function useSystemStatus() {
-  const [statuses, setStatuses] = useState([
-    { label: "API", ok: true },
-    { label: "DB", ok: true },
-    { label: "CDN", ok: true },
-  ]);
+  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+
   useEffect(() => {
-    const id = setInterval(() => {
-      setStatuses((prev) =>
-        prev.map((s) => ({ ...s, ok: Math.random() > 0.05 }))
-      );
-    }, 8000);
-    return () => clearInterval(id);
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
   }, []);
-  return statuses;
+
+  return [
+    { label: "NET", ok: online },
+    { label: "API", ok: true },
+    { label: "APP", ok: true },
+  ];
 }
 
 /* ── Badge counts hook (derive from data when available) ──── */
@@ -118,6 +140,7 @@ export default function AdminLayout({ children }) {
   const badgeCounts = useBadgeCounts();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
 
   const timeStr = clock.toLocaleTimeString("en-AU", {
@@ -134,9 +157,8 @@ export default function AdminLayout({ children }) {
   });
 
   /* Get current section name */
-  const currentSection = navItems.find((item) =>
-    location.pathname.startsWith(item.to)
-  )?.label || "Dashboard";
+  const currentSection = getAdminSectionLabel(location.pathname);
+  const activeMobileTab = getActiveMobileAdminTab(location.pathname);
 
   /* ── Keyboard shortcuts (Ctrl+1-7) ─────────────────────────── */
   const handleKeyboard = useCallback(
@@ -156,8 +178,16 @@ export default function AdminLayout({ children }) {
     return () => window.removeEventListener("keydown", handleKeyboard);
   }, [handleKeyboard]);
 
+  useEffect(() => {
+    setMobileMoreOpen(false);
+  }, [location.pathname]);
+
+  const triggerExport = () => {
+    window.dispatchEvent(new CustomEvent("admin:export-data"));
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground cmd-grid-bg">
+    <div className="min-h-dvh bg-background text-foreground cmd-grid-bg">
       {/* ── Top Accent Bar ── */}
       <div className="cmd-accent-bar h-[2px] w-full" />
 
@@ -169,9 +199,10 @@ export default function AdminLayout({ children }) {
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
-                size="icon"
-                className="rounded-none lg:hidden h-8 w-8"
+                size="mobileIcon"
+                className="rounded-none lg:hidden"
                 onClick={() => setMobileOpen((v) => !v)}
+                aria-label={mobileOpen ? "Close admin navigation" : "Open admin navigation"}
               >
                 {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
               </Button>
@@ -238,8 +269,8 @@ export default function AdminLayout({ children }) {
               <Button
                 asChild
                 variant="outline"
-                size="sm"
-                className="rounded-none h-7 text-[10px] uppercase tracking-wider font-bold"
+                size="mobile"
+                className="rounded-none text-[10px] font-bold uppercase tracking-wider md:h-7 md:px-2"
               >
                 <Link to="/">
                   <ExternalLink className="mr-1.5 h-3 w-3" /> Site
@@ -247,8 +278,8 @@ export default function AdminLayout({ children }) {
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="rounded-none h-7 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-destructive"
+                size="mobile"
+                className="rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-destructive md:h-7 md:px-2"
                 onClick={() => base44.auth.logout("/")}
               >
                 <LogOut className="mr-1.5 h-3 w-3" /> Exit
@@ -260,6 +291,7 @@ export default function AdminLayout({ children }) {
         {/* Animated gradient border at bottom of header */}
         <div className="absolute bottom-0 left-0 right-0 h-[1px] cmd-accent-bar opacity-40" />
       </header>
+      <AdminOfflineBanner />
 
       {/* ── Body ── */}
       <div className="flex">
@@ -268,7 +300,7 @@ export default function AdminLayout({ children }) {
           className={`hidden lg:flex flex-col border-r border-border bg-card/30 transition-all duration-300 ease-out ${
             collapsed ? "w-16" : "w-56"
           }`}
-          style={{ minHeight: "calc(100vh - 54px)" }}
+          style={{ minHeight: "calc(100dvh - 54px)" }}
         >
           {/* Sidebar Header */}
           <div className="flex items-center justify-between px-3 py-3 border-b border-border/50">
@@ -370,10 +402,7 @@ export default function AdminLayout({ children }) {
                   <ExternalLink className="h-3 w-3" /> View Site
                 </Link>
                 <button
-                  onClick={() => {
-                    // Trigger a synthetic CSV export event the active page can listen for
-                    window.dispatchEvent(new CustomEvent("admin:export-data"));
-                  }}
+                  onClick={triggerExport}
                   className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
                              transition-all hover:border-primary/40 hover:text-foreground hover:bg-primary/5"
                 >
@@ -430,7 +459,7 @@ export default function AdminLayout({ children }) {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="fixed left-0 top-0 z-40 h-full w-64 border-r border-border cmd-glass cmd-scrollbar overflow-y-auto lg:hidden"
+                className="ios-scroll fixed left-0 top-0 z-40 h-dvh w-72 max-w-[86vw] border-r border-border cmd-glass cmd-scrollbar overflow-y-auto pb-safe pt-safe lg:hidden"
               >
                 <div className="flex items-center justify-between px-4 py-4 border-b border-border">
                   <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary">
@@ -438,7 +467,8 @@ export default function AdminLayout({ children }) {
                   </span>
                   <button
                     onClick={() => setMobileOpen(false)}
-                    className="p-1 text-muted-foreground hover:text-foreground"
+                    className="touch-target flex items-center justify-center text-muted-foreground hover:text-foreground"
+                    aria-label="Close admin navigation"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -450,7 +480,7 @@ export default function AdminLayout({ children }) {
                       to={to}
                       onClick={() => setMobileOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
+                        `touch-target flex items-center gap-3 px-3 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
                           isActive
                             ? "bg-primary/10 text-foreground border-l-2 border-primary"
                             : "text-muted-foreground hover:text-foreground border-l-2 border-transparent"
@@ -467,22 +497,22 @@ export default function AdminLayout({ children }) {
                 </nav>
 
                 {/* Mobile quick actions */}
-                <div className="border-t border-border/50 mx-2 px-3 py-3 mt-2">
+                <div className="mx-2 mt-2 border-t border-border/50 px-3 py-3">
                   <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                     Quick Actions
                   </p>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <Link
                       to="/"
                       onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
+                      className="flex min-h-11 items-center justify-center gap-1.5 border border-border/50 px-2.5 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
                                  transition-all hover:border-primary/40 hover:text-foreground"
                     >
                       <ExternalLink className="h-3 w-3" /> View Site
                     </Link>
                     <button
-                      onClick={() => window.dispatchEvent(new CustomEvent("admin:export-data"))}
-                      className="flex items-center gap-1.5 border border-border/50 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
+                      onClick={triggerExport}
+                      className="flex min-h-11 items-center justify-center gap-1.5 border border-border/50 px-2.5 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground
                                  transition-all hover:border-primary/40 hover:text-foreground"
                     >
                       <Download className="h-3 w-3" /> Export
@@ -534,13 +564,142 @@ export default function AdminLayout({ children }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="px-5 py-6 md:px-8 md:py-8"
+              className="px-4 pb-[calc(7.75rem+var(--safe-bottom))] pt-5 md:px-8 md:py-8"
             >
               {children}
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
+
+      <AnimatePresence>
+        {mobileMoreOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close admin controls"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-background/55 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileMoreOpen(false)}
+            />
+            <motion.section
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              className="ios-sheet ios-scroll fixed inset-x-0 bottom-0 z-50 max-h-[78dvh] overflow-y-auto border border-border/70 px-4 pb-[calc(1rem+var(--safe-bottom))] pt-3 lg:hidden"
+            >
+              <div className="mx-auto ios-home-indicator" />
+              <div className="mt-4 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-primary">Admin Controls</p>
+                  <h2 className="mt-1 font-display text-2xl uppercase leading-none tracking-wide">Manage on phone</h2>
+                </div>
+                <button
+                  type="button"
+                  className="ios-pressable flex h-11 w-11 items-center justify-center border border-border/70 text-muted-foreground"
+                  onClick={() => setMobileMoreOpen(false)}
+                  aria-label="Close admin controls"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                {mobileMoreAdminItems.map((item) => {
+                  const Icon = mobileIconMap[item.icon] || MoreHorizontal;
+                  const itemClass = "ios-pressable flex min-h-[58px] items-center gap-3 border border-border/60 bg-card/45 px-4 text-left text-sm font-bold text-foreground";
+
+                  if (item.kind === "link") {
+                    return (
+                      <Link key={item.label} to={item.to} className={itemClass} onClick={() => setMobileMoreOpen(false)}>
+                        <Icon className="h-4 w-4 text-primary" />
+                        <span className="flex-1">{item.label}</span>
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Link>
+                    );
+                  }
+
+                  if (item.kind === "action") {
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        className={itemClass}
+                        onClick={() => {
+                          triggerExport();
+                          setMobileMoreOpen(false);
+                        }}
+                      >
+                        <Icon className="h-4 w-4 text-accent" />
+                        <span className="flex-1">{item.label}</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <NavLink key={item.label} to={item.to} className={itemClass} onClick={() => setMobileMoreOpen(false)}>
+                      <Icon className="h-4 w-4 text-primary" />
+                      <span className="flex-1">{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </motion.section>
+          </>
+        )}
+      </AnimatePresence>
+
+      <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 pt-2">
+          {mobilePrimaryAdminTabs.map((item) => {
+            const Icon = mobileIconMap[item.icon] || MoreHorizontal;
+            const isActive = activeMobileTab === item.label || (item.kind === "more" && mobileMoreOpen);
+            const content = (
+              <>
+                <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                <span className="max-w-full truncate">{item.label}</span>
+                {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
+                  <span className="absolute right-3 top-1 flex h-4 min-w-[16px] items-center justify-center bg-primary px-1 text-[8px] font-bold text-primary-foreground">
+                    {badgeCounts[item.badgeKey] > 9 ? "9+" : badgeCounts[item.badgeKey]}
+                  </span>
+                )}
+              </>
+            );
+
+            if (item.kind === "more") {
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setMobileMoreOpen((open) => !open)}
+                  className={`ios-tabbar-item relative flex flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold uppercase tracking-wide ${
+                    isActive ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+                  }`}
+                  aria-expanded={mobileMoreOpen}
+                  aria-label="Open admin controls"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                className={`ios-tabbar-item relative flex flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold uppercase tracking-wide ${
+                  isActive ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {content}
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -99,8 +99,8 @@ function SystemStatusWidget() {
 
   const metrics = [
     { label: "Uptime", value: uptime, icon: Clock },
-    { label: "API Latency", value: `${Math.round(12 + Math.random() * 8)}ms`, icon: Zap },
-    { label: "Active Sessions", value: String(Math.floor(3 + Math.random() * 5)), icon: Eye },
+    { label: "PWA Shell", value: "Ready", icon: Zap },
+    { label: "Admin", value: "Live", icon: Eye },
   ];
 
   return (
@@ -123,7 +123,7 @@ function SystemStatusWidget() {
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           {metrics.map(({ label, value, icon: MIcon }) => (
             <div key={label} className="text-center border border-border/40 bg-muted/20 p-3">
               <MIcon className="h-3.5 w-3.5 mx-auto text-muted-foreground mb-1.5" />

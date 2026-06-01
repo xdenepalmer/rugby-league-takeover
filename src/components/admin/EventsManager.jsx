@@ -107,21 +107,21 @@ function TicketsEditor({ tickets = [], onChange }) {
           animate={{ opacity: 1, height: "auto" }}
           className="grid items-center gap-2 md:grid-cols-[1.2fr_90px_2fr_auto_auto] border-l-2 border-primary/15 pl-3 overflow-hidden"
         >
-          <Input placeholder="Tier (e.g. VIP)" value={ticket.name || ""} onChange={(e) => update(i, { name: e.target.value })} className="h-8 rounded-none text-sm border-border/30" />
-          <Input type="number" placeholder="$AUD" value={ticket.price_aud ?? ""} onChange={(e) => update(i, { price_aud: Number(e.target.value) })} className="h-8 rounded-none text-sm border-border/30" />
-          <Input placeholder="https://tickets..." value={ticket.url || ""} onChange={(e) => update(i, { url: e.target.value })} className="h-8 rounded-none text-sm border-border/30" />
-          <label className="flex items-center gap-1 text-[8px] uppercase text-muted-foreground/40 whitespace-nowrap">
+          <Input placeholder="Tier (e.g. VIP)" value={ticket.name || ""} onChange={(e) => update(i, { name: e.target.value })} className="h-11 rounded-none text-sm border-border/30" />
+          <Input type="number" placeholder="$AUD" value={ticket.price_aud ?? ""} onChange={(e) => update(i, { price_aud: Number(e.target.value) })} className="h-11 rounded-none text-sm border-border/30" />
+          <Input placeholder="https://tickets..." value={ticket.url || ""} onChange={(e) => update(i, { url: e.target.value })} className="h-11 rounded-none text-sm border-border/30" />
+          <label className="flex min-h-11 items-center gap-2 text-[10px] uppercase text-muted-foreground/60 whitespace-nowrap">
             {ticket.sold_out ? <span className="text-destructive">Sold out</span> : "Available"}
-            <Switch checked={ticket.sold_out === true} onCheckedChange={(v) => update(i, { sold_out: v })} className="scale-75" />
+            <Switch checked={ticket.sold_out === true} onCheckedChange={(v) => update(i, { sold_out: v })} />
           </label>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-none text-muted-foreground/30 hover:text-destructive" onClick={() => onChange(tickets.filter((_, idx) => idx !== i))}>
-            <X className="h-3 w-3" />
+          <Button type="button" variant="ghost" size="mobileIcon" className="rounded-none text-muted-foreground/30 hover:text-destructive" onClick={() => onChange(tickets.filter((_, idx) => idx !== i))}>
+            <X className="h-4 w-4" />
           </Button>
         </motion.div>
       ))}
 
-      <Button type="button" variant="outline" size="sm" className="w-fit h-7 rounded-none text-[9px] font-bold uppercase tracking-wider border-border/30" onClick={() => onChange([...tickets, { ...emptyTicket }])}>
-        <Plus className="mr-1 h-3 w-3" /> Add tier
+      <Button type="button" variant="outline" size="mobile" className="w-full rounded-none text-[10px] font-bold uppercase tracking-wider border-border/30 sm:w-fit" onClick={() => onChange([...tickets, { ...emptyTicket }])}>
+        <Plus className="mr-1 h-3.5 w-3.5" /> Add tier
       </Button>
     </div>
   );
@@ -134,22 +134,22 @@ function EventFields({ draft, setDraft }) {
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
         <LabeledField label="Event Title">
-          <Input placeholder="e.g. Official Pre-Game Party" value={draft.title || ""} onChange={(e) => set({ title: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+          <Input placeholder="e.g. Official Pre-Game Party" value={draft.title || ""} onChange={(e) => set({ title: e.target.value })} className="h-11 rounded-none text-sm border-border/40" />
         </LabeledField>
         <LabeledField label="Sort Order" help="Lower numbers appear first">
-          <Input type="number" value={draft.sort_order ?? 1} onChange={(e) => set({ sort_order: Number(e.target.value) })} className="h-9 rounded-none text-sm border-border/40" />
+          <Input type="number" value={draft.sort_order ?? 1} onChange={(e) => set({ sort_order: Number(e.target.value) })} className="h-11 rounded-none text-sm border-border/40" />
         </LabeledField>
         <LabeledField label="Date & Time">
           <DateTimePicker value={draft.event_date || ""} onChange={(val) => set({ event_date: val })} placeholder="Pick event date & time" />
         </LabeledField>
         <LabeledField label="Display Time" help="e.g. Doors 6pm, Kickoff 7:30pm">
-          <Input placeholder="Doors 6pm" value={draft.start_time || ""} onChange={(e) => set({ start_time: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+          <Input placeholder="Doors 6pm" value={draft.start_time || ""} onChange={(e) => set({ start_time: e.target.value })} className="h-11 rounded-none text-sm border-border/40" />
         </LabeledField>
         <LabeledField label="Venue Name">
-          <Input placeholder="e.g. Allegiant Stadium" value={draft.location || ""} onChange={(e) => set({ location: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+          <Input placeholder="e.g. Allegiant Stadium" value={draft.location || ""} onChange={(e) => set({ location: e.target.value })} className="h-11 rounded-none text-sm border-border/40" />
         </LabeledField>
         <LabeledField label="Address">
-          <Input placeholder="3333 Al Davis Way, Las Vegas" value={draft.address || ""} onChange={(e) => set({ address: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+          <Input placeholder="3333 Al Davis Way, Las Vegas" value={draft.address || ""} onChange={(e) => set({ address: e.target.value })} className="h-11 rounded-none text-sm border-border/40" />
         </LabeledField>
       </div>
 
@@ -158,7 +158,7 @@ function EventFields({ draft, setDraft }) {
       </LabeledField>
 
       <LabeledField label="Fallback Ticket/Info Link" help="Used if no ticket tiers below" span2>
-        <Input placeholder="https://..." value={draft.ticket_url || ""} onChange={(e) => set({ ticket_url: e.target.value })} className="h-9 rounded-none text-sm border-border/40" />
+        <Input placeholder="https://..." value={draft.ticket_url || ""} onChange={(e) => set({ ticket_url: e.target.value })} className="h-11 rounded-none text-sm border-border/40" />
       </LabeledField>
 
       <TicketsEditor tickets={draft.tickets || []} onChange={(tickets) => set({ tickets })} />
@@ -170,15 +170,15 @@ function EventFields({ draft, setDraft }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 pt-2">
-        <label className="inline-flex items-center gap-2 px-2.5 py-1.5 border border-border/30 bg-muted/5 cursor-pointer text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+        <label className="inline-flex min-h-11 items-center gap-2 px-2.5 py-2 border border-border/30 bg-muted/5 cursor-pointer text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           <AlertCircle className={`h-3 w-3 ${draft.is_coming_soon !== false ? "text-amber-400" : "text-muted-foreground/30"}`} />
           Coming soon
-          <Switch checked={draft.is_coming_soon !== false} onCheckedChange={(v) => set({ is_coming_soon: v })} className="scale-75" />
+          <Switch checked={draft.is_coming_soon !== false} onCheckedChange={(v) => set({ is_coming_soon: v })} />
         </label>
-        <label className="inline-flex items-center gap-2 px-2.5 py-1.5 border border-border/30 bg-muted/5 cursor-pointer text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+        <label className="inline-flex min-h-11 items-center gap-2 px-2.5 py-2 border border-border/30 bg-muted/5 cursor-pointer text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           {draft.is_published !== false ? <Eye className="h-3 w-3 text-emerald-400" /> : <EyeOff className="h-3 w-3 text-muted-foreground/30" />}
           Published
-          <Switch checked={draft.is_published !== false} onCheckedChange={(v) => set({ is_published: v })} className="scale-75" />
+          <Switch checked={draft.is_published !== false} onCheckedChange={(v) => set({ is_published: v })} />
         </label>
       </div>
     </div>
@@ -270,12 +270,12 @@ function EventCard({ event, onSave, onDelete, saving }) {
             <div className="border-t border-border/20 p-4 md:p-5 space-y-4">
               <EventFields draft={draft} setDraft={setDraft} />
               <div className="flex items-center gap-3 border-t border-border/20 pt-3">
-                <Button onClick={() => onSave(draft)} disabled={saving} className="h-8 rounded-none bg-primary hover:bg-primary/90 text-[9px] font-bold uppercase tracking-wider">
-                  <Save className="mr-1.5 h-3 w-3" /> Save changes
+                <Button size="mobile" onClick={() => onSave(draft)} disabled={saving} className="rounded-none bg-primary hover:bg-primary/90 text-[10px] font-bold uppercase tracking-wider">
+                  <Save className="mr-1.5 h-3.5 w-3.5" /> Save changes
                 </Button>
                 <div className="flex-1" />
-                <Button variant="ghost" size="sm" className="h-8 rounded-none text-[9px] font-bold uppercase tracking-wider text-destructive/60 hover:text-destructive hover:bg-destructive/5" onClick={() => onDelete(event.id)}>
-                  <Trash2 className="mr-1 h-3 w-3" /> Delete event
+                <Button variant="ghost" size="mobile" className="rounded-none text-[10px] font-bold uppercase tracking-wider text-destructive/60 hover:text-destructive hover:bg-destructive/5" onClick={() => onDelete(event.id)}>
+                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete event
                 </Button>
               </div>
             </div>
@@ -321,9 +321,10 @@ export default function EventsManager({ events = [] }) {
 
           <Button
             onClick={() => setShowCreate(!showCreate)}
-            className={`h-8 rounded-none text-[9px] font-bold uppercase tracking-wider ${showCreate ? "bg-muted text-foreground hover:bg-muted/80" : "bg-primary hover:bg-primary/90"}`}
+            size="mobile"
+            className={`rounded-none text-[10px] font-bold uppercase tracking-wider ${showCreate ? "bg-muted text-foreground hover:bg-muted/80" : "bg-primary hover:bg-primary/90"}`}
           >
-            {showCreate ? <><X className="mr-1 h-3 w-3" /> Cancel</> : <><CalendarPlus className="mr-1 h-3 w-3" /> Add Event</>}
+            {showCreate ? <><X className="mr-1 h-3.5 w-3.5" /> Cancel</> : <><CalendarPlus className="mr-1 h-3.5 w-3.5" /> Add Event</>}
           </Button>
         </div>
 
@@ -342,8 +343,8 @@ export default function EventsManager({ events = [] }) {
                   <CalendarPlus className="h-3 w-3" /> Create New Event
                 </p>
                 <EventFields draft={draft} setDraft={setDraft} />
-                <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.title || createMutation.isPending} className="h-9 rounded-none bg-primary hover:bg-primary/90 text-[9px] font-bold uppercase tracking-wider">
-                  <Plus className="mr-1.5 h-3 w-3" /> {createMutation.isPending ? "Adding…" : "Add Event"}
+                <Button size="mobile" onClick={() => createMutation.mutate(draft)} disabled={!draft.title || createMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90 text-[10px] font-bold uppercase tracking-wider">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> {createMutation.isPending ? "Adding…" : "Add Event"}
                 </Button>
               </div>
             </motion.div>

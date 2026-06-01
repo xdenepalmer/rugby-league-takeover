@@ -8,6 +8,10 @@
   :root {
     --font-sans: 'Inter', sans-serif;
     --font-display: 'Oswald', sans-serif;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
     --background: 224 71% 4%;
     --foreground: 210 20% 98%;
     --card: 224 71% 7%;
@@ -46,6 +50,10 @@
   .dark {
     --font-sans: 'Inter', sans-serif;
     --font-display: 'Oswald', sans-serif;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
     --background: 224 71% 4%;
     --foreground: 210 20% 98%;
     --card: 224 71% 7%;
@@ -81,14 +89,178 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
+    overscroll-behavior-y: contain;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    touch-action: manipulation;
   }
 
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+}
+
+@layer utilities {
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+
+  .h-dvh {
+    height: 100dvh;
+  }
+
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+
+  .bottom-safe {
+    bottom: var(--safe-bottom);
+  }
+
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .ios-pressable {
+    touch-action: manipulation;
+    transform: translateZ(0);
+    transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 160ms ease, background-color 160ms ease;
+  }
+
+  .ios-pressable:active {
+    transform: scale(0.96) translateZ(0);
+  }
+
+  .ios-tabbar {
+    padding-bottom: max(0.65rem, calc(0.65rem + var(--safe-bottom)));
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.72), hsl(var(--background) / 0.94)),
+      hsl(var(--background) / 0.92);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--foreground) / 0.08),
+      0 -18px 42px hsl(224 71% 2% / 0.72);
+    backdrop-filter: blur(26px) saturate(1.25);
+    -webkit-backdrop-filter: blur(26px) saturate(1.25);
+  }
+
+  .ios-tabbar-item {
+    min-height: 58px;
+    border-radius: 18px;
+    touch-action: manipulation;
+    transform: translateZ(0);
+    transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), color 160ms ease, background-color 160ms ease;
+  }
+
+  .ios-tabbar-item:active {
+    transform: scale(0.94) translateZ(0);
+  }
+
+  .ios-sheet {
+    border-radius: 24px 24px 0 0;
+    background:
+      linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.98)),
+      hsl(var(--card));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--foreground) / 0.08),
+      0 -24px 80px hsl(224 71% 2% / 0.8);
+    backdrop-filter: blur(28px) saturate(1.2);
+    -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  }
+
+  .ios-keyboard-spacer {
+    padding-bottom: max(1rem, calc(1rem + var(--safe-bottom)));
+  }
+
+  .ios-home-indicator {
+    width: 5rem;
+    height: 0.28rem;
+    border-radius: 999px;
+    background: hsl(var(--foreground) / 0.18);
+  }
+
+  .forum-mobile-shell,
+  .forum-mobile-hero,
+  .forum-post-card,
+  .forum-engagement-bar {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .forum-filter-rail {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-padding-inline: 0.75rem;
+  }
+
+  .forum-filter-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .forum-post-card *,
+  .forum-mobile-hero * {
+    min-width: 0;
+  }
+
+  .forum-compose-fab {
+    right: max(1rem, var(--safe-right));
+    max-width: calc(100vw - 2rem);
+    touch-action: manipulation;
+  }
+
+  .forum-compose-fab > div {
+    transform: translateZ(0);
+  }
+
+  @media (max-width: 640px) {
+    .forum-mobile-hero {
+      min-height: auto;
+    }
+
+    .forum-engagement-bar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.25rem;
+    }
+
+    .forum-engagement-bar > * {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .forum-engagement-bar button {
+      min-width: 0;
+      padding-inline: 0.5rem;
+    }
+
+    .forum-post-card {
+      border-left-width: 1px;
+      border-right-width: 1px;
+      transform: none !important;
+    }
   }
 }
 
@@ -258,4 +430,15 @@
 }
 .cmd-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary) / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }

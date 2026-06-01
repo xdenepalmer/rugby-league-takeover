@@ -31,12 +31,12 @@ export default function FaqManager({ faqs = [] }) {
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a question</p>
-        <Input placeholder="Question (e.g. What's your returns policy?)" value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} className="rounded-none" />
+        <Input placeholder="Question (e.g. What's your returns policy?)" value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} className="h-11 rounded-none" />
         <Textarea placeholder="Answer" value={draft.answer} onChange={(e) => setDraft({ ...draft, answer: e.target.value })} className="min-h-24 rounded-none" />
         <div className="flex flex-wrap items-center gap-4">
-          <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="w-32 rounded-none" />
-          <label className="flex items-center gap-2 text-sm">Published <Switch checked={draft.is_published !== false} onCheckedChange={(v) => setDraft({ ...draft, is_published: v })} /></label>
-          <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.question || createMutation.isPending} className="ml-auto rounded-none bg-primary hover:bg-primary/90">
+          <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 w-32 rounded-none" />
+          <label className="flex min-h-11 items-center gap-2 text-sm">Published <Switch checked={draft.is_published !== false} onCheckedChange={(v) => setDraft({ ...draft, is_published: v })} /></label>
+          <Button size="mobile" onClick={() => createMutation.mutate(draft)} disabled={!draft.question || createMutation.isPending} className="ml-auto w-full rounded-none bg-primary hover:bg-primary/90 sm:w-auto">
             <Plus className="mr-2 h-4 w-4" /> Add FAQ
           </Button>
         </div>
@@ -47,13 +47,13 @@ export default function FaqManager({ faqs = [] }) {
         {sorted.map((faq) => (
           <div key={faq.id} className="grid gap-3 border border-border p-4">
             <div className="grid gap-3 md:grid-cols-[1fr_120px]">
-              <Input defaultValue={faq.question || ""} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { question: e.target.value } })} className="rounded-none" />
-              <Input type="number" defaultValue={faq.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
+              <Input defaultValue={faq.question || ""} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { question: e.target.value } })} className="h-11 rounded-none" />
+              <Input type="number" defaultValue={faq.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { sort_order: Number(e.target.value) } })} className="h-11 rounded-none" />
             </div>
             <Textarea defaultValue={faq.answer || ""} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { answer: e.target.value } })} className="min-h-20 rounded-none" />
             <div className="flex items-center gap-4 border-t border-border pt-3">
-              <label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={faq.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: faq.id, data: { is_published: v } })} /></label>
-              <Button variant="destructive" size="sm" className="ml-auto rounded-none" onClick={() => deleteMutation.mutate(faq.id)}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>
+              <label className="flex min-h-11 items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={faq.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: faq.id, data: { is_published: v } })} /></label>
+              <Button variant="destructive" size="mobile" className="ml-auto rounded-none" onClick={() => deleteMutation.mutate(faq.id)}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>
             </div>
           </div>
         ))}

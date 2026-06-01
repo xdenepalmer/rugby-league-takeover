@@ -93,15 +93,16 @@ export default function ImageField({ value, onChange, label = "Image", className
                       href={url}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-1.5 bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
+                      className="flex h-11 w-11 items-center justify-center bg-white/10 border border-white/20 hover:bg-white/20 transition-colors"
                       onClick={(e) => e.stopPropagation()}
+                      aria-label="Open image"
                     >
                       <ZoomIn className="h-4 w-4 text-white" />
                     </a>
                     <button
                       type="button"
                       onClick={() => commit("")}
-                      className="p-1.5 bg-destructive/30 border border-destructive/40 hover:bg-destructive/50 transition-colors"
+                      className="flex h-11 w-11 items-center justify-center bg-destructive/30 border border-destructive/40 hover:bg-destructive/50 transition-colors"
                       aria-label="Remove image"
                     >
                       <X className="h-4 w-4 text-white" />
@@ -147,7 +148,7 @@ export default function ImageField({ value, onChange, label = "Image", className
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onBlur={() => onChange(url)}
-            className="rounded-none"
+            className="h-11 rounded-none"
           />
 
           {/* Upload progress bar */}
@@ -185,7 +186,7 @@ export default function ImageField({ value, onChange, label = "Image", className
           />
           <label
             htmlFor={inputId}
-            className={`inline-flex w-fit cursor-pointer items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 border cmd-glass ${
+            className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 border cmd-glass sm:w-fit ${
               uploading
                 ? "pointer-events-none opacity-60 border-border/40"
                 : "border-border/60 hover:border-primary/40 hover:text-primary hover:bg-primary/5"
