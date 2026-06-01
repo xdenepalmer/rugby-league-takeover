@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
 import Stripe from 'npm:stripe@22.2.0';
 
 // NOTE: Base44 deploys each function from its own directory and does not support
