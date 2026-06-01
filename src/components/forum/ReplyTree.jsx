@@ -6,6 +6,22 @@ import MentionTextarea from "./MentionTextarea";
 import MediaAttach from "./MediaAttach";
 import ForumMedia from "./ForumMedia";
 
+const HUES = [15, 45, 160, 220, 280, 330, 190, 30, 120, 350];
+// Compact avatar for a reply: uploaded photo when available, else a colour monogram.
+function ReplyAvatar({ name, src }) {
+  const seed = [...String(name || "")].reduce((t, c) => t + c.charCodeAt(0), 0);
+  const hue = HUES[seed % HUES.length];
+  if (src) {
+    return <img src={src} alt={name || "Member"} className="h-6 w-6 shrink-0 rounded-full object-cover" style={{ border: `1px solid hsl(${hue},70%,55%,0.4)` }} />;
+  }
+  const initial = String(name || "?").trim().charAt(0).toUpperCase() || "?";
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold uppercase text-white" style={{ background: `linear-gradient(135deg, hsl(${hue},75%,45%), hsl(${(hue + 30) % 360},65%,35%))` }}>
+      {initial}
+    </span>
+  );
+}
+
 // Recursive, nested reply renderer. Reuses the Forum's existing reply state
 // (drafts keyed by node id, activeReplyId, handleReply) so a reply targets the
 // exact comment it's under. Indents with a left border per depth.
@@ -23,6 +39,7 @@ export default function ReplyTree({
   onDelete,
   timeAgo,
   people = [],
+  resolveAvatar,
 }) {
   if (!replies.length) return null;
   const indent = depth > 0 ? "ml-3 border-l border-border/40 pl-3 md:ml-5 md:pl-5" : "";
@@ -38,6 +55,7 @@ export default function ReplyTree({
           <div key={reply.id} className="grid gap-2">
             <div className="border border-border/40 bg-muted/[0.03] p-3 transition-colors hover:bg-muted/[0.06]">
               <div className="flex items-center gap-2">
+                <ReplyAvatar name={reply.author_name} src={resolveAvatar ? resolveAvatar(reply.user_id, reply.author_avatar) : reply.author_avatar} />
                 <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
                 <span className="font-mono text-[9px] text-muted-foreground/40">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
@@ -86,6 +104,7 @@ export default function ReplyTree({
                 onDelete={onDelete}
                 timeAgo={timeAgo}
                 people={people}
+                resolveAvatar={resolveAvatar}
               />
             )}
           </div>

@@ -670,7 +670,7 @@ function CategoryPill({ value, isActive, onClick, count }) {
 }
 
 /* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, authorPostCounts, authorReplyCounts }) {
+function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar }) {
   const meta = getCategoryMeta(post.category);
   const MetaIcon = meta.icon;
   const engagement = getEngagement(post);
@@ -738,7 +738,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             {/* Author info */}
             <div className="flex items-start gap-3 mb-6">
               <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
-                <UserAvatar name={post.author_name} size="lg" src={post.author_avatar} />
+                <UserAvatar name={post.author_name} size="lg" src={resolveAvatar ? resolveAvatar(post.user_id, post.author_avatar) : post.author_avatar} />
               </UserProfileHoverCard>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -829,7 +829,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
 function ForumPostCard({
   post, isAuthenticated, user, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
-  onOpenThread, onDeletePost, replyApi, authorPostCounts, authorReplyCounts,
+  onOpenThread, onDeletePost, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -938,7 +938,7 @@ function ForumPostCard({
         {/* Header */}
         <div className="flex items-start gap-3">
           <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
-            <UserAvatar name={post.author_name} showStatus={index < 3} src={post.author_avatar} />
+            <UserAvatar name={post.author_name} showStatus={index < 3} src={resolveAvatar ? resolveAvatar(post.user_id, post.author_avatar) : post.author_avatar} />
           </UserProfileHoverCard>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -1580,6 +1580,24 @@ export default function Forum() {
     enabled: appParams.hasBase44Config,
   });
 
+  // Current avatars by user id, so changing a profile photo updates that
+  // member's existing threads/replies. Falls back to the per-post snapshot, then
+  // a monogram. Degrades gracefully if the function isn't deployed yet.
+  const { data: avatarData } = useQuery({
+    queryKey: ["forumAvatars"],
+    queryFn: () => base44.functions.invoke("forumAvatars", {}),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+    staleTime: 60000,
+  });
+  const avatarById = useMemo(() => {
+    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), a.avatar_url]));
+    if (isAuthenticated && user?.id && user?.avatar_url) map.set(String(user.id), user.avatar_url); // viewer's own, always current
+    return map;
+  }, [avatarData, isAuthenticated, user]);
+  const avatarFor = (userId, snapshot) => (userId && avatarById.get(String(userId))) || snapshot || "";
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const authorName = isAuthenticated ? (user?.full_name || "Member") : data.author_name;
@@ -1642,6 +1660,7 @@ export default function Forum() {
     onReply: (node, e) => handleReply(node, e),
     onDelete: handleDelete,
     timeAgo,
+    resolveAvatar: avatarFor,
   };
 
   const allThreads = buildForumThreads(posts);
@@ -1896,6 +1915,7 @@ export default function Forum() {
                   replyApi={replyApi}
                   authorPostCounts={authorPostCounts}
                   authorReplyCounts={authorReplyCounts}
+                  resolveAvatar={avatarFor}
                 />
               ))}
 
@@ -1938,6 +1958,7 @@ export default function Forum() {
             replyApi={replyApi}
             authorPostCounts={authorPostCounts}
             authorReplyCounts={authorReplyCounts}
+            resolveAvatar={avatarFor}
           />
         )}
       </AnimatePresence>
