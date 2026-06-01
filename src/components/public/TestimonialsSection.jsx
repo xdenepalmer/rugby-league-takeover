@@ -1,8 +1,12 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Quote, Star } from "lucide-react";
+import React, { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Quote, Star, PenLine, Send, CheckCircle2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/use-toast";
 import SectionHeader from "./SectionHeader";
 
 const defaultTestimonials = [
@@ -34,9 +38,25 @@ export default function TestimonialsSection({ settings = {} }) {
     meta: { silent: true },
   });
 
+  const emptyDraft = { author_name: "", author_role: "", quote: "", rating: 5 };
+  const [formOpen, setFormOpen] = useState(false);
+  const [draft, setDraft] = useState(emptyDraft);
+  const [submitted, setSubmitted] = useState(false);
+
+  const submitMutation = useMutation({
+    mutationFn: (data) => base44.functions.invoke("submitTestimonial", data),
+    onSuccess: () => { setSubmitted(true); setDraft(emptyDraft); },
+    onError: (err) => toast({ title: "Couldn't submit", description: err?.message || "Please try again.", variant: "destructive" }),
+  });
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!draft.author_name.trim() || !draft.quote.trim()) return;
+    submitMutation.mutate(draft);
+  };
+
   const visible = testimonials.filter((t) => t.is_published !== false && t.quote);
   const display = visible.length > 0 ? visible : defaultTestimonials;
-  if (display.length === 0) return null;
 
   return (
     <section id="testimonials" className="border-t border-border bg-background/80 px-5 py-24 md:px-8 md:py-32">
@@ -63,6 +83,43 @@ export default function TestimonialsSection({ settings = {} }) {
               </figcaption>
             </figure>
           ))}
+        </div>
+
+        {/* Visitor submission — created unpublished, then moderated in the admin panel */}
+        <div className="mt-10 flex flex-col items-center">
+          {submitted ? (
+            <div className="flex items-center gap-3 border border-emerald-500/40 bg-emerald-500/10 px-6 py-4 text-sm text-emerald-300">
+              <CheckCircle2 className="h-5 w-5 shrink-0" />
+              <span>Thanks! Your testimonial has been sent for review and will appear once approved.</span>
+            </div>
+          ) : !formOpen ? (
+            <Button onClick={() => setFormOpen(true)} variant="outline" className="rounded-none border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+              <PenLine className="mr-2 h-4 w-4" /> Share your experience
+            </Button>
+          ) : (
+            <form onSubmit={submit} className="w-full max-w-2xl border border-border bg-card p-6">
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><PenLine className="h-4 w-4" /> Leave a testimonial</p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="rounded-none" />
+                <Input placeholder="Team / location (optional)" value={draft.author_role} onChange={(e) => setDraft({ ...draft, author_role: e.target.value })} className="rounded-none" />
+              </div>
+              <Textarea required placeholder="Tell us about your experience…" value={draft.quote} onChange={(e) => setDraft({ ...draft, quote: e.target.value })} className="mt-3 min-h-28 rounded-none" />
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Rating</span>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button type="button" key={n} onClick={() => setDraft({ ...draft, rating: n })} aria-label={`${n} stars`}>
+                    <Star className={`h-5 w-5 transition-colors ${n <= draft.rating ? "fill-primary text-primary" : "text-muted-foreground/40 hover:text-primary/60"}`} />
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button type="button" variant="ghost" className="rounded-none" onClick={() => setFormOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={!appParams.hasBase44Config || !draft.author_name.trim() || !draft.quote.trim() || submitMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90">
+                  <Send className="mr-2 h-4 w-4" /> {submitMutation.isPending ? "Sending…" : "Submit for review"}
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </section>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Quote } from "lucide-react";
+import { Plus, Trash2, Quote, Check, Clock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,22 @@ export default function TestimonialsManager({ testimonials = [] }) {
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Testimonial.update(id, data), onSuccess: refresh });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Testimonial.delete(id), onSuccess: () => { refresh(); toast({ title: "Testimonial removed" }); } });
 
-  const sorted = [...testimonials].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  // Pending (visitor submissions awaiting approval) float to the top; the rest by sort order.
+  const sorted = [...testimonials].sort((a, b) => {
+    const ap = a.is_published === false ? 0 : 1;
+    const bp = b.is_published === false ? 0 : 1;
+    if (ap !== bp) return ap - bp;
+    return Number(a.sort_order || 0) - Number(b.sort_order || 0);
+  });
+  const pendingCount = testimonials.filter((t) => t.is_published === false).length;
 
   return (
     <section id="testimonials-admin" className="scroll-mt-28 border border-border bg-card p-6">
-      <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Quote className="h-6 w-6 text-primary" /> Testimonials</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Fan quotes shown in the Testimonials section at the bottom of the homepage. Rating is optional (set to 0 to hide stars).</p>
+      <h2 className="flex items-center gap-2 font-display text-3xl uppercase">
+        <Quote className="h-6 w-6 text-primary" /> Testimonials
+        {pendingCount > 0 && <span className="ml-1 inline-flex items-center gap-1 border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-400"><Clock className="h-3 w-3" /> {pendingCount} pending</span>}
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">Fan quotes shown in the Testimonials section at the bottom of the homepage. Visitor submissions arrive <span className="font-semibold text-amber-400">pending</span> — approve to publish them. Rating is optional (set to 0 to hide stars).</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a testimonial</p>
@@ -60,7 +70,10 @@ export default function TestimonialsManager({ testimonials = [] }) {
       <div className="mt-6 grid gap-4">
         {sorted.length === 0 && <p className="text-sm text-muted-foreground">No testimonials yet. Add your first one above.</p>}
         {sorted.map((t) => (
-          <div key={t.id} className="grid gap-3 border border-border p-4">
+          <div key={t.id} className={`grid gap-3 border p-4 ${t.is_published === false ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-border"}`}>
+            {t.is_published === false && (
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-400"><Clock className="h-3.5 w-3.5" /> Pending review{t.user_email ? ` · ${t.user_email}` : ""}</p>
+            )}
             <div className="grid gap-3 md:grid-cols-[1fr_1fr_110px]">
               <Input defaultValue={t.author_name || ""} placeholder="Name" onBlur={(e) => updateMutation.mutate({ id: t.id, data: { author_name: e.target.value } })} className="rounded-none" />
               <Input defaultValue={t.author_role || ""} placeholder="Role / location" onBlur={(e) => updateMutation.mutate({ id: t.id, data: { author_role: e.target.value } })} className="rounded-none" />
@@ -78,6 +91,9 @@ export default function TestimonialsManager({ testimonials = [] }) {
             <ImageField label="Photo / avatar" value={t.avatar_url} onChange={(url) => updateMutation.mutate({ id: t.id, data: { avatar_url: url } })} />
             <div className="flex items-center gap-4 border-t border-border pt-3">
               <label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={t.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: t.id, data: { is_published: v } })} /></label>
+              {t.is_published === false && (
+                <Button variant="outline" size="sm" className="rounded-none border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-white" onClick={() => updateMutation.mutate({ id: t.id, data: { is_published: true } })}><Check className="mr-2 h-4 w-4" /> Approve</Button>
+              )}
               <Button variant="destructive" size="sm" className="ml-auto rounded-none" onClick={() => deleteMutation.mutate(t.id)}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>
             </div>
           </div>

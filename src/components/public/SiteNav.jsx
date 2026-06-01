@@ -17,6 +17,7 @@ const links = [
   { label: "Travel Packages", href: "/#travel" },
   { label: "Events", href: "/#events" },
   { label: "Partners", href: "/#partners" },
+  { label: "Testimonials", href: "/#testimonials" },
   { label: "Merch", href: "/store" },
   { label: "Forum", href: "/forum" }
 ];
