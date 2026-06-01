@@ -9,7 +9,7 @@ import { ALL_TEAMS } from "@/lib/nrl-teams";
 const norm = (s) => String(s || "").trim().toLowerCase();
 
 const LEAGUE_LOGOS = {
-  "Super League": "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/ecabb905c_image.png",
+  "Super League": "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/350141516_image.png",
   NRL: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/13e9c8f68_nrl.png",
 };
 
