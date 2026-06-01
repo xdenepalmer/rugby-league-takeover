@@ -22,6 +22,7 @@ export default function ReplyTree({
   onReply,
   onDelete,
   timeAgo,
+  people = [],
 }) {
   if (!replies.length) return null;
   const indent = depth > 0 ? "ml-3 border-l border-border/40 pl-3 md:ml-5 md:pl-5" : "";
@@ -58,7 +59,7 @@ export default function ReplyTree({
                   {!isAuthenticated && (
                     <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => onUpdateReply(reply.id, { author_name: e.target.value })} className="h-9 rounded-none text-sm" />
                   )}
-                  <MentionTextarea required placeholder={`Reply to ${reply.author_name || "this comment"}… use @ to mention`} value={draft.body} onChange={(val) => onUpdateReply(reply.id, { body: val })} className="min-h-16 rounded-none text-sm" />
+                  <MentionTextarea required people={people} placeholder={`Reply to ${reply.author_name || "this comment"}… use @ to mention`} value={draft.body} onChange={(val) => onUpdateReply(reply.id, { body: val })} className="min-h-16 rounded-none text-sm" />
                   <MediaAttach value={draft.media_url} onChange={(url) => onUpdateReply(reply.id, { media_url: url })} />
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" size="sm" className="h-8 rounded-none text-[10px] uppercase tracking-wider" onClick={() => onToggleReply(reply.id)}>Cancel</Button>
@@ -84,6 +85,7 @@ export default function ReplyTree({
                 onReply={onReply}
                 onDelete={onDelete}
                 timeAgo={timeAgo}
+                people={people}
               />
             )}
           </div>

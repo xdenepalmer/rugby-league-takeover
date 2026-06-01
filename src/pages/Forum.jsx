@@ -12,7 +12,6 @@ import {
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FORUM_CATEGORIES, buildForumThreads, buildPendingForumPost } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
@@ -749,11 +748,12 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                     className="h-9 rounded-none border-border bg-background text-sm"
                   />
                 )}
-                <Textarea
+                <MentionTextarea
                   required
-                  placeholder={`Reply to ${post.author_name || "this thread"}…`}
+                  people={replyApi?.people}
+                  placeholder={`Reply to ${post.author_name || "this thread"}… use @ to mention`}
                   value={replyDraft.body}
-                  onChange={(e) => onUpdateReply({ body: e.target.value })}
+                  onChange={(val) => onUpdateReply({ body: val })}
                   className="min-h-16 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
                 />
               </div>
@@ -1071,11 +1071,12 @@ function ForumPostCard({
                     className="h-10 rounded-none border-border bg-background text-sm"
                   />
                 )}
-                <Textarea
+                <MentionTextarea
                   required
-                  placeholder={`Reply to ${post.author_name || "this thread"}…`}
+                  people={replyApi?.people}
+                  placeholder={`Reply to ${post.author_name || "this thread"}… use @ to mention`}
                   value={replyDraft.body}
-                  onChange={(e) => onUpdateReply({ body: e.target.value })}
+                  onChange={(val) => onUpdateReply({ body: val })}
                   className="min-h-20 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
                 />
                 <div className="flex justify-end gap-2">
@@ -1379,7 +1380,7 @@ function MobileFAB({ onClick }) {
 }
 
 /* ━━━ Compose Sidebar (Premium Enhanced) ━━━━━━━━━━━━━━━━━ */
-function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, authorPostCounts, authorReplyCounts }) {
+function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [], authorPostCounts, authorReplyCounts }) {
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Compose Card */}
@@ -1460,7 +1461,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
 
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Message</label>
-              <MentionTextarea required placeholder="Share your thoughts, questions, or tips… use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
+              <MentionTextarea required people={people} placeholder="Share your thoughts, questions, or tips… use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Attach image / GIF / video</label>
@@ -1614,6 +1615,21 @@ export default function Forum() {
     });
     return { authorPostCounts: postCounts, authorReplyCounts: replyCounts };
   }, [allThreads]);
+
+  // Mentionable people for @autocomplete — every participant currently in the
+  // forum, plus the logged-in member. Used as a client-side fallback so mentions
+  // work even before the searchUsers function is deployed (MentionTextarea also
+  // merges the full user directory from that function when it's available).
+  const mentionPeople = useMemo(() => {
+    const names = new Set();
+    allThreads.forEach((t) => {
+      if (t.author_name) names.add(t.author_name);
+      (t.replies || []).forEach((r) => { if (r.author_name) names.add(r.author_name); });
+    });
+    if (isAuthenticated && (user?.full_name || user?.email)) names.add(user.full_name || user.email);
+    return [...names].map((name) => ({ name }));
+  }, [allThreads, isAuthenticated, user]);
+  replyApi.people = mentionPeople;
 
   // Category counts
   const categoryCounts = useMemo(() => {
@@ -1842,6 +1858,7 @@ export default function Forum() {
               submittedForReview={submittedForReview}
               onSubmit={handlePost} isPending={createMutation.isPending}
               allThreads={allThreads}
+              people={mentionPeople}
               authorPostCounts={authorPostCounts}
               authorReplyCounts={authorReplyCounts}
             />
@@ -1916,7 +1933,7 @@ export default function Forum() {
                     <SelectContent>{categories.filter((c) => c.value !== "All").map((c) => <SelectItem key={c.value} value={c.value}>{getCategoryMeta(c.value).label}</SelectItem>)}</SelectContent>
                   </Select>
                   <Input required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-9 rounded-none border-border bg-background text-sm" />
-                  <Textarea required placeholder="What's on your mind?" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
+                  <MentionTextarea required people={mentionPeople} placeholder="What's on your mind? Use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
                   <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending} className="w-full h-10 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
                     <Send className="mr-2 h-3 w-3" /> {createMutation.isPending ? "Submitting…" : "Submit for Review"}
                   </Button>

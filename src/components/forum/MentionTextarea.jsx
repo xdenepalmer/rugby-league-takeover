@@ -2,10 +2,22 @@ import React, { useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
 
-// Textarea with @mention autocomplete. Detects an @token at the caret, queries
-// the searchUsers function, and inserts "@handle " on select. Controlled via
-// value/onChange; all other props pass through to the textarea.
-export default function MentionTextarea({ value, onChange, ...props }) {
+// Turn a display name into an @handle-safe token (matches the email-local-part
+// style the searchUsers function / notification resolver expect).
+export const toHandle = (name) =>
+  String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^\w.-]/g, "");
+
+// Textarea with @mention autocomplete. Detects an @token at the caret and shows
+// matching people. Sources are merged: (1) the searchUsers backend function (full
+// user directory, once deployed) and (2) a client-side `people` list — typically
+// the participants already visible in the thread — so mentions work immediately
+// even before the function is deployed. Controlled via value/onChange; all other
+// props pass through to the textarea.
+export default function MentionTextarea({ value, onChange, people = [], ...props }) {
   const ref = useRef(null);
   const timer = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
@@ -19,19 +31,45 @@ export default function MentionTextarea({ value, onChange, ...props }) {
     return { start: caret - m[2].length - 1, text: m[2] };
   };
 
+  // Local matches from people already in the thread (name or handle contains q).
+  const localMatches = (q) => {
+    const query = String(q || "").toLowerCase();
+    const seen = new Set();
+    const out = [];
+    for (const p of people) {
+      const name = p?.name || p?.author_name;
+      if (!name) continue;
+      const handle = p.handle || toHandle(name);
+      if (!handle || seen.has(handle)) continue;
+      if (query && !name.toLowerCase().includes(query) && !handle.includes(query)) continue;
+      seen.add(handle);
+      out.push({ id: p.id || handle, name, handle });
+    }
+    return out;
+  };
+
   const runSearch = (q) => {
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
+      // Always have local results ready; merge backend on top when available.
+      const local = localMatches(q);
+      let backend = [];
       try {
         const res = await base44.functions.invoke("searchUsers", { q });
-        const users = res?.data?.users || [];
-        setSuggestions(users);
-        setOpen(users.length > 0);
+        backend = res?.data?.users || [];
       } catch {
-        setSuggestions([]);
-        setOpen(false);
+        backend = [];
       }
-    }, 200);
+      const seen = new Set();
+      const merged = [];
+      for (const u of [...backend, ...local]) {
+        if (!u?.handle || seen.has(u.handle)) continue;
+        seen.add(u.handle);
+        merged.push(u);
+      }
+      setSuggestions(merged.slice(0, 8));
+      setOpen(merged.length > 0);
+    }, 150);
   };
 
   const handleChange = (e) => {
