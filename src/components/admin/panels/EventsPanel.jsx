@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { CalendarDays, Eye, Ticket, Activity } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import EventsManager from "../EventsManager";
+import TeamsManager from "../TeamsManager";
+import MatchupsManager from "../MatchupsManager";
 
 function Stat({ icon: Icon, label, value, color = "from-primary to-primary/60", delay = 0 }) {
   return (
@@ -29,6 +31,8 @@ function Stat({ icon: Icon, label, value, color = "from-primary to-primary/60", 
 
 export default function EventsPanel() {
   const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("sort_order", 100) });
+  const { data: teams = [] } = useQuery({ queryKey: ["teams"], queryFn: () => base44.entities.Team.list("sort_order", 100), retry: false, meta: { silent: true } });
+  const { data: matchups = [] } = useQuery({ queryKey: ["matchups"], queryFn: () => base44.entities.Matchup.list("sort_order", 100), retry: false, meta: { silent: true } });
 
   const published = events.filter((e) => e.is_published !== false).length;
   const withTickets = events.filter((e) => (e.tickets || []).some((t) => t?.url) || e.ticket_url).length;
@@ -77,6 +81,22 @@ export default function EventsPanel() {
         transition={{ delay: 0.25, duration: 0.4 }}
       >
         <EventsManager events={events} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <TeamsManager teams={teams} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
+      >
+        <MatchupsManager matchups={matchups} teams={teams} />
       </motion.div>
     </div>
   );
