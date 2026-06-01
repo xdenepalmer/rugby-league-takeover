@@ -111,7 +111,7 @@ function ProductCard({ product, index, addToCart, cart }) {
             <ShoppingBag className="h-10 w-10 stroke-1" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-60" />
       </div>
 
       <div className="flex flex-1 flex-col p-6">

@@ -39,7 +39,7 @@ function NewsCard({ article, index }) {
           alt={article.title} 
           className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-108 group-hover:grayscale-0 group-hover:opacity-100" 
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-70" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-70" />
         
         {/* Date overlay badge */}
         <span className="absolute bottom-4 left-4 inline-flex items-center gap-1 px-3 py-1 bg-card/85 backdrop-blur-sm border border-border/60 text-[10px] font-bold uppercase tracking-wider text-accent">

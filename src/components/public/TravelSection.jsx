@@ -83,7 +83,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     alt={pkg.name} 
                     className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108" 
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-60" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-60" />
                 </div>
               )}
               

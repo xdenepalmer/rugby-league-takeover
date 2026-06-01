@@ -16,7 +16,7 @@ export default function AboutSection({ settings = {} }) {
         </div>
         <div className="relative min-h-[520px] overflow-hidden border border-border">
           <img src={settings.about_image_url || "https://images.unsplash.com/photo-1569959220744-ff553533f492?auto=format&fit=crop&w=1400&q=80"} alt="Supporters celebrating" className="absolute inset-0 h-full w-full object-cover grayscale" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/80 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8">
             <p className="font-display text-4xl uppercase leading-none text-foreground">{settings.about_image_caption || "Las Vegas will hear us."}</p>
           </div>
