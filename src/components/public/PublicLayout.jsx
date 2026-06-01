@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/AuthContext";
 import SiteNav from "./SiteNav";
 
 export default function PublicLayout() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const { data: settingsRecords = [] } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
@@ -72,7 +72,17 @@ export default function PublicLayout() {
               }`
             }
           >
-            <User className="h-5 w-5" />
+            {user?.avatar_url ? (
+              <img 
+                src={user.avatar_url} 
+                alt="Account" 
+                className={`h-5 w-5 rounded-none object-cover border transition-all ${
+                  isActive ? "border-primary" : "border-border/60"
+                }`} 
+              />
+            ) : (
+              <User className="h-5 w-5" />
+            )}
             <span>Account</span>
           </NavLink>
 

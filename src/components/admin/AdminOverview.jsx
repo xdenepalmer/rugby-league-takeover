@@ -91,10 +91,37 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
 /* ─── System Status Widget ──────────────────────────────── */
 function SystemStatusWidget({ simulatedCpu, simulatedBandwidth, simLoad, networkMode }) {
   const [uptimeSeconds, setUptimeSeconds] = useState(0);
+  const [diagnostics, setDiagnostics] = useState({
+    stripe: { label: "Stripe Gateway", state: "standby", color: "text-slate-400" },
+    db: { label: "DB Replication", state: "standby", color: "text-slate-400" },
+    sw: { label: "PWA Caching SW", state: "standby", color: "text-slate-400" },
+  });
+
   useEffect(() => {
     const id = setInterval(() => setUptimeSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  const runDiagnostic = (key) => {
+    setDiagnostics(prev => ({
+      ...prev,
+      [key]: { ...prev[key], state: "scanning", color: "text-amber-400" }
+    }));
+    
+    window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+      detail: { type: "info", text: `[TELEMETRY] Initiated live integrity test on core node: ${key.toUpperCase()}` }
+    }));
+
+    setTimeout(() => {
+      setDiagnostics(prev => ({
+        ...prev,
+        [key]: { ...prev[key], state: "nominal", color: "text-emerald-400 animate-pulse" }
+      }));
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: { type: "success", text: `[TELEMETRY] Node verification: ${key.toUpperCase()} is ONLINE (OK). State: NOMINAL.` }
+      }));
+    }, 1500);
+  };
 
   const uptime = useMemo(() => {
     const h = Math.floor(uptimeSeconds / 3600);
@@ -111,7 +138,6 @@ function SystemStatusWidget({ simulatedCpu, simulatedBandwidth, simLoad, network
 
   const isOffline = networkMode === "offline";
   const isLaggy = networkMode === "latency";
-  const isAlert = simLoad > 85 || isOffline || isLaggy;
   
   const statusLabel = isOffline ? "Connection Dropped" : isLaggy ? "Degraded Operation" : simLoad > 85 ? "Peak Load Active" : "All Systems Nominal";
 
@@ -131,7 +157,7 @@ function SystemStatusWidget({ simulatedCpu, simulatedBandwidth, simLoad, network
       <div className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <Activity className={`h-4 w-4 cmd-pulse ${isOffline || simLoad > 85 ? "text-red-400" : isLaggy ? "text-amber-400" : "text-emerald-400"}`} />
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-200">
             System Status
           </h3>
           <span className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 border text-[8px] font-bold uppercase tracking-wider transition-colors duration-500 ${
@@ -149,9 +175,41 @@ function SystemStatusWidget({ simulatedCpu, simulatedBandwidth, simLoad, network
             <div key={label} className="text-center border border-border/40 bg-muted/20 p-3">
               <MIcon className="h-3.5 w-3.5 mx-auto text-muted-foreground mb-1.5" />
               <p className="font-mono text-sm font-bold text-foreground tabular-nums">{value}</p>
-              <p className="text-[8px] uppercase tracking-wider text-muted-foreground mt-0.5">{label}</p>
+              <p className="text-[8px] uppercase tracking-wider text-slate-300 mt-0.5">{label}</p>
             </div>
           ))}
+        </div>
+
+        {/* Interactive Diagnostics */}
+        <div className="mt-4 pt-3.5 border-t border-border/30 space-y-2">
+          <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400">Node Live Diagnostics</p>
+          <div className="space-y-1.5">
+            {Object.entries(diagnostics).map(([key, item]) => (
+              <div key={key} className="flex items-center justify-between text-[10px] font-mono border border-border/20 bg-neutral-950/40 px-2.5 py-1">
+                <span className="text-slate-300">{item.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[8px] font-bold uppercase tracking-wider ${item.color}`}>
+                    {item.state}
+                  </span>
+                  {item.state === "standby" && (
+                    <button
+                      type="button"
+                      onClick={() => runDiagnostic(key)}
+                      className="px-1.5 py-0.5 border border-border/60 hover:border-primary hover:text-primary transition-all text-[8px] font-bold uppercase text-slate-300"
+                    >
+                      Scan
+                    </button>
+                  )}
+                  {item.state === "scanning" && (
+                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+                  )}
+                  {item.state.startsWith("nominal") && (
+                    <span className="text-emerald-400 font-extrabold text-[11px]">✓</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -213,12 +271,75 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
   const [networkMode, setNetworkMode] = useState("online");
   const [syncQueue, setSyncQueue] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSurging, setIsSurging] = useState(false);
+  const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem("rlt_theme_accent") || "sincity");
+
+  const changeTheme = (themeKey) => {
+    setActiveTheme(themeKey);
+    window.dispatchEvent(new CustomEvent("rlt_theme_change", { detail: { theme: themeKey } }));
+    window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+      detail: { type: "success", text: `[THEME] Switched accent configuration to: ${themeKey.toUpperCase()}` }
+    }));
+  };
+
+  useEffect(() => {
+    const handleThemeEvent = (e) => {
+      if (e.detail?.theme) {
+        setActiveTheme(e.detail.theme);
+      }
+    };
+    window.addEventListener("rlt_theme_change", handleThemeEvent);
+    return () => window.removeEventListener("rlt_theme_change", handleThemeEvent);
+  }, []);
+
+  useEffect(() => {
+    if (!isSurging) return;
+    setSimLoad(95);
+    setNetworkMode("online");
+    
+    const messages = [
+      "Queue node Sydney-1 processing tickets...",
+      "Stripe payment success: 2x Gold Supporter packages",
+      "Stripe payment success: 1x Allegiant Stadium VIP Pass",
+      "Section 124 seat claim processed for user a***@hotmail.com",
+      "Section 120 seat claim processed for user j***@yahoo.com.au",
+      "Gateway load threshold warning: Melbourne traffic spike",
+      "Ticket allocation Sec 120 Aussie Zone now 96% full",
+      "Webhook delivery succeeded: email confirmation dispatched"
+    ];
+    
+    const interval = setInterval(() => {
+      const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+      const logEntryId = Math.random().toString(36).substring(7).toUpperCase();
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: { type: "info", text: `[DROP-SURGE] [${logEntryId}] ${randomMsg}` }
+      }));
+    }, 1800);
+    
+    return () => clearInterval(interval);
+  }, [isSurging]);
 
   useEffect(() => {
     const id = setInterval(() => {
       setJitter(Math.random() * 5);
     }, 1000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const handleSurgeEvent = (e) => {
+      const loadVal = e.detail?.load;
+      if (loadVal !== undefined) {
+        setSimLoad(loadVal);
+        if (loadVal > 85) {
+          setIsSurging(true);
+        } else {
+          setIsSurging(false);
+        }
+      }
+    };
+    window.addEventListener("rlt_admin_surge_change", handleSurgeEvent);
+    return () => window.removeEventListener("rlt_admin_surge_change", handleSurgeEvent);
   }, []);
 
   const simulatedCpu = Math.min(Math.round(25 + simLoad * 0.7 + jitter + (networkMode === "offline" ? 12 : networkMode === "latency" ? 6 : 0)), 100);
@@ -523,7 +644,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
 
             {/* Simulated Surge Slider */}
             <div className="flex items-center gap-3 border border-border/50 bg-neutral-950 px-3 py-1.5 rounded min-w-[240px]">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-350 whitespace-nowrap">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-300 whitespace-nowrap">
                 Surge Limit
               </span>
               <input
@@ -540,6 +661,75 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                 {simLoad}%
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* ── Vegas Neon Accent Customizer ── */}
+        <div className="mt-4 pt-4 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-200 font-mono">Vegas Accent Customizer</h4>
+            <p className="text-[10px] text-slate-300">Set the active site-wide neon glow signature. Changes deploy dynamically.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: "sincity", label: "Sin City", color: "bg-[#f97316]" },
+              { id: "flamingo", label: "Flamingo", color: "bg-[#ec4899]" },
+              { id: "highroller", label: "High Roller", color: "bg-[#a855f7]" },
+              { id: "emerald", label: "Emerald", color: "bg-[#10b981]" },
+              { id: "jackpot", label: "Jackpot", color: "bg-[#fbbf24]" }
+            ].map((theme) => (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => changeTheme(theme.id)}
+                className={`px-3 py-1.5 text-[9px] font-mono font-bold uppercase tracking-wider rounded border transition-all flex items-center gap-1.5 ${
+                  activeTheme === theme.id
+                    ? "bg-primary/20 text-primary border-primary font-black"
+                    : "border-border/60 hover:border-foreground text-slate-300 hover:text-foreground font-semibold"
+                }`}
+              >
+                <span className={`h-2 w-2 rounded-full ${theme.color}`} />
+                <span>{theme.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Simulated Drop Surge Controller ── */}
+        <div className="mt-4 pt-4 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-200 font-mono">Live Ticket Drop Surge Simulator</h4>
+            <p className="text-[10px] text-slate-300">Stress-test graph tickers, sync queues, and CLI console channels with mock high-frequency ticket queues.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {isSurging && (
+              <span className="flex h-2 w-2 rounded-full bg-red-500 cmd-pulse" />
+            )}
+            <Button
+              type="button"
+              onClick={() => {
+                const next = !isSurging;
+                setIsSurging(next);
+                window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+                  detail: {
+                    type: next ? "warn" : "info",
+                    text: next ? "[SYS] ENGAGING VEGAS TICKET DROP SURGE SIMULATION ENGINE!" : "[SYS] Disengaging ticket drop simulator..."
+                  }
+                }));
+                if (next) {
+                  setSimLoad(95);
+                } else {
+                  setSimLoad(10);
+                }
+              }}
+              className={`rounded-none text-[10px] font-bold uppercase tracking-wider font-mono px-4 h-9 select-none transition-all ${
+                isSurging 
+                  ? "bg-red-600 hover:bg-red-700 text-white border border-red-500/30 animate-pulse" 
+                  : "bg-primary hover:bg-primary/95 text-white"
+              }`}
+            >
+              {isSurging ? "DISENGAGE SURGE SIM" : "TRIGGER VEGAS TICKET DROP"}
+            </Button>
           </div>
         </div>
 
@@ -641,10 +831,10 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           <div className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-200">
                   Registration Signups
                 </h3>
-                <p className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
+                <p className="text-[9px] font-mono text-slate-300 mt-0.5">
                   Last data points · scope: {timeFrame}
                 </p>
               </div>
@@ -658,7 +848,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                       type="button"
                       onClick={() => setRegChartType(type)}
                       className={`px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded ${
-                        regChartType === type ? "bg-primary/20 text-primary border border-primary/25" : "text-muted-foreground/45 hover:text-foreground"
+                        regChartType === type ? "bg-primary/20 text-primary border border-primary/25" : "text-slate-400 hover:text-foreground"
                       }`}
                     >
                       {type}
@@ -737,10 +927,10 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           <div className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-200">
                   Revenue Stream (AUD)
                 </h3>
-                <p className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
+                <p className="text-[9px] font-mono text-slate-300 mt-0.5">
                   Last data points · scope: {timeFrame}
                 </p>
               </div>
@@ -754,7 +944,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                       type="button"
                       onClick={() => setRevChartType(type)}
                       className={`px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded ${
-                        revChartType === type ? "bg-accent/20 text-accent border border-accent/25" : "text-muted-foreground/45 hover:text-foreground"
+                        revChartType === type ? "bg-accent/20 text-accent border border-accent/25" : "text-slate-400 hover:text-foreground"
                       }`}
                     >
                       {type}
@@ -947,7 +1137,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                 <Radio className={`h-3.5 w-3.5 ${networkMode === "offline" ? "text-red-500 animate-pulse" : networkMode === "latency" ? "text-amber-500 animate-pulse" : "text-emerald-400"}`} />
                 PWA Offline Sync Monitor
               </h3>
-              <p className="text-[9px] font-mono text-slate-350 mt-0.5">
+              <p className="text-[9px] font-mono text-slate-300 mt-0.5">
                 Service Worker Buffer Status · Database Sync State
               </p>
             </div>

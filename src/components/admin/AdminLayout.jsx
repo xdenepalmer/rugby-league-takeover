@@ -236,7 +236,7 @@ export default function AdminLayout({ children }) {
                 <p className="font-mono text-xl font-bold tracking-widest text-foreground tabular-nums">
                   {timeStr}
                 </p>
-                <p className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-300">
                   {dateStr}
                 </p>
               </div>
@@ -252,16 +252,24 @@ export default function AdminLayout({ children }) {
             {/* Right: User + Actions */}
             <div className="flex items-center gap-2">
               <div className="hidden lg:flex items-center gap-2 mr-2">
-                <div className="h-7 w-7 rounded-sm bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-primary">
-                    {(user?.email || "A")[0].toUpperCase()}
-                  </span>
-                </div>
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.full_name || user.email}
+                    className="h-7 w-7 rounded-sm object-cover border border-primary/20"
+                  />
+                ) : (
+                  <div className="h-7 w-7 rounded-sm bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-primary">
+                      {(user?.email || "A")[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 <div>
-                  <p className="text-[10px] font-mono text-muted-foreground leading-none">
+                  <p className="text-[10px] font-mono text-slate-200 leading-none">
                     {user?.email}
                   </p>
-                  <p className="text-[8px] uppercase tracking-wider text-primary/60 font-bold">
+                  <p className="text-[8px] uppercase tracking-wider text-primary font-bold">
                     Administrator
                   </p>
                 </div>
@@ -349,7 +357,7 @@ export default function AdminLayout({ children }) {
                         )}
                         {/* Shortcut (hide when badge is showing) */}
                         {!(badgeKey && badgeCounts[badgeKey] > 0) && (
-                          <span className="text-[8px] font-mono text-muted-foreground/50 group-hover:text-muted-foreground/80 transition-colors">
+                          <span className="text-[8px] font-mono text-slate-400 group-hover:text-slate-200 transition-colors">
                             {shortcut}
                           </span>
                         )}

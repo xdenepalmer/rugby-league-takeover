@@ -83,7 +83,7 @@ export default function InstallAppPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="ios-pressable flex h-11 w-11 shrink-0 items-center justify-center text-slate-350 hover:text-foreground"
+              className="ios-pressable flex h-11 w-11 shrink-0 items-center justify-center text-slate-400 hover:text-foreground"
               aria-label="Dismiss install prompt"
             >
               <X className="h-4 w-4" />

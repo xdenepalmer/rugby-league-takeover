@@ -23,6 +23,7 @@ import MentionTextarea from "@/components/forum/MentionTextarea";
 import MediaAttach from "@/components/forum/MediaAttach";
 import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
 import ScorePredictor from "@/components/forum/ScorePredictor";
+import SlotMachineBadgeUnlock from "@/components/forum/SlotMachineBadgeUnlock";
 
 
 
@@ -169,7 +170,7 @@ const toggleSavedPost = (id) => {
 
 function ShareButton({ post }) {
   return (
-    <button type="button" onClick={() => shareThread(post)} title="Share / copy link" className="flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs text-muted-foreground/50 transition-colors hover:text-foreground">
+    <button type="button" onClick={() => shareThread(post)} title="Share / copy link" className="flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs text-slate-300 transition-colors hover:text-foreground">
       <Share2 className="h-3.5 w-3.5" />
     </button>
   );
@@ -183,7 +184,7 @@ function SaveButton({ post }) {
     toast({ title: now ? "Saved" : "Removed", description: now ? "Added to your saved threads." : "Removed from saved threads." });
   };
   return (
-    <button type="button" onClick={onToggle} title={saved ? "Saved" : "Save thread"} className={`flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs transition-colors ${saved ? "text-primary" : "text-muted-foreground/50 hover:text-foreground"}`}>
+    <button type="button" onClick={onToggle} title={saved ? "Saved" : "Save thread"} className={`flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs transition-colors ${saved ? "text-primary" : "text-slate-300 hover:text-foreground"}`}>
       <Bookmark className={`h-3.5 w-3.5 ${saved ? "fill-primary" : ""}`} />
     </button>
   );
@@ -335,18 +336,18 @@ function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, child
                   )}
                 </div>
               </div>
-              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-300">
                 <Clock className="h-3 w-3" />
                 <span>Member since {memberDate.toLocaleDateString("en-AU", { month: "short", year: "numeric" })}</span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="border border-border/30 bg-muted/[0.04] p-2.5 text-center">
                   <p className="font-display text-lg font-bold text-foreground tabular-nums">{postCount}</p>
-                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Posts</p>
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Posts</p>
                 </div>
                 <div className="border border-border/30 bg-muted/[0.04] p-2.5 text-center">
                   <p className="font-display text-lg font-bold text-foreground tabular-nums">{replyCount}</p>
-                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">Replies</p>
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Replies</p>
                 </div>
               </div>
             </div>
@@ -359,6 +360,16 @@ function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, child
 
 /* ━━━ User Achievements Badge Component ━━━━━━━━━━━━━━━━━━ */
 function UserAchievements({ isMe }) {
+  const [trigger, setTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleBadgeEvent = () => {
+      setTrigger((t) => t + 1);
+    };
+    window.addEventListener("rlt_badge_event", handleBadgeEvent);
+    return () => window.removeEventListener("rlt_badge_event", handleBadgeEvent);
+  }, []);
+
   if (!isMe) return null;
   
   let voted = false;
@@ -374,8 +385,10 @@ function UserAchievements({ isMe }) {
   
   const claimed = !!localStorage.getItem("rlt_seat_claimed");
   const posted = !!localStorage.getItem("rlt_forum_posted");
+  const slotSpins = !!localStorage.getItem("rlt_slot_spins");
+  const slotJackpot = !!localStorage.getItem("rlt_slot_jackpot");
   
-  if (!voted && !claimed && !posted) return null;
+  if (!voted && !claimed && !posted && !slotSpins && !slotJackpot) return null;
   
   return (
     <div className="inline-flex items-center gap-1 ml-1" title="Vegas Supporter Achievements">
@@ -392,6 +405,16 @@ function UserAchievements({ isMe }) {
       {posted && (
         <span className="inline-flex h-3.5 w-3.5 items-center justify-center bg-pink-500/10 border border-pink-500/30 text-pink-400 text-[8px]" title="Hype Master (Unlocked)">
           ⚡
+        </span>
+      )}
+      {slotSpins && (
+        <span className="inline-flex h-3.5 w-3.5 items-center justify-center bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[8px]" title="Vegas High Roller (Unlocked)">
+          🎰
+        </span>
+      )}
+      {slotJackpot && (
+        <span className="inline-flex h-3.5 w-3.5 items-center justify-center bg-red-500/10 border border-red-500/30 text-red-400 text-[8px] animate-bounce" style={{ animationDuration: "1s" }} title="Vegas Jackpot Winner (Unlocked)">
+          🔥
         </span>
       )}
     </div>
@@ -415,10 +438,10 @@ function AuthorMeta({ meta, className = "" }) {
   return (
     <>
       {meta.location && (
-        <span className={`inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 ${className}`} title={meta.location}>📍 {meta.location}</span>
+        <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}>📍 {meta.location}</span>
       )}
       {meta.team && (
-        <span className={`inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 ${className}`} title={`Supports ${meta.team}`}>🏉 {meta.team}</span>
+        <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={`Supports ${meta.team}`}>🏉 {meta.team}</span>
       )}
     </>
   );
@@ -463,7 +486,7 @@ function ReactionPicker({ postId, isLiked, likeCount, onLike, isPending }) {
         className={`flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 ${
           isLiked
             ? "bg-primary/10 text-primary border border-primary/20"
-            : "text-muted-foreground/50 hover:text-primary hover:bg-primary/5 border border-transparent"
+            : "text-slate-300 hover:text-primary hover:bg-primary/5 border border-transparent"
         }`}
       >
         <motion.span
@@ -550,7 +573,7 @@ function LiveActivityTicker({ threads }) {
         </div>
         <div className="min-w-0 flex-1 overflow-hidden py-2">
           <motion.div
-            className="whitespace-nowrap text-[10px] text-muted-foreground/50 font-mono"
+            className="whitespace-nowrap text-[10px] text-slate-300 font-mono font-bold"
             animate={{ x: ["0%", "-50%"] }}
             transition={{ duration: activities.length * 4, repeat: Infinity, ease: "linear" }}
           >
@@ -560,7 +583,7 @@ function LiveActivityTicker({ threads }) {
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="shrink-0 p-2 text-muted-foreground/30 hover:text-foreground transition-colors"
+          className="shrink-0 p-2 text-slate-400 hover:text-foreground transition-colors"
         >
           <X className="h-3 w-3" />
         </button>
@@ -625,7 +648,7 @@ function SortTabs({ active, onChange }) {
             type="button"
             onClick={() => onChange(opt.id)}
             className={`relative flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
-              isActive ? "text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"
+              isActive ? "text-foreground" : "text-slate-300 hover:text-foreground"
             }`}
           >
             <opt.icon className={`h-3 w-3 ${isActive ? "text-primary" : ""}`} />
@@ -706,14 +729,14 @@ function CategoryPill({ value, isActive, onClick, count }) {
       className={`relative flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-250 ${
         isActive
           ? `border-primary/40 bg-gradient-to-r ${meta.gradient} text-foreground shadow-[0_0_16px_hsl(var(--primary)/0.12),inset_0_1px_0_hsl(var(--primary)/0.1)]`
-          : `border-border/50 bg-card/20 text-muted-foreground hover:text-foreground hover:bg-card/40 hover:border-border`
+          : `border-border/50 bg-card/20 text-slate-300 hover:text-foreground hover:bg-card/40 hover:border-border`
       }`}
     >
-      <MetaIcon className={`h-3 w-3 ${isActive ? meta.accent : "text-muted-foreground/40"}`} />
+      <MetaIcon className={`h-3 w-3 ${isActive ? meta.accent : "text-slate-400"}`} />
       <span>{meta.label}</span>
       {count > 0 && (
         <span className={`ml-1 px-1.5 py-0 text-[8px] font-mono tabular-nums ${
-          isActive ? "bg-primary/20 text-primary" : "bg-muted/30 text-muted-foreground/50"
+          isActive ? "bg-primary/20 text-primary" : "bg-muted/30 text-slate-300"
         }`}>
           {count}
         </span>
@@ -807,7 +830,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                   <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
                   <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
                   <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
-                  <span className="text-[10px] text-slate-350 font-bold">•</span>
+                  <span className="text-[10px] text-slate-300 font-bold">•</span>
                   <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-250 font-semibold">
@@ -819,7 +842,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
 
             {/* Full body */}
             <div className="prose prose-invert max-w-none">
-              <p className="whitespace-pre-wrap break-words text-sm leading-8 text-muted-foreground/80">{post.body}</p>
+              <p className="whitespace-pre-wrap break-words text-sm leading-8 text-slate-200">{post.body}</p>
               <ForumMedia url={post.media_url} type={post.media_type} />
             </div>
 
@@ -833,7 +856,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             {/* All replies */}
             {replies.length > 0 && (
               <div className="mt-6 border-t border-border/20 pt-6">
-                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40 flex items-center gap-1.5 mb-4">
+                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300 flex items-center gap-1.5 mb-4">
                   <MessageCircle className="h-3 w-3" />
                   {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
                 </p>
@@ -846,7 +869,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
         {/* Sticky reply form at bottom */}
         <div className="ios-keyboard-spacer shrink-0 border-t border-border/30 bg-card/80 p-4 backdrop-blur-sm md:p-6">
           <form onSubmit={onReply} className="space-y-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">
               Write a Reply
             </p>
             <div className="flex gap-3">
@@ -1010,8 +1033,8 @@ function ForumPostCard({
               <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
               <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
               <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
-              <span className="text-[10px] text-slate-500">•</span>
-              <span className="text-[10px] font-mono text-slate-400 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+              <span className="text-[10px] text-slate-300 font-bold">•</span>
+              <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {post.is_pinned && (
@@ -1026,8 +1049,8 @@ function ForumPostCard({
             </div>
           </div>
           {/* Desktop stats */}
-          <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-400">
-            <span className="flex items-center gap-1 font-mono font-bold tabular-nums text-slate-400">
+          <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-300 font-semibold">
+            <span className="flex items-center gap-1 font-mono font-bold tabular-nums text-slate-200">
               <Eye className="h-3 w-3 text-primary" /> {engagement.views}
             </span>
           </div>
@@ -1082,7 +1105,7 @@ function ForumPostCard({
             <button
               type="button"
               onClick={() => onDeletePost(post)}
-              className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-400 hover:text-destructive transition-colors border border-transparent"
+              className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-destructive transition-colors border border-transparent"
               title="Remove this thread"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -1102,9 +1125,9 @@ function ForumPostCard({
           </button>
 
           {/* Mobile stats */}
-          <div className="flex min-h-11 items-center justify-center gap-1 text-[10px] text-slate-400 font-medium md:hidden">
+          <div className="flex min-h-11 items-center justify-center gap-1 text-[10px] text-slate-300 font-bold md:hidden">
             <Eye className="h-3 w-3 text-primary" />
-            <span className="font-mono font-bold tabular-nums text-slate-400">{engagement.views}</span>
+            <span className="font-mono font-bold tabular-nums text-slate-200">{engagement.views}</span>
           </div>
         </div>
 
@@ -1139,7 +1162,7 @@ function ForumPostCard({
                   <button
                     type="button"
                     onClick={() => setShowAllReplies(false)}
-                    className="text-[9px] font-bold uppercase tracking-wider text-slate-400 hover:text-primary pt-1 transition-colors"
+                    className="text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-primary pt-1 transition-colors"
                   >
                     Collapse replies
                   </button>
@@ -1161,7 +1184,7 @@ function ForumPostCard({
               className="overflow-hidden"
             >
               <div className="mt-4 space-y-3 border-t border-border/20 pt-4">
-                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-350">
+                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">
                   Write a Reply
                 </p>
                 {isAuthenticated ? (
@@ -1259,12 +1282,12 @@ function TopContributors({ allThreads }) {
             className="flex items-center gap-2.5 py-1"
           >
             <span className="w-5 text-center text-sm shrink-0">
-              {i < 3 ? rankIcons[i] : <span className="text-[10px] font-mono font-bold text-muted-foreground/40">{i + 1}</span>}
+              {i < 3 ? rankIcons[i] : <span className="text-[10px] font-mono font-bold text-slate-300">{i + 1}</span>}
             </span>
             <UserAvatar name={u.name} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-foreground truncate">{u.name}</p>
-              <p className="text-[8px] text-muted-foreground/40">{u.count} contributions</p>
+              <p className="text-[8px] text-slate-300 font-medium">{u.count} contributions</p>
             </div>
           </motion.div>
         ))}
@@ -1309,7 +1332,7 @@ function RecentActivityFeed({ allThreads }) {
                 {" "}{a.type === "post" ? "posted" : "replied to"}{" "}
                 <span className="text-primary font-bold">"{(a.title || "a thread").slice(0, 32)}{(a.title || "").length > 32 ? "…" : ""}"</span>
               </p>
-              <p className="text-[9px] font-mono text-slate-400 font-bold tabular-nums mt-0.5">{timeAgo(a.date)}</p>
+              <p className="text-[9px] font-mono text-slate-300 font-bold tabular-nums mt-0.5">{timeAgo(a.date)}</p>
             </div>
           </div>
         ))}
@@ -1330,7 +1353,7 @@ function CollapsibleGuidelines() {
       >
         <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">Community Guidelines</p>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="h-3 w-3 text-slate-400" />
+          <ChevronDown className="h-3 w-3 text-slate-200" />
         </motion.div>
       </button>
       <AnimatePresence>
@@ -1377,12 +1400,12 @@ function EmptyState({ onClearFilters, onSelectCategory }) {
           ease: "easeInOut",
         }}
       >
-        <Search className="h-10 w-10 text-primary/40" />
+        <Search className="h-10 w-10 text-primary" />
       </motion.div>
-      <p className="font-display text-2xl uppercase text-muted-foreground/40 tracking-wide">
+      <p className="font-display text-2xl uppercase text-slate-200 tracking-wide">
         No discussions found
       </p>
-      <p className="text-sm text-muted-foreground/30 mt-2 max-w-sm mx-auto leading-relaxed">
+      <p className="text-sm text-slate-300 mt-2 max-w-sm mx-auto leading-relaxed">
         Try adjusting your filters, or be the first to spark a conversation in one of these categories:
       </p>
       <div className="flex flex-wrap justify-center gap-2 mt-6">
@@ -1504,11 +1527,11 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
             </div>
             <div>
               <h2 className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
-              <p className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground/40">Connect with fellow fans</p>
+              <p className="text-[8px] font-mono uppercase tracking-wider text-slate-300">Connect with fellow fans</p>
             </div>
           </div>
 
-          <p className="text-xs leading-relaxed text-muted-foreground/60 mt-3 mb-4">
+          <p className="text-xs leading-relaxed text-slate-200 mt-3 mb-4">
             Got questions about tickets, meetups, flights, or Vegas? Post a topic and connect with other Rugby League fans.
           </p>
 
@@ -1535,18 +1558,18 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
                 <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus src={user?.avatar_url} />
                 <div>
                   <p className="text-xs font-bold text-foreground">{user?.full_name || user?.email}</p>
-                  <p className="text-[8px] text-muted-foreground/40">Authenticated</p>
+                  <p className="text-[8px] text-slate-300 font-bold">Authenticated</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-1">
-                <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Your Name</label>
+                <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Your Name</label>
                 <Input required placeholder="e.g. Tommy R." value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Category</label>
+              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Category</label>
               <Select value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v })}>
                 <SelectTrigger className="h-11 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1566,16 +1589,16 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
             </div>
 
             <div className="space-y-1">
-              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Topic Title</label>
+              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Topic Title</label>
               <Input required placeholder="What's on your mind?" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Message</label>
+              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Message</label>
               <MentionTextarea required people={people} placeholder="Share your thoughts, questions, or tips… use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
             </div>
             <div className="space-y-1">
-              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Attach image / GIF / video</label>
+              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Attach image / GIF / video</label>
               <MediaAttach value={draft.media_url} onChange={(url) => setDraft({ ...draft, media_url: url })} />
             </div>
 
@@ -1588,7 +1611,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
               <Send className="mr-2 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               {isPending ? "Submitting…" : "Submit for Review"}
             </Button>
-            <p className="text-[8px] text-center text-muted-foreground/25">Posts are reviewed before publishing</p>
+            <p className="text-[8px] text-center text-slate-400 font-bold">Posts are reviewed before publishing</p>
           </form>
         </div>
       </div>
@@ -1604,6 +1627,9 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
       <ScorePredictor
         onSharePrediction={onSharePrediction}
       />
+
+      {/* Vegas Takeover Slot Machine */}
+      <SlotMachineBadgeUnlock />
 
       {/* Top Contributors */}
       <TopContributors allThreads={allThreads} />
@@ -1933,6 +1959,11 @@ export default function Forum() {
             {/* Live Activity Ticker */}
             <LiveActivityTicker threads={allThreads} />
 
+            {/* Mobile Vegas Slot Machine Badge Unlocker */}
+            <div className="lg:hidden">
+              <SlotMachineBadgeUnlock />
+            </div>
+
             {/* Search + Filter Bar */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -2155,7 +2186,7 @@ export default function Forum() {
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h2 id="forum-mobile-compose-title" className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
-                  <button type="button" onClick={() => setShowMobileCompose(false)} className="touch-target flex items-center justify-center border border-border/30 text-slate-350 transition-colors hover:border-border hover:text-foreground" aria-label="Close composer">
+                  <button type="button" onClick={() => setShowMobileCompose(false)} className="touch-target flex items-center justify-center border border-border/30 text-slate-300 transition-colors hover:border-border hover:text-foreground" aria-label="Close composer">
                     <X className="h-4 w-4" />
                   </button>
                 </div>

@@ -53,28 +53,36 @@ export default function MissionControlTerminal() {
   }, []);
 
   const handleCommand = (cmd) => {
-    const trimmed = cmd.trim().toLowerCase();
+    const tokens = cmd.trim().split(/\s+/);
+    const mainCommand = tokens[0].toLowerCase();
+    const args = tokens.slice(1);
     const timestamp = new Date().toLocaleTimeString("en-AU", { hour12: false });
     const promptLine = `admin@rlt-command-hq:~$ ${cmd}`;
 
-    if (!trimmed) {
+    if (!mainCommand) {
       setLines((prev) => [...prev, promptLine]);
       return;
     }
 
     let responseLines = [];
 
-    switch (trimmed) {
+    switch (mainCommand) {
       case "help":
         responseLines = [
           "AVAILABLE DIAGNOSTIC COMMANDS:",
-          "  help       - Display this command reference manual",
-          "  health     - Execute systems integrity diagnostics",
-          "  metrics    - Show real-time CPU & telemetry stats",
-          "  logs       - Fetch a snapshot of server audit logs",
-          "  pwa        - Check PWA offline service worker state",
-          "  optimize   - Trigger database table optimization",
-          "  clear      - Wipe console buffer and reset terminal"
+          "  help                            - Display this command reference manual",
+          "  health                          - Execute systems integrity diagnostics",
+          "  metrics                         - Show real-time CPU & telemetry stats",
+          "  logs                            - Fetch a snapshot of server audit logs",
+          "  pwa                             - Check PWA offline service worker state",
+          "  optimize                        - Trigger database table optimization",
+          "  color <sincity/flamingo/etc.>   - Switch visual accent theme profile",
+          "  surge <0-100>                   - Adjust simulated traffic load threshold",
+          "  stats                           - Render ASCII report for registered systems",
+          "  backup                          - Run full DB indexing backup sequence",
+          "  ban <email/IP> [reason]         - Add system rule to active blocklists",
+          "  unban <email/IP>               - Lift system rule from active blocklists",
+          "  clear                           - Wipe console buffer and reset terminal"
         ];
         break;
 
@@ -129,13 +137,116 @@ export default function MissionControlTerminal() {
         ];
         break;
 
+      case "color": {
+        const nextTheme = args[0]?.toLowerCase();
+        const themes = ["sincity", "flamingo", "highroller", "emerald", "jackpot"];
+        if (!nextTheme || !themes.includes(nextTheme)) {
+          responseLines = [
+            "ERROR: Invalid or missing theme argument. Usage:",
+            "  color <sincity | flamingo | highroller | emerald | jackpot>"
+          ];
+        } else {
+          window.dispatchEvent(new CustomEvent("rlt_theme_change", { detail: { theme: nextTheme } }));
+          responseLines = [
+            `[THEME] Switched accent configuration to: ${nextTheme.toUpperCase()}`,
+            "Global system root styling re-initialized successfully."
+          ];
+        }
+        break;
+      }
+
+      case "surge": {
+        const loadVal = parseInt(args[0], 10);
+        if (isNaN(loadVal) || loadVal < 0 || loadVal > 100) {
+          responseLines = [
+            "ERROR: Invalid load value. Must be an integer between 0 and 100. Usage:",
+            "  surge <0-100>"
+          ];
+        } else {
+          window.dispatchEvent(new CustomEvent("rlt_admin_surge_change", { detail: { load: loadVal } }));
+          responseLines = [
+            `[SYS] Traffic surge load set to: ${loadVal}%`,
+            loadVal > 85
+              ? "WARNING: Load exceeds critical threshold. Alerting operations..."
+              : "System operation load within nominal parameters."
+          ];
+        }
+        break;
+      }
+
+      case "stats":
+        responseLines = [
+          "+---------------------------------------------------+",
+          "| PLATFORM METRICS REPORT                           |",
+          "+--------------------------+------------------------+",
+          "| Registrations Queue      | 148 active accounts    |",
+          "| Dispatched Email Nodes   | 3,240 deliveries       |",
+          "| Total Checkout Revenue   | $12,940.00 AUD (Stripe)|",
+          "| Community Discussion Lvl | Peak (Hot thread act.) |",
+          "| PWA Buffer Sync Status   | 100% NOMINAL           |",
+          "+--------------------------+------------------------+",
+          "All telemetry nodes reporting green states."
+        ];
+        break;
+
+      case "backup":
+        responseLines = [
+          "[BACKUP] Initializing re-indexing and database compaction...",
+          "  [DB] Staging local database state...",
+          "  [DB] Progress: [||||||||||||||||||||||||||||] 100%",
+          "  [DB] Compressed bundle size: 42.8 MB",
+          "  [DB] Encrypted with AES-256 binary keys",
+          "[SUCCESS] Backup file RLT-DB-BACKUP.bin compiled and cached to SwBuffer."
+        ];
+        break;
+
+      case "ban": {
+        const banValue = args[0];
+        const banReason = args.slice(1).join(" ") || "Banned from admin terminal";
+        if (!banValue) {
+          responseLines = [
+            "ERROR: Missing ban target. Usage:",
+            "  ban <email | IP> [reason]"
+          ];
+        } else {
+          window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+            detail: { type: "warn", text: `[BAN-ACTION] Blocked blocklist target: ${banValue} (Reason: ${banReason})` }
+          }));
+          responseLines = [
+            `[BAN SUCCESS] Blocklist target added: ${banValue}`,
+            `Reason: "${banReason}"`,
+            "API routes updated. Active session tokens invalidated."
+          ];
+        }
+        break;
+      }
+
+      case "unban": {
+        const unbanValue = args[0];
+        if (!unbanValue) {
+          responseLines = [
+            "ERROR: Missing target to unban. Usage:",
+            "  unban <email | IP>"
+          ];
+        } else {
+          window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+            detail: { type: "info", text: `[BAN-ACTION] Removing block rules for target: ${unbanValue}` }
+          }));
+          responseLines = [
+            `[UNBAN SUCCESS] Lifted blocklist target: ${unbanValue}`,
+            "Rules updated. Target connections re-allowed."
+          ];
+        }
+        break;
+      }
+
       case "clear":
         setLines([`SYSTEM BUFFER WIPED // TIME: ${timestamp}`, "---------------------------------------------"]);
         return;
 
       default:
         responseLines = [
-          `bash: command not found: ${trimmed}`,
+          `bash: command not found: ${mainCommand}`,
           "Type 'help' to review available terminal options."
         ];
         break;

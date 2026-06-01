@@ -80,11 +80,11 @@ export default function StadiumSeatPlanner({ onFilterSearch, onClaimSeat, curren
           </div>
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Stadium Fan Seating Planner</h3>
-            <p className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground/40">Allegiant Stadium Supporter Bays</p>
+            <p className="text-[8px] font-mono uppercase tracking-wider text-slate-300">Allegiant Stadium Supporter Bays</p>
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground/60 leading-relaxed mt-2 mb-4">
+        <p className="text-xs text-slate-300 leading-relaxed mt-2 mb-4">
           Click on a section of the stadium to explore supporter vibes, filter match-day threads, or claim your seat section to write a post.
         </p>
 
@@ -186,26 +186,26 @@ export default function StadiumSeatPlanner({ onFilterSearch, onClaimSeat, curren
                       Active HUD
                     </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground/75 leading-relaxed mt-1">
+                  <p className="text-[10px] text-slate-250 leading-relaxed mt-1">
                     {activeSection.description}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 border-t border-border/25 pt-2">
                   <div className="text-center">
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center justify-center gap-1">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-slate-300 flex items-center justify-center gap-1">
                       <Zap className="h-2.5 w-2.5" /> Vibe
                     </p>
                     <p className="text-xs font-bold text-foreground mt-0.5">{activeSection.vibe}</p>
                   </div>
                   <div className="text-center border-x border-border/20">
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center justify-center gap-1">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-slate-300 flex items-center justify-center gap-1">
                       <Users className="h-2.5 w-2.5" /> Capacity
                     </p>
                     <p className="text-xs font-bold text-foreground mt-0.5">{activeSection.capacity}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center justify-center gap-1">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-slate-300 flex items-center justify-center gap-1">
                       <Volume2 className="h-2.5 w-2.5" /> Sound
                     </p>
                     <p className="text-xs font-bold text-foreground mt-0.5">{activeSection.db}</p>
@@ -238,11 +238,11 @@ export default function StadiumSeatPlanner({ onFilterSearch, onClaimSeat, curren
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col justify-center items-center text-center p-4"
               >
-                <MapPin className="h-6 w-6 text-muted-foreground/30 mb-2 cmd-pulse" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30">
+                <MapPin className="h-6 w-6 text-slate-400 mb-2 cmd-pulse" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">
                   NO SECTOR SELECTED
                 </p>
-                <p className="text-[9px] text-muted-foreground/25 mt-0.5">
+                <p className="text-[9px] text-slate-300 mt-0.5">
                   Select any section on the vector map to activate stadium controls.
                 </p>
               </motion.div>

@@ -430,7 +430,7 @@ export default function Store() {
             >
               <BagIcon className="mx-auto h-12 w-12 text-slate-400 stroke-1 mb-4 animate-bounce" />
               <h3 className="font-display text-2xl uppercase tracking-wide mb-2">No merchandise found</h3>
-              <p className="text-sm text-slate-350 leading-relaxed font-medium">
+              <p className="text-sm text-slate-300 leading-relaxed font-medium">
                 We're currently stocking the shelves with official Las Vegas Takeover gear. Check back shortly!
               </p>
             </motion.div>

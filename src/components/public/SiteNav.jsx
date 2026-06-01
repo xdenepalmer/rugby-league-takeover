@@ -5,7 +5,6 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -90,10 +89,13 @@ export default function SiteNav({ settings = {} }) {
               aria-label="Open account menu" 
               className="group flex items-center gap-2 border border-border bg-secondary/40 px-2.5 py-1.5 transition-all duration-300 hover:border-primary hover:shadow-[0_0_12px_rgba(249,115,22,0.2)]"
             >
-              <Avatar className="h-7 w-7 rounded-none border border-border/60 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
-                <AvatarImage src={user?.avatar_url} alt={user?.full_name || user?.email} className="object-cover" />
-                <AvatarFallback className="rounded-none bg-muted text-xs font-mono font-bold text-primary">{initials(user)}</AvatarFallback>
-              </Avatar>
+              <div className="h-7 w-7 rounded-none border border-border/60 overflow-hidden flex items-center justify-center bg-muted transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105 shrink-0">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.full_name || user.email} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-mono font-bold text-primary">{initials(user)}</span>
+                )}
+              </div>
               <span className="hidden text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-foreground transition-colors xl:inline">Account</span>
             </button>
           </DropdownMenuTrigger>
@@ -234,6 +236,21 @@ export default function SiteNav({ settings = {} }) {
               )}
             </AnimatePresence>
           </Link>
+
+          {/* Mobile User Avatar */}
+          {isAuthenticated && (
+            <Link 
+              to="/account"
+              className="md:hidden flex h-9 w-9 items-center justify-center border border-border bg-secondary/40 transition-all duration-300 hover:border-primary hover:shadow-[0_0_10px_rgba(249,115,22,0.15)] overflow-hidden shrink-0"
+              aria-label="Go to my account"
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-[10px] font-mono font-bold text-primary">{initials(user)}</span>
+              )}
+            </Link>
+          )}
  
           <AccountArea />
           
@@ -248,7 +265,7 @@ export default function SiteNav({ settings = {} }) {
           </Button>
         </div>
       </div>
-
+ 
       {/* Mobile Nav Slide Drawer */}
       <AnimatePresence>
         {open && (
@@ -261,7 +278,7 @@ export default function SiteNav({ settings = {} }) {
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden pointer-events-auto"
             />
-
+ 
             <motion.nav 
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -277,7 +294,7 @@ export default function SiteNav({ settings = {} }) {
                 <div className="flex items-center justify-between border-b border-border/60 pb-4 mb-6">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-mono font-bold tracking-widest text-primary uppercase">Console Menu</span>
-                    <span className="text-[8px] font-mono text-slate-350 uppercase">SYSTEM // LIVE</span>
+                    <span className="text-[8px] font-mono text-slate-400 uppercase">SYSTEM // LIVE</span>
                   </div>
                   <button 
                     onClick={() => setOpen(false)} 
@@ -287,7 +304,7 @@ export default function SiteNav({ settings = {} }) {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-
+ 
                 {/* Staggered Navigation links */}
                 <motion.div 
                   variants={drawerVariants}
@@ -321,9 +338,21 @@ export default function SiteNav({ settings = {} }) {
                         <Link 
                           to="/account" 
                           onClick={() => setOpen(false)} 
-                          className="font-display text-xl uppercase tracking-wider text-foreground hover:text-primary transition-all flex items-center"
+                          className="font-display text-lg uppercase tracking-wider text-foreground hover:text-primary transition-all flex items-center gap-3.5 border border-border/40 bg-secondary/20 p-3 hover:border-primary/50 relative overflow-hidden group"
                         >
-                          My Account
+                          {/* Radial neon glow background on hover */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                          <div className="h-10 w-10 rounded-none border border-border/80 overflow-hidden flex items-center justify-center bg-neutral-900 text-[11px] font-mono font-bold text-primary shrink-0 relative shadow-[0_0_12px_rgba(249,115,22,0.1)] group-hover:border-primary transition-all">
+                            {user?.avatar_url ? (
+                              <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              initials(user)
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-sm tracking-wide text-foreground truncate">{user?.full_name || "My Account"}</span>
+                            <span className="text-[8px] font-mono text-slate-300 uppercase tracking-widest truncate">{user?.email}</span>
+                          </div>
                         </Link>
                         {isAdmin && (
                           <Link 

@@ -60,14 +60,14 @@ function LabeledField({ label, help, children, fullWidth, indicator }) {
   return (
     <div className={`grid gap-1.5 ${fullWidth ? "md:col-span-2" : ""}`}>
       <div className="flex items-center gap-2">
-        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-mono">
+        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-200 font-mono">
           {label}
         </label>
         {indicator && (
           <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.25 text-[7px] font-bold uppercase tracking-wider border ${
             indicator === "custom"
               ? "text-primary border-primary/20 bg-primary/5"
-              : "text-muted-foreground border-border/40 bg-muted/10"
+              : "text-slate-300 border-border/40 bg-muted/10"
           }`}>
             {indicator === "custom" ? (
               <><CheckCircle2 className="h-2 w-2" /> Custom</>
@@ -78,7 +78,7 @@ function LabeledField({ label, help, children, fullWidth, indicator }) {
         )}
       </div>
       {children}
-      {help && <p className="text-[9px] text-muted-foreground/60 leading-4">{help}</p>}
+      {help && <p className="text-[9px] text-slate-300 leading-4">{help}</p>}
     </div>
   );
 }
@@ -98,8 +98,8 @@ function ImagePreview({ url, alt }) {
       className="relative md:col-span-2 overflow-hidden border border-border/40 bg-muted/10 p-2"
     >
       <div className="flex items-center gap-2 mb-2">
-        <ImageIcon className="h-3 w-3 text-muted-foreground" />
-        <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground font-mono">Live Preview</span>
+        <ImageIcon className="h-3 w-3 text-slate-300" />
+        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-200 font-mono">Live Preview</span>
       </div>
       <div className="relative h-20 w-full overflow-hidden bg-background/50 border border-border/20">
         <img
@@ -118,7 +118,7 @@ function VideoCountBadge({ count }) {
   return (
     <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 border border-border/30 bg-muted/10">
       <Film className="h-3.5 w-3.5 text-primary" />
-      <span className="text-[9px] font-mono text-muted-foreground">
+      <span className="text-[9px] font-mono text-slate-300">
         {count} video{count !== 1 ? "s" : ""} in rotation
       </span>
       {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 cmd-blink ml-auto" />}
@@ -143,6 +143,13 @@ export default function SiteSettingsManager({ settings }) {
       queryClient.invalidateQueries({ queryKey: ["siteSettings"] });
       setSaveFlash(true);
       setTimeout(() => setSaveFlash(false), 2000);
+      
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: {
+          type: "success",
+          text: `[SETTING-UPDATE] Configuration saved successfully. Site Name: "${draft.site_name || 'Takeover'}"`
+        }
+      }));
     },
   });
 
@@ -229,7 +236,7 @@ export default function SiteSettingsManager({ settings }) {
               <h2 className="font-display text-2xl md:text-3xl uppercase leading-none tracking-wide text-foreground">
                 Website Configuration Room
               </h2>
-              <p className="mt-2 max-w-2xl text-xs text-muted-foreground leading-relaxed">
+              <p className="mt-2 max-w-2xl text-xs text-slate-300 leading-relaxed">
                 Click on any of the configuration modules below to customize logos, backgrounds, countdown timers, and sections copy across the public site.
               </p>
             </div>
@@ -257,7 +264,7 @@ export default function SiteSettingsManager({ settings }) {
 
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <div className="p-2 border border-border/60 bg-muted/20 text-muted-foreground group-hover:text-primary group-hover:border-primary/20 transition-all">
+                        <div className="p-2 border border-border/60 bg-muted/20 text-slate-300 group-hover:text-primary group-hover:border-primary/20 transition-all">
                           <Icon className="h-5 w-5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
                         </div>
                         <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-primary/60 bg-primary/5 px-2 py-0.5 border border-primary/10">
@@ -267,13 +274,13 @@ export default function SiteSettingsManager({ settings }) {
                       <h3 className="font-display text-base uppercase tracking-wide text-foreground group-hover:text-primary transition-colors">
                         {c.title}
                       </h3>
-                      <p className="mt-1.5 text-xs text-muted-foreground leading-normal line-clamp-3">
+                      <p className="mt-1.5 text-xs text-slate-300 leading-normal line-clamp-3">
                         {c.desc}
                       </p>
                     </div>
 
                     <div className="mt-5 border-t border-border/30 pt-3 flex items-center justify-between">
-                      <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">Configure Module</span>
+                      <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-200 transition-colors">Configure Module</span>
                       <ChevronLeft className="h-3.5 w-3.5 rotate-180 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
                     </div>
                   </motion.div>
@@ -296,19 +303,19 @@ export default function SiteSettingsManager({ settings }) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBackToOverview}
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors border border-border/60 bg-muted/15 px-2.5 py-1"
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-foreground transition-colors border border-border/60 bg-muted/15 px-2.5 py-1"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" /> Back to Dashboard
                 </button>
-                <span className="text-[10px] text-muted-foreground/30">/</span>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Editor</span>
-                <span className="text-[10px] text-muted-foreground/30">/</span>
+                <span className="text-[10px] text-slate-500">/</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300">Editor</span>
+                <span className="text-[10px] text-slate-500">/</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-primary font-mono">
                   {categories.find((c) => c.id === activeCategory)?.title}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground/45">
+              <div className="flex items-center gap-1 text-[8px] font-mono text-slate-400">
                 <LayoutGrid className="h-3 w-3" /> Grid editor active
               </div>
             </div>
@@ -317,7 +324,7 @@ export default function SiteSettingsManager({ settings }) {
             <div className="grid gap-5 md:grid-cols-[200px_1fr]">
               {/* Desktop Side Navigation */}
               <aside className="hidden md:flex flex-col gap-1 border-r border-border/60 pr-4">
-                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2 px-2.5">Modules</span>
+                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-300 mb-2 px-2.5">Modules</span>
                 {categories.map((c) => {
                   const Icon = c.icon;
                   const isCurrent = c.id === activeCategory;
@@ -328,10 +335,10 @@ export default function SiteSettingsManager({ settings }) {
                       className={`flex items-center gap-2 px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider transition-all duration-200 border-l-2 ${
                         isCurrent
                           ? "bg-primary/10 text-foreground border-primary"
-                          : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/10"
+                          : "text-slate-300 border-transparent hover:text-foreground hover:bg-muted/10"
                       }`}
                     >
-                      <Icon className={`h-3.5 w-3.5 ${isCurrent ? "text-primary" : "text-muted-foreground/50"}`} />
+                      <Icon className={`h-3.5 w-3.5 ${isCurrent ? "text-primary" : "text-slate-400"}`} />
                       <span className="truncate">{c.title}</span>
                     </button>
                   );

@@ -59,7 +59,7 @@ function StatCard({ label, value, icon: Icon, color }) {
   return (
     <div className="relative overflow-hidden border border-border bg-card/40 cmd-glass p-5 flex items-center justify-between shadow-sm">
       <div className="space-y-1.5 z-10">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-350">{label}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{label}</p>
         <p className="text-3xl font-display uppercase leading-none text-foreground font-mono">
           <AnimatedNumber value={value} />
         </p>
@@ -158,7 +158,7 @@ export default function Account() {
                   )}
                 </div>
                 <p className="text-xs text-slate-300 font-mono font-medium">{user?.email}</p>
-                <p className="text-[10px] uppercase tracking-widest text-slate-350 font-bold flex items-center gap-1">
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold flex items-center gap-1">
                   <Calendar className="h-3 w-3 text-primary" /> Member Since:{" "}
                   <span className="text-foreground">
                     {user?.created_date ? format(new Date(user.created_date), "MMM yyyy") : "June 2026"}

@@ -26,7 +26,7 @@ const typeConfig = {
 function FieldLabel({ label, children, className = "" }) {
   return (
     <div className={`grid gap-1.5 ${className}`}>
-      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">
         {label}
       </label>
       {children}
@@ -57,8 +57,8 @@ function BanCard({ ban, index, liftBan }) {
   let statusLabel, statusClasses, dotClasses;
   if (lifted) {
     statusLabel = "Lifted";
-    statusClasses = "text-muted-foreground bg-muted/20 border-border/40";
-    dotClasses = "bg-muted-foreground";
+    statusClasses = "text-slate-400 bg-muted/20 border-border/40";
+    dotClasses = "bg-slate-400";
   } else if (expired) {
     statusLabel = "Expired";
     statusClasses = "text-amber-400 bg-amber-500/10 border-amber-500/20";
@@ -106,7 +106,7 @@ function BanCard({ ban, index, liftBan }) {
           <div className="flex-1 min-w-0">
             {/* Value + Status */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`font-mono text-sm font-semibold ${lifted ? "line-through text-muted-foreground" : "text-foreground"}`}>
+              <span className={`font-mono text-sm font-semibold ${lifted ? "line-through text-slate-400" : "text-slate-200"}`}>
                 {ban.value}
               </span>
 
@@ -123,21 +123,21 @@ function BanCard({ ban, index, liftBan }) {
             </div>
 
             {/* Reason */}
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            <p className="mt-2 text-sm text-slate-200 leading-relaxed">
               {ban.reason || "No reason specified"}
             </p>
 
             {/* Meta row */}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-300">
                 <Shield className="h-2.5 w-2.5" />
                 {ban.banned_by || "admin"}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-300">
                 <Calendar className="h-2.5 w-2.5" />
                 {ban.created_date ? format(new Date(ban.created_date), "dd MMM yyyy") : "—"}
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-300">
                 <Clock className="h-2.5 w-2.5" />
                 {ban.expires_at ? `Expires ${format(new Date(ban.expires_at), "dd MMM yyyy")}` : "Permanent"}
               </span>
@@ -186,12 +186,35 @@ export default function BansManager() {
       banned_by: me?.email || "",
       is_active: true,
     }),
-    onSuccess: () => { refresh(); setNewValue(""); setNewReason(""); toast({ title: "Ban added" }); },
+    onSuccess: () => {
+      refresh();
+      toast({ title: "Ban added" });
+      
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: {
+          type: "warn",
+          text: `[BAN-ACTION] Blocklist target registered: ${newValue.trim().toLowerCase()} (Reason: ${newReason.trim() || "Added by admin"})`
+        }
+      }));
+      
+      setNewValue("");
+      setNewReason("");
+    },
   });
 
   const liftBan = useMutation({
     mutationFn: (id) => base44.entities.Ban.update(id, { is_active: false }),
-    onSuccess: () => { refresh(); toast({ title: "Ban lifted" }); },
+    onSuccess: (data, variables) => {
+      refresh();
+      toast({ title: "Ban lifted" });
+      
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: {
+          type: "info",
+          text: `[BAN-ACTION] Blocklist rules lifted for target ID: ${variables}`
+        }
+      }));
+    },
   });
 
   const filtered = useMemo(() => {
@@ -234,14 +257,14 @@ export default function BansManager() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-3xl md:text-4xl uppercase leading-none tracking-wide">Bans</h2>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              <p className="mt-2 max-w-2xl text-sm text-slate-300">
                 Block by IP, email or account. IP bans are best-effort (VPNs/shared connections can evade them), so prefer time-limited bans and lift them when no longer needed.
               </p>
             </div>
 
             {/* Stats badges */}
             <div className="flex flex-wrap items-center gap-2">
-              <StatBadge icon={ShieldX} label="Total" value={totalBans} color="text-muted-foreground" bg="bg-muted/20" border="border-border/40" />
+              <StatBadge icon={ShieldX} label="Total" value={totalBans} color="text-slate-300" bg="bg-muted/20" border="border-border/40" />
               {activeCount > 0 && (
                 <StatBadge icon={ShieldX} label="Active" value={activeCount} color="text-destructive" bg="bg-destructive/5" border="border-destructive/10" pulse />
               )}
@@ -249,7 +272,7 @@ export default function BansManager() {
                 <StatBadge icon={AlertTriangle} label="Expired" value={expiredCount} color="text-amber-400" bg="bg-amber-500/5" border="border-amber-500/10" />
               )}
               {liftedCount > 0 && (
-                <StatBadge icon={CheckCircle2} label="Lifted" value={liftedCount} color="text-muted-foreground" bg="bg-muted/20" border="border-border/40" />
+                <StatBadge icon={CheckCircle2} label="Lifted" value={liftedCount} color="text-slate-400" bg="bg-muted/20" border="border-border/40" />
               )}
             </div>
           </div>
@@ -285,13 +308,13 @@ export default function BansManager() {
             </div>
             <div className="text-left">
               <p className="text-sm font-bold uppercase tracking-wider text-foreground">Add New Ban</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[10px] text-slate-300 mt-0.5">
                 Block an IP address, email address, or user account
               </p>
             </div>
           </div>
           <motion.div animate={{ rotate: formOpen ? 180 : 0 }} transition={{ duration: 0.25 }}>
-            <ChevronDown className="h-4 w-4 text-muted-foreground group-hover/toggle:text-foreground transition-colors" />
+            <ChevronDown className="h-4 w-4 text-slate-300 group-hover/toggle:text-foreground transition-colors" />
           </motion.div>
         </button>
 
@@ -359,7 +382,7 @@ export default function BansManager() {
         transition={{ delay: 0.12, duration: 0.35 }}
         className="relative"
       >
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 z-10" />
         <Input
           placeholder="Search bans by value, reason, or type…"
           value={search}
@@ -374,7 +397,7 @@ export default function BansManager() {
           <div className="h-[2px] w-full bg-gradient-to-r from-red-500 via-rose-500 to-red-500 bg-[length:200%_100%] animate-[cmd-data-stream_3s_linear_infinite]" />
           <div className="p-6 flex items-center gap-3">
             <div className="h-5 w-5 border-2 border-destructive/40 border-t-destructive rounded-full animate-spin" />
-            <p className="text-sm text-muted-foreground">Loading bans…</p>
+            <p className="text-sm text-slate-300">Loading bans…</p>
           </div>
         </div>
       ) : filtered.length === 0 ? (
@@ -385,10 +408,10 @@ export default function BansManager() {
           className="border border-border/60 bg-card/30 cmd-glass py-16 flex flex-col items-center justify-center text-center"
         >
           <div className="p-4 border border-border/30 bg-muted/10 mb-4">
-            <ShieldX className="h-8 w-8 text-muted-foreground/30" />
+            <ShieldX className="h-8 w-8 text-slate-500" />
           </div>
-          <p className="text-sm font-bold text-muted-foreground mb-1">No bans found</p>
-          <p className="text-xs text-muted-foreground/60 max-w-xs">
+          <p className="text-sm font-bold text-slate-200 mb-1">No bans found</p>
+          <p className="text-xs text-slate-400 max-w-xs">
             {bans.length === 0
               ? 'Click "Add New Ban" above to create your first ban rule.'
               : "Try adjusting your search term above."

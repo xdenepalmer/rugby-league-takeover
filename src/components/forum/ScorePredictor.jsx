@@ -118,9 +118,9 @@ export default function ScorePredictor({ onSharePrediction }) {
             <div className="p-1.5 bg-primary/10 border border-primary/20">
               <Trophy className="h-3.5 w-3.5 text-primary animate-pulse" />
             </div>
-            <div>
+             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Match Predictor</h3>
-              <p className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground/45">NRL Takeover Fan Tipping</p>
+              <p className="text-[8px] font-mono uppercase tracking-wider text-slate-300">NRL Takeover Fan Tipping</p>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export default function ScorePredictor({ onSharePrediction }) {
               </SelectTrigger>
               <SelectContent className="bg-neutral-950 border-border rounded-none cmd-glass">
                 {displayMatchups.map((m) => (
-                  <SelectItem key={m.id} value={m.id} className="text-[9px] uppercase font-bold tracking-wider font-mono text-muted-foreground hover:text-foreground">
+                  <SelectItem key={m.id} value={m.id} className="text-[9px] uppercase font-bold tracking-wider font-mono text-slate-300 hover:text-foreground">
                     {m.home_team.substring(0, 3)} vs {m.away_team.substring(0, 3)}
                   </SelectItem>
                 ))}
@@ -145,10 +145,10 @@ export default function ScorePredictor({ onSharePrediction }) {
         <div className="flex items-center gap-1 text-[8px] font-mono text-primary/80 uppercase tracking-widest bg-primary/5 border border-primary/10 px-2 py-1 mb-3">
           <Calendar className="h-2.5 w-2.5" />
           <span>{currentMatchup.label || "Showdown Match"}</span>
-          {currentMatchup.venue && <span className="text-muted-foreground/60 ml-auto">@{currentMatchup.venue}</span>}
+          {currentMatchup.venue && <span className="text-slate-300 ml-auto">@{currentMatchup.venue}</span>}
         </div>
 
-        <p className="text-xs text-muted-foreground/60 leading-relaxed mb-4">
+        <p className="text-xs text-slate-300 leading-relaxed mb-4">
           Set predictions, submit your vote for community stats, and share directly to match day discussions!
         </p>
 
@@ -226,7 +226,7 @@ export default function ScorePredictor({ onSharePrediction }) {
                       <TrendingUp className="h-3.5 w-3.5 text-primary" />
                       Win Probability HUD
                     </p>
-                    <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground/40 tabular-nums">
+                    <span className="text-[8px] font-mono uppercase tracking-wider text-slate-300 tabular-nums">
                       {pollStats.totalVotes} Votes
                     </span>
                   </div>
@@ -278,11 +278,11 @@ export default function ScorePredictor({ onSharePrediction }) {
                 className="space-y-3"
               >
                 <div className="flex flex-col justify-center items-center text-center py-2">
-                  <Users className="h-6 w-6 text-muted-foreground/30 mb-1.5" />
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/45">
+                  <Users className="h-6 w-6 text-slate-400 mb-1.5" />
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-200">
                     Cast Your Vote
                   </p>
-                  <p className="text-[9px] text-muted-foreground/25 mt-0.5 max-w-[240px]">
+                  <p className="text-[9px] text-slate-300 mt-0.5 max-w-[240px]">
                     Submit your score prediction to unlock community statistics.
                   </p>
                 </div>

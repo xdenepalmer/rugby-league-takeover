@@ -181,8 +181,33 @@ export default function ForumManager({ posts }) {
   const [pendingOnly, setPendingOnly] = useState(false);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.ForumPost.update(id, data), onSuccess: refresh });
-  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.ForumPost.delete(id), onSuccess: refresh });
+  const updateMutation = useMutation({ 
+    mutationFn: ({ id, data }) => base44.entities.ForumPost.update(id, data), 
+    onSuccess: (savedData, variables) => {
+      refresh();
+      const keyChanged = Object.keys(variables.data)[0];
+      const valChanged = String(variables.data[keyChanged]);
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: {
+          type: "info",
+          text: `[FORUM-MOD] Thread/Post ID ${variables.id} updated: ${keyChanged} set to ${valChanged}`
+        }
+      }));
+    }
+  });
+
+  const deleteMutation = useMutation({ 
+    mutationFn: (id) => base44.entities.ForumPost.delete(id), 
+    onSuccess: (savedData, id) => {
+      refresh();
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: {
+          type: "warn",
+          text: `[FORUM-MOD] Thread/Post ID ${id} was permanently DELETED`
+        }
+      }));
+    } 
+  });
 
   const createBan = useMutation({
     mutationFn: ({ ban_type, value, reason, expiresAt }) => base44.entities.Ban.create({
@@ -193,7 +218,16 @@ export default function ForumManager({ posts }) {
       expires_at: expiresAt || "",
       is_active: true,
     }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["bans"] }); toast({ title: "Ban applied" }); },
+    onSuccess: (data, variables) => { 
+      queryClient.invalidateQueries({ queryKey: ["bans"] }); 
+      toast({ title: "Ban applied" }); 
+      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
+        detail: {
+          type: "warn",
+          text: `[BAN-ACTION] Forum mod block registered on ${variables.ban_type}: ${variables.value}`
+        }
+      }));
+    },
   });
 
   const visiblePosts = useMemo(() => {

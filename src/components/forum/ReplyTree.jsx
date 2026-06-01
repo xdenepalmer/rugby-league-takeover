@@ -43,7 +43,7 @@ export default function ReplyTree({
   resolveMeta,
 }) {
   if (!replies.length) return null;
-  const indent = depth > 0 ? "ml-3 border-l border-border/40 pl-3 md:ml-5 md:pl-5" : "";
+  const indent = depth > 0 ? "ml-3 border-l-2 border-primary/30 hover:border-primary/80 transition-all duration-300 pl-3 md:ml-5 md:pl-5" : "";
 
   return (
     <div className={`grid gap-3 ${indent}`}>
@@ -54,7 +54,7 @@ export default function ReplyTree({
 
         return (
           <div key={reply.id} className="grid gap-2">
-            <div className="border border-border/40 bg-muted/[0.03] p-3 transition-colors hover:bg-muted/[0.06]">
+            <div className="border border-border/70 bg-card/30 p-3.5 transition-colors hover:border-primary/30">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <ReplyAvatar name={reply.author_name} src={resolveAvatar ? resolveAvatar(reply.user_id, reply.author_avatar) : reply.author_avatar} />
                 <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
@@ -68,7 +68,7 @@ export default function ReplyTree({
                     </>
                   );
                 })()}
-                <span className="font-mono text-[9px] text-slate-400 font-bold">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
+                <span className="font-mono text-[9px] text-slate-300 font-bold">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
               <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-200">{reply.body}</p>
               <ForumMedia url={reply.media_url} type={reply.media_type} />

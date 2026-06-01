@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client';
@@ -64,7 +65,36 @@ const AuthenticatedApp = () => {
 };
 
 
+const themeConfigs = {
+  sincity: { primary: "15 95% 55%", foreground: "0 0% 100%" },
+  flamingo: { primary: "330 95% 60%", foreground: "0 0% 100%" },
+  highroller: { primary: "280 80% 55%", foreground: "0 0% 100%" },
+  emerald: { primary: "140 75% 45%", foreground: "0 0% 100%" },
+  jackpot: { primary: "45 93% 47%", foreground: "0 0% 0%" },
+};
+
 function App() {
+  useEffect(() => {
+    const applyTheme = (themeKey) => {
+      const config = themeConfigs[themeKey] || themeConfigs.sincity;
+      document.documentElement.style.setProperty("--primary", config.primary);
+      document.documentElement.style.setProperty("--primary-foreground", config.foreground);
+    };
+
+    const stored = localStorage.getItem("rlt_theme_accent") || "sincity";
+    applyTheme(stored);
+
+    const handleThemeChange = (e) => {
+      const themeKey = e.detail?.theme;
+      if (themeKey && themeConfigs[themeKey]) {
+        localStorage.setItem("rlt_theme_accent", themeKey);
+        applyTheme(themeKey);
+      }
+    };
+
+    window.addEventListener("rlt_theme_change", handleThemeChange);
+    return () => window.removeEventListener("rlt_theme_change", handleThemeChange);
+  }, []);
 
   return (
     <AuthProvider>
