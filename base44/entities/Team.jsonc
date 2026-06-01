@@ -3,33 +3,44 @@
   "type": "object",
   "properties": {
     "name": {
-      "type": "string",
-      "description": "Team name, e.g. Parramatta Eels"
+      "type": "string"
     },
     "short_name": {
-      "type": "string",
-      "description": "Short name / abbreviation, e.g. Eels"
+      "type": "string"
     },
     "logo_url": {
-      "type": "string",
-      "description": "Team logo image URL"
+      "type": "string"
     },
     "sort_order": {
       "type": "number",
-      "default": 1,
-      "description": "Display order"
+      "default": 1
     },
     "is_active": {
       "type": "boolean",
-      "default": true,
-      "description": "Whether the team is selectable / shown"
+      "default": true
     }
   },
-  "required": ["name"],
+  "required": [
+    "name",
+    "short_name",
+    "logo_url"
+  ],
   "rls": {
-    "create": { "user_condition": { "role": "admin" } },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": true,
-    "update": { "user_condition": { "role": "admin" } },
-    "delete": { "user_condition": { "role": "admin" } }
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
   }
 }
