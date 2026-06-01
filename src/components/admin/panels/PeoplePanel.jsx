@@ -1,15 +1,20 @@
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Activity, UserPlus, Ban } from "lucide-react";
+import { Users, Activity, UserPlus, Ban, UserCheck } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import UsersManager from "../UsersManager";
 import UserInviteManager from "../UserInviteManager";
 import BansManager from "../BansManager";
+import RegistrationsTable from "../RegistrationsTable";
 
 export default function PeoplePanel() {
   const [activeTab, setActiveTab] = useState("users");
+  const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200) });
 
   const tabs = [
     { id: "users", label: "User Accounts", icon: Users },
+    { id: "registrations", label: "Interest Registrations", icon: UserCheck, count: registrations.length },
     { id: "invites", label: "Invites & Handover", icon: UserPlus },
     { id: "bans", label: "Bans & Blocks", icon: Ban },
   ];
@@ -59,6 +64,9 @@ export default function PeoplePanel() {
             >
               <Icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
               <span>{tab.label}</span>
+              {typeof tab.count === "number" && (
+                <span className={`text-[9px] font-mono px-1.5 py-0.25 ${isActive ? "bg-primary/20 text-primary border border-primary/25" : "bg-muted/30 text-muted-foreground border border-border/40"}`}>{tab.count}</span>
+              )}
               {isActive && (
                 <motion.div
                   layoutId="people-subtabs-glow"
@@ -83,6 +91,18 @@ export default function PeoplePanel() {
               transition={{ duration: 0.18 }}
             >
               <UsersManager />
+            </motion.div>
+          )}
+
+          {activeTab === "registrations" && (
+            <motion.div
+              key="registrations-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <RegistrationsTable registrations={registrations} />
             </motion.div>
           )}
 

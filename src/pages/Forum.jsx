@@ -757,7 +757,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
 
             {/* Full body */}
             <div className="prose prose-invert max-w-none">
-              <p className="whitespace-pre-wrap text-sm leading-8 text-muted-foreground/80">{post.body}</p>
+              <p className="whitespace-pre-wrap break-words text-sm leading-8 text-muted-foreground/80">{post.body}</p>
               <ForumMedia url={post.media_url} type={post.media_type} />
             </div>
 
@@ -971,7 +971,7 @@ function ForumPostCard({
 
         {/* Title - clickable to open thread modal */}
         <h3
-          className="mt-4 font-display text-xl md:text-2xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 cursor-pointer"
+          className="mt-4 font-display text-xl md:text-2xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 cursor-pointer break-words"
           onClick={() => onOpenThread(post)}
         >
           {post.title || "Discussion Thread"}
@@ -979,7 +979,7 @@ function ForumPostCard({
 
         {/* Body */}
         <div className="mt-3">
-          <p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground/80">{displayBody}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground/80">{displayBody}</p>
           <ForumMedia url={post.media_url} type={post.media_type} />
           {shouldTruncate && (
             <button

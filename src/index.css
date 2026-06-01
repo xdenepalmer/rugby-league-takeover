@@ -439,6 +439,11 @@
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
   }
+
+  /* Decorative continuous tickers/marquees are intentional and keep scrolling. */
+  .animate-marquee {
+    animation: marquee 30s linear infinite !important;
+  }
 }
 
 /* ─── Las Vegas Casino Marquee & LED Bulb Animations ─────────────────────── */

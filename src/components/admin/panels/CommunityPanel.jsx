@@ -1,19 +1,16 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessagesSquare, Activity, UserCheck } from "lucide-react";
+import { MessagesSquare, Activity } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ForumManager from "../ForumManager";
-import RegistrationsTable from "../RegistrationsTable";
 
 export default function CommunityPanel() {
   const [activeTab, setActiveTab] = useState("forum");
   const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200) });
-  const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200) });
 
   const tabs = [
     { id: "forum", label: "Forum Moderation", icon: MessagesSquare, count: forumPosts.length },
-    { id: "registrations", label: "Interest Registrations", icon: UserCheck, count: registrations.length },
   ];
 
   return (
@@ -40,7 +37,7 @@ export default function CommunityPanel() {
             Community Hub
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Moderate fan discussions, review interest registrations, and manage community engagement.
+            Moderate fan discussions and manage community engagement.
             Keep the conversation on-topic and the community thriving.
           </p>
         </div>
@@ -88,18 +85,6 @@ export default function CommunityPanel() {
               transition={{ duration: 0.18 }}
             >
               <ForumManager posts={forumPosts} />
-            </motion.div>
-          )}
-
-          {activeTab === "registrations" && (
-            <motion.div
-              key="registrations-tab"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.18 }}
-            >
-              <RegistrationsTable registrations={registrations} />
             </motion.div>
           )}
         </AnimatePresence>

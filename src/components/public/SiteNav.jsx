@@ -149,14 +149,14 @@ export default function SiteNav({ settings = {} }) {
             : "max-w-7xl border-b border-border/10 bg-background/20 backdrop-blur-md h-20 px-5 md:px-8"
         }`}
       >
-        <Link 
-          to="/" 
-          className="group relative z-10 overflow-hidden block transition-transform duration-300 hover:scale-105"
+        <Link
+          to="/"
+          className="group relative z-10 block shrink-0 overflow-hidden transition-transform duration-300 hover:scale-105"
         >
-          <img 
-            src={settings.site_logo_url || logoUrl} 
-            alt="Rugby League Takeover Las Vegas" 
-            className="h-12 w-12 object-contain md:h-14 md:w-14" 
+          <img
+            src={settings.site_logo_url || logoUrl}
+            alt="Rugby League Takeover Las Vegas"
+            className="h-12 w-12 shrink-0 object-contain md:h-14 md:w-14"
           />
           {/* Glass glare sweep overlay */}
           <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-25deg] -translate-x-[150%] transition-transform duration-1000 group-hover:translate-x-[250%] pointer-events-none" />
@@ -193,7 +193,7 @@ export default function SiteNav({ settings = {} }) {
           })}
         </nav>
         
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {isAdmin && (
             <Button asChild variant="outline" size="sm" className="hidden rounded-none text-[10px] font-bold uppercase tracking-wider md:inline-flex bg-secondary/40 border-primary/30 text-emerald-400 hover:border-emerald-500 hover:bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.05)] hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all duration-300">
               <Link to="/admin" className="flex items-center">

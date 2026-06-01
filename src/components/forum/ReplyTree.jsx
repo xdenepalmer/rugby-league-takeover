@@ -59,7 +59,7 @@ export default function ReplyTree({
                 <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
                 <span className="font-mono text-[9px] text-muted-foreground/40">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
-              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/80">{reply.body}</p>
+              <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground/80">{reply.body}</p>
               <ForumMedia url={reply.media_url} type={reply.media_type} />
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => onToggleReply(reply.id)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 transition-colors hover:text-accent">
