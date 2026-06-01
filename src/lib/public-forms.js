@@ -53,9 +53,16 @@ const forumDateValue = (post) => {
 export function buildForumThreads(posts = []) {
   const repliesByParent = new Map();
   const threads = [];
+  const seen = new Set();
 
   for (const post of posts || []) {
     if (!post || post.is_published === false) continue;
+    // Guard against duplicate records in the feed (double-submits / cache) so the
+    // reply count and the rendered list can never disagree.
+    if (post.id) {
+      if (seen.has(post.id)) continue;
+      seen.add(post.id);
+    }
 
     if (post.parent_id) {
       const replies = repliesByParent.get(post.parent_id) || [];
