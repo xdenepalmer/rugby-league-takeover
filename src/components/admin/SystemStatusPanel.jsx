@@ -4,7 +4,18 @@ import { motion } from "framer-motion";
 import {
   ShieldCheck, Wifi, WifiOff, CreditCard, Smartphone, Database,
   MessageSquare, Quote, ShoppingBag, UserPlus, CheckCircle2, ArrowRight, LifeBuoy,
+  Newspaper, Trophy, Settings, Eye,
 } from "lucide-react";
+
+// The handful of tasks the owner does most — one tap straight to the right place.
+const QUICK_ACTIONS = [
+  { icon: Newspaper, label: "Write news", to: "/admin/content" },
+  { icon: Trophy, label: "Match results", to: "/admin/events" },
+  { icon: MessageSquare, label: "Forum", to: "/admin/community" },
+  { icon: ShoppingBag, label: "Orders", to: "/admin/store" },
+  { icon: Settings, label: "Site text", to: "/admin/settings" },
+  { icon: Eye, label: "View site", to: "/" },
+];
 
 // A plain-English "is everything OK, and what needs me?" panel for a non-technical
 // owner. No jargon, no fake telemetry — real status signals plus a to-do list
@@ -108,30 +119,27 @@ export default function SystemStatusPanel({ counts = {}, orders = [], registrati
       <div className="p-5">
         <div className="mb-4 flex items-center gap-2">
           <ShieldCheck className={`h-4 w-4 ${allOk ? "text-emerald-400" : "text-amber-400"}`} />
-          <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">System health</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">Control centre</h3>
           <span className={`ml-auto inline-flex items-center gap-1.5 border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${allOk ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-amber-500/30 bg-amber-500/10 text-amber-400"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${allOk ? "bg-emerald-400" : "bg-amber-400"}`} />
             {allOk ? "All good" : "Needs a look"}
           </span>
         </div>
 
-        {/* Plain-English status rows */}
-        <div className="grid gap-2 sm:grid-cols-2">
-          {checks.map((c) => {
-            const Icon = c.icon;
-            return (
-              <div key={c.label} className="flex items-start gap-3 border border-border/40 bg-muted/10 p-3">
-                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${c.ok ? "text-emerald-400" : "text-red-400"}`} />
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                    {c.label}
-                    <span className={c.ok ? "text-emerald-400" : "text-red-400"}>{c.ok ? "✓" : "✕"}</span>
-                  </p>
-                  <p className="text-xs leading-snug text-muted-foreground">{c.detail}</p>
-                </div>
-              </div>
-            );
-          })}
+        {/* Quick actions — one tap to the things the owner does most */}
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Quick actions</p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {QUICK_ACTIONS.map(({ icon: Icon, label, to }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => navigate(to)}
+              className="group flex flex-col items-center justify-center gap-1.5 border border-border/50 bg-muted/10 p-3 text-center transition-colors hover:border-primary/40 hover:bg-primary/[0.05]"
+            >
+              <Icon className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+              <span className="text-[10px] font-bold uppercase tracking-wide leading-tight text-foreground">{label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Needs your attention */}
@@ -170,10 +178,32 @@ export default function SystemStatusPanel({ counts = {}, orders = [], registrati
           )}
         </div>
 
+        {/* Everything working? (reassurance — secondary to the actions above) */}
+        <div className="mt-5 border-t border-border/40 pt-4">
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Everything working?</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {checks.map((c) => {
+              const Icon = c.icon;
+              return (
+                <div key={c.label} className="flex items-start gap-3 border border-border/40 bg-muted/10 p-3">
+                  <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${c.ok ? "text-emerald-400" : "text-red-400"}`} />
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                      {c.label}
+                      <span className={c.ok ? "text-emerald-400" : "text-red-400"}>{c.ok ? "✓" : "✕"}</span>
+                    </p>
+                    <p className="text-xs leading-snug text-muted-foreground">{c.detail}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Friendly help footer */}
         <div className="mt-4 flex items-start gap-2 border-t border-border/40 pt-3 text-xs text-muted-foreground">
           <LifeBuoy className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-          <p>A green ✓ means it's working. If you ever see a red ✕ here, take a screenshot and send it to Dene — nothing else needs technical knowledge.</p>
+          <p>Tap an action above to jump straight there. A green ✓ means it's working — if you ever see a red ✕, screenshot it and send it to Dene. Nothing here needs technical knowledge.</p>
         </div>
       </div>
     </motion.div>

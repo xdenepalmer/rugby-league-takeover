@@ -522,6 +522,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         </div>
       </motion.div>
 
+      {/* ── Owner command centre: quick actions, to-dos & plain-English status ── */}
+      <SystemStatusPanel counts={counts} orders={orders} registrations={registrations} />
+
       {/* ── Operational Telemetry & Simulation Controls ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -1127,14 +1130,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         </div>
       </motion.div>
 
-      {/* ── System health + what needs attention (plain English) ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.55, duration: 0.4 }}
-      >
-        <SystemStatusPanel counts={counts} orders={orders} registrations={registrations} />
-      </motion.div>
     </div>
   );
 }
