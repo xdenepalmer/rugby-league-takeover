@@ -24,6 +24,7 @@ import MediaAttach from "@/components/forum/MediaAttach";
 import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
 import ScorePredictor from "@/components/forum/ScorePredictor";
 import SlotMachineBadgeUnlock from "@/components/forum/SlotMachineBadgeUnlock";
+import TeamCrest from "@/components/public/TeamCrest";
 
 
 
@@ -441,7 +442,9 @@ function AuthorMeta({ meta, className = "" }) {
         <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}>📍 {meta.location}</span>
       )}
       {meta.team && (
-        <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={`Supports ${meta.team}`}>🏉 {meta.team}</span>
+        <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={`Supports ${meta.team}`}>
+          <TeamCrest name={meta.team} logo={meta.teamLogo} className="h-4 w-4 text-[7px]" /> {meta.team}
+        </span>
       )}
     </>
   );
@@ -1700,6 +1703,20 @@ export default function Forum() {
     meta: { silent: true },
     staleTime: 60000,
   });
+  // Club crests (from the Events teams list) so a member's favourite team shows
+  // its logo next to their name instead of a generic emoji.
+  const { data: teamRecords = [] } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => base44.entities.Team.list("name", 200),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+    staleTime: 60000,
+  });
+  const teamLogoByName = useMemo(
+    () => new Map((teamRecords || []).map((t) => [String(t.name || "").trim().toLowerCase(), t.logo_url || ""])),
+    [teamRecords]
+  );
   // Per-user forum profile: avatar + the optional location/team a member chose to
   // display. Built from the forumAvatars function; the viewer's own row is merged
   // in live so their changes show immediately.
@@ -1715,7 +1732,12 @@ export default function Forum() {
     return map;
   }, [avatarData, isAuthenticated, user]);
   const avatarFor = (userId, snapshot) => (userId && profileById.get(String(userId))?.avatar_url) || snapshot || "";
-  const forumMetaFor = (userId) => (userId && profileById.get(String(userId))) || null;
+  const forumMetaFor = (userId) => {
+    const p = userId && profileById.get(String(userId));
+    if (!p) return null;
+    const teamLogo = p.team ? (teamLogoByName.get(String(p.team).trim().toLowerCase()) || "") : "";
+    return { ...p, teamLogo };
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data) => {

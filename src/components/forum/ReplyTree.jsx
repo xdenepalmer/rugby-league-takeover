@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import MentionTextarea from "./MentionTextarea";
 import MediaAttach from "./MediaAttach";
 import ForumMedia from "./ForumMedia";
+import TeamCrest from "@/components/public/TeamCrest";
 
 const HUES = [15, 45, 160, 220, 280, 330, 190, 30, 120, 350];
 // Compact avatar for a reply: uploaded photo when available, else a colour monogram.
@@ -64,7 +65,11 @@ export default function ReplyTree({
                   return (
                     <>
                       {meta.location && <span className="text-[10px] text-slate-300 font-medium" title={meta.location}>📍 {meta.location}</span>}
-                      {meta.team && <span className="text-[10px] text-slate-300 font-medium" title={`Supports ${meta.team}`}>🏉 {meta.team}</span>}
+                      {meta.team && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 font-medium" title={`Supports ${meta.team}`}>
+                          <TeamCrest name={meta.team} logo={meta.teamLogo} className="h-4 w-4 text-[7px]" /> {meta.team}
+                        </span>
+                      )}
                     </>
                   );
                 })()}

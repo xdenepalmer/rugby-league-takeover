@@ -1,6 +1,8 @@
-import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import React, { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Save } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import { ALL_TEAMS } from "@/lib/nrl-teams";
 import { toast } from "@/components/ui/use-toast";
@@ -10,10 +12,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import TeamCrest from "@/components/public/TeamCrest";
 import MediaUploader from "@/components/admin/MediaUploader";
 
-const NRL_OPTIONS = ALL_TEAMS.filter((t) => t.league === "NRL");
-const SL_OPTIONS = ALL_TEAMS.filter((t) => t.league === "Super League");
+const norm = (s) => String(s || "").trim().toLowerCase();
+
+// Build the favourite-team options from the clubs managed in Events (the Team
+// entity, with logos) merged with the built-in roster, grouped by league.
+function buildTeamGroups(dbTeams) {
+  const logoByName = new Map((dbTeams || []).map((t) => [norm(t.name), t.logo_url || ""]));
+  const rosterNames = new Set(ALL_TEAMS.map((t) => norm(t.name)));
+  const withLogo = (t) => ({ ...t, logo: logoByName.get(norm(t.name)) || "" });
+
+  const nrl = ALL_TEAMS.filter((t) => t.league === "NRL").map(withLogo);
+  const sl = ALL_TEAMS.filter((t) => t.league === "Super League").map(withLogo);
+  // Any custom clubs added in Events that aren't part of the built-in roster.
+  const other = (dbTeams || [])
+    .filter((t) => t.name && !rosterNames.has(norm(t.name)))
+    .map((t) => ({ name: t.name, short_name: t.short_name || t.name, logo: t.logo_url || "" }));
+
+  return { nrl, sl, other };
+}
 
 const profileFields = (user) => ({
   full_name: user?.full_name || "",
@@ -33,12 +52,34 @@ export default function ProfileTab() {
   const { user, updateProfile } = useAuth();
   const [draft, setDraft] = useState(() => profileFields(user));
 
+  const { data: dbTeams = [] } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => base44.entities.Team.list("name", 200),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
+  const { nrl, sl, other } = useMemo(() => buildTeamGroups(dbTeams), [dbTeams]);
+  const selectedLogo = useMemo(() => {
+    const all = [...nrl, ...sl, ...other];
+    return all.find((t) => t.name === draft.favourite_team)?.logo || "";
+  }, [nrl, sl, other, draft.favourite_team]);
+
   const saveMutation = useMutation({
     mutationFn: () => updateProfile(draft),
     onSuccess: () => toast({ title: "Profile saved", description: "Your details have been updated." }),
   });
 
   const update = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
+
+  const TeamOption = (team) => (
+    <SelectItem key={team.name} value={team.name}>
+      <span className="flex items-center gap-2">
+        <TeamCrest name={team.name} short={team.short_name} logo={team.logo} className="h-5 w-5 text-[8px]" />
+        {team.name}
+      </span>
+    </SelectItem>
+  );
 
   return (
     <div className="grid gap-6">
@@ -70,18 +111,33 @@ export default function ProfileTab() {
         <div className="grid gap-2">
           <Label>Team you support</Label>
           <Select value={draft.favourite_team} onValueChange={(value) => update("favourite_team", value)}>
-            <SelectTrigger className="rounded-none"><SelectValue placeholder="Select a team">{draft.favourite_team || "Select a team"}</SelectValue></SelectTrigger>
+            <SelectTrigger className="rounded-none">
+              <SelectValue placeholder="Select a team">
+                {draft.favourite_team ? (
+                  <span className="flex items-center gap-2">
+                    <TeamCrest name={draft.favourite_team} logo={selectedLogo} className="h-5 w-5 text-[8px]" />
+                    {draft.favourite_team}
+                  </span>
+                ) : "Select a team"}
+              </SelectValue>
+            </SelectTrigger>
             <SelectContent className="max-h-72">
               <SelectGroup>
                 <SelectLabel>NRL</SelectLabel>
-                {NRL_OPTIONS.map((team) => <SelectItem key={team.name} value={team.name}>{team.name}</SelectItem>)}
+                {nrl.map(TeamOption)}
               </SelectGroup>
               <SelectGroup>
                 <SelectLabel>Betfred Super League</SelectLabel>
-                {SL_OPTIONS.map((team) => <SelectItem key={team.name} value={team.name}>{team.name}</SelectItem>)}
+                {sl.map(TeamOption)}
               </SelectGroup>
+              {other.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Other clubs</SelectLabel>
+                  {other.map(TeamOption)}
+                </SelectGroup>
+              )}
               <SelectGroup>
-                <SelectLabel>Other</SelectLabel>
+                <SelectLabel>&nbsp;</SelectLabel>
                 <SelectItem value="Other">Other / not listed</SelectItem>
               </SelectGroup>
             </SelectContent>
