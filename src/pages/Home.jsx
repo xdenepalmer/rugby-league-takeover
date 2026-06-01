@@ -77,7 +77,7 @@ const slotSymbols = [
   ["💎", "🔔", "💎"],
 ];
 
-const renderBulbRow = (isTop) => {
+const BulbRow = React.memo(function BulbRow({ isTop }) {
   return (
     <div className={`absolute left-0 right-0 w-full flex justify-between px-2 pointer-events-none overflow-hidden h-2 ${isTop ? "top-1" : "bottom-1"}`}>
       {Array.from({ length: 40 }).map((_, i) => {
@@ -97,7 +97,7 @@ const renderBulbRow = (isTop) => {
       })}
     </div>
   );
-};
+});
 
 export default function Home() {
   const queriesEnabled = appParams.hasBase44Config;
@@ -118,7 +118,7 @@ export default function Home() {
       <div className="relative z-10">
         <HeroSection settings={settings} />
         <div className="relative w-full overflow-hidden border-y-2 border-amber-500/60 bg-neutral-950 py-5 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
-          {renderBulbRow(true)}
+          <BulbRow isTop={true} />
           
           <div className="animate-marquee flex items-center gap-8">
             {Array(4).fill(tickerItems).flat().map((item, idx) => (
@@ -137,7 +137,7 @@ export default function Home() {
             ))}
           </div>
 
-          {renderBulbRow(false)}
+          <BulbRow isTop={false} />
         </div>
         <CountdownTimer settings={settings} />
         <MatchupsSection />

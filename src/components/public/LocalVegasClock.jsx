@@ -48,7 +48,7 @@ export default function LocalVegasClock() {
   const vegas = fmt(now, VEGAS_TZ);
 
   return (
-    <div className="mx-auto mt-12 max-w-md divide-y divide-border border border-border bg-card/65 cmd-glass text-left shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
+    <div className="mx-auto mt-12 max-w-md divide-y divide-border border border-border bg-card/95 text-left shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
       <ClockRow icon={Clock} label="Your time" sublabel={tzLabel(now, localTz)} time={local.time} date={local.date} />
       <ClockRow icon={MapPin} label="Las Vegas" sublabel={tzLabel(now, VEGAS_TZ)} time={vegas.time} date={vegas.date} accent />
     </div>

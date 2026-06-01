@@ -52,7 +52,7 @@ export default function HeroSection({ settings = {} }) {
           scale: [1, 1.15, 1] 
         }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 left-10 w-48 h-48 rounded-full bg-primary/5 blur-3xl z-0 pointer-events-none"
+        className="absolute top-1/4 left-10 w-48 h-48 rounded-full bg-primary/5 blur-3xl z-0 pointer-events-none hidden md:block"
       />
       <motion.div
         animate={{ 
@@ -61,7 +61,7 @@ export default function HeroSection({ settings = {} }) {
           scale: [1, 1.1, 1] 
         }}
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute bottom-1/4 right-10 w-72 h-72 rounded-full bg-accent/5 blur-3xl z-0 pointer-events-none"
+        className="absolute bottom-1/4 right-10 w-72 h-72 rounded-full bg-accent/5 blur-3xl z-0 pointer-events-none hidden md:block"
       />
 
       {/* 3D Floating Shapes with cmd-float */}

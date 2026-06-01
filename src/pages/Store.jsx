@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 /* ── 3D Product Card Component ── */
-function ProductCard({ product, index, addToCart, cart }) {
+const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart }) {
   const stock = Number(product.stock_quantity);
   const soldOut = Number.isFinite(stock) && stock <= 0;
   const inCart = cart.find(item => item.id === product.id);
@@ -157,7 +157,7 @@ function ProductCard({ product, index, addToCart, cart }) {
       </div>
     </motion.article>
   );
-}
+});
 
 /* ── Skeleton Loading Grid ── */
 function SkeletonLoader() {
@@ -233,7 +233,7 @@ export default function Store() {
     }
   }, [user?.email, user?.full_name]);
 
-  const addToCart = (product) => {
+  const addToCart = useCallback((product) => {
     const stock = Number(product.stock_quantity);
     if (Number.isFinite(stock) && stock <= 0) return;
 
@@ -248,9 +248,9 @@ export default function Store() {
       return [...curr, { id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, quantity: 1 }];
     });
     setCartOpen(true);
-  };
+  }, []);
 
-  const updateQuantity = (id, change) => {
+  const updateQuantity = useCallback((id, change) => {
     setCart((curr) => 
       curr.map((item) => {
         if (item.id === id) {
@@ -262,11 +262,11 @@ export default function Store() {
         return item;
       })
     );
-  };
+  }, []);
 
-  const removeFromCart = (id) => {
+  const removeFromCart = useCallback((id) => {
     setCart((curr) => curr.filter((item) => item.id !== id));
-  };
+  }, []);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price_aud || 0) * item.quantity), 0);
@@ -459,16 +459,19 @@ export default function Store() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "linear" }}
+              style={{ willChange: "opacity" }}
               onClick={() => setCartOpen(false)}
-              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md"
+              className="fixed inset-0 z-40 bg-black/65 lg:hidden"
             />
 
             <motion.div 
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex h-dvh w-full flex-col border-l border-border/80 bg-card p-5 pb-safe cmd-glass shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md md:p-6"
+              transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
+              style={{ willChange: "transform" }}
+              className="fixed bottom-0 right-0 top-0 z-50 flex h-dvh w-full flex-col border-l border-border/80 bg-card p-5 pb-safe shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md md:p-6"
             >
               {/* Decorative side tag */}
               <div className="absolute left-[-2px] top-0 bottom-0 w-[2px] cmd-accent-bar" />

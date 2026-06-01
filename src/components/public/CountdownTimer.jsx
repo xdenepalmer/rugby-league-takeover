@@ -30,7 +30,7 @@ function FlipUnit({ value, label }) {
   return (
     <div className="relative flex flex-col items-center">
       {/* Unit container box with premium glassmorphism and subtle primary shadow glow */}
-      <div className="relative w-[72px] overflow-hidden border border-border bg-card/65 cmd-glass sm:w-24 md:w-28 shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:border-primary/45 transition-colors duration-300">
+      <div className="relative w-[72px] overflow-hidden border border-border bg-card/95 sm:w-24 md:w-28 shadow-[0_4px_20px_rgba(0,0,0,0.35)] hover:border-primary/45 transition-colors duration-300">
         
         {/* Glowing top line */}
         <div className="cmd-accent-bar h-[2px] w-full" />
