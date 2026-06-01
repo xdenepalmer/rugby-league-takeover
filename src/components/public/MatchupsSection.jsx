@@ -9,16 +9,21 @@ import { ALL_TEAMS } from "@/lib/nrl-teams";
 const norm = (s) => String(s || "").trim().toLowerCase();
 
 const LEAGUE_LOGOS = {
-  "Super League": "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/350141516_image.png",
+  "Super League": "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/ecabb905c_image.png",
   NRL: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/13e9c8f68_nrl.png",
 };
 
 const leagueByTeamName = new Map(ALL_TEAMS.map((team) => [norm(team.name), team.league]));
 
 const leagueForMatchup = (matchup) => {
-  const homeLeague = leagueByTeamName.get(norm(matchup.home_team));
-  const awayLeague = leagueByTeamName.get(norm(matchup.away_team));
-  return homeLeague === "Super League" || awayLeague === "Super League" ? "Super League" : "NRL";
+  const home = norm(matchup.home_team);
+  const away = norm(matchup.away_team);
+  const homeLeague = leagueByTeamName.get(home);
+  const awayLeague = leagueByTeamName.get(away);
+
+  if (homeLeague === "Super League" || awayLeague === "Super League") return "Super League";
+  if (home.includes("bulls") || away.includes("bulls") || home.includes("leopards") || away.includes("leopards")) return "Super League";
+  return "NRL";
 };
 
 const formatKickoff = (value) => {
@@ -42,8 +47,8 @@ function LeagueBadge({ league }) {
   if (!logo) return null;
 
   return (
-    <div className="pointer-events-none absolute bottom-3 right-3 flex h-12 w-24 items-center justify-end opacity-85 md:h-14 md:w-28">
-      <img src={logo} alt={league} className="max-h-full max-w-full object-contain" />
+    <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex h-12 w-24 items-center justify-end bg-card/70 p-1 opacity-100 md:h-14 md:w-28">
+      <img src={logo} alt={league} className="max-h-full max-w-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]" />
     </div>
   );
 }
