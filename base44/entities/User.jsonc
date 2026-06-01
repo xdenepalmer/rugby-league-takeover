@@ -10,6 +10,18 @@
       "type": "string",
       "description": "User postcode"
     },
+    "city": {
+      "type": "string",
+      "description": "User city"
+    },
+    "country": {
+      "type": "string",
+      "description": "User country"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Short user profile bio"
+    },
     "favourite_team": {
       "type": "string",
       "description": "User's favourite rugby league team"
@@ -18,39 +30,27 @@
       "type": "string",
       "description": "User avatar image URL"
     },
-    "city": {
-      "type": "string",
-      "description": "User's city / town"
-    },
-    "country": {
-      "type": "string",
-      "description": "User's country"
-    },
-    "bio": {
-      "type": "string",
-      "description": "Short about-me shown on the user's forum profile"
-    },
-    "show_location_on_forum": {
-      "type": "boolean",
-      "default": false,
-      "description": "Show the user's city/country next to their name on the forum"
-    },
-    "show_team_on_forum": {
-      "type": "boolean",
-      "default": false,
-      "description": "Show the user's favourite team next to their name on the forum"
-    },
     "badges": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Slot-machine badge ids the user has unlocked (shown on the forum)"
+      "description": "Forum badge identifiers earned by the user"
     },
     "marketing_opt_in": {
       "type": "boolean",
       "default": false,
       "description": "Whether the user opted in to marketing communications"
+    },
+    "show_location_on_forum": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to show the user's city and country on forum posts"
+    },
+    "show_team_on_forum": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to show the user's favourite team on forum posts"
     }
   },
   "required": [],
