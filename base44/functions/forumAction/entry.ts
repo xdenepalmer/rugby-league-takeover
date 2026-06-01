@@ -16,6 +16,31 @@ async function deleteWithChildren(base44, postId) {
 }
 
 const ALLOWED_REACTIONS = ['❤️', '🏉', '🔥', '🎉', '👏'];
+const CASINO_RANKS = [
+  { min: 2500, name: 'Vegas Royalty' }, { min: 1500, name: 'Whale' }, { min: 900, name: 'High Roller' },
+  { min: 450, name: 'Pit Boss' }, { min: 180, name: 'Table Regular' }, { min: 60, name: 'Lucky Local' }, { min: 0, name: 'Rookie Punter' },
+];
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const rankForXp = (xp) => CASINO_RANKS.find((r) => xp >= r.min)?.name || 'Rookie Punter';
+async function awardForumReward(base44, user, { kind, xp, chips, postId, note, counter }) {
+  if (!user?.id) return null;
+  try {
+    const fullUser = await base44.asServiceRole.entities.User.get(user.id);
+    const today = todayKey();
+    const last = String(fullUser?.casino_last_active_date || '');
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const streak = last === today ? Number(fullUser?.casino_streak || 0) : last === yesterday ? Number(fullUser?.casino_streak || 0) + 1 : 1;
+    const streakBonus = last === today ? 0 : Math.min(50, streak * 5);
+    const nextXp = Number(fullUser?.casino_xp || 0) + xp + streakBonus;
+    const nextChips = Number(fullUser?.casino_chips || 0) + chips + streakBonus;
+    const rank = rankForXp(nextXp);
+    const data = { casino_xp: nextXp, casino_chips: nextChips, casino_rank: rank, casino_streak: streak, casino_last_active_date: today };
+    if (counter) data[counter] = Number(fullUser?.[counter] || 0) + 1;
+    await base44.asServiceRole.entities.User.update(user.id, data);
+    await base44.asServiceRole.entities.ForumRewardEvent.create({ user_id: user.id, user_email: user.email || '', kind, xp: xp + streakBonus, chips: chips + streakBonus, rank_after: rank, post_id: postId || '', note: streakBonus ? `${note} · ${streak} day streak bonus` : note });
+    return { xp: xp + streakBonus, chips: chips + streakBonus, rank, streak };
+  } catch (error) { console.error('awardForumReward error:', error); return null; }
+}
 
 Deno.serve(async (req) => {
   try {
@@ -103,6 +128,7 @@ Deno.serve(async (req) => {
       const id = String(user.id);
       const list = Array.isArray(reactions[emoji]) ? reactions[emoji].slice() : [];
       const index = list.indexOf(id);
+      const added = index < 0;
       if (index >= 0) list.splice(index, 1);
       else list.push(id);
       if (list.length) reactions[emoji] = list;
@@ -110,7 +136,15 @@ Deno.serve(async (req) => {
 
       const total = Object.values(reactions).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
       await base44.asServiceRole.entities.ForumPost.update(postId, { reactions, like_count: total });
-      return Response.json({ reactions, like_count: total });
+      let reward = null;
+      if (added) {
+        reward = await awardForumReward(base44, user, { kind: 'reaction_given', xp: 2, chips: 5, postId, note: `Reacted with ${emoji}`, counter: 'casino_total_reactions_given' });
+        if (post.user_id && String(post.user_id) !== id) {
+          const author = { id: post.user_id, email: post.user_email || '' };
+          await awardForumReward(base44, author, { kind: 'reaction_received', xp: 4, chips: 10, postId, note: `Received ${emoji} reaction`, counter: 'casino_total_reactions_received' });
+        }
+      }
+      return Response.json({ reactions, like_count: total, reward });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });

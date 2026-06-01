@@ -1,0 +1,81 @@
+{
+  "name": "ForumRewardEvent",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Rewarded user ID"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Rewarded user email"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "thread",
+        "reply",
+        "reaction_given",
+        "reaction_received",
+        "streak_bonus",
+        "slot_win"
+      ],
+      "description": "Reward event type"
+    },
+    "xp": {
+      "type": "number",
+      "default": 0,
+      "description": "XP awarded"
+    },
+    "chips": {
+      "type": "number",
+      "default": 0,
+      "description": "Non-cash chips awarded"
+    },
+    "rank_after": {
+      "type": "string",
+      "description": "User rank after the event"
+    },
+    "post_id": {
+      "type": "string",
+      "description": "Related forum post ID"
+    },
+    "note": {
+      "type": "string",
+      "description": "Short reward note"
+    }
+  },
+  "required": [
+    "user_id",
+    "kind"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

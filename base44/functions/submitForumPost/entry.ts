@@ -61,6 +61,32 @@ function matchesMention(u, tokens) {
   return tokens.some((t) => candidates.has(t));
 }
 
+const CASINO_RANKS = [
+  { min: 2500, name: 'Vegas Royalty' }, { min: 1500, name: 'Whale' }, { min: 900, name: 'High Roller' },
+  { min: 450, name: 'Pit Boss' }, { min: 180, name: 'Table Regular' }, { min: 60, name: 'Lucky Local' }, { min: 0, name: 'Rookie Punter' },
+];
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const rankForXp = (xp) => CASINO_RANKS.find((r) => xp >= r.min)?.name || 'Rookie Punter';
+async function awardForumReward(base44, user, { kind, xp, chips, postId, note, counter }) {
+  if (!user?.id) return null;
+  try {
+    const fullUser = await base44.asServiceRole.entities.User.get(user.id);
+    const today = todayKey();
+    const last = String(fullUser?.casino_last_active_date || '');
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const streak = last === today ? Number(fullUser?.casino_streak || 0) : last === yesterday ? Number(fullUser?.casino_streak || 0) + 1 : 1;
+    const streakBonus = last === today ? 0 : Math.min(50, streak * 5);
+    const nextXp = Number(fullUser?.casino_xp || 0) + xp + streakBonus;
+    const nextChips = Number(fullUser?.casino_chips || 0) + chips + streakBonus;
+    const rank = rankForXp(nextXp);
+    const data = { casino_xp: nextXp, casino_chips: nextChips, casino_rank: rank, casino_streak: streak, casino_last_active_date: today };
+    if (counter) data[counter] = Number(fullUser?.[counter] || 0) + 1;
+    await base44.asServiceRole.entities.User.update(user.id, data);
+    await base44.asServiceRole.entities.ForumRewardEvent.create({ user_id: user.id, user_email: user.email || '', kind, xp: xp + streakBonus, chips: chips + streakBonus, rank_after: rank, post_id: postId || '', note: streakBonus ? `${note} · ${streak} day streak bonus` : note });
+    return { xp: xp + streakBonus, chips: chips + streakBonus, rank, streak };
+  } catch (error) { console.error('awardForumReward error:', error); return null; }
+}
+
 // Best-effort notification fan-out for a new post/reply. Never throws.
 async function createForumNotifications(base44, { post, parentId, actor, authorName, body }) {
   try {
@@ -160,9 +186,12 @@ Deno.serve(async (req) => {
       media_type: mediaType
     });
 
+    const reward = await awardForumReward(base44, user, parentId
+      ? { kind: 'reply', xp: 12, chips: 25, postId: post.id, note: 'Posted a forum reply', counter: 'casino_total_replies' }
+      : { kind: 'thread', xp: 30, chips: 60, postId: post.id, note: 'Started a forum thread', counter: 'casino_total_posts' });
     await createForumNotifications(base44, { post, parentId, actor: user, authorName, body });
 
-    return Response.json({ ok: true, id: post.id });
+    return Response.json({ ok: true, id: post.id, reward });
   } catch (error) {
     console.error('submitForumPost error:', error);
     return Response.json({ error: error.message }, { status: 500 });

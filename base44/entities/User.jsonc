@@ -37,6 +37,50 @@
       },
       "description": "Forum badge identifiers earned by the user"
     },
+    "casino_xp": {
+      "type": "number",
+      "default": 0,
+      "description": "Forum casino gamification XP"
+    },
+    "casino_chips": {
+      "type": "number",
+      "default": 0,
+      "description": "Non-cash forum chips earned through engagement"
+    },
+    "casino_rank": {
+      "type": "string",
+      "default": "Rookie Punter",
+      "description": "Casino themed forum rank"
+    },
+    "casino_streak": {
+      "type": "number",
+      "default": 0,
+      "description": "Consecutive active forum days"
+    },
+    "casino_last_active_date": {
+      "type": "string",
+      "description": "Last forum reward activity date in YYYY-MM-DD format"
+    },
+    "casino_total_posts": {
+      "type": "number",
+      "default": 0,
+      "description": "Total rewarded forum threads"
+    },
+    "casino_total_replies": {
+      "type": "number",
+      "default": 0,
+      "description": "Total rewarded forum replies"
+    },
+    "casino_total_reactions_given": {
+      "type": "number",
+      "default": 0,
+      "description": "Total forum reactions given"
+    },
+    "casino_total_reactions_received": {
+      "type": "number",
+      "default": 0,
+      "description": "Total forum reactions received"
+    },
     "marketing_opt_in": {
       "type": "boolean",
       "default": false,

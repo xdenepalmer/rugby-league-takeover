@@ -450,22 +450,13 @@ function AuthorBadge({ name, authorPostCounts }) {
 
 /* ━━━ Author Meta (opt-in location / team shown next to name) ━━ */
 function AuthorMeta({ meta, className = "" }) {
-  if (!meta || (!meta.location && !meta.team && !meta.badge)) return null;
+  if (!meta || (!meta.location && !meta.team && !meta.badge && !meta.casino_xp)) return null;
   return (
     <>
-      {meta.badge && (
-        <span className={`inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300 ${className}`} title={`Slot badge: ${meta.badge.label}`}>
-          {meta.badge.emoji} {meta.badge.label}
-        </span>
-      )}
-      {meta.location && (
-        <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}>📍 {meta.location}</span>
-      )}
-      {meta.team && (
-        <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={`Supports ${meta.team}`}>
-          <TeamCrest name={meta.team} logo={meta.teamLogo} className="h-4 w-4 text-[7px]" /> {meta.team}
-        </span>
-      )}
+      {meta.badge && <span className={`inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300 ${className}`} title={`Slot badge: ${meta.badge.label}`}>{meta.badge.emoji} {meta.badge.label}</span>}
+      {meta.casino_xp > 0 && <span className={`inline-flex items-center gap-1 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 ${className}`} title={`${meta.casino_xp} XP · ${meta.casino_chips} chips · ${meta.casino_streak || 0} day streak`}>🎲 {meta.casino_rank}</span>}
+      {meta.location && <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}>📍 {meta.location}</span>}
+      {meta.team && <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={`Supports ${meta.team}`}><TeamCrest name={meta.team} logo={meta.teamLogo} className="h-4 w-4 text-[7px]" /> {meta.team}</span>}
     </>
   );
 }
@@ -784,7 +775,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
   const queryClient = useQueryClient();
   const reactMutation = useMutation({
     mutationFn: (emoji) => base44.functions.invoke("forumAction", { action: "react", postId: post.id, emoji }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
+    onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] }); if (res?.data?.reward) toast({ title: `+${res.data.reward.xp} XP · +${res.data.reward.chips} chips`, description: res.data.reward.rank }); },
   });
   const onReact = (emoji) => { if (!reactMutation.isPending) reactMutation.mutate(emoji); };
 
@@ -948,7 +939,7 @@ const ForumPostCard = memo(function ForumPostCard({
   const queryClient = useQueryClient();
   const reactMutation = useMutation({
     mutationFn: (emoji) => base44.functions.invoke("forumAction", { action: "react", postId: post.id, emoji }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
+    onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] }); if (res?.data?.reward) toast({ title: `+${res.data.reward.xp} XP · +${res.data.reward.chips} chips`, description: res.data.reward.rank }); },
   });
   const onReact = (emoji) => { if (!reactMutation.isPending) reactMutation.mutate(emoji); };
   useEffect(() => {
@@ -1735,7 +1726,7 @@ export default function Forum() {
   // display. Built from the forumAvatars function; the viewer's own row is merged
   // in live so their changes show immediately.
   const profileById = useMemo(() => {
-    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges) }]));
+    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges), casino_rank: a.casino_rank || "Rookie Punter", casino_xp: Number(a.casino_xp || 0), casino_chips: Number(a.casino_chips || 0), casino_streak: Number(a.casino_streak || 0) }]));
     if (isAuthenticated && user?.id) {
       // The viewer's own row, live — including badges saved to their profile and
       // any just won this session (kept in localStorage).
@@ -1746,7 +1737,7 @@ export default function Forum() {
         avatar_url: user.avatar_url || "",
         location: user.show_location_on_forum ? [user.city, user.country].filter(Boolean).join(", ") : "",
         team: user.show_team_on_forum ? (user.favourite_team || "") : "",
-        badges,
+        badges, casino_rank: user.casino_rank || "Rookie Punter", casino_xp: Number(user.casino_xp || 0), casino_chips: Number(user.casino_chips || 0), casino_streak: Number(user.casino_streak || 0),
       });
     }
     return map;
@@ -1769,10 +1760,10 @@ export default function Forum() {
       });
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
-      setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true);
-      setShowMobileCompose(false);
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] });
+      setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false);
+      if (data?.reward) toast({ title: `+${data.reward.xp} XP · +${data.reward.chips} chips`, description: `${data.reward.rank}${data.reward.streak ? ` · ${data.reward.streak} day streak` : ""}` });
     },
   });
 

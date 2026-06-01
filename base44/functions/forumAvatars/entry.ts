@@ -28,10 +28,14 @@ Deno.serve(async (req) => {
           location,
           team,
           badges,
+          casino_rank: clean(u.casino_rank) || 'Rookie Punter',
+          casino_xp: Number(u.casino_xp || 0),
+          casino_chips: Number(u.casino_chips || 0),
+          casino_streak: Number(u.casino_streak || 0),
         };
       })
       // Only include rows that carry something useful for the forum.
-      .filter((row) => row.avatar_url || row.location || row.team || row.badges.length);
+      .filter((row) => row.avatar_url || row.location || row.team || row.badges.length || row.casino_xp > 0);
 
     return Response.json({ avatars });
   } catch (error) {

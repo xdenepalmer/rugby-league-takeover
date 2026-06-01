@@ -68,6 +68,7 @@ const ReplyTree = memo(function ReplyTree({
                           {meta.badge.emoji} {meta.badge.label}
                         </span>
                       )}
+                      {meta.casino_xp > 0 && <span className="inline-flex items-center gap-1 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200" title={`${meta.casino_xp} XP · ${meta.casino_chips} chips`}>🎲 {meta.casino_rank}</span>}
                       {meta.location && <span className="text-[10px] text-slate-300 font-medium" title={meta.location}>📍 {meta.location}</span>}
                       {meta.team && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 font-medium" title={`Supports ${meta.team}`}>
