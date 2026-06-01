@@ -1,11 +1,14 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Home, ShoppingBag, MessageSquare, User, ShieldCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { useAuth } from "@/lib/AuthContext";
 import SiteNav from "./SiteNav";
 
 export default function PublicLayout() {
+  const { isAdmin } = useAuth();
   const { data: settingsRecords = [] } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
@@ -13,9 +16,81 @@ export default function PublicLayout() {
   });
 
   return (
-    <>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Top Site Navigation */}
       <SiteNav settings={settingsRecords[0] || {}} />
-      <Outlet />
-    </>
+      
+      {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
+      <div className="flex-1 pb-[max(60px,calc(60px+var(--safe-bottom)))] lg:pb-0">
+        <Outlet />
+      </div>
+
+      {/* iOS-Style Public Mobile Bottom Tab Bar */}
+      <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto">
+        <div className="flex h-16 items-center justify-around px-2 pb-safe">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
+              }`
+            }
+          >
+            <Home className="h-5 w-5" />
+            <span>Home</span>
+          </NavLink>
+
+          <NavLink
+            to="/store"
+            className={({ isActive }) =>
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
+              }`
+            }
+          >
+            <ShoppingBag className="h-5 w-5" />
+            <span>Shop</span>
+          </NavLink>
+
+          <NavLink
+            to="/forum"
+            className={({ isActive }) =>
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
+              }`
+            }
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span>Forum</span>
+          </NavLink>
+
+          <NavLink
+            to="/account"
+            className={({ isActive }) =>
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
+              }`
+            }
+          >
+            <User className="h-5 w-5" />
+            <span>Account</span>
+          </NavLink>
+
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                  isActive ? "text-emerald-400" : "text-muted-foreground/80 hover:text-foreground"
+                }`
+              }
+            >
+              <ShieldCheck className="h-5 w-5" />
+              <span>Admin</span>
+            </NavLink>
+          )}
+        </div>
+      </nav>
+    </div>
   );
 }

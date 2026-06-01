@@ -807,12 +807,12 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                   <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
                   <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
                   <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
-                  <span className="text-[10px] text-muted-foreground/30">•</span>
-                  <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
+                  <span className="text-[10px] text-slate-500">•</span>
+                  <span className="text-[10px] font-mono text-slate-400 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground/40">
-                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {engagement.views} views</span>
-                  <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {replies.length} replies</span>
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400 font-medium">
+                  <span className="flex items-center gap-1"><Eye className="h-3 w-3 text-primary" /> {engagement.views} views</span>
+                  <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3 text-accent" /> {replies.length} replies</span>
                 </div>
               </div>
             </div>
@@ -1297,19 +1297,19 @@ function RecentActivityFeed({ allThreads }) {
     <div className="border border-border/50 bg-card/20 p-4 mt-4">
       <div className="flex items-center gap-2 mb-3">
         <Activity className="h-3.5 w-3.5 text-primary" />
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">Recent Activity</p>
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">Recent Activity</p>
       </div>
       <div className="space-y-2.5">
         {activities.map((a, i) => (
           <div key={`${a.id}-${i}`} className="flex items-start gap-2">
-            <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${a.type === "post" ? "bg-primary" : "bg-accent"}`} />
+            <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${a.type === "post" ? "bg-primary" : "bg-accent"}`} />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
-                <span className="font-bold text-foreground/80">{a.name || "Someone"}</span>
+              <p className="text-[11px] text-slate-300 leading-relaxed font-medium">
+                <span className="font-bold text-foreground">{a.name || "Someone"}</span>
                 {" "}{a.type === "post" ? "posted" : "replied to"}{" "}
-                <span className="text-foreground/50">{(a.title || "a thread").slice(0, 35)}{(a.title || "").length > 35 ? "…" : ""}</span>
+                <span className="text-primary font-bold">"{(a.title || "a thread").slice(0, 32)}{(a.title || "").length > 32 ? "…" : ""}"</span>
               </p>
-              <p className="text-[8px] font-mono text-muted-foreground/30 tabular-nums">{timeAgo(a.date)}</p>
+              <p className="text-[9px] font-mono text-slate-400 font-bold tabular-nums mt-0.5">{timeAgo(a.date)}</p>
             </div>
           </div>
         ))}
@@ -1328,9 +1328,9 @@ function CollapsibleGuidelines() {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/5 transition-colors"
       >
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">Community Guidelines</p>
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">Community Guidelines</p>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="h-3 w-3 text-muted-foreground/30" />
+          <ChevronDown className="h-3 w-3 text-slate-400" />
         </motion.div>
       </button>
       <AnimatePresence>
@@ -1344,8 +1344,8 @@ function CollapsibleGuidelines() {
           >
             <ul className="space-y-1.5 px-4 pb-4">
               {["Be respectful to fellow fans", "Keep discussions on-topic", "No spam or commercial posts", "Share tips, ask questions, have fun"].map((rule) => (
-                <li key={rule} className="flex items-start gap-2 text-[10px] text-muted-foreground/35">
-                  <span className="mt-1 h-1 w-1 rounded-full bg-primary/30 shrink-0" />
+                <li key={rule} className="flex items-start gap-2.5 text-[11px] text-slate-200 font-medium py-0.5">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(249,115,22,0.8)]" />
                   {rule}
                 </li>
               ))}
@@ -1618,7 +1618,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
 
       {/* Quick Stats */}
       <div className="border border-border/50 bg-card/20 p-4">
-        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/50 mb-3">Forum Stats</p>
+        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300 mb-3">Forum Stats</p>
         <div className="space-y-2.5">
           {[
             { icon: MessageSquare, label: "Total Threads", value: allThreads.length },
@@ -1626,11 +1626,11 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
             { icon: Users, label: "Contributors", value: new Set(allThreads.map((t) => t.author_name)).size },
             { icon: BarChart3, label: "Total Views", value: allThreads.reduce((s, t) => s + getEngagement(t).views, 0) },
           ].map(({ icon: SIcon, label, value }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-[10px] text-muted-foreground/40">
-                <SIcon className="h-3 w-3" /> {label}
+            <div key={label} className="flex items-center justify-between py-1 border-b border-border/10 last:border-0 last:pb-0">
+              <span className="flex items-center gap-2 text-[11px] text-slate-300 font-medium">
+                <SIcon className="h-3.5 w-3.5 text-primary" /> {label}
               </span>
-              <span className="text-[10px] font-mono font-bold text-muted-foreground tabular-nums">{value.toLocaleString()}</span>
+              <span className="text-[11px] font-mono font-bold text-foreground tabular-nums">{value.toLocaleString()}</span>
             </div>
           ))}
         </div>
