@@ -24,13 +24,16 @@ import { useAuth } from "@/lib/AuthContext";
 import StoreFaq from "@/components/public/StoreFaq";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
 
 /* ── 3D Product Card Component ── */
-const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart }) {
+const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease }) {
   const stock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
   const inCart = cart.find(item => item.id === product.id);
+  const [releaseEmail, setReleaseEmail] = useState(user?.email || "");
+  const [releaseSubscribed, setReleaseSubscribed] = useState(false);
 
   // 3D Tilt Hook
   const mouseX = useMotionValue(0);
@@ -149,6 +152,33 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
           </div>
         </div>
 
+        {comingSoon && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const ok = await onSubscribeRelease(product, releaseEmail);
+              if (ok) setReleaseSubscribed(true);
+            }}
+            className="mt-5 border border-primary/25 bg-primary/[0.06] p-3"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Get release alert</p>
+            <p className="mt-1 text-xs leading-5 text-slate-300">We'll email you and send an account notification when this drops.</p>
+            <div className="mt-3 flex gap-2">
+              <Input
+                type="email"
+                required
+                placeholder="Email address"
+                value={releaseEmail}
+                onChange={(e) => setReleaseEmail(e.target.value)}
+                className="h-10 rounded-none border-border bg-background/70 text-xs"
+              />
+              <Button type="submit" disabled={releaseSubscribed} className="h-10 rounded-none bg-primary px-3 text-[9px] font-bold uppercase tracking-wider">
+                {releaseSubscribed ? "Saved" : "Notify"}
+              </Button>
+            </div>
+          </form>
+        )}
+
         {/* Price & Action */}
         <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
           <span className="text-xl font-bold font-mono tracking-tight text-accent drop-shadow-[0_0_8px_rgba(217,119,6,0.3)]">
@@ -259,6 +289,20 @@ export default function Store() {
     });
     setCartOpen(true);
   }, []);
+
+  const subscribeToRelease = useCallback(async (product, email) => {
+    if (!product?.id || !email) return false;
+    const response = await base44.functions.invoke("subscribeProductRelease", {
+      productId: product.id,
+      email,
+      name: user?.full_name || "",
+    });
+    toast({
+      title: response?.data?.alreadyLive ? "Already live" : "Release alert saved",
+      description: response?.data?.alreadyLive ? "This product is already available in the store." : "We'll let you know when it drops.",
+    });
+    return true;
+  }, [user?.full_name]);
 
   const updateQuantity = useCallback((id, change) => {
     setCart((curr) => 
@@ -453,6 +497,8 @@ export default function Store() {
                   index={idx}
                   addToCart={addToCart}
                   cart={cart}
+                  user={user}
+                  onSubscribeRelease={subscribeToRelease}
                 />
               ))}
             </div>

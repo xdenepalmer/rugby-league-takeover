@@ -1,0 +1,64 @@
+{
+  "name": "ProductReleaseSubscription",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Product the subscriber wants release updates for"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Snapshot of the product name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Subscriber email address"
+    },
+    "name": {
+      "type": "string",
+      "description": "Optional subscriber name"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Linked app user ID when subscribed while signed in"
+    },
+    "user_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Linked app user email when signed in"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the subscription is still active"
+    },
+    "notified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When release notification was sent"
+    }
+  },
+  "required": [
+    "product_id",
+    "email"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
