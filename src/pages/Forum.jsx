@@ -25,6 +25,7 @@ import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
 import ScorePredictor from "@/components/forum/ScorePredictor";
 import SlotMachineBadgeUnlock from "@/components/forum/SlotMachineBadgeUnlock";
 import TeamCrest from "@/components/public/TeamCrest";
+import { topBadge, parseBadgeIds } from "@/lib/slot-badges";
 
 
 
@@ -435,9 +436,14 @@ function AuthorBadge({ name, authorPostCounts }) {
 
 /* ━━━ Author Meta (opt-in location / team shown next to name) ━━ */
 function AuthorMeta({ meta, className = "" }) {
-  if (!meta || (!meta.location && !meta.team)) return null;
+  if (!meta || (!meta.location && !meta.team && !meta.badge)) return null;
   return (
     <>
+      {meta.badge && (
+        <span className={`inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300 ${className}`} title={`Slot badge: ${meta.badge.label}`}>
+          {meta.badge.emoji} {meta.badge.label}
+        </span>
+      )}
       {meta.location && (
         <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}>📍 {meta.location}</span>
       )}
@@ -1721,12 +1727,18 @@ export default function Forum() {
   // display. Built from the forumAvatars function; the viewer's own row is merged
   // in live so their changes show immediately.
   const profileById = useMemo(() => {
-    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "" }]));
+    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges) }]));
     if (isAuthenticated && user?.id) {
+      // The viewer's own row, live — including badges saved to their profile and
+      // any just won this session (kept in localStorage).
+      let localBadges = [];
+      try { localBadges = parseBadgeIds(JSON.parse(localStorage.getItem("rlt_slot_badges") || "[]")); } catch { localBadges = []; }
+      const badges = Array.from(new Set([...parseBadgeIds(user.badges), ...localBadges]));
       map.set(String(user.id), {
         avatar_url: user.avatar_url || "",
         location: user.show_location_on_forum ? [user.city, user.country].filter(Boolean).join(", ") : "",
         team: user.show_team_on_forum ? (user.favourite_team || "") : "",
+        badges,
       });
     }
     return map;
@@ -1736,7 +1748,7 @@ export default function Forum() {
     const p = userId && profileById.get(String(userId));
     if (!p) return null;
     const teamLogo = p.team ? (teamLogoByName.get(String(p.team).trim().toLowerCase()) || "") : "";
-    return { ...p, teamLogo };
+    return { ...p, teamLogo, badge: topBadge(p.badges) };
   };
 
   const createMutation = useMutation({

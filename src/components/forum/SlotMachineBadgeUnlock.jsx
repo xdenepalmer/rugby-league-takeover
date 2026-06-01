@@ -1,41 +1,55 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCw, Volume2, VolumeX } from "lucide-react";
+import { RotateCw, Volume2, VolumeX, Lock, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
+import {
+  SLOT_SYMBOLS, SLOT_BADGES, spinReels, evaluateReels, parseBadgeIds,
+  SPIN_COOLDOWN_MS, SLOT_BADGES_KEY, SLOT_LAST_SPIN_KEY,
+} from "@/lib/slot-badges";
 
-// Slot machine reel symbols
-const SYMBOLS = [
-  { emoji: "🍒", label: "Cherry" },
-  { emoji: "🍋", label: "Lemon" },
-  { emoji: "🔔", label: "Bell" },
-  { emoji: "💎", label: "Diamond" },
-  { emoji: "🏉", label: "Footy" },
-  { emoji: "🎰", label: "Jackpot" }
-];
+const ALL_EMOJIS = SLOT_SYMBOLS.map((s) => s.emoji);
+const readIds = () => parseBadgeIds(JSON.parse(localStorage.getItem(SLOT_BADGES_KEY) || "[]"));
+const fmtCountdown = (ms) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+};
 
 export default function SlotMachineBadgeUnlock() {
+  const { user, isAuthenticated, updateProfile } = useAuth();
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
   const [spinning, setSpinning] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [message, setMessage] = useState("Spin the slot to unlock Vegas Fan Badges!");
-  const [isJackpot, setIsJackpot] = useState(false);
-  const [unlockedSpins, setUnlockedSpins] = useState(() => !!localStorage.getItem("rlt_slot_spins"));
-  const [unlockedJackpot, setUnlockedJackpot] = useState(() => !!localStorage.getItem("rlt_slot_jackpot"));
-  
-  // Audio Context Ref
+  const [message, setMessage] = useState("One spin a day — line up three to win a badge!");
+  const [isWin, setIsWin] = useState(false);
+  const [ownedIds, setOwnedIds] = useState(() => { try { return readIds(); } catch { return []; } });
+  const [cooldownLeft, setCooldownLeft] = useState(0);
   const audioCtxRef = useRef(null);
 
-  // Initialize Audio Context on demand (user interaction)
-  const initAudio = () => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+  // Merge any badges already saved on the user's profile (e.g. won on another device).
+  useEffect(() => {
+    const serverIds = parseBadgeIds(user?.badges);
+    if (serverIds.length) {
+      setOwnedIds((prev) => Array.from(new Set([...prev, ...serverIds])));
     }
-    if (audioCtxRef.current.state === "suspended") {
-      audioCtxRef.current.resume();
-    }
-  };
+  }, [user]);
 
-  // Play retro synth beep
+  // 24-hour cooldown countdown.
+  useEffect(() => {
+    const tick = () => {
+      const last = Number(localStorage.getItem(SLOT_LAST_SPIN_KEY) || 0);
+      setCooldownLeft(Math.max(0, last + SPIN_COOLDOWN_MS - Date.now()));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
+  };
   const playBeep = (freq, duration, type = "sine") => {
     if (!soundEnabled) return;
     try {
@@ -43,255 +57,167 @@ export default function SlotMachineBadgeUnlock() {
       const ctx = audioCtxRef.current;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      
       osc.type = type;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      
       gain.gain.setValueAtTime(0.12, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-    } catch (e) {
-      console.warn("Web Audio failed:", e);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + duration);
+    } catch { /* ignore */ }
+  };
+  const playVictory = () => {
+    [261.63, 329.63, 392.0, 523.25, 659.25, 783.99, 1046.5].forEach((f, i) => setTimeout(() => playBeep(f, 0.45, "square"), i * 110));
+  };
+  const playBuzzer = () => { playBeep(180, 0.3, "sawtooth"); setTimeout(() => playBeep(140, 0.4, "sawtooth"), 150); };
+
+  const awardBadge = (badge) => {
+    if (ownedIds.includes(badge.id)) return;
+    const next = Array.from(new Set([...ownedIds, badge.id]));
+    setOwnedIds(next);
+    try { localStorage.setItem(SLOT_BADGES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    // Persist to the profile so it shows on the forum (logged-in only).
+    if (isAuthenticated) {
+      try { Promise.resolve(updateProfile({ badges: next })).catch(() => {}); } catch { /* ignore */ }
     }
   };
 
-  // Play victory jackpot sound
-  const playVictorySound = () => {
-    if (!soundEnabled) return;
-    const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50]; // C major arpeggio
-    notes.forEach((freq, index) => {
-      setTimeout(() => {
-        playBeep(freq, 0.45, "square");
-      }, index * 120);
-    });
-  };
-
-  // Play loss buzzer sound
-  const playBuzzerSound = () => {
-    if (!soundEnabled) return;
-    playBeep(180, 0.3, "sawtooth");
-    setTimeout(() => {
-      playBeep(140, 0.4, "sawtooth");
-    }, 150);
-  };
-
   const handleSpin = () => {
-    if (spinning) return;
-    
+    if (spinning || cooldownLeft > 0) return;
     initAudio();
     setSpinning(true);
-    setIsJackpot(false);
-    setMessage("Spinning the Reels...");
-    
-    // Set spins unlock in localstorage
-    localStorage.setItem("rlt_slot_spins", "true");
-    setUnlockedSpins(true);
-    // Dispatch local event to refresh achievements component
-    window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "slot_spin" } }));
+    setIsWin(false);
+    setMessage("Spinning the reels…");
 
-    // Sound effect: reel spinning sounds (rapid ticking)
-    let spinTickCount = 0;
+    // Lock in the daily cooldown the moment they spin.
+    localStorage.setItem(SLOT_LAST_SPIN_KEY, String(Date.now()));
+    setCooldownLeft(SPIN_COOLDOWN_MS);
+
+    let ticks = 0;
     const tickInterval = setInterval(() => {
-      if (spinTickCount < 8) {
-        playBeep(330 + (spinTickCount * 40), 0.08, "triangle");
-        spinTickCount++;
-      } else {
-        clearInterval(tickInterval);
-      }
+      if (ticks < 8) { playBeep(330 + ticks * 40, 0.08, "triangle"); ticks++; } else clearInterval(tickInterval);
     }, 120);
 
-    // Dynamic reel randomization over time
-    const duration = 1200;
+    const duration = 1300;
     const start = Date.now();
-    
-    const animateReels = () => {
-      const elapsed = Date.now() - start;
-      if (elapsed < duration) {
+    const finalSymbols = spinReels(); // the genuine outcome, decided up front
+
+    const animate = () => {
+      if (Date.now() - start < duration) {
         setReels([
-          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji,
-          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji,
-          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji
+          ALL_EMOJIS[Math.floor(Math.random() * ALL_EMOJIS.length)],
+          ALL_EMOJIS[Math.floor(Math.random() * ALL_EMOJIS.length)],
+          ALL_EMOJIS[Math.floor(Math.random() * ALL_EMOJIS.length)],
         ]);
-        requestAnimationFrame(animateReels);
+        requestAnimationFrame(animate);
+        return;
+      }
+      // Land on the real result and judge exactly what's shown.
+      setReels(finalSymbols.map((s) => s.emoji));
+      setSpinning(false);
+      const result = evaluateReels(finalSymbols);
+
+      if (result.type === "win") {
+        setIsWin(true);
+        playVictory();
+        const already = ownedIds.includes(result.badge.id);
+        awardBadge(result.badge);
+        setMessage(already
+          ? `${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} Three of a kind! You already hold the ${result.badge.label} badge.`
+          : `🎉 Winner! ${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} — unlocked the ${result.badge.label} badge!`);
+        window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "slot_win", badge: result.badge.id } }));
+      } else if (result.type === "near") {
+        playBeep(523.25, 0.15, "sine");
+        setMessage(`So close — two ${result.symbol.emoji}. You need three to win. Come back tomorrow!`);
       } else {
-        // Final outcomes
-        const finalReels = [
-          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji,
-          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji,
-          SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji
-        ];
-        
-        // Custom odds: let's make it 25% chance to win something, and 10% chance of a perfect 3-of-a-kind jackpot
-        const roll = Math.random();
-        if (roll < 0.15) {
-          // Force perfect 3-of-a-kind jackpot
-          const winSym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji;
-          finalReels[0] = winSym;
-          finalReels[1] = winSym;
-          finalReels[2] = winSym;
-        } else if (roll < 0.35) {
-          // Force 2 matching elements
-          const winSym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)].emoji;
-          finalReels[0] = winSym;
-          finalReels[1] = winSym;
-        }
-
-        setReels(finalReels);
-        setSpinning(false);
-
-        // Evaluate victory condition
-        const isWin = finalReels[0] === finalReels[1] && finalReels[1] === finalReels[2];
-        const isTwoOfKind = finalReels[0] === finalReels[1] || finalReels[1] === finalReels[2] || finalReels[0] === finalReels[2];
-
-        if (isWin) {
-          playVictorySound();
-          setIsJackpot(true);
-          localStorage.setItem("rlt_slot_jackpot", "true");
-          setUnlockedJackpot(true);
-          setMessage(`🎉 JACKPOT! 3x ${finalReels[0]} - You unlocked the Jackpot Winner Badge!`);
-          window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "slot_jackpot" } }));
-        } else if (isTwoOfKind) {
-          playBeep(523.25, 0.15, "sine");
-          setTimeout(() => playBeep(659.25, 0.25, "sine"), 100);
-          setMessage(`✨ Good spin! 2x ${finalReels[0] === finalReels[1] ? finalReels[0] : finalReels[1]} - Unlocked High Roller Badge!`);
-        } else {
-          playBuzzerSound();
-          setMessage("Try again! Spin to match symbols and unlock badges.");
-        }
+        playBuzzer();
+        setMessage("No luck this time. One spin a day — try again tomorrow!");
       }
     };
-
-    requestAnimationFrame(animateReels);
+    requestAnimationFrame(animate);
   };
+
+  const canSpin = !spinning && cooldownLeft <= 0;
+  const earnedCount = ownedIds.length;
 
   return (
     <div className="border border-border/65 bg-card/30 cmd-glass overflow-hidden">
       <div className="h-[2px] w-full bg-gradient-to-r from-pink-500 via-primary to-pink-500" />
       <div className="p-4 sm:p-5">
-        
         {/* Header */}
-        <div className="flex items-center justify-between mb-3.5">
+        <div className="mb-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-pink-500/10 border border-pink-500/20 shadow-[0_0_10px_rgba(236,72,153,0.15)]">
-              <span className="text-sm">🎰</span>
-            </div>
+            <div className="border border-pink-500/20 bg-pink-500/10 p-1.5 shadow-[0_0_10px_rgba(236,72,153,0.15)]"><span className="text-sm">🎰</span></div>
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Vegas Slot Machine</h3>
-              <p className="text-[8px] font-mono uppercase tracking-wider text-pink-400">Unlock Premium Badges</p>
+              <p className="text-[8px] font-mono uppercase tracking-wider text-pink-400">One free spin a day · {earnedCount}/{SLOT_BADGES.length} badges</p>
             </div>
           </div>
-          
-          <button
-            type="button"
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1 border border-border/40 bg-neutral-900/60"
-            title={soundEnabled ? "Mute Sounds" : "Unmute Sounds"}
-          >
+          <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} className="border border-border/40 bg-neutral-900/60 p-1 text-muted-foreground transition-colors hover:text-foreground" title={soundEnabled ? "Mute" : "Unmute"}>
             {soundEnabled ? <Volume2 className="h-3 w-3 text-pink-400" /> : <VolumeX className="h-3 w-3" />}
           </button>
         </div>
 
-        {/* Slot Window Frame */}
-        <div className="relative border border-border/80 bg-neutral-950 p-4 shadow-[inset_0_0_15px_rgba(0,0,0,0.9)] overflow-hidden">
-          {/* Neon lights visual borders */}
+        {/* Reels */}
+        <div className="relative border border-border/80 bg-neutral-950 p-4 shadow-[inset_0_0_15px_rgba(0,0,0,0.9)]">
           <div className="absolute inset-0 pointer-events-none border border-pink-500/20" />
-          
-          {/* Reels Display */}
-          <div className="grid grid-cols-3 gap-3 relative z-10">
+          <div className="relative z-10 grid grid-cols-3 gap-3">
             {reels.map((emoji, index) => (
-              <div 
-                key={index} 
-                className="h-16 flex items-center justify-center border border-border/60 bg-neutral-900 shadow-[0_4px_12px_rgba(0,0,0,0.8)] relative overflow-hidden"
-              >
-                {/* Horizontal guide line */}
-                <div className="absolute left-0 right-0 h-[1px] bg-pink-500/10 top-1/2 -translate-y-1/2 pointer-events-none" />
-                
+              <div key={index} className="relative flex h-16 items-center justify-center overflow-hidden border border-border/60 bg-neutral-900 shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                <div className="absolute left-0 right-0 top-1/2 h-[1px] -translate-y-1/2 bg-pink-500/10" />
                 <AnimatePresence mode="wait">
-                  <motion.span
-                    key={`${emoji}_${index}_${spinning}`}
-                    initial={{ y: spinning ? -30 : 0, opacity: spinning ? 0.3 : 1 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: spinning ? 30 : 0, opacity: 0.3 }}
-                    transition={{ type: "spring", stiffness: 350, damping: 20 }}
-                    className="text-3xl filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] select-none"
-                  >
+                  <motion.span key={`${emoji}_${index}_${spinning}`} initial={{ y: spinning ? -30 : 0, opacity: spinning ? 0.3 : 1 }} animate={{ y: 0, opacity: 1 }} exit={{ y: spinning ? 30 : 0, opacity: 0.3 }} transition={{ type: "spring", stiffness: 350, damping: 20 }} className="select-none text-3xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                     {emoji}
                   </motion.span>
                 </AnimatePresence>
               </div>
             ))}
           </div>
-
-          {/* Decorative Las Vegas Jackpot flashing crown */}
-          {isJackpot && (
-            <div className="absolute inset-0 pointer-events-none bg-pink-500/[0.04] animate-pulse flex items-center justify-center">
-              <div className="text-[9px] font-mono text-pink-400 font-extrabold uppercase border border-pink-500 bg-black px-2 py-0.5 animate-bounce">
-                🎉 JACKPOT 🎉
-              </div>
+          {isWin && (
+            <div className="absolute inset-0 flex items-center justify-center bg-pink-500/[0.04] pointer-events-none animate-pulse">
+              <div className="animate-bounce border border-pink-500 bg-black px-2 py-0.5 text-[9px] font-mono font-extrabold uppercase text-pink-400">🎉 Winner 🎉</div>
             </div>
           )}
         </div>
 
-        {/* Status message */}
-        <p className={`text-[10px] text-center font-mono mt-3 ${isJackpot ? "text-pink-400 font-bold" : "text-slate-300"}`}>
-          {message}
-        </p>
+        <p className={`mt-3 text-center font-mono text-[10px] ${isWin ? "font-bold text-pink-400" : "text-slate-300"}`}>{message}</p>
 
-        {/* Action button */}
+        {/* Action / cooldown */}
         <div className="mt-3">
-          <Button
-            type="button"
-            disabled={spinning}
-            onClick={handleSpin}
-            className={`w-full rounded-none text-[10px] font-bold uppercase tracking-widest font-mono h-9 select-none transition-all ${
-              spinning 
-                ? "bg-neutral-800 text-slate-500 border border-border"
-                : "bg-gradient-to-r from-pink-600 via-primary to-pink-600 hover:from-pink-500 hover:to-pink-500 text-white shadow-[0_0_12px_rgba(236,72,153,0.35)] hover:shadow-[0_0_18px_rgba(236,72,153,0.55)]"
-            }`}
-          >
+          <Button type="button" disabled={!canSpin} onClick={handleSpin}
+            className={`h-9 w-full select-none rounded-none font-mono text-[10px] font-bold uppercase tracking-widest transition-all ${
+              canSpin
+                ? "bg-gradient-to-r from-pink-600 via-primary to-pink-600 text-white shadow-[0_0_12px_rgba(236,72,153,0.35)] hover:from-pink-500 hover:to-pink-500 hover:shadow-[0_0_18px_rgba(236,72,153,0.55)]"
+                : "border border-border bg-neutral-800 text-slate-500"
+            }`}>
             {spinning ? (
-              <span className="flex items-center justify-center gap-1.5">
-                <RotateCw className="h-3.5 w-3.5 animate-spin" />
-                Spinning...
-              </span>
-            ) : (
-              "PULL THE LEVER"
-            )}
+              <span className="flex items-center justify-center gap-1.5"><RotateCw className="h-3.5 w-3.5 animate-spin" /> Spinning…</span>
+            ) : cooldownLeft > 0 ? (
+              <span className="flex items-center justify-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Next spin in {fmtCountdown(cooldownLeft)}</span>
+            ) : "Pull the lever"}
           </Button>
         </div>
 
-        {/* Badges Earned Summary */}
-        <div className="mt-3.5 pt-3 border-t border-border/30 flex justify-between items-center">
-          <span className="text-[8px] font-mono text-slate-400 uppercase">Badges:</span>
-          <div className="flex gap-2">
-            <span 
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${
-                unlockedSpins 
-                  ? "bg-blue-500/10 border-blue-500/30 text-blue-400" 
-                  : "bg-neutral-900 border-border/30 text-slate-500"
-              }`}
-              title="Unlocked by spinning the Vegas Slot Machine"
-            >
-              🎰 High Roller
-            </span>
-            <span 
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${
-                unlockedJackpot 
-                  ? "bg-red-500/10 border-red-500/30 text-red-400 animate-pulse" 
-                  : "bg-neutral-900 border-border/30 text-slate-500"
-              }`}
-              title="Unlocked by getting a 3x match jackpot"
-            >
-              🔥 Jackpot Winner
-            </span>
+        {/* Badge collection */}
+        <div className="mt-3.5 border-t border-border/30 pt-3">
+          <p className="mb-2 text-[8px] font-mono uppercase tracking-wider text-slate-400">Badge collection · {earnedCount}/{SLOT_BADGES.length}</p>
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+            {SLOT_BADGES.map((b) => {
+              const owned = ownedIds.includes(b.id);
+              return (
+                <div key={b.id} title={owned ? `${b.label} — unlocked` : `${b.label} — locked (land three ${b.emoji})`}
+                  className={`flex flex-col items-center gap-1 border p-1.5 text-center ${owned ? "border-pink-500/40 bg-pink-500/[0.06]" : "border-border/30 bg-neutral-900/60"}`}>
+                  <span className={`text-base leading-none ${owned ? "" : "opacity-30 grayscale"}`}>{b.emoji}</span>
+                  <span className={`flex items-center gap-0.5 text-[7px] font-bold uppercase leading-tight ${owned ? "text-pink-300" : "text-slate-600"}`}>
+                    {owned ? <Check className="h-2 w-2" /> : <Lock className="h-2 w-2" />}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+          {!isAuthenticated && earnedCount > 0 && (
+            <p className="mt-2 text-[8px] text-slate-500">Log in to show your badges next to your name in the forum.</p>
+          )}
         </div>
-
       </div>
     </div>
   );

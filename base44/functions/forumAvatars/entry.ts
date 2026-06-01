@@ -21,15 +21,17 @@ Deno.serve(async (req) => {
           ? [city, country].filter(Boolean).join(', ')
           : '';
         const team = u.show_team_on_forum ? clean(u.favourite_team) : '';
+        const badges = Array.isArray(u.badges) ? u.badges.filter(Boolean) : [];
         return {
           id: u.id,
           avatar_url: clean(u.avatar_url),
           location,
           team,
+          badges,
         };
       })
       // Only include rows that carry something useful for the forum.
-      .filter((row) => row.avatar_url || row.location || row.team);
+      .filter((row) => row.avatar_url || row.location || row.team || row.badges.length);
 
     return Response.json({ avatars });
   } catch (error) {

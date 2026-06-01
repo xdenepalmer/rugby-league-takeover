@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Reply, Trash2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,18 +23,17 @@ function ReplyAvatar({ name, src }) {
   );
 }
 
-// Recursive, nested reply renderer. Reuses the Forum's existing reply state
-// (drafts keyed by node id, activeReplyId, handleReply) so a reply targets the
-// exact comment it's under. Indents with a left border per depth.
-export default function ReplyTree({
+const emptyReply = { author_name: "", body: "", media_url: "" };
+
+const ReplyTree = memo(function ReplyTree({
   replies = [],
   depth = 0,
   isAuthenticated,
   user,
   isSubmitting,
   activeReplyId,
+  activeReplyDraft,
   onToggleReply,
-  getReplyDraft,
   onUpdateReply,
   onReply,
   onDelete,
@@ -49,7 +48,7 @@ export default function ReplyTree({
   return (
     <div className={`grid gap-3 ${indent}`}>
       {replies.map((reply) => {
-        const draft = getReplyDraft(reply.id);
+        const draft = activeReplyId === reply.id ? (activeReplyDraft || emptyReply) : emptyReply;
         const open = activeReplyId === reply.id;
         const canDelete = isAuthenticated && ((user?.id && String(reply.user_id) === String(user.id)) || user?.role === "admin");
 
@@ -64,6 +63,11 @@ export default function ReplyTree({
                   if (!meta) return null;
                   return (
                     <>
+                      {meta.badge && (
+                        <span className="inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300" title={`Slot badge: ${meta.badge.label}`}>
+                          {meta.badge.emoji} {meta.badge.label}
+                        </span>
+                      )}
                       {meta.location && <span className="text-[10px] text-slate-300 font-medium" title={meta.location}>📍 {meta.location}</span>}
                       {meta.team && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 font-medium" title={`Supports ${meta.team}`}>
@@ -113,8 +117,8 @@ export default function ReplyTree({
                 user={user}
                 isSubmitting={isSubmitting}
                 activeReplyId={activeReplyId}
+                activeReplyDraft={activeReplyDraft}
                 onToggleReply={onToggleReply}
-                getReplyDraft={getReplyDraft}
                 onUpdateReply={onUpdateReply}
                 onReply={onReply}
                 onDelete={onDelete}
@@ -129,4 +133,6 @@ export default function ReplyTree({
       })}
     </div>
   );
-}
+});
+
+export default ReplyTree;

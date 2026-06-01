@@ -40,6 +40,13 @@
       "default": false,
       "description": "Show the user's favourite team next to their name on the forum"
     },
+    "badges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Slot-machine badge ids the user has unlocked (shown on the forum)"
+    },
     "marketing_opt_in": {
       "type": "boolean",
       "default": false,
