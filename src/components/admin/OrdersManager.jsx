@@ -72,7 +72,7 @@ function OrderCard({ order, onStatusChange, onNotesChange, index }) {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/5 transition-colors"
+        className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/5 sm:gap-4"
       >
         {/* Status icon */}
         <div className={`shrink-0 p-2 border ${status.color}`}>
@@ -156,7 +156,7 @@ function OrderCard({ order, onStatusChange, onNotesChange, index }) {
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Status</label>
                   <Select value={order.status || "pending"} onValueChange={onStatusChange}>
-                    <SelectTrigger className="h-9 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {statuses.map((s) => {
                         const conf = getStatusConfig(s);
@@ -178,7 +178,7 @@ function OrderCard({ order, onStatusChange, onNotesChange, index }) {
                     placeholder="Add tracking info, shipping notes…"
                     defaultValue={order.shipping_notes || ""}
                     onBlur={onNotesChange}
-                    className="min-h-[68px] rounded-none text-sm border-border/40 resize-none"
+                    className="min-h-24 resize-none rounded-none border-border/40 text-sm"
                   />
                 </div>
               </div>
@@ -246,7 +246,8 @@ export default function OrdersManager({ orders }) {
             variant="outline"
             onClick={exportCsv}
             disabled={!filtered.length}
-            className="h-8 rounded-none text-[9px] font-bold uppercase tracking-wider border-border/30"
+            size="mobile"
+            className="rounded-none border-border/30 text-[9px] font-bold uppercase tracking-wider"
           >
             <Download className="mr-1.5 h-3 w-3" /> Export CSV
           </Button>
@@ -268,11 +269,11 @@ export default function OrdersManager({ orders }) {
               placeholder="Search customer, email or item…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 rounded-none pl-9 text-sm border-border/40"
+              className="h-11 rounded-none border-border/40 pl-9 text-sm"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 rounded-none sm:w-44 border-border/40 text-sm">
+            <SelectTrigger className="h-11 rounded-none border-border/40 text-sm sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

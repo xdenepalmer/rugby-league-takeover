@@ -468,7 +468,7 @@ export default function Store() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex h-full w-full flex-col border-l border-border/80 bg-card cmd-glass p-6 shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md"
+              className="fixed bottom-0 right-0 top-0 z-50 flex h-dvh w-full flex-col border-l border-border/80 bg-card p-5 pb-safe cmd-glass shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md md:p-6"
             >
               {/* Decorative side tag */}
               <div className="absolute left-[-2px] top-0 bottom-0 w-[2px] cmd-accent-bar" />
@@ -527,21 +527,21 @@ export default function Store() {
                             <div className="flex items-center border border-border">
                               <button 
                                 onClick={() => updateQuantity(item.id, -1)}
-                                className="flex h-7 w-7 items-center justify-center bg-card hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+                                className="flex h-11 w-11 items-center justify-center bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-white"
                               >
                                 <Minus className="h-3 w-3" />
                               </button>
-                              <span className="w-8 text-center text-xs font-mono font-bold text-foreground">{item.quantity}</span>
+                              <span className="w-10 text-center text-xs font-mono font-bold text-foreground">{item.quantity}</span>
                               <button 
                                 onClick={() => updateQuantity(item.id, 1)}
-                                className="flex h-7 w-7 items-center justify-center bg-card hover:bg-muted text-muted-foreground hover:text-white transition-colors"
+                                className="flex h-11 w-11 items-center justify-center bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-white"
                               >
                                 <Plus className="h-3 w-3" />
                               </button>
                             </div>
                             <button 
                               onClick={() => removeFromCart(item.id)}
-                              className="text-muted-foreground hover:text-destructive p-1 transition-colors"
+                              className="touch-target flex items-center justify-center text-muted-foreground transition-colors hover:text-destructive"
                               aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -556,7 +556,7 @@ export default function Store() {
 
               {/* Cart Footer */}
               {cart.length > 0 && (
-                <div className="border-t border-border/60 pt-4 bg-card/60 backdrop-blur-md">
+                <div className="border-t border-border/60 bg-card/60 pt-4 backdrop-blur-md">
                   {/* Shipping status banner */}
                   <div className="mb-4 bg-muted/20 border border-border/40 p-3 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
@@ -631,7 +631,7 @@ export default function Store() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setCartOpen(true)}
-            className="fixed bottom-6 right-6 z-45 p-4 rounded-none bg-primary text-white border border-primary-foreground/15 shadow-[0_0_25px_rgba(249,115,22,0.5)] hover:bg-primary/95 flex items-center justify-center group pointer-events-auto"
+            className="fixed bottom-[calc(1.5rem+var(--safe-bottom))] right-6 z-45 flex items-center justify-center rounded-none border border-primary-foreground/15 bg-primary p-4 text-white shadow-[0_0_25px_rgba(249,115,22,0.5)] pointer-events-auto hover:bg-primary/95 group"
           >
             <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
             <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center bg-accent text-[11px] font-bold text-accent-foreground rounded-none shadow-md border border-accent-foreground/10 animate-bounce">

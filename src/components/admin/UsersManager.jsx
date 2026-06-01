@@ -128,9 +128,9 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
         </div>
 
         {/* ── Action bar ── */}
-        <div className="mt-4 pt-3 border-t border-border/30 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-col gap-2 border-t border-border/30 pt-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Select value={role} disabled={isSelf || updateUser.isPending} onValueChange={(newRole) => updateUser.mutate({ id: u.id, data: { role: newRole } })}>
-            <SelectTrigger className="rounded-none h-8 w-28 text-xs">
+            <SelectTrigger className="h-11 w-full rounded-none text-xs sm:w-28">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -139,13 +139,13 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
             </SelectContent>
           </Select>
 
-          <div className="flex-1" />
+          <div className="hidden flex-1 sm:block" />
 
           {u.disabled ? (
             <Button
               variant="outline"
-              size="sm"
-              className="rounded-none h-8 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+              size="mobile"
+              className="w-full rounded-none text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 sm:w-auto"
               disabled={isSelf || unbanUser.isPending}
               onClick={() => unbanUser.mutate(u)}
             >
@@ -155,8 +155,8 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
             <>
               <Button
                 variant="outline"
-                size="sm"
-                className="rounded-none h-8 text-xs"
+                size="mobile"
+                className="w-full rounded-none text-xs sm:w-auto"
                 disabled={isSelf || updateUser.isPending}
                 onClick={() => updateUser.mutate({ id: u.id, data: { disabled: true } })}
               >
@@ -171,7 +171,7 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
                   pending={banUser.isPending}
                   onConfirm={({ reason, expiresAt }) => banUser.mutateAsync({ targetUser: u, reason, expiresAt })}
                   trigger={
-                    <Button variant="destructive" size="sm" className="rounded-none h-8 text-xs">
+                    <Button variant="destructive" size="mobile" className="w-full rounded-none text-xs sm:w-auto">
                       <BanIcon className="mr-1.5 h-3.5 w-3.5" /> Ban
                     </Button>
                   }
@@ -369,11 +369,11 @@ export default function UsersManager() {
                     placeholder="Search name or email…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="rounded-none pl-10 bg-background/40 border-border/60"
+                    className="h-11 rounded-none pl-10 bg-background/40 border-border/60"
                   />
                 </div>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="rounded-none sm:w-44 bg-background/40 border-border/60">
+                  <SelectTrigger className="h-11 rounded-none sm:w-44 bg-background/40 border-border/60">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

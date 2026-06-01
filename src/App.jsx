@@ -9,6 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
+import InstallAppPrompt from '@/components/InstallAppPrompt';
 // Add page imports here
 import Home from './pages/Home';
 import Admin from './pages/Admin';
@@ -71,6 +72,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <AuthenticatedApp />
+          <InstallAppPrompt />
         </Router>
         <Toaster />
       </QueryClientProvider>

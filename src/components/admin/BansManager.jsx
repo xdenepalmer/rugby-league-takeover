@@ -150,8 +150,8 @@ function BanCard({ ban, index, liftBan }) {
           <div className="mt-4 pt-3 border-t border-border/30 flex justify-end">
             <Button
               variant="outline"
-              size="sm"
-              className="rounded-none h-8 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+              size="mobile"
+              className="w-full rounded-none text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 sm:w-auto"
               disabled={liftBan.isPending}
               onClick={() => liftBan.mutate(ban.id)}
             >
@@ -308,7 +308,7 @@ export default function BansManager() {
                 <div className="grid gap-4 md:grid-cols-[160px_1fr_1fr]">
                   <FieldLabel label="Ban Type">
                     <Select value={newType} onValueChange={setNewType}>
-                      <SelectTrigger className="rounded-none bg-background/40 border-border/60">
+                      <SelectTrigger className="h-11 rounded-none bg-background/40 border-border/60">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -323,7 +323,7 @@ export default function BansManager() {
                       placeholder={newType === "ip" ? "e.g. 192.168.1.1" : newType === "email" ? "e.g. spammer@example.com" : "User ID"}
                       value={newValue}
                       onChange={(e) => setNewValue(e.target.value)}
-                      className="rounded-none bg-background/40 border-border/60 font-mono"
+                      className="h-11 rounded-none bg-background/40 border-border/60 font-mono"
                     />
                   </FieldLabel>
                   <FieldLabel label="Reason">
@@ -331,15 +331,16 @@ export default function BansManager() {
                       placeholder="e.g. Repeated spam"
                       value={newReason}
                       onChange={(e) => setNewReason(e.target.value)}
-                      className="rounded-none bg-background/40 border-border/60"
+                      className="h-11 rounded-none bg-background/40 border-border/60"
                     />
                   </FieldLabel>
                 </div>
                 <div className="mt-4">
                   <Button
+                    size="mobile"
                     onClick={() => addBan.mutate()}
                     disabled={!newValue.trim() || addBan.isPending}
-                    className="rounded-none bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    className="w-full rounded-none bg-destructive hover:bg-destructive/90 text-destructive-foreground sm:w-auto"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     {addBan.isPending ? "Adding…" : "Add Ban"}
@@ -363,7 +364,7 @@ export default function BansManager() {
           placeholder="Search bans by value, reason, or type…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="rounded-none pl-10 bg-card/60 border-border cmd-glass"
+          className="h-11 rounded-none pl-10 bg-card/60 border-border cmd-glass"
         />
       </motion.div>
 

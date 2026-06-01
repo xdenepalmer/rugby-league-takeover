@@ -77,9 +77,10 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
             </div>
             <button
               onClick={() => setEditing(false)}
-              className="p-1.5 border border-border/50 hover:border-primary/30 hover:text-primary transition-colors"
+              className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-primary/30 hover:text-primary transition-colors"
+              title="Close editor"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
@@ -88,7 +89,7 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
               <Input
                 defaultValue={pkg.name || ""}
                 onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { name: e.target.value } })}
-                className="rounded-none"
+                className="h-11 rounded-none"
               />
             </FieldLabel>
             <FieldLabel label="Sort Order" icon={ArrowUpDown} helpText="Lower numbers appear first">
@@ -96,7 +97,7 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
                 type="number"
                 defaultValue={pkg.sort_order || 1}
                 onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { sort_order: Number(e.target.value) } })}
-                className="rounded-none"
+                className="h-11 rounded-none"
               />
             </FieldLabel>
             <FieldLabel label="Description" className="md:col-span-2" helpText="Brief summary shown in the package card">
@@ -179,33 +180,34 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setEditing(true)}
-                  className="p-2 border border-border/50 hover:border-cyan-400/30 hover:text-cyan-400 transition-colors text-muted-foreground"
+                  className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-cyan-400/30 hover:text-cyan-400 transition-colors text-muted-foreground"
                   title="Edit package"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-4 w-4" />
                 </button>
 
                 {!confirmDelete ? (
                   <button
                     onClick={() => setConfirmDelete(true)}
-                    className="p-2 border border-border/50 hover:border-destructive/30 hover:text-destructive transition-colors text-muted-foreground"
+                    className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-destructive/30 hover:text-destructive transition-colors text-muted-foreground"
                     title="Delete package"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 ) : (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => deleteMutation.mutate(pkg.id)}
-                      className="px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 transition-colors"
+                      className="min-h-11 px-3 py-2 text-[10px] font-bold uppercase tracking-wider bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 transition-colors"
                     >
                       Confirm
                     </button>
                     <button
                       onClick={() => setConfirmDelete(false)}
-                      className="p-1.5 border border-border/50 hover:border-border text-muted-foreground transition-colors"
+                      className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-border text-muted-foreground transition-colors"
+                      title="Cancel delete"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -343,7 +345,7 @@ export default function TravelPackagesManager({ packages }) {
                       placeholder="e.g. VIP Courtside Experience"
                       value={draft.name}
                       onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                      className="rounded-none"
+                      className="h-11 rounded-none"
                     />
                   </FieldLabel>
                   <FieldLabel label="Sort Order" icon={ArrowUpDown} helpText="Lower numbers appear first on the page">
@@ -351,7 +353,7 @@ export default function TravelPackagesManager({ packages }) {
                       type="number"
                       value={draft.sort_order}
                       onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })}
-                      className="rounded-none"
+                      className="h-11 rounded-none"
                     />
                   </FieldLabel>
                   <FieldLabel label="Description" className="md:col-span-2" helpText="Brief summary shown below the package name">
@@ -381,6 +383,7 @@ export default function TravelPackagesManager({ packages }) {
                   </FieldLabel>
                   <div className="md:col-span-2">
                     <Button
+                      size="mobile"
                       onClick={() => createMutation.mutate(draft)}
                       disabled={!draft.name || createMutation.isPending}
                       className="rounded-none bg-cyan-600 hover:bg-cyan-500 text-white w-full sm:w-auto"

@@ -267,7 +267,7 @@ export default function SiteNav({ settings = {} }) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 350, damping: 30 }}
-              className="fixed right-0 top-0 bottom-0 z-50 w-72 border-l border-border bg-background/98 cmd-glass px-6 py-6 lg:hidden shadow-2xl flex flex-col justify-between pointer-events-auto"
+              className="fixed bottom-0 right-0 top-0 z-50 flex w-72 max-w-[86vw] flex-col justify-between border-l border-border bg-background/98 px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto cmd-glass lg:hidden"
             >
               {/* Technical Grid background decoration */}
               <div className="absolute inset-0 cmd-grid-bg opacity-10 pointer-events-none" />
@@ -281,7 +281,7 @@ export default function SiteNav({ settings = {} }) {
                   </div>
                   <button 
                     onClick={() => setOpen(false)} 
-                    className="flex h-8 w-8 items-center justify-center border border-border hover:border-primary text-muted-foreground hover:text-foreground transition-all duration-300"
+                    className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-all duration-300 hover:border-primary hover:text-foreground"
                     aria-label="Close menu"
                   >
                     <X className="h-4 w-4" />

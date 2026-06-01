@@ -84,7 +84,7 @@ export default function UserInviteManager() {
                 placeholder="user@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="rounded-none"
+                className="h-11 rounded-none"
               />
               <p className="text-[9px] text-muted-foreground/60">
                 The recipient will get an email with login instructions
@@ -98,7 +98,7 @@ export default function UserInviteManager() {
                 Access Level
               </label>
               <Select value={role} onValueChange={setRole}>
-                <SelectTrigger className="rounded-none">
+                <SelectTrigger className="h-11 rounded-none">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,6 +115,7 @@ export default function UserInviteManager() {
           {/* Send Button */}
           <div className="mt-5">
             <Button
+              size="mobile"
               onClick={invite}
               disabled={!email || sending}
               className="rounded-none bg-pink-600 hover:bg-pink-500 text-white w-full sm:w-auto min-w-[180px] group/btn"

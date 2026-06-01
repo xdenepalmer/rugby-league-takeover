@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { Trash2, Ban as BanIcon, Globe, Filter, MessageSquare, Pin, Eye, EyeOff, Shield, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Trash2, Ban as BanIcon, Globe, Filter, MessageSquare, Pin, Eye, EyeOff, Shield, AlertTriangle, CheckCircle2, Mail } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -92,13 +92,13 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
             {/* Identity info */}
             <div className="mt-2 flex flex-wrap items-center gap-3">
               {post.user_email && (
-                <span className="text-[9px] font-mono text-muted-foreground/30">
-                  ✉ {post.user_email}
+                <span className="inline-flex items-center gap-1 text-[9px] font-mono text-muted-foreground/40">
+                  <Mail className="h-3 w-3" /> {post.user_email}
                 </span>
               )}
               {post.ip_address && (
-                <span className="text-[9px] font-mono text-muted-foreground/30">
-                  🌐 {post.ip_address}
+                <span className="inline-flex items-center gap-1 text-[9px] font-mono text-muted-foreground/40">
+                  <Globe className="h-3 w-3" /> {post.ip_address}
                 </span>
               )}
             </div>
@@ -108,7 +108,7 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
         {/* Actions bar */}
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/20 pt-3">
           {/* Publish toggle */}
-          <label className="inline-flex items-center gap-2 px-2.5 py-1.5 border border-border/30 bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer">
+          <label className="touch-target inline-flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 transition-colors hover:bg-muted/10">
             {post.is_published === true ? <Eye className="h-3 w-3 text-emerald-400" /> : <EyeOff className="h-3 w-3 text-muted-foreground/40" />}
             <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
               {post.is_published === true ? "Live" : "Hidden"}
@@ -116,18 +116,16 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
             <Switch
               checked={post.is_published === true}
               onCheckedChange={onTogglePublished}
-              className="scale-75"
             />
           </label>
 
           {/* Pin toggle */}
-          <label className="inline-flex items-center gap-2 px-2.5 py-1.5 border border-border/30 bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer">
+          <label className="touch-target inline-flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 transition-colors hover:bg-muted/10">
             <Pin className={`h-3 w-3 ${isPinned ? "text-primary" : "text-muted-foreground/40"}`} />
             <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Pin</span>
             <Switch
               checked={isPinned}
               onCheckedChange={onTogglePin}
-              className="scale-75"
             />
           </label>
 
@@ -142,7 +140,7 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
               pending={banPending}
               onConfirm={onBanEmail}
               trigger={
-                <Button variant="outline" size="sm" className="h-7 rounded-none text-[9px] font-bold uppercase tracking-wider border-border/30">
+                <Button variant="outline" size="mobile" className="rounded-none border-border/30 text-[9px] font-bold uppercase tracking-wider">
                   <BanIcon className="mr-1 h-3 w-3" /> Author
                 </Button>
               }
@@ -156,7 +154,7 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
               pending={banPending}
               onConfirm={onBanIP}
               trigger={
-                <Button variant="outline" size="sm" className="h-7 rounded-none text-[9px] font-bold uppercase tracking-wider border-border/30">
+                <Button variant="outline" size="mobile" className="rounded-none border-border/30 text-[9px] font-bold uppercase tracking-wider">
                   <Globe className="mr-1 h-3 w-3" /> IP
                 </Button>
               }
@@ -165,8 +163,8 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
 
           <Button
             variant="ghost"
-            size="sm"
-            className="h-7 rounded-none text-[9px] font-bold uppercase tracking-wider text-destructive/60 hover:text-destructive hover:bg-destructive/5"
+            size="mobile"
+            className="rounded-none text-[9px] font-bold uppercase tracking-wider text-destructive/60 hover:bg-destructive/5 hover:text-destructive"
             onClick={onDelete}
           >
             <Trash2 className="mr-1 h-3 w-3" /> Delete
@@ -232,7 +230,7 @@ export default function ForumManager({ posts }) {
           <button
             type="button"
             onClick={() => setPendingOnly((v) => !v)}
-            className={`flex items-center gap-2 border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
+            className={`touch-target flex items-center gap-2 border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
               pendingOnly
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
                 : "border-border/40 text-muted-foreground/50 hover:text-muted-foreground hover:border-border"
