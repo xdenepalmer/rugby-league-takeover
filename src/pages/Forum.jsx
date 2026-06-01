@@ -1877,8 +1877,6 @@ export default function Forum() {
               onSubmit={handlePost} isPending={createMutation.isPending}
               allThreads={allThreads}
               people={mentionPeople}
-              authorPostCounts={authorPostCounts}
-              authorReplyCounts={authorReplyCounts}
             />
           </div>
         </div>
