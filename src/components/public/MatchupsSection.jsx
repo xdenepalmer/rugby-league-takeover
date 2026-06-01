@@ -4,8 +4,22 @@ import { Swords, CalendarDays, MapPin, ArrowUpRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import TeamCrest from "./TeamCrest";
+import { ALL_TEAMS } from "@/lib/nrl-teams";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
+
+const LEAGUE_LOGOS = {
+  "Super League": "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/350141516_image.png",
+  NRL: "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/13e9c8f68_nrl.png",
+};
+
+const leagueByTeamName = new Map(ALL_TEAMS.map((team) => [norm(team.name), team.league]));
+
+const leagueForMatchup = (matchup) => {
+  const homeLeague = leagueByTeamName.get(norm(matchup.home_team));
+  const awayLeague = leagueByTeamName.get(norm(matchup.away_team));
+  return homeLeague === "Super League" || awayLeague === "Super League" ? "Super League" : "NRL";
+};
 
 const formatKickoff = (value) => {
   if (!value) return "";
@@ -19,6 +33,17 @@ function TeamBadge({ name, logo, won }) {
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
       <TeamCrest name={name} logo={logo} className={`h-16 w-16 text-lg md:h-20 md:w-20 md:text-2xl ${won ? "" : ""}`} />
       <span className={`font-display text-sm uppercase leading-tight md:text-base ${won ? "text-primary" : "text-foreground"}`}>{name}{won && <span className="ml-1 align-middle text-[9px] tracking-widest text-emerald-400">▲</span>}</span>
+    </div>
+  );
+}
+
+function LeagueBadge({ league }) {
+  const logo = LEAGUE_LOGOS[league];
+  if (!logo) return null;
+
+  return (
+    <div className="pointer-events-none absolute bottom-3 right-3 flex h-12 w-24 items-center justify-end opacity-85 md:h-14 md:w-28">
+      <img src={logo} alt={league} className="max-h-full max-w-full object-contain" />
     </div>
   );
 }
@@ -58,8 +83,9 @@ export default function MatchupsSection() {
             const isFinal = m.status === "final" && m.home_score != null && m.away_score != null;
             const homeWon = isFinal && Number(m.home_score) > Number(m.away_score);
             const awayWon = isFinal && Number(m.away_score) > Number(m.home_score);
+            const league = leagueForMatchup(m);
             return (
-            <article key={m.id} className="border border-border bg-card p-6">
+            <article key={m.id} className="relative border border-border bg-card p-6 pb-16">
               {m.label && <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-accent">{m.label}</p>}
               <div className="flex items-center justify-between gap-4">
                 <TeamBadge name={m.home_team} logo={logoFor(m.home_team, m.home_logo)} won={homeWon} />
@@ -88,6 +114,7 @@ export default function MatchupsSection() {
                   </a>
                 </div>
               )}
+              <LeagueBadge league={league} />
             </article>
             );
           })}
