@@ -30,7 +30,7 @@ export default function TeamCrest({ name, short, logo, className = "h-16 w-16" }
     // Transparent container so transparent-PNG crests blend with the page.
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <img src={cleanLogo} alt={name} className="h-full w-full object-contain" onError={() => setFailedLogo(true)} />
+        <img src={cleanLogo} alt={name} className="h-full w-full object-contain" referrerPolicy="no-referrer" onError={() => setFailedLogo(true)} />
       </div>
     );
   }
