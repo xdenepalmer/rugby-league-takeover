@@ -39,7 +39,7 @@ export default function HeroSection({ settings = {} }) {
     <section id="home" className="relative min-h-screen overflow-hidden flex items-center justify-center bg-transparent">
       {/* Background Gradients and scan overlays */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#030512]/10 via-[#030512]/45 to-[#030512]/95 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030512]/40 to-[#030512] z-10" />
         {/* Obsidian background grid */}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:80px_80px] opacity-25 z-0 cmd-grid-bg" />
       </div>
