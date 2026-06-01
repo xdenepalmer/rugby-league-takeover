@@ -71,6 +71,21 @@
         }
       }
     },
+    "media_url": {
+      "type": "string",
+      "description": "Attached forum media URL"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video",
+        "gif",
+        ""
+      ],
+      "default": "",
+      "description": "Attached forum media type"
+    },
     "like_count": {
       "type": "number",
       "default": 0,
@@ -87,14 +102,6 @@
       "type": "number",
       "default": 0,
       "description": "Number of views on the post"
-    },
-    "media_url": {
-      "type": "string",
-      "description": "Optional attached image / GIF / video URL"
-    },
-    "media_type": {
-      "type": "string",
-      "description": "Media kind: image, gif, or video"
     }
   },
   "required": [
