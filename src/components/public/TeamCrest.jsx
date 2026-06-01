@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 // Renders a team's uploaded logo, or an auto colour monogram (initials on a
 // team-derived colour) when no logo is set — so preloaded teams look intentional.
@@ -17,15 +17,23 @@ export function teamHue(name) {
 }
 
 export default function TeamCrest({ name, short, logo, className = "h-16 w-16" }) {
-  if (logo) {
+  const cleanLogo = String(logo || "").trim();
+  const [failedLogo, setFailedLogo] = useState(false);
+
+  useEffect(() => {
+    setFailedLogo(false);
+  }, [cleanLogo]);
+
+  const hue = teamHue(name);
+
+  if (cleanLogo && !failedLogo) {
     // Transparent container so transparent-PNG crests blend with the page.
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <img src={logo} alt={name} className="h-full w-full object-contain" />
+        <img src={cleanLogo} alt={name} className="h-full w-full object-contain" onError={() => setFailedLogo(true)} />
       </div>
     );
   }
-  const hue = teamHue(name);
   return (
     <div
       className={`flex items-center justify-center font-display uppercase tracking-tight text-white ${className}`}

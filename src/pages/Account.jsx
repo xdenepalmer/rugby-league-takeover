@@ -142,10 +142,18 @@ export default function Account() {
             <div className="flex items-center gap-5">
               {/* Profile Avatar with radial glowing shadow */}
               <div className="relative flex-shrink-0">
-                <div className="h-20 w-20 rounded-none bg-gradient-to-tr from-primary via-accent to-primary flex items-center justify-center font-display text-4xl text-white font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)]">
-                  {avatarLetter}
-                </div>
-                <div className="absolute inset-0 border border-white/20" />
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={displayName}
+                    className="h-20 w-20 rounded-none border border-white/20 object-cover shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-none bg-gradient-to-tr from-primary via-accent to-primary flex items-center justify-center font-display text-4xl text-white font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)]">
+                    {avatarLetter}
+                  </div>
+                )}
+                <div className="absolute inset-0 border border-white/20 pointer-events-none" />
               </div>
               
               <div className="space-y-1">

@@ -102,12 +102,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const normalizeUser = (currentUser) => ({
+    ...currentUser,
+    ...(currentUser?.data || {}),
+  });
+
   const checkUserAuth = async () => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
-      setUser(currentUser);
+      setUser(normalizeUser(currentUser));
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
@@ -147,7 +152,7 @@ export const AuthProvider = ({ children }) => {
 
   // Re-fetch the current user (e.g. after a profile or password change).
   const refreshUser = async () => {
-    const currentUser = await base44.auth.me();
+    const currentUser = normalizeUser(await base44.auth.me());
     setUser(currentUser);
     setIsAuthenticated(true);
     return currentUser;
