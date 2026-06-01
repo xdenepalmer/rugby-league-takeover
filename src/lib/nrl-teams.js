@@ -23,6 +23,7 @@ export const NRL_TEAMS = [
 ];
 
 export const SUPER_LEAGUE_TEAMS = [
+  { name: "Bradford Bulls", short_name: "Bradford" },
   { name: "Castleford Tigers", short_name: "Castleford" },
   { name: "Catalans Dragons", short_name: "Catalans" },
   { name: "Huddersfield Giants", short_name: "Huddersfield" },

@@ -18,9 +18,10 @@ export function teamHue(name) {
 
 export default function TeamCrest({ name, short, logo, className = "h-16 w-16" }) {
   if (logo) {
+    // Transparent container so transparent-PNG crests blend with the page.
     return (
-      <div className={`flex items-center justify-center overflow-hidden border border-border bg-secondary ${className}`}>
-        <img src={logo} alt={name} className="h-full w-full object-contain p-1.5" />
+      <div className={`flex items-center justify-center ${className}`}>
+        <img src={logo} alt={name} className="h-full w-full object-contain" />
       </div>
     );
   }
