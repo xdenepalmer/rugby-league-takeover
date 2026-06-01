@@ -9,6 +9,8 @@ import {
   Eye, Clock, Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import MissionControlTerminal from "./MissionControlTerminal";
+
 
 /* ─── Animated Counter Hook ─────────────────────────────── */
 function useAnimatedCount(target, duration = 800) {
@@ -544,6 +546,15 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           </motion.div>
         </div>
       )}
+
+      {/* ── Mission Control CLI Console ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55, duration: 0.4 }}
+      >
+        <MissionControlTerminal />
+      </motion.div>
     </div>
   );
 }

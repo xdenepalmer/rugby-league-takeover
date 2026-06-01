@@ -21,6 +21,8 @@ import ReplyTree from "@/components/forum/ReplyTree";
 import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea from "@/components/forum/MentionTextarea";
 import MediaAttach from "@/components/forum/MediaAttach";
+import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
+
 
 /* ━━━ Constants & Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const emptyPost = { author_name: "", title: "", body: "", category: "General", media_url: "" };
@@ -1427,7 +1429,7 @@ function MobileFAB({ onClick }) {
 }
 
 /* ━━━ Compose Sidebar (Premium Enhanced) ━━━━━━━━━━━━━━━━━ */
-function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [] }) {
+function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [], onFilterSearch, onClaimSeat, searchQuery }) {
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Compose Card */}
@@ -1529,6 +1531,13 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
         </div>
       </div>
 
+      {/* Stadium Seating Planner */}
+      <StadiumSeatPlanner
+        onFilterSearch={onFilterSearch}
+        onClaimSeat={onClaimSeat}
+        currentSearch={searchQuery}
+      />
+
       {/* Top Contributors */}
       <TopContributors allThreads={allThreads} />
 
@@ -1537,6 +1546,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
 
       {/* Recent Activity */}
       <RecentActivityFeed allThreads={allThreads} />
+
 
       {/* Quick Stats */}
       <div className="border border-border/50 bg-card/20 p-4">
@@ -1905,6 +1915,33 @@ export default function Forum() {
               </div>
             </motion.div>
 
+            {/* Seating Planner at top of feed for MatchDay category */}
+            <AnimatePresence>
+              {selectedCategory === "MatchDay" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <StadiumSeatPlanner
+                    onFilterSearch={(q) => setSearchQuery(q)}
+                    onClaimSeat={(q) => {
+                      setDraft((d) => ({
+                        ...d,
+                        title: `[${q}] Supporter Meetup!`,
+                        body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
+                        category: "MatchDay",
+                      }));
+                      setShowMobileCompose(true);
+                      window.scrollTo({ top: 300, behavior: "smooth" });
+                    }}
+                    currentSearch={searchQuery}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Thread Feed */}
             <div className="space-y-3">
               {filteredThreads.map((post, index) => (
@@ -1943,6 +1980,17 @@ export default function Forum() {
               onSubmit={handlePost} isPending={createMutation.isPending}
               allThreads={allThreads}
               people={mentionPeople}
+              onFilterSearch={(q) => setSearchQuery(q)}
+              onClaimSeat={(q) => {
+                setDraft((d) => ({
+                  ...d,
+                  title: `[${q}] Supporter Meetup!`,
+                  body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
+                  category: "MatchDay",
+                }));
+                window.scrollTo({ top: 300, behavior: "smooth" });
+              }}
+              searchQuery={searchQuery}
             />
           </div>
         </div>
