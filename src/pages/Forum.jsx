@@ -807,10 +807,10 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                   <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
                   <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
                   <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
-                  <span className="text-[10px] text-slate-500">•</span>
-                  <span className="text-[10px] font-mono text-slate-400 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+                  <span className="text-[10px] text-slate-350 font-bold">•</span>
+                  <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400 font-medium">
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-250 font-semibold">
                   <span className="flex items-center gap-1"><Eye className="h-3 w-3 text-primary" /> {engagement.views} views</span>
                   <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3 text-accent" /> {replies.length} replies</span>
                 </div>
@@ -1927,9 +1927,9 @@ export default function Forum() {
           </motion.div>
         )}
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,_1fr)_320px]">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,_1fr)_320px]">
           {/* ━━━ LEFT: Feed ━━━ */}
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             {/* Live Activity Ticker */}
             <LiveActivityTicker threads={allThreads} />
 
