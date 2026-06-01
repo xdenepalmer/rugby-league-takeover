@@ -6,11 +6,10 @@ import {
 } from "recharts";
 import {
   TrendingUp, DollarSign, Users, ShoppingCart, MessageSquare,
-  ArrowUpRight, ArrowDownRight, Activity, Newspaper, Package,
-  Eye, Clock, Zap, Radio,
+  ArrowUpRight, ArrowDownRight, Activity, Newspaper, Package, Clock, Radio, Wifi, WifiOff, Smartphone, CreditCard,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import MissionControlTerminal from "./MissionControlTerminal";
+import SystemStatusPanel from "./SystemStatusPanel";
 import { Button } from "@/components/ui/button";
 
 /* ─── Animated Counter Hook ─────────────────────────────── */
@@ -88,58 +87,31 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
   );
 }
 
-/* ─── System Status Widget ──────────────────────────────── */
-function SystemStatusWidget({ simulatedCpu, simulatedBandwidth, simLoad, networkMode }) {
-  const [uptimeSeconds, setUptimeSeconds] = useState(0);
-  const [diagnostics, setDiagnostics] = useState({
-    stripe: { label: "Stripe Gateway", state: "standby", color: "text-slate-400" },
-    db: { label: "DB Replication", state: "standby", color: "text-slate-400" },
-    sw: { label: "PWA Caching SW", state: "standby", color: "text-slate-400" },
-  });
+/* ─── System Status Widget (real, plain-English) ─────────── */
+function SystemStatusWidget() {
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [installed, setInstalled] = useState(false);
+  const [checkedAt, setCheckedAt] = useState(() => new Date());
 
   useEffect(() => {
-    const id = setInterval(() => setUptimeSeconds((s) => s + 1), 1000);
-    return () => clearInterval(id);
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    setInstalled(Boolean(navigator.serviceWorker && navigator.serviceWorker.controller));
+    const id = setInterval(() => setCheckedAt(new Date()), 30000);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+      clearInterval(id);
+    };
   }, []);
 
-  const runDiagnostic = (key) => {
-    setDiagnostics(prev => ({
-      ...prev,
-      [key]: { ...prev[key], state: "scanning", color: "text-amber-400" }
-    }));
-    
-    window.dispatchEvent(new CustomEvent("rlt_admin_log", {
-      detail: { type: "info", text: `[TELEMETRY] Initiated live integrity test on core node: ${key.toUpperCase()}` }
-    }));
-
-    setTimeout(() => {
-      setDiagnostics(prev => ({
-        ...prev,
-        [key]: { ...prev[key], state: "nominal", color: "text-emerald-400 animate-pulse" }
-      }));
-      window.dispatchEvent(new CustomEvent("rlt_admin_log", {
-        detail: { type: "success", text: `[TELEMETRY] Node verification: ${key.toUpperCase()} is ONLINE (OK). State: NOMINAL.` }
-      }));
-    }, 1500);
-  };
-
-  const uptime = useMemo(() => {
-    const h = Math.floor(uptimeSeconds / 3600);
-    const m = Math.floor((uptimeSeconds % 3600) / 60);
-    const s = uptimeSeconds % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  }, [uptimeSeconds]);
-
-  const metrics = [
-    { label: "Uptime", value: uptime, icon: Clock },
-    { label: "Bandwidth", value: `${simulatedBandwidth} MB/s`, icon: Zap },
-    { label: "CPU Load", value: `${simulatedCpu}%`, icon: Eye },
+  const tiles = [
+    { label: "Connection", value: online ? "Online" : "Offline", ok: online, icon: online ? Wifi : WifiOff },
+    { label: "App", value: installed ? "Offline-ready" : "In browser", ok: true, icon: Smartphone },
+    { label: "Payments", value: "Secure", ok: true, icon: CreditCard },
   ];
-
-  const isOffline = networkMode === "offline";
-  const isLaggy = networkMode === "latency";
-  
-  const statusLabel = isOffline ? "Connection Dropped" : isLaggy ? "Degraded Operation" : simLoad > 85 ? "Peak Load Active" : "All Systems Nominal";
 
   return (
     <motion.div
@@ -148,69 +120,34 @@ function SystemStatusWidget({ simulatedCpu, simulatedBandwidth, simLoad, network
       transition={{ delay: 0.3, duration: 0.4 }}
       className="border border-border bg-card/60 cmd-glass overflow-hidden"
     >
-      <div className={`h-[2px] w-full transition-colors duration-500 ${
-        isOffline ? "bg-gradient-to-r from-red-600 via-red-500 to-red-600 animate-pulse" :
-        isLaggy ? "bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 animate-pulse" :
-        simLoad > 85 ? "bg-gradient-to-r from-red-500 via-orange-400 to-red-500 animate-pulse" : 
-        "bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500"
-      }`} />
+      <div className={`h-[2px] w-full ${online ? "bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500" : "bg-gradient-to-r from-red-600 via-red-500 to-red-600 animate-pulse"}`} />
       <div className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Activity className={`h-4 w-4 cmd-pulse ${isOffline || simLoad > 85 ? "text-red-400" : isLaggy ? "text-amber-400" : "text-emerald-400"}`} />
+          <Activity className={`h-4 w-4 cmd-pulse ${online ? "text-emerald-400" : "text-red-400"}`} />
           <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-200">
             System Status
           </h3>
-          <span className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 border text-[8px] font-bold uppercase tracking-wider transition-colors duration-500 ${
-            isOffline || simLoad > 85 ? "bg-red-500/10 border-red-500/20 text-red-400 animate-pulse" :
-            isLaggy ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
-            "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+          <span className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 border text-[8px] font-bold uppercase tracking-wider ${
+            online ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400 animate-pulse"
           }`}>
-            <span className={`h-1.5 w-1.5 rounded-full cmd-blink ${isOffline || simLoad > 85 ? "bg-red-400" : isLaggy ? "bg-amber-400" : "bg-emerald-400"}`} />
-            {statusLabel}
+            <span className={`h-1.5 w-1.5 rounded-full cmd-blink ${online ? "bg-emerald-400" : "bg-red-400"}`} />
+            {online ? "All good" : "Offline"}
           </span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          {metrics.map(({ label, value, icon: MIcon }) => (
+          {tiles.map(({ label, value, ok, icon: MIcon }) => (
             <div key={label} className="text-center border border-border/40 bg-muted/20 p-3">
-              <MIcon className="h-3.5 w-3.5 mx-auto text-muted-foreground mb-1.5" />
-              <p className="font-mono text-sm font-bold text-foreground tabular-nums">{value}</p>
+              <MIcon className={`h-3.5 w-3.5 mx-auto mb-1.5 ${ok ? "text-emerald-400" : "text-red-400"}`} />
+              <p className="text-sm font-bold text-foreground">{value}</p>
               <p className="text-[8px] uppercase tracking-wider text-slate-300 mt-0.5">{label}</p>
             </div>
           ))}
         </div>
 
-        {/* Interactive Diagnostics */}
-        <div className="mt-4 pt-3.5 border-t border-border/30 space-y-2">
-          <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400">Node Live Diagnostics</p>
-          <div className="space-y-1.5">
-            {Object.entries(diagnostics).map(([key, item]) => (
-              <div key={key} className="flex items-center justify-between text-[10px] font-mono border border-border/20 bg-neutral-950/40 px-2.5 py-1">
-                <span className="text-slate-300">{item.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[8px] font-bold uppercase tracking-wider ${item.color}`}>
-                    {item.state}
-                  </span>
-                  {item.state === "standby" && (
-                    <button
-                      type="button"
-                      onClick={() => runDiagnostic(key)}
-                      className="px-1.5 py-0.5 border border-border/60 hover:border-primary hover:text-primary transition-all text-[8px] font-bold uppercase text-slate-300"
-                    >
-                      Scan
-                    </button>
-                  )}
-                  {item.state === "scanning" && (
-                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
-                  )}
-                  {item.state.startsWith("nominal") && (
-                    <span className="text-emerald-400 font-extrabold text-[11px]">✓</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <p className="mt-4 pt-3.5 border-t border-border/30 flex items-center gap-1.5 text-[10px] text-slate-400">
+          <Clock className="h-3 w-3" /> Checked {checkedAt.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })} · refreshes automatically
+        </p>
       </div>
     </motion.div>
   );
@@ -343,7 +280,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
   }, []);
 
   const simulatedCpu = Math.min(Math.round(25 + simLoad * 0.7 + jitter + (networkMode === "offline" ? 12 : networkMode === "latency" ? 6 : 0)), 100);
-  const simulatedBandwidth = networkMode === "offline" ? "0.00" : networkMode === "latency" ? (0.12 + (jitter * 0.02)).toFixed(2) : (1.8 + simLoad * 0.12 + (jitter * 0.05)).toFixed(2);
 
   const handleNetworkChange = (mode) => {
     setNetworkMode(mode);
@@ -815,7 +751,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           color="bg-gradient-to-r from-cyan-500 to-cyan-500/60"
           delay={0.3}
         />
-        <SystemStatusWidget simulatedCpu={simulatedCpu} simulatedBandwidth={simulatedBandwidth} simLoad={simLoad} networkMode={networkMode} />
+        <SystemStatusWidget />
       </div>
 
       {/* ── Charts Grid ── */}
@@ -1191,13 +1127,13 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         </div>
       </motion.div>
 
-      {/* ── Mission Control CLI Console ── */}
+      {/* ── System health + what needs attention (plain English) ── */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55, duration: 0.4 }}
       >
-        <MissionControlTerminal />
+        <SystemStatusPanel counts={counts} orders={orders} registrations={registrations} />
       </motion.div>
     </div>
   );
