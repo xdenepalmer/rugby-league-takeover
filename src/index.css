@@ -108,6 +108,27 @@
   #root {
     min-height: 100%;
   }
+
+  /* Prevent iOS Safari from zooming in when focusing a form field. Inputs must be
+     at least 16px on touch devices, so we bump them only on coarse pointers. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+
+  /* Native-app touch behaviour: suppress the long-press callout menu and text
+     selection on app chrome (buttons / tab bar), while leaving content selectable. */
+  button,
+  [role="button"],
+  .ios-tabbar,
+  .ios-tabbar-item {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 @layer utilities {
