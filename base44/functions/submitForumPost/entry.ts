@@ -155,6 +155,7 @@ Deno.serve(async (req) => {
       ip_address: ip,
       user_email: user?.email || '',
       user_id: user?.id || '',
+      author_avatar: trimToLength(user?.avatar_url, 600),
       media_url: mediaUrl,
       media_type: mediaType
     });

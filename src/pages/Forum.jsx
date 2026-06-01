@@ -172,7 +172,7 @@ function FloatingParticles() {
 }
 
 /* ━━━ User Avatar (Enhanced) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function UserAvatar({ name, size = "md", showStatus = false }) {
+function UserAvatar({ name, size = "md", showStatus = false, src = "" }) {
   const initial = (name || "?")[0].toUpperCase();
   const second = (name || "??").length > 1 ? name.split(/\s+/)?.[1]?.[0]?.toUpperCase() || "" : "";
   const seed = [...(name || "")].reduce((t, c) => t + c.charCodeAt(0), 0);
@@ -182,16 +182,25 @@ function UserAvatar({ name, size = "md", showStatus = false }) {
 
   return (
     <div className="relative shrink-0">
-      <div
-        className={`${sizes[size]} flex items-center justify-center font-bold uppercase tracking-wider rounded-full`}
-        style={{
-          background: `linear-gradient(135deg, hsl(${hue}, 75%, 45%) 0%, hsl(${(hue + 30) % 360}, 65%, 35%) 100%)`,
-          border: `1.5px solid hsl(${hue}, 70%, 55%, 0.4)`,
-          boxShadow: `0 0 12px hsl(${hue}, 70%, 50%, 0.15)`,
-        }}
-      >
-        {initial}{second}
-      </div>
+      {src ? (
+        <img
+          src={src}
+          alt={name || "Member"}
+          className={`${sizes[size]} rounded-full object-cover`}
+          style={{ border: `1.5px solid hsl(${hue}, 70%, 55%, 0.4)`, boxShadow: `0 0 12px hsl(${hue}, 70%, 50%, 0.15)` }}
+        />
+      ) : (
+        <div
+          className={`${sizes[size]} flex items-center justify-center font-bold uppercase tracking-wider rounded-full`}
+          style={{
+            background: `linear-gradient(135deg, hsl(${hue}, 75%, 45%) 0%, hsl(${(hue + 30) % 360}, 65%, 35%) 100%)`,
+            border: `1.5px solid hsl(${hue}, 70%, 55%, 0.4)`,
+            boxShadow: `0 0 12px hsl(${hue}, 70%, 50%, 0.15)`,
+          }}
+        >
+          {initial}{second}
+        </div>
+      )}
       {showStatus && (
         <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-background cmd-pulse" />
       )}
@@ -683,7 +692,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             {/* Author info */}
             <div className="flex items-start gap-3 mb-6">
               <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
-                <UserAvatar name={post.author_name} size="lg" />
+                <UserAvatar name={post.author_name} size="lg" src={post.author_avatar} />
               </UserProfileHoverCard>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -737,7 +746,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             </p>
             <div className="flex gap-3">
               <div className="shrink-0 hidden sm:block">
-                <UserAvatar name={isAuthenticated ? (user?.full_name || user?.email) : replyDraft.author_name} size="sm" />
+                <UserAvatar name={isAuthenticated ? (user?.full_name || user?.email) : replyDraft.author_name} size="sm" src={isAuthenticated ? user?.avatar_url : ""} />
               </div>
               <div className="flex-1 space-y-2">
                 {!isAuthenticated && (
@@ -887,7 +896,7 @@ function ForumPostCard({
         {/* Header */}
         <div className="flex items-start gap-3">
           <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
-            <UserAvatar name={post.author_name} showStatus={index < 3} />
+            <UserAvatar name={post.author_name} showStatus={index < 3} src={post.author_avatar} />
           </UserProfileHoverCard>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -1061,7 +1070,7 @@ function ForumPostCard({
                 </p>
                 {isAuthenticated ? (
                   <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
-                    <UserAvatar name={user?.full_name || user?.email} size="sm" />
+                    <UserAvatar name={user?.full_name || user?.email} size="sm" src={user?.avatar_url} />
                     <span className="text-xs text-muted-foreground/60">
                       Replying as <span className="font-bold text-foreground">{user?.full_name || user?.email}</span>
                     </span>
@@ -1424,7 +1433,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
           <form onSubmit={onSubmit} className="space-y-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
-                <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus />
+                <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus src={user?.avatar_url} />
                 <div>
                   <p className="text-xs font-bold text-foreground">{user?.full_name || user?.email}</p>
                   <p className="text-[8px] text-muted-foreground/40">Authenticated</p>
@@ -1938,7 +1947,7 @@ export default function Forum() {
                 <form onSubmit={(e) => { handlePost(e); setShowMobileCompose(false); }} className="space-y-3">
                   {isAuthenticated ? (
                     <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
-                      <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus />
+                      <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus src={user?.avatar_url} />
                       <span className="text-xs font-bold text-foreground">{user?.full_name || user?.email}</span>
                     </div>
                   ) : (

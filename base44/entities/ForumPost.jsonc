@@ -71,6 +71,10 @@
         }
       }
     },
+    "author_avatar": {
+      "type": "string",
+      "description": "Snapshot of the author's profile photo at post time"
+    },
     "media_url": {
       "type": "string",
       "description": "Attached forum media URL"
