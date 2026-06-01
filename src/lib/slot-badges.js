@@ -5,22 +5,32 @@
 export const SLOT_SYMBOLS = [
   { key: "cherry", emoji: "🍒", weight: 30 },
   { key: "lemon", emoji: "🍋", weight: 26 },
-  { key: "bell", emoji: "🔔", weight: 18 },
+  { key: "bell", emoji: "🔔", weight: 20 },
+  { key: "dice", emoji: "🎲", weight: 18 },
+  { key: "chip", emoji: "🟡", weight: 16 },
   { key: "star", emoji: "⭐", weight: 13 },
-  { key: "footy", emoji: "🏉", weight: 9 },
-  { key: "diamond", emoji: "💎", weight: 5 },
-  { key: "seven", emoji: "7️⃣", weight: 3 },
+  { key: "footy", emoji: "🏉", weight: 10 },
+  { key: "clover", emoji: "🍀", weight: 8 },
+  { key: "diamond", emoji: "💎", weight: 6 },
+  { key: "crown", emoji: "👑", weight: 4 },
+  { key: "moneybag", emoji: "💰", weight: 3 },
+  { key: "seven", emoji: "7️⃣", weight: 2 },
 ];
 
 // One collectible badge per 3-of-a-kind. Higher rarity = rarer symbol.
 export const SLOT_BADGES = [
-  { id: "cherry", emoji: "🍒", label: "Cherry Picker", rarity: 1 },
-  { id: "lemon", emoji: "🍋", label: "Fresh Squeeze", rarity: 2 },
-  { id: "bell", emoji: "🔔", label: "Bell Ringer", rarity: 3 },
-  { id: "star", emoji: "⭐", label: "Lucky Star", rarity: 4 },
-  { id: "footy", emoji: "🏉", label: "Footy Legend", rarity: 5 },
-  { id: "diamond", emoji: "💎", label: "Diamond Hands", rarity: 6 },
-  { id: "seven", emoji: "7️⃣", label: "Triple Seven", rarity: 7 },
+  { id: "cherry", emoji: "🍒", label: "Cherry Picker", rarity: 1, tier: "Common" },
+  { id: "lemon", emoji: "🍋", label: "Fresh Squeeze", rarity: 2, tier: "Common" },
+  { id: "bell", emoji: "🔔", label: "Bell Ringer", rarity: 3, tier: "Common" },
+  { id: "dice", emoji: "🎲", label: "Dice Roller", rarity: 4, tier: "Uncommon" },
+  { id: "chip", emoji: "🟡", label: "Chip Collector", rarity: 5, tier: "Uncommon" },
+  { id: "star", emoji: "⭐", label: "Lucky Star", rarity: 6, tier: "Rare" },
+  { id: "footy", emoji: "🏉", label: "Footy Legend", rarity: 7, tier: "Rare" },
+  { id: "clover", emoji: "🍀", label: "Four Leaf Flyer", rarity: 8, tier: "Epic" },
+  { id: "diamond", emoji: "💎", label: "Diamond Hands", rarity: 9, tier: "Epic" },
+  { id: "crown", emoji: "👑", label: "Casino Royalty", rarity: 10, tier: "Legendary" },
+  { id: "moneybag", emoji: "💰", label: "High Roller", rarity: 11, tier: "Legendary" },
+  { id: "seven", emoji: "7️⃣", label: "Triple Seven", rarity: 12, tier: "Mythic" },
 ];
 
 const BADGE_BY_ID = Object.fromEntries(SLOT_BADGES.map((b) => [b.id, b]));

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Check, Lock, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { ChevronDown, Check, Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthContext";
 import {
@@ -16,7 +16,15 @@ import {
 
 const ALL_EMOJIS = SLOT_SYMBOLS.map((s) => s.emoji);
 const REEL_CELL = 76;
-const REEL_DURATIONS = [1.55, 2.05, 2.55];
+const REEL_DURATIONS = [1.65, 2.18, 2.72];
+const TIER_STYLES = {
+  Common: "text-slate-300 border-slate-500/25 bg-slate-500/5",
+  Uncommon: "text-emerald-300 border-emerald-400/25 bg-emerald-400/5",
+  Rare: "text-sky-300 border-sky-400/25 bg-sky-400/5",
+  Epic: "text-purple-300 border-purple-400/25 bg-purple-400/5",
+  Legendary: "text-amber-200 border-amber-300/35 bg-amber-300/[0.08]",
+  Mythic: "text-pink-200 border-pink-300/40 bg-pink-400/10",
+};
 const readIds = () => parseBadgeIds(JSON.parse(localStorage.getItem(SLOT_BADGES_KEY) || "[]"));
 
 const fmtCountdown = (ms) => {
@@ -50,7 +58,7 @@ function ReelWindow({ track, index, spinning }) {
           duration: REEL_DURATIONS[index],
           ease: [0.12, 0.78, 0.12, 1],
         }}
-        className="will-change-transform"
+        className={`will-change-transform ${spinning ? "blur-[0.35px]" : ""}`}
       >
         {track.map((emoji, i) => (
           <div key={`${emoji}-${i}`} className="flex h-[76px] items-center justify-center text-[2.65rem] leading-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.85)]">
@@ -241,6 +249,7 @@ export default function SlotMachineBadgeUnlock() {
 
   const canSpin = !spinning && cooldownLeft <= 0;
   const earnedCount = ownedIds.length;
+  const topOwnedBadge = SLOT_BADGES.filter((badge) => ownedIds.includes(badge.id)).sort((a, b) => b.rarity - a.rarity)[0];
 
   return (
     <div className="relative overflow-hidden border border-amber-400/25 bg-[linear-gradient(145deg,rgba(88,28,135,0.26),rgba(7,10,23,0.98)_38%,rgba(127,29,29,0.20))] shadow-[0_0_34px_rgba(251,191,36,0.10)]">
@@ -252,12 +261,19 @@ export default function SlotMachineBadgeUnlock() {
             <div className="grid h-9 w-9 place-items-center border border-amber-300/40 bg-black/50 text-lg shadow-[0_0_18px_rgba(251,191,36,0.20)]">🎰</div>
             <div>
               <h3 className="font-display text-base font-black uppercase tracking-[0.08em] text-amber-100">Vegas Slot Machine</h3>
-              <p className="text-[8px] font-mono uppercase tracking-wider text-amber-300/80">One free spin a day · {earnedCount}/{SLOT_BADGES.length} badges</p>
+              <p className="text-[8px] font-mono uppercase tracking-wider text-amber-300/80">One free spin a day · {earnedCount}/{SLOT_BADGES.length} rewards</p>
             </div>
           </div>
-          <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} className="border border-amber-300/25 bg-black/55 p-2 text-muted-foreground transition-colors hover:text-amber-200" title={soundEnabled ? "Mute" : "Unmute"}>
-            {soundEnabled ? <Volume2 className="h-3.5 w-3.5 text-amber-300" /> : <VolumeX className="h-3.5 w-3.5" />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {topOwnedBadge && (
+              <span className="hidden items-center gap-1 border border-amber-300/25 bg-black/45 px-2 py-1 text-[8px] font-mono uppercase text-amber-200 sm:inline-flex">
+                <Trophy className="h-3 w-3" /> {topOwnedBadge.emoji} {topOwnedBadge.tier}
+              </span>
+            )}
+            <button type="button" onClick={() => setSoundEnabled(!soundEnabled)} className="border border-amber-300/25 bg-black/55 p-2 text-muted-foreground transition-colors hover:text-amber-200" title={soundEnabled ? "Mute" : "Unmute"}>
+              {soundEnabled ? <Volume2 className="h-3.5 w-3.5 text-amber-300" /> : <VolumeX className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </div>
 
         <div className="relative overflow-hidden border border-amber-300/35 bg-black p-2.5 shadow-[inset_0_0_35px_rgba(0,0,0,0.96),0_0_28px_rgba(251,191,36,0.12)]">
@@ -321,19 +337,27 @@ export default function SlotMachineBadgeUnlock() {
         </div>
 
         <div className="mt-4 border-t border-amber-300/15 pt-3">
-          <p className="mb-2 text-[8px] font-mono uppercase tracking-wider text-amber-200/55">Badge collection · {earnedCount}/{SLOT_BADGES.length}</p>
-          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[8px] font-mono uppercase tracking-wider text-amber-200/55">Prize ladder · {earnedCount}/{SLOT_BADGES.length}</p>
+            <span className="inline-flex items-center gap-1 border border-amber-300/20 bg-black/35 px-1.5 py-0.5 text-[7px] font-mono uppercase text-amber-200/70">
+              <Gem className="h-2.5 w-2.5" /> 12 rewards
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
             {SLOT_BADGES.map((badge) => {
               const owned = ownedIds.includes(badge.id);
+              const tierStyle = TIER_STYLES[badge.tier] || TIER_STYLES.Common;
               return (
                 <div
                   key={badge.id}
                   title={owned ? `${badge.label} — unlocked` : `${badge.label} — locked (land three ${badge.emoji})`}
-                  className={`group relative flex flex-col items-center gap-1 border p-1.5 text-center transition-all ${owned ? "border-amber-300/45 bg-amber-300/[0.08] shadow-[0_0_14px_rgba(251,191,36,0.12)]" : "border-border/30 bg-black/35"}`}
+                  className={`group relative min-h-[4.25rem] overflow-hidden border p-1.5 text-center transition-all ${owned ? `${tierStyle} shadow-[0_0_16px_rgba(251,191,36,0.12)]` : "border-border/30 bg-black/35"}`}
                 >
-                  <span className={`text-base leading-none transition-transform group-hover:scale-110 ${owned ? "" : "opacity-25 grayscale"}`}>{badge.emoji}</span>
-                  <span className={`flex items-center gap-0.5 text-[7px] font-bold uppercase leading-tight ${owned ? "text-amber-200" : "text-slate-600"}`}>
-                    {owned ? <Check className="h-2 w-2" /> : <Lock className="h-2 w-2" />}
+                  <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-current to-transparent opacity-35" />
+                  <span className={`block text-lg leading-none transition-transform group-hover:scale-110 ${owned ? "" : "opacity-25 grayscale"}`}>{badge.emoji}</span>
+                  <span className={`mt-1 block truncate text-[7px] font-black uppercase leading-tight ${owned ? "text-current" : "text-slate-600"}`}>{badge.label}</span>
+                  <span className={`mt-0.5 flex items-center justify-center gap-0.5 text-[6px] font-bold uppercase tracking-wide ${owned ? "text-current/80" : "text-slate-700"}`}>
+                    {owned ? <Check className="h-2 w-2" /> : <Lock className="h-2 w-2" />} {badge.tier}
                   </span>
                 </div>
               );
