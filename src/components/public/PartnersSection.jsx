@@ -5,6 +5,45 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import SectionHeader from "./SectionHeader";
 
+const defaultPartners = [
+  {
+    id: "default-rw",
+    name: "Resorts World Las Vegas",
+    logo_url: "",
+    url: "https://www.rwlasvegas.com/",
+    description: "Official resort partner & fan headquarters.",
+    sort_order: 1,
+    is_published: true
+  },
+  {
+    id: "default-stadium",
+    name: "Allegiant Stadium",
+    logo_url: "",
+    url: "https://www.allegiantstadium.com/",
+    description: "Match day venue for the NRL Takeover.",
+    sort_order: 2,
+    is_published: true
+  },
+  {
+    id: "default-swim",
+    name: "Stadium Swim at Circa",
+    logo_url: "",
+    url: "https://www.circalasvegas.com/stadium-swim/",
+    description: "Official pre-match pool party venue.",
+    sort_order: 3,
+    is_published: true
+  },
+  {
+    id: "default-vegas",
+    name: "Vegas.com",
+    logo_url: "",
+    url: "https://www.vegas.com/",
+    description: "Official travel booking partner.",
+    sort_order: 4,
+    is_published: true
+  }
+];
+
 export default function PartnersSection({ settings = {} }) {
   const { data: partners = [] } = useQuery({
     queryKey: ["partners"],
@@ -15,7 +54,7 @@ export default function PartnersSection({ settings = {} }) {
   });
 
   const visible = partners.filter((p) => p.is_published !== false);
-  if (visible.length === 0) return null;
+  const displayPartners = visible.length > 0 ? visible : defaultPartners;
 
   const Card = ({ partner }) => {
     const inner = (
@@ -41,7 +80,7 @@ export default function PartnersSection({ settings = {} }) {
           {settings.partners_description || "The venues, brands and partners powering the Rugby League Takeover."}
         </SectionHeader>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {visible.map((partner, index) => <Card key={partner.id || index} partner={partner} />)}
+          {displayPartners.map((partner, index) => <Card key={partner.id || index} partner={partner} />)}
         </div>
       </div>
     </section>

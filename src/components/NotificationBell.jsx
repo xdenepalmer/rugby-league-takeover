@@ -60,27 +60,39 @@ export default function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative flex h-9 w-9 items-center justify-center border border-border transition-colors hover:border-primary" aria-label="Notifications">
+        <button 
+          className={`relative flex h-9 w-9 items-center justify-center border transition-all duration-300 bg-secondary/40 ${
+            unread.length > 0
+              ? "border-primary/50 text-primary shadow-[0_0_10px_rgba(249,115,22,0.15)] animate-pulse"
+              : "border-border text-muted-foreground hover:border-primary hover:text-foreground hover:shadow-[0_0_10px_rgba(249,115,22,0.15)]"
+          }`}
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
           {unread.length > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-primary-foreground">
+            <span className="absolute -right-1 -top-1.5 flex h-4 min-w-[16px] items-center justify-center bg-primary px-1 text-[8.5px] font-bold tabular-nums text-white rounded-none shadow-[0_0_10px_hsl(var(--primary))]">
               {unread.length > 9 ? "9+" : unread.length}
             </span>
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 rounded-none p-0">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Notifications</p>
+      <DropdownMenuContent align="end" className="w-80 rounded-none bg-background/95 border-border cmd-glass shadow-2xl p-0">
+        <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 bg-secondary/20">
+          <p className="font-display text-[10px] font-bold uppercase tracking-widest text-foreground">Notifications</p>
           {unread.length > 0 && (
-            <button onClick={() => markAllRead.mutate()} className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground">
-              <CheckCheck className="h-3 w-3" /> Mark all read
+            <button 
+              onClick={() => markAllRead.mutate()} 
+              className="flex items-center gap-1 text-[9px] uppercase tracking-widest font-mono text-muted-foreground hover:text-primary transition-colors"
+            >
+              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
             </button>
           )}
         </div>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto cmd-scrollbar">
           {notifications.length === 0 && (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground">You're all caught up.</p>
+            <p className="px-4 py-12 text-center text-xs font-mono tracking-wider text-muted-foreground uppercase">
+              No new alerts
+            </p>
           )}
           {notifications.map((n) => {
             const Icon = typeIcon(n.type);
@@ -88,17 +100,25 @@ export default function NotificationBell() {
               <button
                 key={n.id}
                 onClick={() => open(n)}
-                className={`flex w-full items-start gap-3 border-b border-border/50 px-4 py-3 text-left transition-colors hover:bg-secondary ${n.is_read !== true ? "bg-primary/5" : ""}`}
+                className={`flex w-full items-start gap-3 border-b border-border/40 px-4 py-3.5 text-left transition-all duration-300 hover:bg-secondary/60 ${
+                  n.is_read !== true ? "bg-primary/5" : ""
+                }`}
               >
-                <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border ${n.is_read !== true ? "border-primary/40 text-primary" : "border-border text-muted-foreground"}`}>
+                <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border transition-colors ${
+                  n.is_read !== true 
+                    ? "border-primary/40 text-primary bg-primary/5" 
+                    : "border-border/60 text-muted-foreground bg-muted/10"
+                }`}>
                   <Icon className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">{n.title || "Notification"}</p>
-                  {n.preview && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.preview}</p>}
-                  <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{relativeTime(n.created_date)}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-foreground leading-snug">{n.title || "Notification"}</p>
+                  {n.preview && <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{n.preview}</p>}
+                  <p className="mt-1.5 text-[8.5px] font-mono tracking-wider text-muted-foreground uppercase">{relativeTime(n.created_date)}</p>
                 </div>
-                {n.is_read !== true && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                {n.is_read !== true && (
+                  <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-none bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
+                )}
               </button>
             );
           })}

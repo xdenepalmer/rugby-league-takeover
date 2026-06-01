@@ -1,0 +1,90 @@
+import React from "react";
+import { Reply, Trash2, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+// Recursive, nested reply renderer. Reuses the Forum's existing reply state
+// (drafts keyed by node id, activeReplyId, handleReply) so a reply targets the
+// exact comment it's under. Indents with a left border per depth.
+export default function ReplyTree({
+  replies = [],
+  depth = 0,
+  isAuthenticated,
+  user,
+  isSubmitting,
+  activeReplyId,
+  onToggleReply,
+  getReplyDraft,
+  onUpdateReply,
+  onReply,
+  onDelete,
+  timeAgo,
+}) {
+  if (!replies.length) return null;
+  const indent = depth > 0 ? "ml-3 border-l border-border/40 pl-3 md:ml-5 md:pl-5" : "";
+
+  return (
+    <div className={`grid gap-3 ${indent}`}>
+      {replies.map((reply) => {
+        const draft = getReplyDraft(reply.id);
+        const open = activeReplyId === reply.id;
+        const canDelete = isAuthenticated && ((user?.id && String(reply.user_id) === String(user.id)) || user?.role === "admin");
+
+        return (
+          <div key={reply.id} className="grid gap-2">
+            <div className="border border-border/40 bg-muted/[0.03] p-3 transition-colors hover:bg-muted/[0.06]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
+                <span className="font-mono text-[9px] text-muted-foreground/40">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/80">{reply.body}</p>
+              <div className="mt-2 flex items-center gap-4">
+                <button type="button" onClick={() => onToggleReply(reply.id)} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 transition-colors hover:text-accent">
+                  <Reply className="h-3 w-3" /> Reply
+                </button>
+                {canDelete && (
+                  <button type="button" onClick={() => onDelete(reply)} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 transition-colors hover:text-destructive">
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                )}
+              </div>
+
+              {open && (
+                <form onSubmit={(e) => onReply(reply, e)} className="mt-3 grid gap-2 border-t border-border/40 pt-3">
+                  {!isAuthenticated && (
+                    <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => onUpdateReply(reply.id, { author_name: e.target.value })} className="h-9 rounded-none text-sm" />
+                  )}
+                  <Textarea required placeholder={`Reply to ${reply.author_name || "this comment"}…`} value={draft.body} onChange={(e) => onUpdateReply(reply.id, { body: e.target.value })} className="min-h-16 rounded-none text-sm" />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" size="sm" className="h-8 rounded-none text-[10px] uppercase tracking-wider" onClick={() => onToggleReply(reply.id)}>Cancel</Button>
+                    <Button type="submit" size="sm" disabled={isSubmitting || !draft.body} className="h-8 rounded-none bg-primary text-[10px] uppercase tracking-wider hover:bg-primary/90">
+                      <Send className="mr-1 h-3 w-3" /> Reply
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {reply.replies?.length > 0 && (
+              <ReplyTree
+                replies={reply.replies}
+                depth={depth + 1}
+                isAuthenticated={isAuthenticated}
+                user={user}
+                isSubmitting={isSubmitting}
+                activeReplyId={activeReplyId}
+                onToggleReply={onToggleReply}
+                getReplyDraft={getReplyDraft}
+                onUpdateReply={onUpdateReply}
+                onReply={onReply}
+                onDelete={onDelete}
+                timeAgo={timeAgo}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

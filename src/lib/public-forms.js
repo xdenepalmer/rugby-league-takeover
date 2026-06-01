@@ -50,35 +50,54 @@ const forumDateValue = (post) => {
   return Number.isFinite(value) ? value : 0;
 };
 
+// Total number of nested replies under a node (all descendants).
+export function countReplies(node) {
+  return (node?.replies || []).reduce((total, child) => total + 1 + countReplies(child), 0);
+}
+
+// Builds a nested tree: top-level threads, each with `replies`, and each reply
+// can itself have `replies` (true threading at any depth). De-duplicates by id
+// and drops orphans whose parent isn't visible.
 export function buildForumThreads(posts = []) {
-  const repliesByParent = new Map();
-  const threads = [];
   const seen = new Set();
+  const byId = new Map();
+  const published = [];
 
   for (const post of posts || []) {
     if (!post || post.is_published === false) continue;
-    // Guard against duplicate records in the feed (double-submits / cache) so the
-    // reply count and the rendered list can never disagree.
     if (post.id) {
       if (seen.has(post.id)) continue;
       seen.add(post.id);
     }
+    published.push(post);
+    if (post.id) byId.set(post.id, post);
+  }
 
+  const childrenOf = new Map();
+  const roots = [];
+
+  for (const post of published) {
     if (post.parent_id) {
-      const replies = repliesByParent.get(post.parent_id) || [];
-      replies.push(post);
-      repliesByParent.set(post.parent_id, replies);
+      if (!byId.has(post.parent_id)) continue; // orphaned reply (missing/unpublished parent)
+      if (!childrenOf.has(post.parent_id)) childrenOf.set(post.parent_id, []);
+      childrenOf.get(post.parent_id).push(post);
     } else {
-      threads.push(post);
+      roots.push(post);
     }
   }
 
-  return [...threads]
+  const attach = (node, visited) => {
+    if (visited.has(node.id)) return { ...node, replies: [] };
+    visited.add(node.id);
+    const children = [...(childrenOf.get(node.id) || [])]
+      .sort((a, b) => forumDateValue(a) - forumDateValue(b))
+      .map((child) => attach(child, visited));
+    return { ...node, replies: children };
+  };
+
+  return [...roots]
     .sort((a, b) => Number(b.is_pinned === true) - Number(a.is_pinned === true) || forumDateValue(b) - forumDateValue(a))
-    .map((thread) => ({
-      ...thread,
-      replies: [...(repliesByParent.get(thread.id) || [])].sort((a, b) => forumDateValue(a) - forumDateValue(b)),
-    }));
+    .map((thread) => attach(thread, new Set()));
 }
 
 export function normalizeInterestRegistration(input, timestamp = new Date().toISOString()) {
