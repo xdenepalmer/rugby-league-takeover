@@ -49,6 +49,9 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
         <div className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent cmd-scan-line" />
       </div>
 
+      {/* Glass glare sweep overlay */}
+      <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/[0.04] to-transparent skew-x-[-25deg] -translate-x-[150%] transition-transform duration-1000 group-hover:translate-x-[250%] pointer-events-none" />
+
       <div className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -60,8 +63,8 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
             </p>
           </div>
           <div className="relative">
-            <div className={`p-2 border border-border/50 ${color.replace("bg-gradient-to-r", "bg-opacity-10")} bg-muted/30`}>
-              <Icon className="h-5 w-5 text-primary" />
+            <div className={`p-2 border border-border/50 ${color.replace("bg-gradient-to-r", "bg-opacity-10")} bg-muted/30 transition-colors group-hover:border-primary/30`}>
+              <Icon className="h-5 w-5 text-primary transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
             </div>
           </div>
         </div>

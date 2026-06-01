@@ -94,7 +94,7 @@ async function createForumNotifications(base44, { post, parentId, actor, authorN
         preview: String(body || '').slice(0, 140),
         actor_name: authorName,
         post_id: threadId,
-        link: '/forum',
+        link: `/forum?thread=${threadId}`,
         is_read: false,
       });
     }

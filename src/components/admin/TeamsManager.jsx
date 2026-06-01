@@ -1,25 +1,51 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, Pencil, Check, Trash2, Plus } from "lucide-react";
+import { Shield, Pencil, Check, Trash2, Plus, Upload, ChevronDown } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { ALL_TEAMS } from "@/lib/nrl-teams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import ImageField from "./ImageField";
 import TeamCrest from "@/components/public/TeamCrest";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
 
+// Parse a bulk paste into { name, url } rows. Accepts "Name = url", "Name | url",
+// "Name, url", or "Name<tab>url" — one club per line. The split point is the LAST
+// delimiter so commas inside club names (rare) don't break the URL.
+function parseBulk(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const m = line.match(/^(.*?)[\s]*(?:=|\||\t|,)[\s]*(\S+)\s*$/);
+      if (!m) return null;
+      return { name: m[1].trim(), url: m[2].trim() };
+    })
+    .filter((r) => r && r.name && /^https?:\/\//i.test(r.url));
+}
+
 export default function TeamsManager({ teams = [] }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null); // team name currently editing
   const [custom, setCustom] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["teams"] });
 
   const byName = new Map((teams || []).map((t) => [norm(t.name), t]));
   const rosterNames = new Set(ALL_TEAMS.map((t) => norm(t.name)));
   const customTeams = (teams || []).filter((t) => !rosterNames.has(norm(t.name)));
+  const knownByName = new Map([...ALL_TEAMS, ...customTeams].map((t) => [norm(t.name), t]));
+
+  // Live preview of which pasted lines map to a known club.
+  const bulkRows = useMemo(() => parseBulk(bulkText).map((r) => ({
+    ...r, team: knownByName.get(norm(r.name)),
+  })), [bulkText]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bulkMatched = bulkRows.filter((r) => r.team);
 
   const setLogo = useMutation({
     mutationFn: async ({ team, logo_url }) => {
@@ -34,6 +60,18 @@ export default function TeamsManager({ teams = [] }) {
     onSuccess: () => { refresh(); setCustom(""); toast({ title: "Team added" }); },
   });
   const removeTeam = useMutation({ mutationFn: (id) => base44.entities.Team.delete(id), onSuccess: () => { refresh(); toast({ title: "Removed" }); } });
+
+  const applyBulk = useMutation({
+    mutationFn: async (rows) => {
+      for (const { team, url } of rows) {
+        const existing = byName.get(norm(team.name));
+        if (existing) await base44.entities.Team.update(existing.id, { logo_url: url });
+        else await base44.entities.Team.create({ name: team.name, short_name: team.short_name || team.name, logo_url: url, is_active: true, sort_order: 1 });
+      }
+      return rows.length;
+    },
+    onSuccess: (count) => { refresh(); setBulkText(""); setBulkOpen(false); toast({ title: `${count} logo${count === 1 ? "" : "s"} applied` }); },
+  });
 
   const Tile = ({ team }) => {
     const dbTeam = byName.get(norm(team.name));
@@ -78,6 +116,27 @@ export default function TeamsManager({ teams = [] }) {
     <section id="teams-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Shield className="h-6 w-6 text-primary" /> Teams &amp; Crests</h2>
       <p className="mt-2 text-sm text-muted-foreground">Every NRL &amp; Super League club is built in and always available in the match-up picker. Click the pencil to set a club's crest (until then a colour monogram is used). You don't need to add teams — just pick fixtures in Match-ups.</p>
+
+      <div className="mt-4 border border-border bg-background/40">
+        <button type="button" onClick={() => setBulkOpen((o) => !o)} className="flex w-full items-center gap-2 px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+          <Upload className="h-4 w-4" /> Bulk import logos
+          <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${bulkOpen ? "rotate-180" : ""}`} />
+        </button>
+        {bulkOpen && (
+          <div className="grid gap-3 border-t border-border p-4">
+            <p className="text-xs text-muted-foreground">Paste one club per line as <span className="font-mono text-foreground">Club Name = https://logo-url.png</span> (you can also use a comma or <span className="font-mono text-foreground">|</span> instead of <span className="font-mono text-foreground">=</span>). Transparent PNGs look best. Use image links you own or are licensed to use — official club crests are copyrighted.</p>
+            <Textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={6} placeholder={"Penrith Panthers = https://your-cdn.com/penrith.png\nMelbourne Storm = https://your-cdn.com/storm.png"} className="rounded-none font-mono text-xs" />
+            {bulkText.trim() && (
+              <p className="text-xs text-muted-foreground">{bulkMatched.length} of {bulkRows.length} line{bulkRows.length === 1 ? "" : "s"} match a known club.{bulkRows.length > bulkMatched.length && " Unmatched lines (bad URL or unknown club name) are skipped."}</p>
+            )}
+            <div className="flex justify-end">
+              <Button size="sm" className="rounded-none bg-primary hover:bg-primary/90" disabled={bulkMatched.length === 0 || applyBulk.isPending} onClick={() => applyBulk.mutate(bulkMatched)}>
+                <Upload className="mr-2 h-4 w-4" /> {applyBulk.isPending ? "Applying…" : `Apply ${bulkMatched.length} logo${bulkMatched.length === 1 ? "" : "s"}`}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mt-6 grid gap-6">
         <Group title="NRL" list={ALL_TEAMS.filter((t) => t.league === "NRL")} />

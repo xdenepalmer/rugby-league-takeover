@@ -42,7 +42,7 @@ function StatBadge({ icon: Icon, label, value, color = "text-primary", bg = "bg-
 }
 
 /* ─── Single user card ────────────────────────────────────── */
-function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser, me }) {
+function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
   const initial = (u.full_name || u.email || "?").charAt(0).toUpperCase();
   const gradient = getAvatarGradient(u.id);
   const role = u.role || "user";
@@ -416,7 +416,6 @@ export default function UsersManager() {
                 updateUser={updateUser}
                 banUser={banUser}
                 unbanUser={unbanUser}
-                me={me}
               />
             ))}
           </AnimatePresence>

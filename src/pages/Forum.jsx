@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useInView, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
   MessageSquare, Send, Pin, Search, Heart, MessageCircle,
@@ -213,7 +213,7 @@ function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, child
   const memberDate = new Date(Date.now() - memberDays * 24 * 60 * 60 * 1000);
   const badge = getAuthorBadge(name, authorPostCounts);
 
-  const handleEnter = useCallback((e) => {
+  const handleEnter = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       if (wrapperRef.current) {
@@ -762,7 +762,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
               <Button
                 type="submit"
                 disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
-                className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
+                className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/95 text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all"
               >
                 <Send className="mr-1.5 h-3 w-3" /> {isSubmitting ? "Sending…" : "Post Reply"}
               </Button>
@@ -870,6 +870,9 @@ function ForumPostCard({
           <div className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent cmd-scan-line" />
         </div>
       )}
+
+      {/* Glass glare sweep overlay */}
+      <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/[0.03] to-transparent skew-x-[-25deg] -translate-x-[150%] transition-transform duration-1000 group-hover:translate-x-[250%] pointer-events-none" />
 
       {/* Hot badge */}
       {engagement.hot && !post.is_pinned && (
@@ -1086,7 +1089,7 @@ function ForumPostCard({
                   <Button
                     type="submit"
                     disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
-                    className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90"
+                    className="h-8 rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/95 text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all"
                   >
                     <Send className="mr-1.5 h-3 w-3" /> {isSubmitting ? "Sending…" : "Post Reply"}
                   </Button>
@@ -1114,7 +1117,7 @@ function ForumPostCard({
 }
 
 /* ━━━ Top Contributors Leaderboard ━━━━━━━━━━━━━━━━━━━━━━━ */
-function TopContributors({ allThreads, authorPostCounts, authorReplyCounts }) {
+function TopContributors({ allThreads }) {
   const topUsers = useMemo(() => {
     const totalCounts = {};
     allThreads.forEach(t => {
@@ -1380,7 +1383,7 @@ function MobileFAB({ onClick }) {
 }
 
 /* ━━━ Compose Sidebar (Premium Enhanced) ━━━━━━━━━━━━━━━━━ */
-function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [], authorPostCounts, authorReplyCounts }) {
+function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [] }) {
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Compose Card */}
@@ -1471,7 +1474,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
             <Button
               type="submit"
               disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || isPending}
-              className="w-full h-10 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90 transition-all group"
+              className="w-full h-10 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/95 text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] hover:shadow-[0_0_18px_rgba(249,115,22,0.45)] transition-all group"
             >
               <Send className="mr-2 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               {isPending ? "Submitting…" : "Submit for Review"}
@@ -1482,7 +1485,7 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
       </div>
 
       {/* Top Contributors */}
-      <TopContributors allThreads={allThreads} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts} />
+      <TopContributors allThreads={allThreads} />
 
       {/* Online Users */}
       <OnlineUsersWidget threads={allThreads} />
@@ -1528,6 +1531,7 @@ export default function Forum() {
   const [replyDrafts, setReplyDrafts] = useState({});
   const [showMobileCompose, setShowMobileCompose] = useState(false);
   const [threadModalPost, setThreadModalPost] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
   const { data: posts = [] } = useQuery({
@@ -1601,6 +1605,20 @@ export default function Forum() {
   };
 
   const allThreads = buildForumThreads(posts);
+
+  // Deep-link: /forum?thread=<id> (used by notifications) opens that thread, then
+  // clears the param so closing the modal doesn't reopen it.
+  const threadParam = searchParams.get("thread");
+  useEffect(() => {
+    if (!threadParam || !posts.length) return;
+    const target = buildForumThreads(posts).find((t) => t.id === threadParam);
+    if (target) {
+      setThreadModalPost(target);
+      const next = new URLSearchParams(searchParams);
+      next.delete("thread");
+      setSearchParams(next, { replace: true });
+    }
+  }, [threadParam, posts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Author post/reply counts for badges and hover cards
   const { authorPostCounts, authorReplyCounts } = useMemo(() => {

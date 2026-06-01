@@ -63,7 +63,7 @@ export default function ReplyTree({
                   <MediaAttach value={draft.media_url} onChange={(url) => onUpdateReply(reply.id, { media_url: url })} />
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" size="sm" className="h-8 rounded-none text-[10px] uppercase tracking-wider" onClick={() => onToggleReply(reply.id)}>Cancel</Button>
-                    <Button type="submit" size="sm" disabled={isSubmitting || !draft.body} className="h-8 rounded-none bg-primary text-[10px] uppercase tracking-wider hover:bg-primary/90">
+                    <Button type="submit" size="sm" disabled={isSubmitting || !draft.body} className="h-8 rounded-none bg-primary text-[10px] uppercase tracking-wider hover:bg-primary/95 text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] hover:shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all">
                       <Send className="mr-1 h-3 w-3" /> Reply
                     </Button>
                   </div>

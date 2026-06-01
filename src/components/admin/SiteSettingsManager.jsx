@@ -251,10 +251,13 @@ export default function SiteSettingsManager({ settings }) {
                       <div className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent cmd-scan-line" />
                     </div>
 
+                    {/* Glass glare sweep overlay */}
+                    <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/[0.04] to-transparent skew-x-[-25deg] -translate-x-[150%] transition-transform duration-1000 group-hover:translate-x-[250%] pointer-events-none" />
+
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="p-2 border border-border/60 bg-muted/20 text-muted-foreground group-hover:text-primary group-hover:border-primary/20 transition-all">
-                          <Icon className="h-5 w-5" />
+                          <Icon className="h-5 w-5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
                         </div>
                         <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-primary/60 bg-primary/5 px-2 py-0.5 border border-primary/10">
                           {c.summary}
