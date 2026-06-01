@@ -8,27 +8,30 @@
     },
     "author_role": {
       "type": "string",
-      "description": "Optional descriptor, e.g. 'Eels fan · Sydney' or 'Vegas 2025 traveller'"
+      "description": "Role, team, or short descriptor for the author"
     },
     "quote": {
       "type": "string",
-      "description": "The testimonial text"
+      "description": "Testimonial quote"
     },
     "avatar_url": {
       "type": "string",
-      "description": "Optional photo/avatar of the person"
+      "description": "Author avatar image URL"
     },
     "rating": {
       "type": "number",
-      "description": "Optional star rating 1-5"
+      "default": 5,
+      "description": "Rating out of 5"
     },
     "sort_order": {
       "type": "number",
-      "default": 1
+      "default": 1,
+      "description": "Display order"
     },
     "is_published": {
       "type": "boolean",
-      "default": true
+      "default": true,
+      "description": "Whether this testimonial is visible publicly"
     }
   },
   "required": [
