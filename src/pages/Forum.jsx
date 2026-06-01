@@ -426,7 +426,7 @@ function LiveActivityTicker({ threads }) {
       exit={{ opacity: 0, height: 0 }}
       className="relative border border-border/30 bg-card/20 overflow-hidden mb-4"
     >
-      <div className="flex items-center">
+      <div className="flex items-center w-full min-w-0">
         <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 border-r border-border/30 bg-primary/5">
           <Activity className="h-3 w-3 text-primary cmd-pulse" />
           <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-primary">Live</span>
@@ -1729,7 +1729,7 @@ export default function Forum() {
           </motion.div>
         )}
 
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,_1fr)_320px]">
           {/* ━━━ LEFT: Feed ━━━ */}
           <div className="space-y-4">
             {/* Live Activity Ticker */}
