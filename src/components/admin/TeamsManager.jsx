@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Shield } from "lucide-react";
+import { Plus, Trash2, Shield, Library } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
+import { NRL_TEAMS } from "@/lib/nrl-teams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +20,20 @@ export default function TeamsManager({ teams = [] }) {
     mutationFn: (data) => base44.entities.Team.create(data),
     onSuccess: () => { refresh(); setDraft(emptyTeam); toast({ title: "Team added" }); },
   });
+
+  const loadLibrary = useMutation({
+    mutationFn: async () => {
+      const existing = new Set((teams || []).map((t) => String(t.name || "").trim().toLowerCase()));
+      const missing = NRL_TEAMS.filter((t) => !existing.has(t.name.toLowerCase()));
+      let order = (teams || []).reduce((max, t) => Math.max(max, Number(t.sort_order || 0)), 0);
+      for (const t of missing) {
+        order += 1;
+        await base44.entities.Team.create({ name: t.name, short_name: t.short_name, logo_url: "", sort_order: order, is_active: true });
+      }
+      return missing.length;
+    },
+    onSuccess: (added) => { refresh(); toast({ title: added ? `Added ${added} NRL team${added === 1 ? "" : "s"}` : "All NRL teams already added", description: added ? "Now upload each team's logo." : undefined }); },
+  });
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Team.update(id, data), onSuccess: refresh });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Team.delete(id), onSuccess: () => { refresh(); toast({ title: "Team removed" }); } });
 
@@ -26,8 +41,13 @@ export default function TeamsManager({ teams = [] }) {
 
   return (
     <section id="teams-admin" className="scroll-mt-28 border border-border bg-card p-6">
-      <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Shield className="h-6 w-6 text-primary" /> Teams</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Add the teams (with logos) that can appear in match-ups. You'll pick from these when building the fixtures.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Shield className="h-6 w-6 text-primary" /> Teams</h2>
+        <Button variant="outline" className="rounded-none" onClick={() => loadLibrary.mutate()} disabled={loadLibrary.isPending}>
+          <Library className="mr-2 h-4 w-4" /> {loadLibrary.isPending ? "Loading…" : "Load NRL team library"}
+        </Button>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">Add the teams (with logos) that can appear in match-ups. Use "Load NRL team library" for all 17 clubs in one click, then upload each logo.</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a team</p>
