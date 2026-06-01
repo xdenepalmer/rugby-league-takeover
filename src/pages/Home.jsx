@@ -62,6 +62,43 @@ const defaultEvent = {
   is_coming_soon: true,
 };
 
+const tickerItems = [
+  { text: "LAS VEGAS TAKEOVER 2026", type: "gold" },
+  { text: "RUGBY LEAGUE GLOBAL INVASION", type: "red" },
+  { text: "VIP TRAVEL PACKAGES DROPPING SOON", type: "gold" },
+  { text: "EXCLUSIVE FAN EVENTS & MEETUPS", type: "red" },
+  { text: "STADIUM SWIM PARTIES", type: "gold" },
+];
+
+const slotSymbols = [
+  ["🍒", "🎰", "🍒"],
+  ["🏉", "🪙", "🏉"],
+  ["⭐", "7️⃣", "⭐"],
+  ["💎", "🔔", "💎"],
+];
+
+const renderBulbRow = (isTop) => {
+  return (
+    <div className={`absolute left-0 right-0 w-full flex justify-between px-2 pointer-events-none overflow-hidden h-2 ${isTop ? "top-1" : "bottom-1"}`}>
+      {Array.from({ length: 40 }).map((_, i) => {
+        const index = isTop ? i : i + 2;
+        let animateClass = "";
+        if (index % 4 === 0) animateClass = "animate-vegas-gold-1 bg-amber-400";
+        else if (index % 4 === 1) animateClass = "animate-vegas-red-1 bg-red-500";
+        else if (index % 4 === 2) animateClass = "animate-vegas-gold-2 bg-amber-400";
+        else animateClass = "animate-vegas-red-2 bg-red-500";
+
+        return (
+          <span
+            key={i}
+            className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${animateClass} shadow-md transition-all duration-300`}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
 export default function Home() {
   const queriesEnabled = appParams.hasBase44Config;
   const { data: settingsRecords = [] } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1), enabled: queriesEnabled });
@@ -80,21 +117,27 @@ export default function Home() {
       <BackgroundVideo sources={videoSources} />
       <div className="relative z-10">
         <HeroSection settings={settings} />
-        <div className="relative w-full overflow-hidden border-y border-border bg-secondary/80 py-4 backdrop-blur-md">
-          <div className="animate-marquee flex gap-12 text-xs font-bold uppercase tracking-[0.3em] text-accent">
-            {Array(4).fill([
-              "LAS VEGAS TAKEOVER 2026",
-              "RUGBY LEAGUE GLOBAL INVASION",
-              "VIP TRAVEL PACKAGES DROPPING SOON",
-              "EXCLUSIVE FAN EVENTS & MEETUPS",
-              "STADIUM SWIM PARTIES",
-            ]).flat().map((text, idx) => (
-              <span key={idx} className="flex items-center gap-12">
-                <span>{text}</span>
-                <span className="text-primary font-extrabold">•</span>
-              </span>
+        <div className="relative w-full overflow-hidden border-y-2 border-amber-500/60 bg-neutral-950 py-5 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+          {renderBulbRow(true)}
+          
+          <div className="animate-marquee flex items-center gap-8">
+            {Array(4).fill(tickerItems).flat().map((item, idx) => (
+              <div key={idx} className="flex items-center gap-8">
+                <span className={`font-display text-xs sm:text-[13px] font-bold uppercase tracking-[0.25em] whitespace-nowrap ${
+                  item.type === "gold" ? "vegas-neon-text-gold" : "vegas-neon-text-red"
+                }`}>
+                  {item.text}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-neutral-900 border border-amber-500/30 rounded shadow-[inset_0_0_8px_rgba(0,0,0,0.9)] text-[10px] select-none whitespace-nowrap">
+                  <span>{slotSymbols[idx % slotSymbols.length][0]}</span>
+                  <span className="scale-110">{slotSymbols[idx % slotSymbols.length][1]}</span>
+                  <span>{slotSymbols[idx % slotSymbols.length][2]}</span>
+                </span>
+              </div>
             ))}
           </div>
+
+          {renderBulbRow(false)}
         </div>
         <CountdownTimer settings={settings} />
         <MatchupsSection />

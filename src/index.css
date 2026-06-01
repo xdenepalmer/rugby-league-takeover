@@ -84,8 +84,6 @@
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -441,4 +439,56 @@
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ─── Las Vegas Casino Marquee & LED Bulb Animations ─────────────────────── */
+
+@keyframes vegas-flash-gold {
+  0%, 100% {
+    background-color: #78350f; /* Amber-900 */
+    box-shadow: 0 0 2px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    background-color: #fbbf24; /* Amber-400 */
+    box-shadow: 0 0 8px #fbbf24, 0 0 16px #fbbf24;
+  }
+}
+
+@keyframes vegas-flash-red {
+  0%, 100% {
+    background-color: #7f1d1d; /* Red-900 */
+    box-shadow: 0 0 2px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    background-color: #ef4444; /* Red-500 */
+    box-shadow: 0 0 8px #ef4444, 0 0 16px #ef4444;
+  }
+}
+
+.vegas-neon-text-gold {
+  color: #fef08a; /* yellow-200 */
+  text-shadow: 0 0 4px #fbbf24, 0 0 12px #f59e0b, 0 0 20px #d97706;
+}
+
+.vegas-neon-text-red {
+  color: #fee2e2; /* red-100 */
+  text-shadow: 0 0 4px #f87171, 0 0 12px #ef4444, 0 0 20px #b91c1c;
+}
+
+.animate-vegas-gold-1 {
+  animation: vegas-flash-gold 1s infinite;
+}
+
+.animate-vegas-gold-2 {
+  animation: vegas-flash-gold 1s infinite;
+  animation-delay: 0.5s;
+}
+
+.animate-vegas-red-1 {
+  animation: vegas-flash-red 1s infinite;
+}
+
+.animate-vegas-red-2 {
+  animation: vegas-flash-red 1s infinite;
+  animation-delay: 0.5s;
 }
