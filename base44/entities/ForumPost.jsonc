@@ -102,6 +102,10 @@
       },
       "description": "User IDs or emails that liked the post"
     },
+    "reactions": {
+      "type": "object",
+      "description": "Map of reaction emoji to the array of user ids who reacted"
+    },
     "view_count": {
       "type": "number",
       "default": 0,

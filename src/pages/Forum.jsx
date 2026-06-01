@@ -7,7 +7,7 @@ import {
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp, Trash2,
   Trophy, Activity, BarChart3, Globe,
-  Plane, MapPin, Reply, ArrowUp
+  Plane, MapPin, Reply, ArrowUp, Smile
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -470,85 +470,85 @@ function AuthorMeta({ meta, className = "" }) {
   );
 }
 
-/* ━━━ Reaction Picker ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ReactionPicker({ postId, isLiked, likeCount, onLike, isPending }) {
-  const [showPicker, setShowPicker] = useState(false);
-  // The viewer's own chosen reaction emoji, remembered per post.
-  const reactionKey = `rlt_reaction_${postId}`;
-  const [myReaction, setMyReaction] = useState(() => {
-    try { return localStorage.getItem(reactionKey) || ""; } catch { return ""; }
-  });
-  const timerRef = useRef(null);
+/* ━━━ Reaction Picker (real multi-emoji reactions with live counts) ━━━ */
+function ReactionPicker({ reactions = {}, legacyLikes = 0, currentUserId, isAuthenticated, onReact, isPending }) {
+  const [open, setOpen] = useState(false);
+  // Local copy for instant feedback; re-syncs whenever the server data changes.
+  const [local, setLocal] = useState(reactions || {});
+  useEffect(() => { setLocal(reactions && typeof reactions === "object" ? reactions : {}); }, [reactions]);
 
-  const handleEnter = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setShowPicker(true);
+  const requireLogin = () => { window.location.href = "/login?next=/forum"; };
+
+  const toggle = (emoji) => {
+    if (!isAuthenticated) return requireLogin();
+    const id = String(currentUserId || "");
+    setLocal((prev) => {
+      const next = { ...prev };
+      const list = Array.isArray(next[emoji]) ? next[emoji].slice() : [];
+      const i = list.indexOf(id);
+      if (i >= 0) list.splice(i, 1); else list.push(id);
+      if (list.length) next[emoji] = list; else delete next[emoji];
+      return next;
+    });
+    onReact(emoji);
+    setOpen(false);
   };
 
-  const handleLeave = () => {
-    timerRef.current = setTimeout(() => setShowPicker(false), 300);
-  };
-
-  const handleReaction = (emoji) => {
-    setMyReaction(emoji);
-    try { localStorage.setItem(reactionKey, emoji); } catch { /* ignore */ }
-    if (!isLiked) onLike(); // picking a reaction also registers the like
-    setShowPicker(false);
-  };
-
-  // Show the viewer's own reaction if they've liked; otherwise a neutral heart.
-  const dominantEmoji = (isLiked && myReaction) || myReaction || "❤️";
+  // Existing reactions to show as chips. Seed a ❤️ chip from legacy likes so old
+  // likes don't disappear before anyone reacts again.
+  let chips = REACTIONS.map((r) => ({ emoji: r.emoji, count: (local[r.emoji] || []).length, mine: (local[r.emoji] || []).includes(String(currentUserId || "")) }))
+    .filter((c) => c.count > 0);
+  if (chips.length === 0 && legacyLikes > 0) {
+    chips = [{ emoji: "❤️", count: legacyLikes, mine: false }];
+  }
 
   return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      <motion.button
-        type="button"
-        onClick={onLike}
-        disabled={isPending}
-        whileTap={{ scale: 0.9 }}
-        className={`flex min-h-11 items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 ${
-          isLiked
-            ? "bg-primary/10 text-primary border border-primary/20"
-            : "text-slate-300 hover:text-primary hover:bg-primary/5 border border-transparent"
-        }`}
-      >
-        <motion.span
-          animate={isLiked ? { scale: [1, 1.4, 1] } : {}}
-          transition={{ duration: 0.3 }}
-          className="text-sm"
+    <div className="relative flex flex-wrap items-center gap-1">
+      {chips.map((c) => (
+        <button
+          key={c.emoji}
+          type="button"
+          disabled={isPending}
+          onClick={() => toggle(c.emoji)}
+          title={isAuthenticated ? "Toggle reaction" : "Log in to react"}
+          className={`flex min-h-11 items-center gap-1 px-2.5 py-1 text-xs font-bold transition-colors ${
+            c.mine ? "border border-primary/40 bg-primary/10 text-primary" : "border border-border/40 text-slate-300 hover:border-primary/30 hover:bg-primary/5"
+          }`}
         >
-          {dominantEmoji}
-        </motion.span>
-        <span className="tabular-nums">{likeCount}</span>
-      </motion.button>
+          <span className="text-sm leading-none">{c.emoji}</span>
+          <span className="tabular-nums">{c.count}</span>
+        </button>
+      ))}
 
-      <AnimatePresence>
-        {showPicker && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.9 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute bottom-full left-0 mb-2 flex items-center gap-0.5 p-1.5 border border-border/60 bg-card/95 backdrop-blur-xl shadow-xl shadow-black/20 z-50"
-          >
-            {REACTIONS.map((r) => (
-              <motion.button
+      {/* Add-reaction button — taps open an inline palette (touch-friendly, never clipped) */}
+      <button
+        type="button"
+        onClick={() => (isAuthenticated ? setOpen((o) => !o) : requireLogin())}
+        title="Add a reaction"
+        aria-label="Add a reaction"
+        className={`flex min-h-11 items-center gap-1 px-2.5 py-1 text-xs font-bold transition-colors ${open ? "border border-primary/40 bg-primary/10 text-primary" : "border border-transparent text-slate-300 hover:text-primary hover:bg-primary/5"}`}
+      >
+        <Smile className="h-4 w-4" />
+      </button>
+
+      {open && (
+        <div className="flex items-center gap-0.5 border border-border/60 bg-card/95 p-1 cmd-glass">
+          {REACTIONS.map((r) => {
+            const mine = (local[r.emoji] || []).includes(String(currentUserId || ""));
+            return (
+              <button
                 key={r.emoji}
                 type="button"
-                onClick={() => handleReaction(r.emoji)}
-                whileHover={{ scale: 1.3, y: -4 }}
-                whileTap={{ scale: 0.85 }}
-                className={`flex min-h-11 min-w-11 flex-col items-center justify-center px-2 py-1 transition-all rounded-sm ${
-                  myReaction === r.emoji ? "bg-primary/10" : "hover:bg-muted/20"
-                }`}
+                onClick={() => toggle(r.emoji)}
                 title={r.label}
+                className={`flex min-h-11 min-w-11 items-center justify-center rounded-sm px-2 py-1 text-lg transition-transform hover:scale-125 ${mine ? "bg-primary/15" : "hover:bg-muted/20"}`}
               >
-                <span className="text-lg leading-none">{r.emoji}</span>
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                {r.emoji}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -782,15 +782,11 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
   const engagement = getEngagement(post);
   const replies = post.replies || [];
   const queryClient = useQueryClient();
-  const isLiked = isAuthenticated && Array.isArray(post.liked_by) && post.liked_by.includes(user?.id);
-  const likeMutation = useMutation({
-    mutationFn: () => base44.functions.invoke("forumAction", { action: "like", postId: post.id }),
+  const reactMutation = useMutation({
+    mutationFn: (emoji) => base44.functions.invoke("forumAction", { action: "react", postId: post.id, emoji }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
   });
-  const toggleLike = () => {
-    if (!isAuthenticated) { window.location.href = "/login?next=/forum"; return; }
-    if (!likeMutation.isPending) likeMutation.mutate();
-  };
+  const onReact = (emoji) => { if (!reactMutation.isPending) reactMutation.mutate(emoji); };
 
   // Lock body scroll
   useEffect(() => {
@@ -804,15 +800,17 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm"
+        transition={{ duration: 0.2, ease: "linear" }}
+        style={{ willChange: "opacity" }}
+        className="fixed inset-0 z-[80] bg-black/65"
         onClick={onClose}
       />
       <motion.div
         initial={{ opacity: 0, y: 60, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 60, scale: 0.96 }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
+        style={{ willChange: "transform, opacity" }}
         className="ios-sheet fixed inset-x-0 bottom-0 z-[81] flex max-h-[92dvh] flex-col overflow-hidden border-t border-border/60 bg-card/95 shadow-2xl shadow-black/30 md:inset-x-[10%] md:inset-y-8 md:max-h-none md:border"
       >
         {/* Top accent */}
@@ -871,7 +869,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
 
             {/* Engagement */}
             <div className="mt-6 flex flex-wrap items-center gap-1 border-t border-border/20 pt-4">
-              <ReactionPicker postId={post.id} isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
+              <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} />
               <ShareButton post={post} />
               <SaveButton post={post} />
             </div>
@@ -948,15 +946,11 @@ const ForumPostCard = memo(function ForumPostCard({
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-30px" });
   const queryClient = useQueryClient();
-  const isLiked = isAuthenticated && Array.isArray(post.liked_by) && post.liked_by.includes(user?.id);
-  const likeMutation = useMutation({
-    mutationFn: () => base44.functions.invoke("forumAction", { action: "like", postId: post.id }),
+  const reactMutation = useMutation({
+    mutationFn: (emoji) => base44.functions.invoke("forumAction", { action: "react", postId: post.id, emoji }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
   });
-  const toggleLike = () => {
-    if (!isAuthenticated) { window.location.href = "/login?next=/forum"; return; }
-    if (!likeMutation.isPending) likeMutation.mutate();
-  };
+  const onReact = (emoji) => { if (!reactMutation.isPending) reactMutation.mutate(emoji); };
   useEffect(() => {
     if (!isInView || !post.id || typeof window === "undefined") return;
     const key = `rlt_viewed_${post.id}`;
@@ -1104,7 +1098,7 @@ const ForumPostCard = memo(function ForumPostCard({
 
         {/* Engagement Bar */}
         <div className="forum-engagement-bar mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
-          <ReactionPicker postId={post.id} isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
+          <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} />
 
           <button
             type="button"
@@ -2247,10 +2241,21 @@ export default function Forum() {
       <AnimatePresence>
         {showMobileCompose && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/70 lg:hidden" onClick={() => setShowMobileCompose(false)} />
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              transition={{ duration: 0.2, ease: "linear" }}
+              style={{ willChange: "opacity" }}
+              className="fixed inset-0 z-50 bg-black/65 lg:hidden" 
+              onClick={() => setShowMobileCompose(false)} 
+            />
             <motion.div
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              initial={{ y: "100%" }} 
+              animate={{ y: 0 }} 
+              exit={{ y: "100%" }}
+              transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
+              style={{ willChange: "transform" }}
               className="ios-sheet ios-scroll fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto border-t border-border bg-card/95 pb-[calc(1.25rem+var(--safe-bottom))] cmd-scrollbar lg:hidden"
               role="dialog"
               aria-modal="true"
