@@ -125,6 +125,66 @@ const REACTIONS = [
   { emoji: "👏", label: "Clap" },
 ];
 
+/* ━━━ Share / Save helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const threadUrl = (post) => {
+  if (typeof window === "undefined") return "";
+  return `${window.location.origin}/forum?thread=${post?.id}`;
+};
+
+async function shareThread(post) {
+  const url = threadUrl(post);
+  const title = post?.title || "Rugby League Takeover forum";
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text: title, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast({ title: "Link copied", description: "Thread link copied to your clipboard." });
+  } catch {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied", description: "Thread link copied to your clipboard." });
+    } catch {
+      toast({ title: "Couldn't share", description: url });
+    }
+  }
+}
+
+const SAVED_KEY = "rlt_saved_posts";
+const getSavedPosts = () => {
+  try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch { return []; }
+};
+const isPostSaved = (id) => getSavedPosts().includes(id);
+const toggleSavedPost = (id) => {
+  const saved = getSavedPosts();
+  const next = saved.includes(id) ? saved.filter((x) => x !== id) : [...saved, id];
+  try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  return next.includes(id);
+};
+
+function ShareButton({ post }) {
+  return (
+    <button type="button" onClick={() => shareThread(post)} title="Share / copy link" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/50 hover:text-foreground transition-colors border border-transparent">
+      <Share2 className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+function SaveButton({ post }) {
+  const [saved, setSaved] = useState(() => isPostSaved(post?.id));
+  const onToggle = () => {
+    const now = toggleSavedPost(post?.id);
+    setSaved(now);
+    toast({ title: now ? "Saved" : "Removed", description: now ? "Added to your saved threads." : "Removed from saved threads." });
+  };
+  return (
+    <button type="button" onClick={onToggle} title={saved ? "Saved" : "Save thread"} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors border border-transparent ${saved ? "text-primary" : "text-muted-foreground/50 hover:text-foreground"}`}>
+      <Bookmark className={`h-3.5 w-3.5 ${saved ? "fill-primary" : ""}`} />
+    </button>
+  );
+}
+
 /* ━━━ Animated Number Counter ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function AnimatedNumber({ value, duration = 1200 }) {
   const [display, setDisplay] = useState(0);
@@ -305,23 +365,14 @@ function AuthorBadge({ name, authorPostCounts }) {
 }
 
 /* ━━━ Reaction Picker ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ReactionPicker({ isLiked, likeCount, onLike, isPending }) {
+function ReactionPicker({ postId, isLiked, likeCount, onLike, isPending }) {
   const [showPicker, setShowPicker] = useState(false);
-  const [selectedReactions, setSelectedReactions] = useState({});
+  // The viewer's own chosen reaction emoji, remembered per post.
+  const reactionKey = `rlt_reaction_${postId}`;
+  const [myReaction, setMyReaction] = useState(() => {
+    try { return localStorage.getItem(reactionKey) || ""; } catch { return ""; }
+  });
   const timerRef = useRef(null);
-
-  // Generate deterministic reaction counts from like count
-  const reactionCounts = useMemo(() => {
-    const counts = {};
-    if (likeCount > 0) {
-      counts["❤️"] = Math.max(1, Math.ceil(likeCount * 0.4));
-      if (likeCount > 2) counts["🏉"] = Math.ceil(likeCount * 0.25);
-      if (likeCount > 4) counts["🔥"] = Math.ceil(likeCount * 0.2);
-      if (likeCount > 6) counts["🎉"] = Math.ceil(likeCount * 0.1);
-      if (likeCount > 8) counts["👏"] = Math.ceil(likeCount * 0.05);
-    }
-    return counts;
-  }, [likeCount]);
 
   const handleEnter = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -333,13 +384,14 @@ function ReactionPicker({ isLiked, likeCount, onLike, isPending }) {
   };
 
   const handleReaction = (emoji) => {
-    setSelectedReactions(prev => ({ ...prev, [emoji]: !prev[emoji] }));
-    onLike();
+    setMyReaction(emoji);
+    try { localStorage.setItem(reactionKey, emoji); } catch { /* ignore */ }
+    if (!isLiked) onLike(); // picking a reaction also registers the like
     setShowPicker(false);
   };
 
-  // Find dominant reaction emoji
-  const dominantEmoji = Object.entries(reactionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "❤️";
+  // Show the viewer's own reaction if they've liked; otherwise a neutral heart.
+  const dominantEmoji = (isLiked && myReaction) || myReaction || "❤️";
 
   return (
     <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
@@ -373,27 +425,21 @@ function ReactionPicker({ isLiked, likeCount, onLike, isPending }) {
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="absolute bottom-full left-0 mb-2 flex items-center gap-0.5 p-1.5 border border-border/60 bg-card/95 backdrop-blur-xl shadow-xl shadow-black/20 z-50"
           >
-            {REACTIONS.map((r) => {
-              const count = (reactionCounts[r.emoji] || 0) + (selectedReactions[r.emoji] ? 1 : 0);
-              return (
-                <motion.button
-                  key={r.emoji}
-                  type="button"
-                  onClick={() => handleReaction(r.emoji)}
-                  whileHover={{ scale: 1.3, y: -4 }}
-                  whileTap={{ scale: 0.85 }}
-                  className={`flex flex-col items-center px-2 py-1 transition-all rounded-sm ${
-                    selectedReactions[r.emoji] ? "bg-primary/10" : "hover:bg-muted/20"
-                  }`}
-                  title={r.label}
-                >
-                  <span className="text-lg leading-none">{r.emoji}</span>
-                  {count > 0 && (
-                    <span className="text-[8px] font-mono font-bold text-muted-foreground/60 mt-0.5 tabular-nums">{count}</span>
-                  )}
-                </motion.button>
-              );
-            })}
+            {REACTIONS.map((r) => (
+              <motion.button
+                key={r.emoji}
+                type="button"
+                onClick={() => handleReaction(r.emoji)}
+                whileHover={{ scale: 1.3, y: -4 }}
+                whileTap={{ scale: 0.85 }}
+                className={`flex flex-col items-center px-2 py-1 transition-all rounded-sm ${
+                  myReaction === r.emoji ? "bg-primary/10" : "hover:bg-muted/20"
+                }`}
+                title={r.label}
+              >
+                <span className="text-lg leading-none">{r.emoji}</span>
+              </motion.button>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -716,13 +762,9 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
 
             {/* Engagement */}
             <div className="mt-6 flex flex-wrap items-center gap-1 border-t border-border/20 pt-4">
-              <ReactionPicker isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
-              <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
-                <Share2 className="h-3.5 w-3.5" />
-              </button>
-              <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent">
-                <Bookmark className="h-3.5 w-3.5" />
-              </button>
+              <ReactionPicker postId={post.id} isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
+              <ShareButton post={post} />
+              <SaveButton post={post} />
             </div>
 
             {/* All replies */}
@@ -950,7 +992,7 @@ function ForumPostCard({
 
         {/* Engagement Bar */}
         <div className="mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
-          <ReactionPicker isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
+          <ReactionPicker postId={post.id} isLiked={isLiked} likeCount={engagement.likes} onLike={toggleLike} isPending={likeMutation.isPending} />
 
           <button
             type="button"
@@ -968,19 +1010,8 @@ function ForumPostCard({
             </span>
           </button>
 
-          <button
-            type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent"
-          >
-            <Share2 className="h-3.5 w-3.5" />
-          </button>
-
-          <button
-            type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-foreground/50 transition-colors border border-transparent"
-          >
-            <Bookmark className="h-3.5 w-3.5" />
-          </button>
+          <ShareButton post={post} />
+          <SaveButton post={post} />
 
           {isAuthenticated && ((user?.id && String(post.user_id) === String(user.id)) || user?.role === "admin") && (
             <button

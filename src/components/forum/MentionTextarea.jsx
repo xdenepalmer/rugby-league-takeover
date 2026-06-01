@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Textarea } from "@/components/ui/textarea";
+import EmojiPicker from "./EmojiPicker";
 
 // Turn a display name into an @handle-safe token (matches the email-local-part
 // style the searchUsers function / notification resolver expect).
@@ -92,6 +93,22 @@ export default function MentionTextarea({ value, onChange, people = [], ...props
     requestAnimationFrame(() => ref.current?.focus());
   };
 
+  // Insert an emoji at the caret (or append if the caret position is unknown).
+  const insertEmoji = (emoji) => {
+    const el = ref.current;
+    const text = value || "";
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      const pos = start + emoji.length;
+      try { el.setSelectionRange(pos, pos); } catch { /* ignore */ }
+    });
+  };
+
   return (
     <div className="relative">
       <Textarea
@@ -101,6 +118,9 @@ export default function MentionTextarea({ value, onChange, people = [], ...props
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         {...props}
       />
+      <div className="absolute bottom-2 right-2">
+        <EmojiPicker onPick={insertEmoji} />
+      </div>
       {open && suggestions.length > 0 && (
         <div className="absolute z-50 mt-1 max-h-56 w-64 max-w-full overflow-y-auto border border-border bg-card shadow-xl">
           {suggestions.map((u) => (
