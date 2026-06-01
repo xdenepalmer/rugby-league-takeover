@@ -9,7 +9,7 @@ import {
   ArrowUpRight, ArrowDownRight, Activity, Newspaper, Package,
   Eye, Clock, Zap, Radio,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import MissionControlTerminal from "./MissionControlTerminal";
 import { Button } from "@/components/ui/button";
 

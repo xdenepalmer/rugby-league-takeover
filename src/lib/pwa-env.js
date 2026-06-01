@@ -17,6 +17,13 @@ export function isPreviewLikeUrl(urlString) {
 }
 
 export function shouldEnablePwaForEnvironment({ href, mode, hasServiceWorker }) {
+  try {
+    const url = new URL(href);
+    if (url.pathname.startsWith("/admin")) return false;
+  } catch {
+    return false;
+  }
+
   return mode === "production" && hasServiceWorker && !isPreviewLikeUrl(href);
 }
 
