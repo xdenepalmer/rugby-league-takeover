@@ -16,8 +16,6 @@ export default function ScrollToTop() {
   const navigationType = useNavigationType();
 
   useEffect(() => {
-    if (navigationType === "POP") return;
-
     if (hash) {
       const id = getHashId(hash);
       const timer = window.setTimeout(() => {
@@ -25,6 +23,8 @@ export default function ScrollToTop() {
       }, 50);
       return () => window.clearTimeout(timer);
     }
+
+    if (navigationType === "POP") return;
 
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname, hash, navigationType]);

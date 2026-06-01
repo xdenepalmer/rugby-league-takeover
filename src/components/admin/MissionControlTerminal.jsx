@@ -30,6 +30,18 @@ export default function MissionControlTerminal() {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [lines]);
 
+  // Hook up event-based log streaming from external modules
+  useEffect(() => {
+    const handleLogEvent = (e) => {
+      const { type, text } = e.detail;
+      const timestamp = new Date().toLocaleTimeString("en-AU", { hour12: false });
+      setLines((prev) => [...prev, `[${timestamp}] ${text}`]);
+    };
+
+    window.addEventListener("rlt_admin_log", handleLogEvent);
+    return () => window.removeEventListener("rlt_admin_log", handleLogEvent);
+  }, []);
+
   // Idle logger: append mock logs automatically every 15 seconds to simulate a live server stream
   useEffect(() => {
     const interval = setInterval(() => {
