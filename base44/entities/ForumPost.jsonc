@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Guest display name"
     },
+    "author_avatar": {
+      "type": "string",
+      "description": "Author avatar image URL"
+    },
     "title": {
       "type": "string",
       "description": "Post title"
@@ -70,10 +74,6 @@
           }
         }
       }
-    },
-    "author_avatar": {
-      "type": "string",
-      "description": "Snapshot of the author's profile photo at post time"
     },
     "media_url": {
       "type": "string",
