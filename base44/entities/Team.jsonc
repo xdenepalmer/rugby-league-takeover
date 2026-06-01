@@ -21,9 +21,7 @@
     }
   },
   "required": [
-    "name",
-    "short_name",
-    "logo_url"
+    "name"
   ],
   "rls": {
     "create": {
