@@ -5,9 +5,9 @@ import { motion, AnimatePresence, useInView, useMotionValue, useTransform, useSp
 import {
   MessageSquare, Send, Pin, Search, Heart, MessageCircle,
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
-  X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp,
+  X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp, Trash2,
   Trophy, Activity, BarChart3, Globe,
-  Plane, MapPin, ThumbsUp, Reply, ArrowUp
+  Plane, MapPin, Reply, ArrowUp
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FORUM_CATEGORIES, buildForumThreads, buildPendingForumPost } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
+import { toast } from "@/components/ui/use-toast";
+import ReplyTree from "@/components/forum/ReplyTree";
 
 /* ━━━ Constants & Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const emptyPost = { author_name: "", title: "", body: "", category: "General" };
@@ -611,7 +613,7 @@ function CategoryPill({ value, isActive, onClick, count }) {
 }
 
 /* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, authorPostCounts, authorReplyCounts }) {
+function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, authorPostCounts, authorReplyCounts }) {
   const meta = getCategoryMeta(post.category);
   const MetaIcon = meta.icon;
   const engagement = getEngagement(post);
@@ -718,42 +720,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                   <MessageCircle className="h-3 w-3" />
                   {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
                 </p>
-                <div className="space-y-3">
-                  {replies.map((reply, ri) => (
-                    <motion.div
-                      key={reply.id}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: ri * 0.04, ease: "easeOut" }}
-                      className="group/reply relative flex gap-3 pl-4 pr-4 py-3 bg-muted/[0.03] hover:bg-muted/[0.06] transition-colors"
-                    >
-                      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/30 via-primary/10 to-transparent" />
-                      <UserProfileHoverCard name={reply.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
-                        <UserAvatar name={reply.author_name} size="sm" />
-                      </UserProfileHoverCard>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
-                          <AuthorBadge name={reply.author_name} authorPostCounts={authorPostCounts} />
-                          <span className="text-[9px] font-mono text-muted-foreground/30 tabular-nums">{timeAgo(reply.created_date)}</span>
-                        </div>
-                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/70">{reply.body}</p>
-                        <div className="flex items-center gap-3 mt-2 opacity-0 group-hover/reply:opacity-100 transition-opacity">
-                          <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-primary transition-colors flex items-center gap-1">
-                            <ThumbsUp className="h-2.5 w-2.5" /> Like
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onUpdateReply({ body: `@${reply.author_name || "Member"} ` })}
-                            className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1"
-                          >
-                            <Reply className="h-2.5 w-2.5" /> Reply
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                <ReplyTree replies={replies} {...replyApi} />
               </div>
             )}
           </div>
@@ -807,7 +774,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
 function ForumPostCard({
   post, isAuthenticated, user, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
-  onOpenThread, authorPostCounts, authorReplyCounts,
+  onOpenThread, onDeletePost, replyApi, authorPostCounts, authorReplyCounts,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -998,6 +965,17 @@ function ForumPostCard({
             <Bookmark className="h-3.5 w-3.5" />
           </button>
 
+          {isAuthenticated && ((user?.id && String(post.user_id) === String(user.id)) || user?.role === "admin") && (
+            <button
+              type="button"
+              onClick={() => onDeletePost(post)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground/30 hover:text-destructive transition-colors border border-transparent"
+              title="Remove this thread"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           <div className="flex-1" />
 
           {/* View Thread button */}
@@ -1043,43 +1021,7 @@ function ForumPostCard({
                     </button>
                   )}
                 </div>
-                {visibleReplies.map((reply, ri) => (
-                  <motion.div
-                    key={reply.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: ri * 0.06, ease: "easeOut" }}
-                    className="group/reply relative flex gap-3 pl-4 pr-4 py-3 bg-muted/[0.03] hover:bg-muted/[0.06] transition-colors"
-                  >
-                    <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/25 via-primary/10 to-transparent" />
-                    <UserProfileHoverCard name={reply.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
-                      <UserAvatar name={reply.author_name} size="sm" />
-                    </UserProfileHoverCard>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
-                        <AuthorBadge name={reply.author_name} authorPostCounts={authorPostCounts} />
-                        <span className="text-[9px] font-mono text-muted-foreground/30 tabular-nums">{timeAgo(reply.created_date)}</span>
-                      </div>
-                      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/70">{reply.body}</p>
-                      <div className="flex items-center gap-3 mt-2 opacity-0 group-hover/reply:opacity-100 transition-opacity">
-                        <button type="button" className="text-[9px] text-muted-foreground/30 hover:text-primary transition-colors flex items-center gap-1">
-                          <ThumbsUp className="h-2.5 w-2.5" /> Like
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!replyOpen) onToggleReply();
-                            onUpdateReply({ body: `@${reply.author_name || "Member"} ` });
-                          }}
-                          className="text-[9px] text-muted-foreground/30 hover:text-accent transition-colors flex items-center gap-1"
-                        >
-                          <Reply className="h-2.5 w-2.5" /> Reply
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                <ReplyTree replies={visibleReplies} {...replyApi} />
                 {showAllReplies && hiddenCount > 0 && (
                   <button
                     type="button"
@@ -1622,6 +1564,31 @@ export default function Forum() {
     });
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: (postId) => base44.functions.invoke("forumAction", { action: "delete", postId }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); toast({ title: "Removed" }); },
+  });
+
+  const handleDelete = (node) => {
+    if (!node?.id) return;
+    if (typeof window !== "undefined" && !window.confirm("Remove this and any replies under it?")) return;
+    deleteMutation.mutate(node.id);
+  };
+
+  // Shared API for the recursive ReplyTree (reply to / delete any comment at any depth).
+  const replyApi = {
+    isAuthenticated,
+    user,
+    isSubmitting: createMutation.isPending,
+    activeReplyId,
+    onToggleReply: (id) => setActiveReplyId(activeReplyId === id ? null : id),
+    getReplyDraft,
+    onUpdateReply: (id, updates) => updateReplyDraft(id, updates),
+    onReply: (node, e) => handleReply(node, e),
+    onDelete: handleDelete,
+    timeAgo,
+  };
+
   const allThreads = buildForumThreads(posts);
 
   // Author post/reply counts for badges and hover cards
@@ -1673,7 +1640,7 @@ export default function Forum() {
   };
 
   return (
-    <main className="relative min-h-screen bg-background text-foreground">
+    <main className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       {/* ━━━ HERO SECTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <section className="relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 cmd-grid-bg opacity-40" />
@@ -1841,6 +1808,8 @@ export default function Forum() {
                   onUpdateReply={(updates) => updateReplyDraft(post.id, updates)}
                   onReply={(e) => handleReply(post, e)}
                   onOpenThread={(p) => setThreadModalPost(p)}
+                  onDeletePost={handleDelete}
+                  replyApi={replyApi}
                   authorPostCounts={authorPostCounts}
                   authorReplyCounts={authorReplyCounts}
                 />
@@ -1882,7 +1851,8 @@ export default function Forum() {
             isSubmitting={createMutation.isPending}
             replyDraft={getReplyDraft(threadModalPost.id)}
             onUpdateReply={(updates) => updateReplyDraft(threadModalPost.id, updates)}
-            onReply={(e) => { handleReply(threadModalPost, e); setThreadModalPost(null); }}
+            onReply={(e) => { handleReply(threadModalPost, e); }}
+            replyApi={replyApi}
             authorPostCounts={authorPostCounts}
             authorReplyCounts={authorReplyCounts}
           />
