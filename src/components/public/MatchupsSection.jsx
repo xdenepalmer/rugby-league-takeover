@@ -1,8 +1,9 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Swords, CalendarDays, MapPin, Shield, ArrowUpRight } from "lucide-react";
+import { Swords, CalendarDays, MapPin, ArrowUpRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import TeamCrest from "./TeamCrest";
 
 const formatKickoff = (value) => {
   if (!value) return "";
@@ -14,9 +15,7 @@ const formatKickoff = (value) => {
 function TeamBadge({ name, logo }) {
   return (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
-      <div className="flex h-16 w-16 items-center justify-center border border-border bg-secondary md:h-20 md:w-20">
-        {logo ? <img src={logo} alt={name} className="h-full w-full object-contain p-1.5" /> : <Shield className="h-7 w-7 text-muted-foreground" />}
-      </div>
+      <TeamCrest name={name} logo={logo} className="h-16 w-16 text-lg md:h-20 md:w-20 md:text-2xl" />
       <span className="font-display text-sm uppercase leading-tight text-foreground md:text-base">{name}</span>
     </div>
   );

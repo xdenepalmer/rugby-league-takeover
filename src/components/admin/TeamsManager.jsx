@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Shield, Library } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
-import { NRL_TEAMS } from "@/lib/nrl-teams";
+import { NRL_TEAMS, SUPER_LEAGUE_TEAMS } from "@/lib/nrl-teams";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import ImageField from "./ImageField";
+import TeamCrest from "@/components/public/TeamCrest";
 
 const emptyTeam = { name: "", short_name: "", logo_url: "", sort_order: 1, is_active: true };
 
@@ -22,9 +23,9 @@ export default function TeamsManager({ teams = [] }) {
   });
 
   const loadLibrary = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (list) => {
       const existing = new Set((teams || []).map((t) => String(t.name || "").trim().toLowerCase()));
-      const missing = NRL_TEAMS.filter((t) => !existing.has(t.name.toLowerCase()));
+      const missing = list.filter((t) => !existing.has(t.name.toLowerCase()));
       let order = (teams || []).reduce((max, t) => Math.max(max, Number(t.sort_order || 0)), 0);
       for (const t of missing) {
         order += 1;
@@ -32,7 +33,7 @@ export default function TeamsManager({ teams = [] }) {
       }
       return missing.length;
     },
-    onSuccess: (added) => { refresh(); toast({ title: added ? `Added ${added} NRL team${added === 1 ? "" : "s"}` : "All NRL teams already added", description: added ? "Now upload each team's logo." : undefined }); },
+    onSuccess: (added) => { refresh(); toast({ title: added ? `Added ${added} team${added === 1 ? "" : "s"}` : "Those teams are already added", description: added ? "Upload each crest to replace the auto monogram." : undefined }); },
   });
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Team.update(id, data), onSuccess: refresh });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Team.delete(id), onSuccess: () => { refresh(); toast({ title: "Team removed" }); } });
@@ -43,11 +44,16 @@ export default function TeamsManager({ teams = [] }) {
     <section id="teams-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Shield className="h-6 w-6 text-primary" /> Teams</h2>
-        <Button variant="outline" className="rounded-none" onClick={() => loadLibrary.mutate()} disabled={loadLibrary.isPending}>
-          <Library className="mr-2 h-4 w-4" /> {loadLibrary.isPending ? "Loading…" : "Load NRL team library"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="rounded-none" onClick={() => loadLibrary.mutate(NRL_TEAMS)} disabled={loadLibrary.isPending}>
+            <Library className="mr-2 h-4 w-4" /> Load NRL ({NRL_TEAMS.length})
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-none" onClick={() => loadLibrary.mutate(SUPER_LEAGUE_TEAMS)} disabled={loadLibrary.isPending}>
+            <Library className="mr-2 h-4 w-4" /> Load Super League ({SUPER_LEAGUE_TEAMS.length})
+          </Button>
+        </div>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">Add the teams (with logos) that can appear in match-ups. Use "Load NRL team library" for all 17 clubs in one click, then upload each logo.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Load the full NRL or British Super League rosters in one click, add more manually, then upload each crest (teams show an auto colour monogram until you do).</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a team</p>
@@ -69,9 +75,7 @@ export default function TeamsManager({ teams = [] }) {
         {sorted.length === 0 && <p className="text-sm text-muted-foreground">No teams yet. Add your first one above.</p>}
         {sorted.map((team) => (
           <div key={team.id} className="grid items-center gap-3 border border-border p-3 md:grid-cols-[56px_1fr_1fr_90px_auto]">
-            <div className="flex h-12 w-12 items-center justify-center border border-border bg-secondary">
-              {team.logo_url ? <img src={team.logo_url} alt={team.name} className="h-full w-full object-contain" /> : <Shield className="h-5 w-5 text-muted-foreground" />}
-            </div>
+            <TeamCrest name={team.name} short={team.short_name} logo={team.logo_url} className="h-12 w-12 text-sm" />
             <Input defaultValue={team.name || ""} onBlur={(e) => updateMutation.mutate({ id: team.id, data: { name: e.target.value } })} className="rounded-none" />
             <Input defaultValue={team.short_name || ""} placeholder="Short name" onBlur={(e) => updateMutation.mutate({ id: team.id, data: { short_name: e.target.value } })} className="rounded-none" />
             <Input type="number" defaultValue={team.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: team.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
