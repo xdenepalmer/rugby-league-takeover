@@ -93,18 +93,24 @@
     "like_count": {
       "type": "number",
       "default": 0,
-      "description": "Number of likes on the post"
+      "description": "Total number of reactions on the post"
     },
     "liked_by": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "User IDs or emails that liked the post"
+      "description": "Legacy user IDs or emails that liked the post"
     },
     "reactions": {
       "type": "object",
-      "description": "Map of reaction emoji to the array of user ids who reacted"
+      "description": "Emoji reaction user IDs grouped by emoji",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
     },
     "view_count": {
       "type": "number",
