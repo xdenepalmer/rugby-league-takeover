@@ -1010,8 +1010,8 @@ function ForumPostCard({
               <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
               <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
               <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
-              <span className="text-[10px] text-muted-foreground/30">•</span>
-              <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
+              <span className="text-[10px] text-slate-500">•</span>
+              <span className="text-[10px] font-mono text-slate-400 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {post.is_pinned && (
@@ -1026,9 +1026,9 @@ function ForumPostCard({
             </div>
           </div>
           {/* Desktop stats */}
-          <div className="hidden md:flex items-center gap-3 text-[10px] text-muted-foreground/30">
-            <span className="flex items-center gap-1 font-mono tabular-nums">
-              <Eye className="h-3 w-3" /> {engagement.views}
+          <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-400">
+            <span className="flex items-center gap-1 font-mono font-bold tabular-nums text-slate-400">
+              <Eye className="h-3 w-3 text-primary" /> {engagement.views}
             </span>
           </div>
         </div>
@@ -1043,13 +1043,13 @@ function ForumPostCard({
 
         {/* Body */}
         <div className="mt-3">
-          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground/80">{displayBody}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-200">{displayBody}</p>
           <ForumMedia url={post.media_url} type={post.media_type} />
           {shouldTruncate && (
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors"
+              className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary transition-colors"
             >
               {expanded ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> Read more</>}
             </button>
@@ -1066,13 +1066,13 @@ function ForumPostCard({
             className={`flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 border ${
               replyOpen
                 ? "bg-accent/10 text-accent border-accent/20"
-                : "text-muted-foreground/50 hover:text-accent hover:bg-accent/5 border-transparent"
+                : "text-slate-300 hover:text-accent hover:bg-accent/5 border-transparent"
             }`}
             aria-label="Write a reply"
           >
             <Reply className="h-3.5 w-3.5" />
             <span className="text-[10px] uppercase tracking-wider">Reply</span>
-            {replies.length > 0 && <span className="rounded-sm bg-muted/30 px-1.5 py-0.5 tabular-nums">{replies.length}</span>}
+            {replies.length > 0 && <span className="rounded-sm bg-muted/60 px-1.5 py-0.5 tabular-nums text-foreground font-bold">{replies.length}</span>}
           </button>
 
           <ShareButton post={post} />
@@ -1082,7 +1082,7 @@ function ForumPostCard({
             <button
               type="button"
               onClick={() => onDeletePost(post)}
-              className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-muted-foreground/30 hover:text-destructive transition-colors border border-transparent"
+              className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-400 hover:text-destructive transition-colors border border-transparent"
               title="Remove this thread"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -1095,16 +1095,16 @@ function ForumPostCard({
           <button
             type="button"
             onClick={() => onOpenThread(post)}
-            className="hidden min-h-11 items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20 sm:flex"
+            className="hidden min-h-11 items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20 sm:flex"
           >
             <Eye className="h-3 w-3" />
             <span className="hidden sm:inline">View Thread</span>
           </button>
 
           {/* Mobile stats */}
-          <div className="flex min-h-11 items-center justify-center gap-1 text-[10px] text-muted-foreground/30 md:hidden">
-            <Eye className="h-3 w-3" />
-            <span className="font-mono tabular-nums">{engagement.views}</span>
+          <div className="flex min-h-11 items-center justify-center gap-1 text-[10px] text-slate-400 font-medium md:hidden">
+            <Eye className="h-3 w-3 text-primary" />
+            <span className="font-mono font-bold tabular-nums text-slate-400">{engagement.views}</span>
           </div>
         </div>
 
@@ -1120,15 +1120,15 @@ function ForumPostCard({
             >
               <div className="mt-4 space-y-2 border-t border-border/20 pt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40 flex items-center gap-1.5">
-                    <MessageCircle className="h-3 w-3" />
+                  <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300 flex items-center gap-1.5">
+                    <MessageCircle className="h-3 w-3 text-primary" />
                     {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
                   </p>
                   {hiddenCount > 0 && !showAllReplies && (
                     <button
                       type="button"
                       onClick={() => setShowAllReplies(true)}
-                      className="text-[9px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary transition-colors"
+                      className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline transition-colors"
                     >
                       Show {hiddenCount} more
                     </button>
@@ -1139,7 +1139,7 @@ function ForumPostCard({
                   <button
                     type="button"
                     onClick={() => setShowAllReplies(false)}
-                    className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 hover:text-muted-foreground pt-1 transition-colors"
+                    className="text-[9px] font-bold uppercase tracking-wider text-slate-400 hover:text-primary pt-1 transition-colors"
                   >
                     Collapse replies
                   </button>
@@ -1161,13 +1161,13 @@ function ForumPostCard({
               className="overflow-hidden"
             >
               <div className="mt-4 space-y-3 border-t border-border/20 pt-4">
-                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
+                <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-350">
                   Write a Reply
                 </p>
                 {isAuthenticated ? (
                   <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
                     <UserAvatar name={user?.full_name || user?.email} size="sm" src={user?.avatar_url} />
-                    <span className="text-xs text-muted-foreground/60">
+                    <span className="text-xs text-slate-300">
                       Replying as <span className="font-bold text-foreground">{user?.full_name || user?.email}</span>
                     </span>
                   </div>
@@ -1188,7 +1188,7 @@ function ForumPostCard({
                   className="min-h-20 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
                 />
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" size="mobile" onClick={onToggleReply} className="rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <Button type="button" variant="ghost" size="mobile" onClick={onToggleReply} className="rounded-none text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-white">
                     Cancel
                   </Button>
                   <Button
@@ -2155,7 +2155,7 @@ export default function Forum() {
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h2 id="forum-mobile-compose-title" className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
-                  <button type="button" onClick={() => setShowMobileCompose(false)} className="touch-target flex items-center justify-center border border-border/30 text-muted-foreground transition-colors hover:border-border hover:text-foreground" aria-label="Close composer">
+                  <button type="button" onClick={() => setShowMobileCompose(false)} className="touch-target flex items-center justify-center border border-border/30 text-slate-350 transition-colors hover:border-border hover:text-foreground" aria-label="Close composer">
                     <X className="h-4 w-4" />
                   </button>
                 </div>

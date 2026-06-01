@@ -478,7 +478,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">Operational Telemetry Settings</h3>
-            <p className="text-[10px] text-muted-foreground/60">Configure time-range scopes, toggle visual chart styles, or test server surge limits.</p>
+            <p className="text-[10px] text-slate-300 font-medium">Configure time-range scopes, toggle visual chart styles, or test server surge limits.</p>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
@@ -490,7 +490,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                   type="button"
                   onClick={() => setTimeFrame(t)}
                   className={`px-3 py-1 text-[9px] font-mono font-bold uppercase tracking-wider rounded transition-all ${
-                    timeFrame === t ? "bg-primary/20 text-primary border border-primary/25" : "text-muted-foreground/45 hover:text-foreground"
+                    timeFrame === t ? "bg-primary/20 text-primary border border-primary/25" : "text-slate-400 hover:text-foreground font-semibold"
                   }`}
                 >
                   {t}
@@ -512,7 +512,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                   className={`px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 ${
                     networkMode === n.mode
                       ? "bg-primary/20 text-primary border border-primary/25"
-                      : "text-muted-foreground/45 hover:text-foreground"
+                      : "text-slate-400 hover:text-foreground font-semibold"
                   }`}
                 >
                   <span className="text-[8px]">{n.icon}</span>
@@ -523,7 +523,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
 
             {/* Simulated Surge Slider */}
             <div className="flex items-center gap-3 border border-border/50 bg-neutral-950 px-3 py-1.5 rounded min-w-[240px]">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 whitespace-nowrap">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-350 whitespace-nowrap">
                 Surge Limit
               </span>
               <input
@@ -914,7 +914,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                       <p className="text-xs font-bold text-accent tabular-nums">
                         ${Number(order.total_aud || 0).toFixed(2)}
                       </p>
-                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground">
+                      <p className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">
                         {order.status || "pending"}
                       </p>
                     </div>
@@ -922,8 +922,8 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                 ))}
                 {orders.length === 0 && (
                   <div className="text-center py-8">
-                    <ShoppingCart className="h-6 w-6 mx-auto text-muted-foreground/30 mb-2" />
-                    <p className="text-[10px] text-muted-foreground">No orders yet</p>
+                    <ShoppingCart className="h-6 w-6 mx-auto text-slate-500 mb-2" />
+                    <p className="text-[10px] text-slate-400 font-medium">No orders yet</p>
                   </div>
                 )}
               </div>
@@ -943,11 +943,11 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         <div className="p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground flex items-center gap-1.5">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-300 flex items-center gap-1.5">
                 <Radio className={`h-3.5 w-3.5 ${networkMode === "offline" ? "text-red-500 animate-pulse" : networkMode === "latency" ? "text-amber-500 animate-pulse" : "text-emerald-400"}`} />
                 PWA Offline Sync Monitor
               </h3>
-              <p className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
+              <p className="text-[9px] font-mono text-slate-350 mt-0.5">
                 Service Worker Buffer Status · Database Sync State
               </p>
             </div>
@@ -976,7 +976,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           {/* Sync Queue Table / List */}
           <div className="border border-border/40 bg-black/40 p-4">
             {syncQueue.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground/45 font-mono text-xs">
+              <div className="text-center py-6 text-slate-400 font-mono text-xs">
                 {networkMode === "online" ? (
                   <p className="flex items-center justify-center gap-2">🟢 PWA Sync database is clean. No pending local logs.</p>
                 ) : (

@@ -92,7 +92,7 @@ function ProductCard({ product, index, addToCart, cart }) {
           </span>
         )}
         {product.category && (
-          <span className="bg-muted border border-border text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 text-muted-foreground">
+          <span className="bg-muted border border-border text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 text-slate-200">
             {product.category}
           </span>
         )}
@@ -107,7 +107,7 @@ function ProductCard({ product, index, addToCart, cart }) {
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-hover:rotate-1" 
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <div className="flex h-full w-full items-center justify-center text-slate-300">
             <ShoppingBag className="h-10 w-10 stroke-1" />
           </div>
         )}
@@ -118,17 +118,17 @@ function ProductCard({ product, index, addToCart, cart }) {
         <h2 className="font-display text-2xl uppercase tracking-wide text-foreground group-hover:text-primary transition-colors">
           {product.name}
         </h2>
-        <p className="mt-2 flex-1 text-sm leading-6 text-muted-foreground line-clamp-3">
+        <p className="mt-2 flex-1 text-sm leading-6 text-slate-200 line-clamp-3">
           {product.description}
         </p>
 
         {/* Stock status indicator */}
         <div className="mt-4 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
             <span className={soldOut ? "text-destructive" : stock <= 5 ? "text-amber-400" : "text-emerald-400"}>
               {stockLabel}
             </span>
-            <span className="text-muted-foreground">{soldOut ? "0" : stock} left</span>
+            <span className="text-slate-300 font-bold">{soldOut ? "0" : stock} left</span>
           </div>
           <div className="h-1 w-full bg-border overflow-hidden">
             <motion.div 
@@ -143,7 +143,7 @@ function ProductCard({ product, index, addToCart, cart }) {
         {/* Price & Action */}
         <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
           <span className="text-xl font-bold font-mono tracking-tight text-accent drop-shadow-[0_0_8px_rgba(217,119,6,0.3)]">
-            ${Number(product.price_aud || 0).toFixed(2)} <span className="text-xs text-muted-foreground font-sans">AUD</span>
+            ${Number(product.price_aud || 0).toFixed(2)} <span className="text-xs text-slate-400 font-sans font-semibold">AUD</span>
           </span>
           <Button 
             onClick={() => addToCart(product)}
@@ -401,7 +401,7 @@ export default function Store() {
         {/* Category Pill Filters */}
         {categories.length > 1 && (
           <div className="mt-8 flex flex-wrap gap-2 items-center border-b border-border/30 pb-4">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mr-2">Filter:</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mr-2">Filter:</span>
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -409,7 +409,7 @@ export default function Store() {
                 className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider border transition-all ${
                   selectedCategory === cat
                     ? "border-primary bg-primary text-primary-foreground shadow-[0_0_12px_rgba(249,115,22,0.3)]"
-                    : "border-border bg-card/40 hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                    : "border-border bg-card/40 hover:border-primary/50 text-slate-300 hover:text-foreground"
                 }`}
               >
                 {cat}
@@ -428,9 +428,9 @@ export default function Store() {
               animate={{ opacity: 1, scale: 1 }}
               className="border border-border bg-card/30 cmd-glass p-16 text-center max-w-lg mx-auto"
             >
-              <BagIcon className="mx-auto h-12 w-12 text-muted-foreground stroke-1 mb-4 animate-bounce" />
+              <BagIcon className="mx-auto h-12 w-12 text-slate-400 stroke-1 mb-4 animate-bounce" />
               <h3 className="font-display text-2xl uppercase tracking-wide mb-2">No merchandise found</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-350 leading-relaxed font-medium">
                 We're currently stocking the shelves with official Las Vegas Takeover gear. Check back shortly!
               </p>
             </motion.div>
@@ -479,7 +479,7 @@ export default function Store() {
                 </h3>
                 <button 
                   onClick={() => setCartOpen(false)}
-                  className="text-xs uppercase tracking-[0.25em] text-muted-foreground hover:text-primary transition-colors"
+                  className="text-xs uppercase tracking-[0.25em] text-slate-300 hover:text-primary transition-colors font-bold"
                 >
                   Close
                 </button>
@@ -488,12 +488,12 @@ export default function Store() {
               {/* Items Section */}
               <div className="flex-1 overflow-y-auto cmd-scrollbar py-4 pr-1">
                 {cart.length === 0 ? (
-                  <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
+                  <div className="flex h-64 flex-col items-center justify-center text-slate-300">
                     <motion.div
                       animate={{ y: [0, -10, 0] }}
                       transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                     >
-                      <BagIcon className="h-12 w-12 stroke-1 mb-3 text-muted-foreground/60" />
+                      <BagIcon className="h-12 w-12 stroke-1 mb-3 text-slate-400" />
                     </motion.div>
                     <p className="text-sm font-semibold uppercase tracking-wider">Your cart is empty</p>
                     <button 
@@ -527,21 +527,21 @@ export default function Store() {
                             <div className="flex items-center border border-border">
                               <button 
                                 onClick={() => updateQuantity(item.id, -1)}
-                                className="flex h-11 w-11 items-center justify-center bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-white"
+                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white"
                               >
                                 <Minus className="h-3 w-3" />
                               </button>
                               <span className="w-10 text-center text-xs font-mono font-bold text-foreground">{item.quantity}</span>
                               <button 
                                 onClick={() => updateQuantity(item.id, 1)}
-                                className="flex h-11 w-11 items-center justify-center bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-white"
+                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white"
                               >
                                 <Plus className="h-3 w-3" />
                               </button>
                             </div>
                             <button 
                               onClick={() => removeFromCart(item.id)}
-                              className="touch-target flex items-center justify-center text-muted-foreground transition-colors hover:text-destructive"
+                              className="touch-target flex items-center justify-center text-slate-400 transition-colors hover:text-destructive"
                               aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -556,7 +556,7 @@ export default function Store() {
 
               {/* Cart Footer */}
               {cart.length > 0 && (
-                <div className="border-t border-border/60 bg-card/60 pt-4 backdrop-blur-md">
+                <div className="border-t border-border/60 bg-card/60 pt-4 backdrop-blur-md pb-safe">
                   {/* Shipping status banner */}
                   <div className="mb-4 bg-muted/20 border border-border/40 p-3 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
@@ -586,17 +586,17 @@ export default function Store() {
                     )}
                     
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         required 
                         placeholder="Your full name" 
                         value={checkoutName}
                         onChange={(e) => setCheckoutName(e.target.value)}
-                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary" 
+                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary text-foreground" 
                       />
                     </div>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         required 
                         type="email" 

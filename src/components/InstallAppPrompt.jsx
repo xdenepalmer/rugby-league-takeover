@@ -71,11 +71,11 @@ export default function InstallAppPrompt() {
                 Add RLT to your phone
               </p>
               {mode === "native" ? (
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                <p className="mt-1 text-xs leading-5 text-slate-200 font-medium">
                   Install the app shell for faster admin access, offline fallback, and a cleaner mobile launch.
                 </p>
               ) : (
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                <p className="mt-1 text-xs leading-5 text-slate-200 font-medium">
                   On iPhone, tap Share, then Add to Home Screen for the closest native app feel.
                 </p>
               )}
@@ -83,7 +83,7 @@ export default function InstallAppPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="ios-pressable flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+              className="ios-pressable flex h-11 w-11 shrink-0 items-center justify-center text-slate-350 hover:text-foreground"
               aria-label="Dismiss install prompt"
             >
               <X className="h-4 w-4" />
@@ -109,7 +109,7 @@ export default function InstallAppPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="ios-pressable flex min-h-11 items-center justify-center border border-border/60 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground"
+              className="ios-pressable flex min-h-11 items-center justify-center border border-border/60 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300"
             >
               Later
             </button>

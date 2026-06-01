@@ -63,21 +63,21 @@ export default function ReplyTree({
                   if (!meta) return null;
                   return (
                     <>
-                      {meta.location && <span className="text-[10px] text-muted-foreground/50" title={meta.location}>📍 {meta.location}</span>}
-                      {meta.team && <span className="text-[10px] text-muted-foreground/50" title={`Supports ${meta.team}`}>🏉 {meta.team}</span>}
+                      {meta.location && <span className="text-[10px] text-slate-300 font-medium" title={meta.location}>📍 {meta.location}</span>}
+                      {meta.team && <span className="text-[10px] text-slate-300 font-medium" title={`Supports ${meta.team}`}>🏉 {meta.team}</span>}
                     </>
                   );
                 })()}
-                <span className="font-mono text-[9px] text-muted-foreground/40">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
+                <span className="font-mono text-[9px] text-slate-400 font-bold">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
-              <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground/80">{reply.body}</p>
+              <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-200">{reply.body}</p>
               <ForumMedia url={reply.media_url} type={reply.media_type} />
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button type="button" onClick={() => onToggleReply(reply.id)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 transition-colors hover:text-accent">
+                <button type="button" onClick={() => onToggleReply(reply.id)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-colors hover:text-accent">
                   <Reply className="h-3.5 w-3.5" /> Reply
                 </button>
                 {canDelete && (
-                  <button type="button" onClick={() => onDelete(reply)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 transition-colors hover:text-destructive">
+                  <button type="button" onClick={() => onDelete(reply)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-colors hover:text-destructive">
                     <Trash2 className="h-3.5 w-3.5" /> Delete
                   </button>
                 )}

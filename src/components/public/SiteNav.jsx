@@ -73,7 +73,7 @@ export default function SiteNav({ settings = {} }) {
     if (!isAuthenticated) {
       return (
         <div className="hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" size="sm" className="rounded-none text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-transparent transition-all">
+          <Button asChild variant="ghost" size="sm" className="rounded-none text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:text-foreground hover:bg-transparent transition-all">
             <Link to="/login">Log in</Link>
           </Button>
           <Button asChild size="sm" className="rounded-none bg-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/95 text-white shadow-[0_0_12px_rgba(249,115,22,0.3)] hover:shadow-[0_0_18px_rgba(249,115,22,0.5)] transition-all">
@@ -94,22 +94,22 @@ export default function SiteNav({ settings = {} }) {
                 <AvatarImage src={user?.avatar_url} alt={user?.full_name || user?.email} className="object-cover" />
                 <AvatarFallback className="rounded-none bg-muted text-xs font-mono font-bold text-primary">{initials(user)}</AvatarFallback>
               </Avatar>
-              <span className="hidden text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors xl:inline">Account</span>
+              <span className="hidden text-[10px] font-bold uppercase tracking-wider text-slate-300 group-hover:text-foreground transition-colors xl:inline">Account</span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-none bg-background/95 border-border cmd-glass shadow-2xl p-1">
-            <DropdownMenuLabel className="truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3.5 py-3">
+            <DropdownMenuLabel className="truncate text-[10px] font-bold uppercase tracking-wider text-slate-300 px-3.5 py-3">
               {user?.full_name || user?.email}
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem asChild className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-muted-foreground hover:text-foreground">
+            <DropdownMenuItem asChild className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-slate-300 hover:text-foreground">
               <Link to="/account"><UserIcon className="mr-2.5 h-4 w-4 text-primary" /> My Account</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-muted-foreground hover:text-foreground">
+            <DropdownMenuItem asChild className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-slate-300 hover:text-foreground">
               <Link to="/store"><ShoppingBag className="mr-2.5 h-4 w-4 text-accent" /> Shop merch</Link>
             </DropdownMenuItem>
             {isAdmin && (
-              <DropdownMenuItem asChild className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-muted-foreground hover:text-foreground">
+              <DropdownMenuItem asChild className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-slate-300 hover:text-foreground">
                 <Link to="/admin"><ShieldCheck className="mr-2.5 h-4 w-4 text-emerald-400" /> Admin dashboard</Link>
               </DropdownMenuItem>
             )}
@@ -141,7 +141,7 @@ export default function SiteNav({ settings = {} }) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-0">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)]">
       <div 
         className={`pointer-events-auto mx-auto flex items-center justify-between transition-all duration-500 ${
           scrolled 
@@ -171,7 +171,7 @@ export default function SiteNav({ settings = {} }) {
                 key={link.href} 
                 to={link.href} 
                 className={`group relative py-2 font-display text-[10.5px] font-bold uppercase tracking-[0.25em] transition-all duration-300 ${
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  active ? "text-primary" : "text-slate-300 hover:text-foreground"
                 }`}
               >
                 <span className="relative z-10 flex items-center">
@@ -207,14 +207,14 @@ export default function SiteNav({ settings = {} }) {
           )}
           
           <NotificationBell />
-
+ 
           {/* Cart Status Badge */}
           <Link 
             to="/store" 
             className={`relative flex h-9 w-9 items-center justify-center border transition-all duration-300 bg-secondary/40 ${
               cartCount > 0 
                 ? "border-primary/50 text-primary shadow-[0_0_10px_rgba(249,115,22,0.15)] animate-pulse" 
-                : "border-border text-muted-foreground hover:border-primary hover:text-foreground hover:shadow-[0_0_10px_rgba(249,115,22,0.15)]"
+                : "border-border text-slate-300 hover:border-primary hover:text-foreground hover:shadow-[0_0_10px_rgba(249,115,22,0.15)]"
             }`}
             aria-label="View shopping cart"
           >
@@ -234,13 +234,13 @@ export default function SiteNav({ settings = {} }) {
               )}
             </AnimatePresence>
           </Link>
-
+ 
           <AccountArea />
           
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden border border-border rounded-none h-9 w-9 bg-secondary/40 text-muted-foreground hover:text-foreground hover:border-primary transition-all duration-300" 
+            className="md:hidden border border-border rounded-none h-9 w-9 bg-secondary/40 text-slate-300 hover:text-foreground hover:border-primary transition-all duration-300" 
             onClick={() => setOpen(!open)}
             aria-label={open ? "Close menu" : "Open menu"}
           >
@@ -277,11 +277,11 @@ export default function SiteNav({ settings = {} }) {
                 <div className="flex items-center justify-between border-b border-border/60 pb-4 mb-6">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-mono font-bold tracking-widest text-primary uppercase">Console Menu</span>
-                    <span className="text-[8px] font-mono text-muted-foreground uppercase">SYSTEM // LIVE</span>
+                    <span className="text-[8px] font-mono text-slate-350 uppercase">SYSTEM // LIVE</span>
                   </div>
                   <button 
                     onClick={() => setOpen(false)} 
-                    className="flex h-11 w-11 items-center justify-center border border-border text-muted-foreground transition-all duration-300 hover:border-primary hover:text-foreground"
+                    className="flex h-11 w-11 items-center justify-center border border-border text-slate-300 transition-all duration-300 hover:border-primary hover:text-foreground"
                     aria-label="Close menu"
                   >
                     <X className="h-4 w-4" />
@@ -369,7 +369,7 @@ export default function SiteNav({ settings = {} }) {
 
               {/* Drawer Footer info */}
               <div className="relative z-10 border-t border-border/40 pt-4 mt-6 text-center">
-                <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest">
+                <p className="text-[8px] font-mono text-slate-400 font-bold uppercase tracking-widest">
                   RLT Vegas // Takeover 2026
                 </p>
               </div>

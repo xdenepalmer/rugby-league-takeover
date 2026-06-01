@@ -59,7 +59,7 @@ function StatCard({ label, value, icon: Icon, color }) {
   return (
     <div className="relative overflow-hidden border border-border bg-card/40 cmd-glass p-5 flex items-center justify-between shadow-sm">
       <div className="space-y-1.5 z-10">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-350">{label}</p>
         <p className="text-3xl font-display uppercase leading-none text-foreground font-mono">
           <AnimatedNumber value={value} />
         </p>
@@ -157,8 +157,8 @@ export default function Account() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground font-mono">{user?.email}</p>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-1">
+                <p className="text-xs text-slate-300 font-mono font-medium">{user?.email}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-350 font-bold flex items-center gap-1">
                   <Calendar className="h-3 w-3 text-primary" /> Member Since:{" "}
                   <span className="text-foreground">
                     {user?.created_date ? format(new Date(user.created_date), "MMM yyyy") : "June 2026"}
@@ -218,10 +218,10 @@ export default function Account() {
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="relative rounded-none border border-border bg-card/20 backdrop-blur-sm px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-all duration-300 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+                    className="relative rounded-none border border-border bg-card/20 backdrop-blur-sm px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-300 transition-all duration-300 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
                   >
                     <div className="flex items-center gap-2 relative z-10">
-                      <IconComponent className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                      <IconComponent className={`h-4 w-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
                       <span>{tab.label}</span>
                       {Number.isFinite(tab.count) && tab.count > 0 && (
                         <span className="px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/30 text-[9px] font-mono font-bold leading-none">
