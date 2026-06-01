@@ -14,11 +14,11 @@ const formatKickoff = (value) => {
   return d.toLocaleString("en-AU", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 };
 
-function TeamBadge({ name, logo }) {
+function TeamBadge({ name, logo, won }) {
   return (
     <div className="flex flex-1 flex-col items-center gap-2 text-center">
-      <TeamCrest name={name} logo={logo} className="h-16 w-16 text-lg md:h-20 md:w-20 md:text-2xl" />
-      <span className="font-display text-sm uppercase leading-tight text-foreground md:text-base">{name}</span>
+      <TeamCrest name={name} logo={logo} className={`h-16 w-16 text-lg md:h-20 md:w-20 md:text-2xl ${won ? "" : ""}`} />
+      <span className={`font-display text-sm uppercase leading-tight md:text-base ${won ? "text-primary" : "text-foreground"}`}>{name}{won && <span className="ml-1 align-middle text-[9px] tracking-widest text-emerald-400">▲</span>}</span>
     </div>
   );
 }
@@ -54,15 +54,28 @@ export default function MatchupsSection() {
           <Swords className="h-4 w-4" /> The Match-ups
         </p>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
-          {visible.map((m) => (
+          {visible.map((m) => {
+            const isFinal = m.status === "final" && m.home_score != null && m.away_score != null;
+            const homeWon = isFinal && Number(m.home_score) > Number(m.away_score);
+            const awayWon = isFinal && Number(m.away_score) > Number(m.home_score);
+            return (
             <article key={m.id} className="border border-border bg-card p-6">
               {m.label && <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-accent">{m.label}</p>}
               <div className="flex items-center justify-between gap-4">
-                <TeamBadge name={m.home_team} logo={logoFor(m.home_team, m.home_logo)} />
-                <span className="font-display text-2xl text-primary md:text-3xl">VS</span>
-                <TeamBadge name={m.away_team} logo={logoFor(m.away_team, m.away_logo)} />
+                <TeamBadge name={m.home_team} logo={logoFor(m.home_team, m.home_logo)} won={homeWon} />
+                {isFinal ? (
+                  <span className="font-display text-2xl tabular-nums text-foreground md:text-4xl"><span className={homeWon ? "text-primary" : ""}>{m.home_score}</span><span className="mx-1.5 text-muted-foreground">–</span><span className={awayWon ? "text-primary" : ""}>{m.away_score}</span></span>
+                ) : (
+                  <span className="font-display text-2xl text-primary md:text-3xl">VS</span>
+                )}
+                <TeamBadge name={m.away_team} logo={logoFor(m.away_team, m.away_logo)} won={awayWon} />
               </div>
-              {(m.kickoff || m.venue) && (
+              {isFinal ? (
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border pt-4 text-xs font-bold uppercase tracking-[0.18em]">
+                  <span className="border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-emerald-400">{m.result_note || "Full Time"}</span>
+                  {m.venue && <span className="flex items-center gap-1.5 text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> {m.venue}</span>}
+                </div>
+              ) : (m.kickoff || m.venue) && (
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border pt-4 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                   {m.kickoff && <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-primary" /> {formatKickoff(m.kickoff)}</span>}
                   {m.venue && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {m.venue}</span>}
@@ -76,7 +89,8 @@ export default function MatchupsSection() {
                 </div>
               )}
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

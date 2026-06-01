@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Swords } from "lucide-react";
+import { Plus, Trash2, Swords, Pencil, Check, X, Trophy } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { ALL_TEAMS } from "@/lib/nrl-teams";
 import DateTimePicker from "./DateTimePicker";
 
-const emptyMatchup = { home_team: "", home_logo: "", away_team: "", away_logo: "", kickoff: "", label: "", venue: "", ticket_url: "", sort_order: 1, is_published: true };
+const emptyMatchup = { home_team: "", home_logo: "", away_team: "", away_logo: "", kickoff: "", label: "", venue: "", ticket_url: "", sort_order: 1, is_published: true, status: "scheduled", home_score: "", away_score: "", result_note: "" };
 const norm = (s) => String(s || "").trim().toLowerCase();
 
 function TeamSelect({ valueName, onPick, placeholder }) {
@@ -33,9 +33,52 @@ function TeamSelect({ valueName, onPick, placeholder }) {
   );
 }
 
+// Shared editable fields for both the "add" form and inline edit. `logoFor`
+// resolves a club's uploaded crest by name so the snapshot stays current.
+function MatchupFields({ value, onChange, logoFor }) {
+  const setHome = (t) => onChange({ ...value, home_team: t.name, home_logo: logoFor(t.name) });
+  const setAway = (t) => onChange({ ...value, away_team: t.name, away_logo: logoFor(t.name) });
+  const isFinal = value.status === "final";
+  return (
+    <div className="grid gap-3">
+      <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
+        <TeamSelect valueName={value.home_team} onPick={setHome} placeholder="Home team" />
+        <span className="text-center font-display text-xl text-primary">VS</span>
+        <TeamSelect valueName={value.away_team} onPick={setAway} placeholder="Away team" />
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <DateTimePicker value={value.kickoff} onChange={(val) => onChange({ ...value, kickoff: val })} placeholder="Kickoff date & time" />
+        <Input placeholder="Label (e.g. Double Header Game 1)" value={value.label || ""} onChange={(e) => onChange({ ...value, label: e.target.value })} className="rounded-none" />
+        <Input placeholder="Venue (optional)" value={value.venue || ""} onChange={(e) => onChange({ ...value, venue: e.target.value })} className="rounded-none" />
+        <Input placeholder="Tickets link (optional)" value={value.ticket_url || ""} onChange={(e) => onChange({ ...value, ticket_url: e.target.value })} className="rounded-none" />
+        <Input type="number" placeholder="Sort order" value={value.sort_order ?? 1} onChange={(e) => onChange({ ...value, sort_order: Number(e.target.value) })} className="rounded-none" />
+      </div>
+
+      {/* Result entry — flip to Final once the game is over */}
+      <div className="grid gap-3 border-t border-border/60 pt-3">
+        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          <Trophy className="h-4 w-4" /> Game finished?
+          <Switch checked={isFinal} onCheckedChange={(v) => onChange({ ...value, status: v ? "final" : "scheduled" })} />
+          <span className="font-normal normal-case tracking-normal text-muted-foreground/70">{isFinal ? "Result shows instead of kickoff" : "Toggle on to enter the final score"}</span>
+        </label>
+        {isFinal && (
+          <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr_1fr]">
+            <Input type="number" placeholder={`${value.home_team || "Home"} score`} value={value.home_score ?? ""} onChange={(e) => onChange({ ...value, home_score: e.target.value === "" ? "" : Number(e.target.value) })} className="rounded-none" />
+            <span className="text-center font-display text-primary">–</span>
+            <Input type="number" placeholder={`${value.away_team || "Away"} score`} value={value.away_score ?? ""} onChange={(e) => onChange({ ...value, away_score: e.target.value === "" ? "" : Number(e.target.value) })} className="rounded-none" />
+            <Input placeholder="Note (e.g. Full Time)" value={value.result_note || ""} onChange={(e) => onChange({ ...value, result_note: e.target.value })} className="rounded-none" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MatchupsManager({ matchups = [], teams = [] }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(emptyMatchup);
+  const [editId, setEditId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
   // Resolve a team's uploaded crest (if the owner set one) by name.
   const logoByName = new Map((teams || []).map((t) => [norm(t.name), t.logo_url || ""]));
   const logoFor = (name) => logoByName.get(norm(name)) || "";
@@ -45,32 +88,29 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
     mutationFn: (data) => base44.entities.Matchup.create(data),
     onSuccess: () => { refresh(); setDraft(emptyMatchup); toast({ title: "Matchup added" }); },
   });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Matchup.update(id, data), onSuccess: refresh });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Matchup.update(id, data),
+    onSuccess: () => { refresh(); setEditId(null); setEditDraft(null); },
+  });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Matchup.delete(id), onSuccess: () => { refresh(); toast({ title: "Matchup removed" }); } });
 
-  const setHome = (t) => setDraft((d) => ({ ...d, home_team: t.name, home_logo: logoFor(t.name) }));
-  const setAway = (t) => setDraft((d) => ({ ...d, away_team: t.name, away_logo: logoFor(t.name) }));
+  const startEdit = (m) => { setEditId(m.id); setEditDraft({ ...emptyMatchup, ...m }); };
+  const cancelEdit = () => { setEditId(null); setEditDraft(null); };
+  const saveEdit = () => {
+    const { id: _id, ...data } = editDraft;
+    updateMutation.mutate({ id: editId, data }, { onSuccess: () => toast({ title: "Matchup updated" }) });
+  };
+
   const sorted = [...matchups].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
   return (
     <section id="matchups-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Swords className="h-6 w-6 text-primary" /> Match-ups</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Pick which teams are playing — every NRL &amp; Super League club is built in. These show on the homepage near the countdown. Set club crests in the Teams panel (optional).</p>
+      <p className="mt-2 text-sm text-muted-foreground">Pick which teams are playing — every NRL &amp; Super League club is built in. These show on the homepage near the countdown. After a game, edit it and switch on &ldquo;Game finished?&rdquo; to publish the result.</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a match-up</p>
-        <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
-          <TeamSelect valueName={draft.home_team} onPick={setHome} placeholder="Home team" />
-          <span className="text-center font-display text-xl text-primary">VS</span>
-          <TeamSelect valueName={draft.away_team} onPick={setAway} placeholder="Away team" />
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <DateTimePicker value={draft.kickoff} onChange={(val) => setDraft({ ...draft, kickoff: val })} placeholder="Kickoff date & time" />
-          <Input placeholder="Label (e.g. Double Header Game 1)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} className="rounded-none" />
-          <Input placeholder="Venue (optional)" value={draft.venue} onChange={(e) => setDraft({ ...draft, venue: e.target.value })} className="rounded-none" />
-          <Input placeholder="Tickets link (optional)" value={draft.ticket_url} onChange={(e) => setDraft({ ...draft, ticket_url: e.target.value })} className="rounded-none" />
-          <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="rounded-none" />
-        </div>
+        <MatchupFields value={draft} onChange={setDraft} logoFor={logoFor} />
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm">Published <Switch checked={draft.is_published !== false} onCheckedChange={(v) => setDraft({ ...draft, is_published: v })} /></label>
           <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.home_team || !draft.away_team || createMutation.isPending} className="ml-auto rounded-none bg-primary hover:bg-primary/90">
@@ -82,22 +122,42 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
       <div className="mt-6 grid gap-3">
         {sorted.length === 0 && <p className="text-sm text-muted-foreground">No match-ups yet. Add one above.</p>}
         {sorted.map((m) => (
-          <div key={m.id} className="flex flex-wrap items-center gap-4 border border-border p-4">
-            <div className="flex items-center gap-2">
-              {m.home_logo && <img src={m.home_logo} alt={m.home_team} className="h-8 w-8 object-contain" />}
-              <span className="font-bold">{m.home_team}</span>
+          editId === m.id ? (
+            <div key={m.id} className="grid gap-3 border border-primary/50 bg-background/40 p-4">
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary"><Pencil className="h-4 w-4" /> Editing match-up</p>
+              <MatchupFields value={editDraft} onChange={setEditDraft} logoFor={logoFor} />
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">Published <Switch checked={editDraft.is_published !== false} onCheckedChange={(v) => setEditDraft({ ...editDraft, is_published: v })} /></label>
+                <div className="ml-auto flex gap-2">
+                  <Button variant="ghost" className="rounded-none" onClick={cancelEdit}><X className="mr-2 h-4 w-4" /> Cancel</Button>
+                  <Button onClick={saveEdit} disabled={!editDraft.home_team || !editDraft.away_team || updateMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90"><Check className="mr-2 h-4 w-4" /> Save changes</Button>
+                </div>
+              </div>
             </div>
-            <span className="font-display text-primary">VS</span>
-            <div className="flex items-center gap-2">
-              {m.away_logo && <img src={m.away_logo} alt={m.away_team} className="h-8 w-8 object-contain" />}
-              <span className="font-bold">{m.away_team}</span>
+          ) : (
+            <div key={m.id} className="flex flex-wrap items-center gap-4 border border-border p-4">
+              <div className="flex items-center gap-2">
+                {m.home_logo && <img src={m.home_logo} alt={m.home_team} className="h-8 w-8 object-contain" />}
+                <span className="font-bold">{m.home_team}</span>
+              </div>
+              {m.status === "final" ? (
+                <span className="font-display text-lg tabular-nums text-foreground">{m.home_score ?? "–"} <span className="text-primary">–</span> {m.away_score ?? "–"}</span>
+              ) : (
+                <span className="font-display text-primary">VS</span>
+              )}
+              <div className="flex items-center gap-2">
+                {m.away_logo && <img src={m.away_logo} alt={m.away_team} className="h-8 w-8 object-contain" />}
+                <span className="font-bold">{m.away_team}</span>
+              </div>
+              {m.status === "final" && <span className="border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">{m.result_note || "Full Time"}</span>}
+              <span className="text-xs text-muted-foreground">{m.label}{m.venue ? ` · ${m.venue}` : ""}</span>
+              <div className="ml-auto flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={m.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: m.id, data: { is_published: v } })} /></label>
+                <Button variant="outline" size="icon" className="rounded-none" onClick={() => startEdit(m)} title="Edit / enter result"><Pencil className="h-4 w-4" /></Button>
+                <Button variant="destructive" size="icon" className="rounded-none" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
             </div>
-            <span className="text-xs text-muted-foreground">{m.label}{m.venue ? ` · ${m.venue}` : ""}</span>
-            <div className="ml-auto flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={m.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: m.id, data: { is_published: v } })} /></label>
-              <Button variant="destructive" size="icon" className="rounded-none" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          </div>
+          )
         ))}
       </div>
     </section>

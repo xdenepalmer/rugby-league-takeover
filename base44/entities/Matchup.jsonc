@@ -34,6 +34,27 @@
     "is_published": {
       "type": "boolean",
       "default": true
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "final"
+      ],
+      "default": "scheduled",
+      "description": "Match status — 'final' shows the result instead of kickoff"
+    },
+    "home_score": {
+      "type": "number",
+      "description": "Home team final score (shown when status is final)"
+    },
+    "away_score": {
+      "type": "number",
+      "description": "Away team final score (shown when status is final)"
+    },
+    "result_note": {
+      "type": "string",
+      "description": "Optional result note, e.g. 'Full Time' or 'Golden Point'"
     }
   },
   "required": [
