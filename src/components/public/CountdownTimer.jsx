@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CalendarClock, ArrowUpRight } from "lucide-react";
+import LocalVegasClock from "./LocalVegasClock";
 
 const UNITS = [
   { key: "days", label: "Days" },
@@ -116,6 +117,8 @@ export default function CountdownTimer({ settings = {} }) {
             {settings.countdown_cta_label} <ArrowUpRight className="h-4 w-4" />
           </a>
         )}
+
+        <LocalVegasClock />
       </div>
     </section>
   );
