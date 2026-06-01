@@ -1923,8 +1923,23 @@ export default function Forum() {
             {/* Live Activity Ticker */}
             <LiveActivityTicker threads={allThreads} />
 
-            {/* Mobile Vegas Slot Machine Badge Unlocker */}
-            <div className="lg:hidden">
+            {/* Mobile Footy Tipping + Vegas Badge Unlocker */}
+            <div className="space-y-4 lg:hidden">
+              <ScorePredictor
+                onSharePrediction={(matchup, homeScore, awayScore) => {
+                  const home = matchup.home_team;
+                  const away = matchup.away_team;
+                  const label = matchup.label || "NRL Fixture";
+                  setDraft((d) => ({
+                    ...d,
+                    title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
+                    body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
+                    category: "MatchDay",
+                  }));
+                  setShowMobileCompose(true);
+                  window.scrollTo({ top: 300, behavior: "smooth" });
+                }}
+              />
               <SlotMachineBadgeUnlock />
             </div>
 
@@ -1998,7 +2013,7 @@ export default function Forum() {
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden space-y-4 mb-4"
                 >
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4">
                     <StadiumSeatPlanner
                       onFilterSearch={(q) => setSearchQuery(q)}
                       onClaimSeat={(q) => {
@@ -2016,21 +2031,6 @@ export default function Forum() {
                         } catch (err) {}
                       }}
                       currentSearch={searchQuery}
-                    />
-                    <ScorePredictor
-                      onSharePrediction={(matchup, homeScore, awayScore) => {
-                        const home = matchup.home_team;
-                        const away = matchup.away_team;
-                        const label = matchup.label || "Opening Showdown";
-                        setDraft((d) => ({
-                          ...d,
-                          title: `[Prediction] ${home} ${homeScore} - ${awayScore} ${away}`,
-                          body: `Here is my match prediction for ${label}: ${home} ${homeScore} - ${awayScore} ${away}! Let's go! What are your score predictions?`,
-                          category: "MatchDay",
-                        }));
-                        setShowMobileCompose(true);
-                        window.scrollTo({ top: 300, behavior: "smooth" });
-                      }}
                     />
                   </div>
                 </motion.div>

@@ -1,0 +1,91 @@
+{
+  "name": "TippingEntry",
+  "type": "object",
+  "properties": {
+    "game_id": {
+      "type": "string",
+      "description": "Stable ID for the tipped match"
+    },
+    "game_label": {
+      "type": "string",
+      "description": "Display label for the match"
+    },
+    "home_team": {
+      "type": "string",
+      "description": "Home team name"
+    },
+    "away_team": {
+      "type": "string",
+      "description": "Away team name"
+    },
+    "selected_team": {
+      "type": "string",
+      "description": "Team selected to win"
+    },
+    "predicted_home_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Predicted home score"
+    },
+    "predicted_away_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Predicted away score"
+    },
+    "margin": {
+      "type": "number",
+      "default": 1,
+      "description": "Predicted winning margin"
+    },
+    "confidence": {
+      "type": "number",
+      "default": 1,
+      "description": "Confidence chips wagered on this tip"
+    },
+    "tipper_name": {
+      "type": "string",
+      "description": "Display name for public tipping leaderboard"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Optional authenticated user ID"
+    },
+    "user_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Optional authenticated user email"
+    },
+    "kickoff": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Match kickoff time"
+    }
+  },
+  "required": [
+    "game_id",
+    "home_team",
+    "away_team",
+    "selected_team"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
