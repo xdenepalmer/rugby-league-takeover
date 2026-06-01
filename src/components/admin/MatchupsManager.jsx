@@ -6,25 +6,28 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ALL_TEAMS } from "@/lib/nrl-teams";
 import DateTimePicker from "./DateTimePicker";
 
 const emptyMatchup = { home_team: "", home_logo: "", away_team: "", away_logo: "", kickoff: "", label: "", venue: "", ticket_url: "", sort_order: 1, is_published: true };
+const norm = (s) => String(s || "").trim().toLowerCase();
 
-function TeamSelect({ teams, valueName, onPick, placeholder }) {
+function TeamSelect({ valueName, onPick, placeholder }) {
+  const nrl = ALL_TEAMS.filter((t) => t.league === "NRL");
+  const sl = ALL_TEAMS.filter((t) => t.league === "Super League");
   return (
-    <Select value={valueName || ""} onValueChange={(id) => { const t = teams.find((x) => x.id === id); if (t) onPick(t); }}>
+    <Select value={valueName || ""} onValueChange={(name) => { const t = ALL_TEAMS.find((x) => x.name === name); if (t) onPick(t); }}>
       <SelectTrigger className="rounded-none"><SelectValue placeholder={placeholder}>{valueName || placeholder}</SelectValue></SelectTrigger>
-      <SelectContent>
-        {teams.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Add teams first</div>}
-        {teams.map((t) => (
-          <SelectItem key={t.id} value={t.id}>
-            <span className="flex items-center gap-2">
-              {t.logo_url && <img src={t.logo_url} alt="" className="h-4 w-4 object-contain" />}
-              {t.name}
-            </span>
-          </SelectItem>
-        ))}
+      <SelectContent className="max-h-72">
+        <SelectGroup>
+          <SelectLabel>NRL</SelectLabel>
+          {nrl.map((t) => <SelectItem key={t.name} value={t.name}>{t.name}</SelectItem>)}
+        </SelectGroup>
+        <SelectGroup>
+          <SelectLabel>British Super League</SelectLabel>
+          {sl.map((t) => <SelectItem key={t.name} value={t.name}>{t.name}</SelectItem>)}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );
@@ -33,7 +36,9 @@ function TeamSelect({ teams, valueName, onPick, placeholder }) {
 export default function MatchupsManager({ matchups = [], teams = [] }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(emptyMatchup);
-  const activeTeams = teams.filter((t) => t.is_active !== false);
+  // Resolve a team's uploaded crest (if the owner set one) by name.
+  const logoByName = new Map((teams || []).map((t) => [norm(t.name), t.logo_url || ""]));
+  const logoFor = (name) => logoByName.get(norm(name)) || "";
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["matchups"] });
 
   const createMutation = useMutation({
@@ -43,21 +48,21 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Matchup.update(id, data), onSuccess: refresh });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Matchup.delete(id), onSuccess: () => { refresh(); toast({ title: "Matchup removed" }); } });
 
-  const setHome = (t) => setDraft((d) => ({ ...d, home_team: t.name, home_logo: t.logo_url || "" }));
-  const setAway = (t) => setDraft((d) => ({ ...d, away_team: t.name, away_logo: t.logo_url || "" }));
+  const setHome = (t) => setDraft((d) => ({ ...d, home_team: t.name, home_logo: logoFor(t.name) }));
+  const setAway = (t) => setDraft((d) => ({ ...d, away_team: t.name, away_logo: logoFor(t.name) }));
   const sorted = [...matchups].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
   return (
     <section id="matchups-admin" className="scroll-mt-28 border border-border bg-card p-6">
       <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Swords className="h-6 w-6 text-primary" /> Match-ups</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Pick which teams are playing — these show on the homepage near the countdown. Add teams in the Teams panel first.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Pick which teams are playing — every NRL &amp; Super League club is built in. These show on the homepage near the countdown. Set club crests in the Teams panel (optional).</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a match-up</p>
         <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
-          <TeamSelect teams={activeTeams} valueName={draft.home_team} onPick={setHome} placeholder="Home team" />
+          <TeamSelect valueName={draft.home_team} onPick={setHome} placeholder="Home team" />
           <span className="text-center font-display text-xl text-primary">VS</span>
-          <TeamSelect teams={activeTeams} valueName={draft.away_team} onPick={setAway} placeholder="Away team" />
+          <TeamSelect valueName={draft.away_team} onPick={setAway} placeholder="Away team" />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <DateTimePicker value={draft.kickoff} onChange={(val) => setDraft({ ...draft, kickoff: val })} placeholder="Kickoff date & time" />

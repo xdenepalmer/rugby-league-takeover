@@ -5,6 +5,8 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import TeamCrest from "./TeamCrest";
 
+const norm = (s) => String(s || "").trim().toLowerCase();
+
 const formatKickoff = (value) => {
   if (!value) return "";
   const d = new Date(value);
@@ -29,6 +31,18 @@ export default function MatchupsSection() {
     retry: false,
     meta: { silent: true },
   });
+  const { data: teams = [] } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => base44.entities.Team.list("name", 200),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
+
+  // Prefer the club's current uploaded crest (resolved by name), then the snapshot
+  // stored on the match-up, then fall back to the auto monogram in TeamCrest.
+  const logoByName = new Map((teams || []).map((t) => [norm(t.name), t.logo_url || ""]));
+  const logoFor = (name, snapshot) => logoByName.get(norm(name)) || snapshot || "";
 
   const visible = matchups.filter((m) => m.is_published !== false && m.home_team && m.away_team);
   if (visible.length === 0) return null;
@@ -44,9 +58,9 @@ export default function MatchupsSection() {
             <article key={m.id} className="border border-border bg-card p-6">
               {m.label && <p className="mb-4 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-accent">{m.label}</p>}
               <div className="flex items-center justify-between gap-4">
-                <TeamBadge name={m.home_team} logo={m.home_logo} />
+                <TeamBadge name={m.home_team} logo={logoFor(m.home_team, m.home_logo)} />
                 <span className="font-display text-2xl text-primary md:text-3xl">VS</span>
-                <TeamBadge name={m.away_team} logo={m.away_logo} />
+                <TeamBadge name={m.away_team} logo={logoFor(m.away_team, m.away_logo)} />
               </div>
               {(m.kickoff || m.venue) && (
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border pt-4 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">

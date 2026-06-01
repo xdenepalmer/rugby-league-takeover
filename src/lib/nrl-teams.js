@@ -36,3 +36,10 @@ export const SUPER_LEAGUE_TEAMS = [
   { name: "Warrington Wolves", short_name: "Warrington" },
   { name: "Wigan Warriors", short_name: "Wigan" },
 ];
+
+// Combined, league-tagged roster. Always available in the match-up picker so the
+// owner never has to manage a team list — they just pick fixtures.
+export const ALL_TEAMS = [
+  ...NRL_TEAMS.map((t) => ({ ...t, league: "NRL" })),
+  ...SUPER_LEAGUE_TEAMS.map((t) => ({ ...t, league: "Super League" })),
+];
