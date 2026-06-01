@@ -80,13 +80,15 @@ export default function CountdownTimer({ settings = {} }) {
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:40px_40px] opacity-15 pointer-events-none" />
 
       <div className="relative mx-auto max-w-5xl text-center z-10">
-        <p className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.45em] text-primary">
-          <CalendarClock className="h-4 w-4 animate-pulse text-accent" /> {settings.countdown_subtitle || "Las Vegas • NRL Takeover"}
-        </p>
-        
-        <h2 className="mt-5 font-display text-4xl uppercase leading-[0.9] tracking-tight text-foreground sm:text-5xl md:text-6xl max-w-2xl mx-auto">
-          {remaining.done ? "The takeover is live" : (settings.countdown_title || "The takeover begins in")}
-        </h2>
+        <div className="sticky top-[calc(5.5rem+var(--safe-top))] z-20 -mx-3 border-y border-border/30 bg-background/70 px-3 py-4 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          <p className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-primary sm:text-xs sm:tracking-[0.45em]">
+            <CalendarClock className="h-4 w-4 animate-pulse text-accent" /> {settings.countdown_subtitle || "Las Vegas • NRL Takeover"}
+          </p>
+          
+          <h2 className="mt-4 font-display text-3xl uppercase leading-[0.92] tracking-tight text-foreground sm:mt-5 sm:text-5xl md:text-6xl max-w-2xl mx-auto">
+            {remaining.done ? "The takeover is live" : (settings.countdown_title || "The takeover begins in")}
+          </h2>
+        </div>
 
         {remaining.done ? (
           <p className="mt-8 inline-flex border border-primary bg-primary/10 px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] text-foreground shadow-[0_0_15px_rgba(249,115,22,0.2)]">
@@ -95,14 +97,14 @@ export default function CountdownTimer({ settings = {} }) {
         ) : (
           <div className="mt-10 flex items-start justify-center gap-2 sm:gap-4 md:gap-5 select-none">
             {UNITS.map((unit, i) => (
-              <React.Fragment key={unit.key}>
+              <div key={unit.key} className="contents">
                 {i > 0 && (
                   <span className="pt-4 font-display text-2xl text-primary/45 sm:text-4xl md:pt-6 md:text-5xl animate-pulse self-center">
                     :
                   </span>
                 )}
                 <FlipUnit value={remaining[unit.key]} label={unit.label} />
-              </React.Fragment>
+              </div>
             ))}
           </div>
         )}
