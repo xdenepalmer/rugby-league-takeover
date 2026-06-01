@@ -72,18 +72,22 @@ export default function PublicLayout() {
               }`
             }
           >
-            {user?.avatar_url ? (
-              <img 
-                src={user.avatar_url} 
-                alt="Account" 
-                className={`h-5 w-5 rounded-none object-cover border transition-all ${
-                  isActive ? "border-primary" : "border-border/60"
-                }`} 
-              />
-            ) : (
-              <User className="h-5 w-5" />
+            {({ isActive }) => (
+              <>
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt="Account"
+                    className={`h-5 w-5 rounded-none object-cover border transition-all ${
+                      isActive ? "border-primary" : "border-border/60"
+                    }`}
+                  />
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
+                <span>Account</span>
+              </>
             )}
-            <span>Account</span>
           </NavLink>
 
           {isAdmin && (
