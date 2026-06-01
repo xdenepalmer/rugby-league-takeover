@@ -11,6 +11,7 @@ import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import InstallAppPrompt from '@/components/InstallAppPrompt';
+import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
 // Add page imports here
 import Home from './pages/Home';
 import Admin from './pages/Admin';
@@ -103,6 +104,7 @@ function App() {
           <ScrollToTop />
           <AuthenticatedApp />
           <InstallAppPrompt />
+          <PwaUpdatePrompt />
         </Router>
         <Toaster />
       </QueryClientProvider>

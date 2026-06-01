@@ -1,4 +1,7 @@
-const CACHE_NAME = "rlt-shell-v2";
+// BUILD_ID is replaced at build time (see vite.config.js) so this file is
+// byte-different on every publish — that's what lets the browser detect updates.
+const BUILD_ID = "__BUILD_ID__";
+const CACHE_NAME = `rlt-${BUILD_ID}`;
 const SHELL_URLS = ["/", "/offline.html", "/manifest.webmanifest"];
 
 const isBypassedRequest = (request) => {
@@ -21,8 +24,10 @@ const isStaticAsset = (request, url) =>
     ["script", "style", "font", "image"].includes(request.destination));
 
 self.addEventListener("install", (event) => {
+  // Pre-cache the shell, but do NOT skipWaiting automatically — the new worker
+  // waits until the user accepts the in-app update prompt (or all tabs close),
+  // so we never swap code out from under an active session.
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)));
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -32,6 +37,13 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+// The page asks the waiting worker to take over (triggered by the update prompt).
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // Serve from cache immediately, refresh in the background.
