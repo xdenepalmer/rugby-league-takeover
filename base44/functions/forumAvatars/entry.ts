@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
         return {
           id: u.id,
           avatar_url: clean(u.avatar_url),
+          display_name: clean(u.full_name) || 'Member',
           location,
           team,
           badges,

@@ -7,7 +7,7 @@ import {
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp, Trash2,
   Trophy, Activity, BarChart3, Globe,
-  Plane, MapPin, Reply, ArrowUp, Smile
+  Plane, MapPin, Reply, ArrowUp
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import ReplyTree from "@/components/forum/ReplyTree";
+import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea from "@/components/forum/MentionTextarea";
 import MediaAttach from "@/components/forum/MediaAttach";
@@ -136,15 +137,6 @@ function getAuthorBadge(name, authorPostCounts) {
   }
   return null;
 }
-
-/* ━━━ Reaction Emojis ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const REACTIONS = [
-  { emoji: "❤️", label: "Love" },
-  { emoji: "🏉", label: "Rugby" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "🎉", label: "Celebrate" },
-  { emoji: "👏", label: "Clap" },
-];
 
 /* ━━━ Share / Save helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const threadUrl = (post) => {
@@ -461,89 +453,6 @@ function AuthorMeta({ meta, className = "" }) {
   );
 }
 
-/* ━━━ Reaction Picker (real multi-emoji reactions with live counts) ━━━ */
-function ReactionPicker({ reactions = {}, legacyLikes = 0, currentUserId, isAuthenticated, onReact, isPending }) {
-  const [open, setOpen] = useState(false);
-  // Local copy for instant feedback; re-syncs whenever the server data changes.
-  const [local, setLocal] = useState(reactions || {});
-  useEffect(() => { setLocal(reactions && typeof reactions === "object" ? reactions : {}); }, [reactions]);
-
-  const requireLogin = () => { window.location.href = "/login?next=/forum"; };
-
-  const toggle = (emoji) => {
-    if (!isAuthenticated) return requireLogin();
-    const id = String(currentUserId || "");
-    setLocal((prev) => {
-      const next = { ...prev };
-      const list = Array.isArray(next[emoji]) ? next[emoji].slice() : [];
-      const i = list.indexOf(id);
-      if (i >= 0) list.splice(i, 1); else list.push(id);
-      if (list.length) next[emoji] = list; else delete next[emoji];
-      return next;
-    });
-    onReact(emoji);
-    setOpen(false);
-  };
-
-  // Existing reactions to show as chips. Seed a ❤️ chip from legacy likes so old
-  // likes don't disappear before anyone reacts again.
-  let chips = REACTIONS.map((r) => ({ emoji: r.emoji, count: (local[r.emoji] || []).length, mine: (local[r.emoji] || []).includes(String(currentUserId || "")) }))
-    .filter((c) => c.count > 0);
-  if (chips.length === 0 && legacyLikes > 0) {
-    chips = [{ emoji: "❤️", count: legacyLikes, mine: false }];
-  }
-
-  return (
-    <div className="relative flex flex-wrap items-center gap-1">
-      {chips.map((c) => (
-        <button
-          key={c.emoji}
-          type="button"
-          disabled={isPending}
-          onClick={() => toggle(c.emoji)}
-          title={isAuthenticated ? "Toggle reaction" : "Log in to react"}
-          className={`flex min-h-11 items-center gap-1 px-2.5 py-1 text-xs font-bold transition-colors ${
-            c.mine ? "border border-primary/40 bg-primary/10 text-primary" : "border border-border/40 text-slate-300 hover:border-primary/30 hover:bg-primary/5"
-          }`}
-        >
-          <span className="text-sm leading-none">{c.emoji}</span>
-          <span className="tabular-nums">{c.count}</span>
-        </button>
-      ))}
-
-      {/* Add-reaction button — taps open an inline palette (touch-friendly, never clipped) */}
-      <button
-        type="button"
-        onClick={() => (isAuthenticated ? setOpen((o) => !o) : requireLogin())}
-        title="Add a reaction"
-        aria-label="Add a reaction"
-        className={`flex min-h-11 items-center gap-1 px-2.5 py-1 text-xs font-bold transition-colors ${open ? "border border-primary/40 bg-primary/10 text-primary" : "border border-transparent text-slate-300 hover:text-primary hover:bg-primary/5"}`}
-      >
-        <Smile className="h-4 w-4" />
-      </button>
-
-      {open && (
-        <div className="flex items-center gap-0.5 border border-border/60 bg-card/95 p-1 cmd-glass">
-          {REACTIONS.map((r) => {
-            const mine = (local[r.emoji] || []).includes(String(currentUserId || ""));
-            return (
-              <button
-                key={r.emoji}
-                type="button"
-                onClick={() => toggle(r.emoji)}
-                title={r.label}
-                className={`flex min-h-11 min-w-11 items-center justify-center rounded-sm px-2 py-1 text-lg transition-transform hover:scale-125 ${mine ? "bg-primary/15" : "hover:bg-muted/20"}`}
-              >
-                {r.emoji}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ━━━ Live Activity Ticker ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function LiveActivityTicker({ threads }) {
   const [dismissed, setDismissed] = useState(false);
@@ -767,7 +676,7 @@ const CategoryPill = memo(function CategoryPill({ value, isActive, onClick, coun
 });
 
 /* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta }) {
+const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles }) {
   const meta = getCategoryMeta(post.category);
   const MetaIcon = meta.icon;
   const engagement = getEngagement(post);
@@ -860,7 +769,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
 
             {/* Engagement */}
             <div className="mt-6 flex flex-wrap items-center gap-1 border-t border-border/20 pt-4">
-              <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} />
+              <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} reactionProfiles={reactionProfiles} />
               <ShareButton post={post} />
               <SaveButton post={post} />
             </div>
@@ -928,7 +837,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
 const ForumPostCard = memo(function ForumPostCard({
   post, isAuthenticated, user, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
-  onOpenThread, onDeletePost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta,
+  onOpenThread, onDeletePost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -1089,7 +998,7 @@ const ForumPostCard = memo(function ForumPostCard({
 
         {/* Engagement Bar */}
         <div className="forum-engagement-bar mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
-          <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} />
+          <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} reactionProfiles={reactionProfiles} />
 
           <button
             type="button"
@@ -1726,7 +1635,7 @@ export default function Forum() {
   // display. Built from the forumAvatars function; the viewer's own row is merged
   // in live so their changes show immediately.
   const profileById = useMemo(() => {
-    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges), casino_rank: a.casino_rank || "Rookie Punter", casino_xp: Number(a.casino_xp || 0), casino_chips: Number(a.casino_chips || 0), casino_streak: Number(a.casino_streak || 0) }]));
+    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { display_name: a.display_name || "Member", avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges), casino_rank: a.casino_rank || "Rookie Punter", casino_xp: Number(a.casino_xp || 0), casino_chips: Number(a.casino_chips || 0), casino_streak: Number(a.casino_streak || 0) }]));
     if (isAuthenticated && user?.id) {
       // The viewer's own row, live — including badges saved to their profile and
       // any just won this session (kept in localStorage).
@@ -1734,6 +1643,7 @@ export default function Forum() {
       try { localBadges = parseBadgeIds(JSON.parse(localStorage.getItem("rlt_slot_badges") || "[]")); } catch { localBadges = []; }
       const badges = Array.from(new Set([...parseBadgeIds(user.badges), ...localBadges]));
       map.set(String(user.id), {
+        display_name: user.full_name || user.email || "You",
         avatar_url: user.avatar_url || "",
         location: user.show_location_on_forum ? [user.city, user.country].filter(Boolean).join(", ") : "",
         team: user.show_team_on_forum ? (user.favourite_team || "") : "",
@@ -2151,6 +2061,7 @@ export default function Forum() {
                     authorReplyCounts={authorReplyCounts}
                     resolveAvatar={avatarFor}
                     resolveMeta={forumMetaFor}
+                    reactionProfiles={profileById}
                   />
                 );
               })}
@@ -2224,6 +2135,7 @@ export default function Forum() {
             authorReplyCounts={authorReplyCounts}
             resolveAvatar={avatarFor}
             resolveMeta={forumMetaFor}
+            reactionProfiles={profileById}
           />
         )}
       </AnimatePresence>

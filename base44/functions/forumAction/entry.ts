@@ -126,25 +126,43 @@ Deno.serve(async (req) => {
       }
 
       const id = String(user.id);
-      const list = Array.isArray(reactions[emoji]) ? reactions[emoji].slice() : [];
-      const index = list.indexOf(id);
-      const added = index < 0;
-      if (index >= 0) list.splice(index, 1);
-      else list.push(id);
-      if (list.length) reactions[emoji] = list;
-      else delete reactions[emoji];
+      const cleaned = {};
+      const claimed = new Set();
+      let currentEmoji = '';
 
-      const total = Object.values(reactions).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
-      await base44.asServiceRole.entities.ForumPost.update(postId, { reactions, like_count: total });
+      for (const key of ALLOWED_REACTIONS) {
+        const ids = Array.isArray(reactions[key]) ? reactions[key].map(String).filter(Boolean) : [];
+        const unique = [];
+        for (const reactorId of ids) {
+          if (!claimed.has(reactorId)) {
+            claimed.add(reactorId);
+            unique.push(reactorId);
+            if (reactorId === id) currentEmoji = key;
+          }
+        }
+        if (unique.length) cleaned[key] = unique;
+      }
+
+      for (const key of ALLOWED_REACTIONS) {
+        if (cleaned[key]) cleaned[key] = cleaned[key].filter((reactorId) => reactorId !== id);
+        if (cleaned[key]?.length === 0) delete cleaned[key];
+      }
+
+      const added = currentEmoji !== emoji;
+      const firstReactionOnPost = !currentEmoji;
+      if (added) cleaned[emoji] = [...(cleaned[emoji] || []), id];
+
+      const total = Object.values(cleaned).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+      await base44.asServiceRole.entities.ForumPost.update(postId, { reactions: cleaned, like_count: total, liked_by: cleaned['❤️'] || [] });
       let reward = null;
-      if (added) {
+      if (added && firstReactionOnPost) {
         reward = await awardForumReward(base44, user, { kind: 'reaction_given', xp: 2, chips: 5, postId, note: `Reacted with ${emoji}`, counter: 'casino_total_reactions_given' });
         if (post.user_id && String(post.user_id) !== id) {
           const author = { id: post.user_id, email: post.user_email || '' };
           await awardForumReward(base44, author, { kind: 'reaction_received', xp: 4, chips: 10, postId, note: `Received ${emoji} reaction`, counter: 'casino_total_reactions_received' });
         }
       }
-      return Response.json({ reactions, like_count: total, reward });
+      return Response.json({ reactions: cleaned, like_count: total, reward });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });
