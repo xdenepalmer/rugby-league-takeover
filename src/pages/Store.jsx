@@ -28,7 +28,8 @@ import { Input } from "@/components/ui/input";
 /* ── 3D Product Card Component ── */
 const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart }) {
   const stock = Number(product.stock_quantity);
-  const soldOut = Number.isFinite(stock) && stock <= 0;
+  const comingSoon = product.coming_soon === true;
+  const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
   const inCart = cart.find(item => item.id === product.id);
 
   // 3D Tilt Hook
@@ -49,18 +50,22 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
   }, [mouseX, mouseY]);
 
   // Determine stock bar percentage and color
-  const stockPercent = Number.isFinite(stock) ? Math.min(100, Math.max(0, (stock / 15) * 100)) : 100;
-  const stockColor = soldOut 
-    ? "bg-destructive" 
-    : stock <= 5 
-      ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" 
-      : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
+  const stockPercent = comingSoon ? 100 : Number.isFinite(stock) ? Math.min(100, Math.max(0, (stock / 15) * 100)) : 100;
+  const stockColor = comingSoon
+    ? "bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]"
+    : soldOut 
+      ? "bg-destructive" 
+      : stock <= 5 
+        ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" 
+        : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
 
-  const stockLabel = soldOut
-    ? "Sold Out"
-    : stock <= 5
-      ? `Only ${stock} left!`
-      : "In Stock";
+  const stockLabel = comingSoon
+    ? "Coming Soon"
+    : soldOut
+      ? "Sold Out"
+      : stock <= 5
+        ? `Only ${stock} left!`
+        : "In Stock";
 
   // Badge determination
   const showHotBadge = index === 0;
@@ -81,12 +86,16 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
       
       {/* Badges overlay */}
       <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
-        {showHotBadge && (
+        {comingSoon ? (
+          <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(249,115,22,0.4)]">
+            ✨ COMING SOON
+          </span>
+        ) : showHotBadge && (
           <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(249,115,22,0.4)]">
             🔥 HOT
           </span>
         )}
-        {showNewBadge && (
+        {!comingSoon && showNewBadge && (
           <span className="bg-accent text-accent-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(217,119,6,0.4)]">
             ⭐ NEW
           </span>
@@ -125,10 +134,10 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
         {/* Stock status indicator */}
         <div className="mt-4 space-y-1.5">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
-            <span className={soldOut ? "text-destructive" : stock <= 5 ? "text-amber-400" : "text-emerald-400"}>
+            <span className={comingSoon ? "text-primary" : soldOut ? "text-destructive" : stock <= 5 ? "text-amber-400" : "text-emerald-400"}>
               {stockLabel}
             </span>
-            <span className="text-slate-300 font-bold">{soldOut ? "0" : stock} left</span>
+            <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : stock} left`}</span>
           </div>
           <div className="h-1 w-full bg-border overflow-hidden">
             <motion.div 
@@ -147,11 +156,11 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
           </span>
           <Button 
             onClick={() => addToCart(product)}
-            disabled={soldOut}
-            className="rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-wider text-xs px-4 py-2 flex items-center gap-1.5 relative overflow-hidden transition-all duration-300"
+            disabled={soldOut || comingSoon}
+            className="rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-wider text-xs px-4 py-2 flex items-center gap-1.5 relative overflow-hidden transition-all duration-300 disabled:bg-muted disabled:text-slate-400"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>{soldOut ? "Sold Out" : inCart ? `In Cart (${inCart.quantity})` : "Add"}</span>
+            {comingSoon ? <Sparkles className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            <span>{comingSoon ? "Soon" : soldOut ? "Sold Out" : inCart ? `In Cart (${inCart.quantity})` : "Add"}</span>
           </Button>
         </div>
       </div>
@@ -234,6 +243,7 @@ export default function Store() {
   }, [user?.email, user?.full_name]);
 
   const addToCart = useCallback((product) => {
+    if (product.coming_soon === true) return;
     const stock = Number(product.stock_quantity);
     if (Number.isFinite(stock) && stock <= 0) return;
 
