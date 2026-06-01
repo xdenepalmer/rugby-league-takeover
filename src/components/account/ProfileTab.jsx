@@ -2,15 +2,18 @@ import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import { SUPPORTED_TEAMS } from "@/lib/public-forms";
+import { ALL_TEAMS } from "@/lib/nrl-teams";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MediaUploader from "@/components/admin/MediaUploader";
+
+const NRL_OPTIONS = ALL_TEAMS.filter((t) => t.league === "NRL");
+const SL_OPTIONS = ALL_TEAMS.filter((t) => t.league === "Super League");
 
 const profileFields = (user) => ({
   full_name: user?.full_name || "",
@@ -67,8 +70,21 @@ export default function ProfileTab() {
         <div className="grid gap-2">
           <Label>Team you support</Label>
           <Select value={draft.favourite_team} onValueChange={(value) => update("favourite_team", value)}>
-            <SelectTrigger className="rounded-none"><SelectValue placeholder="Select a team" /></SelectTrigger>
-            <SelectContent>{SUPPORTED_TEAMS.map((team) => <SelectItem key={team} value={team}>{team}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="rounded-none"><SelectValue placeholder="Select a team">{draft.favourite_team || "Select a team"}</SelectValue></SelectTrigger>
+            <SelectContent className="max-h-72">
+              <SelectGroup>
+                <SelectLabel>NRL</SelectLabel>
+                {NRL_OPTIONS.map((team) => <SelectItem key={team.name} value={team.name}>{team.name}</SelectItem>)}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Betfred Super League</SelectLabel>
+                {SL_OPTIONS.map((team) => <SelectItem key={team.name} value={team.name}>{team.name}</SelectItem>)}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Other</SelectLabel>
+                <SelectItem value="Other">Other / not listed</SelectItem>
+              </SelectGroup>
+            </SelectContent>
           </Select>
         </div>
         <div className="grid gap-2">
