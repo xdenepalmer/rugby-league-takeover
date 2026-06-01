@@ -118,7 +118,7 @@ export default function Account() {
   ];
 
   return (
-    <main className="relative min-h-screen bg-background px-5 py-28 text-foreground md:px-8 overflow-hidden">
+    <main className="relative min-h-screen bg-background px-5 pb-28 pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8 overflow-hidden">
       {/* Visual Background Grids */}
       <div className="absolute inset-0 cmd-grid-bg opacity-35 z-0 pointer-events-none" />
       <div className="absolute top-12 left-12 w-96 h-96 rounded-full bg-primary/5 blur-3xl z-0 pointer-events-none" />

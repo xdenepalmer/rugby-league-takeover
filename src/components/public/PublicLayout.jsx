@@ -21,13 +21,13 @@ export default function PublicLayout() {
       <SiteNav settings={settingsRecords[0] || {}} />
       
       {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
-      <div className="flex-1 pb-[max(60px,calc(60px+var(--safe-bottom)))] lg:pb-0">
+      <div className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
         <Outlet />
       </div>
 
       {/* iOS-Style Public Mobile Bottom Tab Bar */}
       <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto">
-        <div className="flex h-16 items-center justify-around px-2 pb-safe">
+        <div className="flex items-center justify-around px-2 py-1.5 w-full">
           <NavLink
             to="/"
             className={({ isActive }) =>

@@ -192,8 +192,8 @@ export default function AdminLayout({ children }) {
       <div className="cmd-accent-bar h-[2px] w-full" />
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-40 border-b border-border relative">
-        <div className="cmd-glass px-4 py-3 md:px-6">
+      <header className="sticky top-0 z-40 border-b border-border cmd-glass pt-[env(safe-area-inset-top,0px)] relative">
+        <div className="px-4 py-3 md:px-6">
           <div className="flex items-center justify-between">
             {/* Left: Branding + Mobile Toggle */}
             <div className="flex items-center gap-3">

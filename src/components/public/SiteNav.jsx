@@ -147,7 +147,7 @@ export default function SiteNav({ settings = {} }) {
       <div 
         className={`pointer-events-auto mx-auto flex items-center justify-between transition-all duration-500 ${
           scrolled 
-            ? "mt-4 max-w-6xl border border-primary/30 bg-background/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(3,5,18,0.4),0_0_20px_rgba(249,115,22,0.15)] h-16 px-6" 
+            ? "max-w-7xl border-b border-primary/30 bg-background/85 backdrop-blur-xl shadow-[0_4px_30px_rgba(3,5,18,0.4)] h-16 px-5 md:px-8" 
             : "max-w-7xl border-b border-border/10 bg-background/20 backdrop-blur-md h-20 px-5 md:px-8"
         }`}
       >
