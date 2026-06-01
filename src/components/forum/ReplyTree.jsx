@@ -2,7 +2,9 @@ import React from "react";
 import { Reply, Trash2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import MentionTextarea from "./MentionTextarea";
+import MediaAttach from "./MediaAttach";
+import ForumMedia from "./ForumMedia";
 
 // Recursive, nested reply renderer. Reuses the Forum's existing reply state
 // (drafts keyed by node id, activeReplyId, handleReply) so a reply targets the
@@ -39,6 +41,7 @@ export default function ReplyTree({
                 <span className="font-mono text-[9px] text-muted-foreground/40">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
               <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground/80">{reply.body}</p>
+              <ForumMedia url={reply.media_url} type={reply.media_type} />
               <div className="mt-2 flex items-center gap-4">
                 <button type="button" onClick={() => onToggleReply(reply.id)} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 transition-colors hover:text-accent">
                   <Reply className="h-3 w-3" /> Reply
@@ -55,7 +58,8 @@ export default function ReplyTree({
                   {!isAuthenticated && (
                     <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => onUpdateReply(reply.id, { author_name: e.target.value })} className="h-9 rounded-none text-sm" />
                   )}
-                  <Textarea required placeholder={`Reply to ${reply.author_name || "this comment"}…`} value={draft.body} onChange={(e) => onUpdateReply(reply.id, { body: e.target.value })} className="min-h-16 rounded-none text-sm" />
+                  <MentionTextarea required placeholder={`Reply to ${reply.author_name || "this comment"}… use @ to mention`} value={draft.body} onChange={(val) => onUpdateReply(reply.id, { body: val })} className="min-h-16 rounded-none text-sm" />
+                  <MediaAttach value={draft.media_url} onChange={(url) => onUpdateReply(reply.id, { media_url: url })} />
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="ghost" size="sm" className="h-8 rounded-none text-[10px] uppercase tracking-wider" onClick={() => onToggleReply(reply.id)}>Cancel</Button>
                     <Button type="submit" size="sm" disabled={isSubmitting || !draft.body} className="h-8 rounded-none bg-primary text-[10px] uppercase tracking-wider hover:bg-primary/90">

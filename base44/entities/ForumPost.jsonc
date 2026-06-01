@@ -87,6 +87,14 @@
       "type": "number",
       "default": 0,
       "description": "Number of views on the post"
+    },
+    "media_url": {
+      "type": "string",
+      "description": "Optional attached image / GIF / video URL"
+    },
+    "media_type": {
+      "type": "string",
+      "description": "Media kind: image, gif, or video"
     }
   },
   "required": [

@@ -134,6 +134,11 @@ Deno.serve(async (req) => {
     let authorName = trimToLength(user?.full_name || input?.author_name, 80) || 'Anonymous';
     const ip = resolveClientIp(req);
 
+    const mediaUrl = trimToLength(input?.media_url, 600);
+    const mediaExt = mediaUrl.split('?')[0].split('.').pop()?.toLowerCase();
+    const mediaType = trimToLength(input?.media_type, 16)
+      || (mediaUrl ? (['mp4', 'webm', 'mov', 'ogg'].includes(mediaExt) ? 'video' : mediaExt === 'gif' ? 'gif' : 'image') : '');
+
     const ban = await findActiveBan(base44, { ip, emails: [user?.email], userId: user?.id });
     if (ban) {
       return Response.json({ error: 'Your account or connection has been blocked from posting.', code: 'blocked' }, { status: 403 });
@@ -149,7 +154,9 @@ Deno.serve(async (req) => {
       is_pinned: false,
       ip_address: ip,
       user_email: user?.email || '',
-      user_id: user?.id || ''
+      user_id: user?.id || '',
+      media_url: mediaUrl,
+      media_type: mediaType
     });
 
     await createForumNotifications(base44, { post, parentId, actor: user, authorName, body });

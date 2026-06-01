@@ -19,10 +19,13 @@ import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import ReplyTree from "@/components/forum/ReplyTree";
+import ForumMedia from "@/components/forum/ForumMedia";
+import MentionTextarea from "@/components/forum/MentionTextarea";
+import MediaAttach from "@/components/forum/MediaAttach";
 
 /* ━━━ Constants & Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-const emptyPost = { author_name: "", title: "", body: "", category: "General" };
-const emptyReply = { author_name: "", body: "" };
+const emptyPost = { author_name: "", title: "", body: "", category: "General", media_url: "" };
+const emptyReply = { author_name: "", body: "", media_url: "" };
 
 const CATEGORY_META = {
   All:      { label: "All Topics",       icon: Globe,        gradient: "from-slate-400/25 to-slate-500/5",  accent: "text-slate-300",   dot: "bg-slate-300",   ring: "ring-slate-400/20",   hue: 220, glow: "rgba(148,163,184,0.15)" },
@@ -700,6 +703,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
             {/* Full body */}
             <div className="prose prose-invert max-w-none">
               <p className="whitespace-pre-wrap text-sm leading-8 text-muted-foreground/80">{post.body}</p>
+              <ForumMedia url={post.media_url} type={post.media_type} />
             </div>
 
             {/* Engagement */}
@@ -920,6 +924,7 @@ function ForumPostCard({
         {/* Body */}
         <div className="mt-3">
           <p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground/80">{displayBody}</p>
+          <ForumMedia url={post.media_url} type={post.media_type} />
           {shouldTruncate && (
             <button
               type="button"
@@ -1455,7 +1460,11 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
 
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Message</label>
-              <Textarea required placeholder="Share your thoughts, questions, or tips…" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
+              <MentionTextarea required placeholder="Share your thoughts, questions, or tips… use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Attach image / GIF / video</label>
+              <MediaAttach value={draft.media_url} onChange={(url) => setDraft({ ...draft, media_url: url })} />
             </div>
 
             <Button
@@ -1532,7 +1541,7 @@ export default function Forum() {
       const post = buildPendingForumPost({ ...data, author_name: authorName });
       const response = await base44.functions.invoke("submitForumPost", {
         author_name: post.author_name, title: post.title, body: post.body,
-        category: post.category, parent_id: post.parent_id,
+        category: post.category, parent_id: post.parent_id, media_url: data.media_url || "",
       });
       return response.data;
     },
@@ -1561,6 +1570,7 @@ export default function Forum() {
       author_name: reply.author_name,
       title: `Re: ${post.title || "Discussion Thread"}`,
       body: reply.body, category: post.category || "General", parent_id: post.id,
+      media_url: reply.media_url || "",
     });
   };
 
