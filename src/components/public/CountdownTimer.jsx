@@ -74,13 +74,13 @@ export default function CountdownTimer({ settings = {} }) {
   if (settings.countdown_enabled === false || !target || !remaining) return null;
 
   return (
-    <section className="relative overflow-hidden border-y border-border bg-background/85 px-5 py-20 md:px-8 md:py-28">
+    <section className="relative overflow-hidden border-y border-border bg-background/85 px-5 py-12 md:px-8 md:py-28">
       {/* Laser glow highlight */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.12),transparent_60%)] shadow-inner" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:40px_40px] opacity-15 pointer-events-none" />
 
       <div className="relative mx-auto max-w-5xl text-center z-10">
-        <div className="sticky top-[calc(5.5rem+var(--safe-top))] z-20 -mx-3 border-y border-border/30 bg-background/70 px-3 py-4 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <div className="relative z-20 px-1">
           <p className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-primary sm:text-xs sm:tracking-[0.45em]">
             <CalendarClock className="h-4 w-4 animate-pulse text-accent" /> {settings.countdown_subtitle || "Las Vegas • NRL Takeover"}
           </p>
@@ -95,7 +95,7 @@ export default function CountdownTimer({ settings = {} }) {
             🏉 It's happening now in Las Vegas
           </p>
         ) : (
-          <div className="mt-10 flex items-start justify-center gap-2 sm:gap-4 md:gap-5 select-none">
+          <div className="mt-7 flex items-start justify-center gap-2 sm:mt-10 sm:gap-4 md:gap-5 select-none">
             {UNITS.map((unit, i) => (
               <div key={unit.key} className="contents">
                 {i > 0 && (
