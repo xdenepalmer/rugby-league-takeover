@@ -490,7 +490,7 @@ function LiveActivityTicker({ threads }) {
           <Activity className="h-3 w-3 text-primary cmd-pulse" />
           <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-primary">Live</span>
         </div>
-        <div className="flex-1 overflow-hidden py-2">
+        <div className="min-w-0 flex-1 overflow-hidden py-2">
           <motion.div
             className="whitespace-nowrap text-[10px] text-muted-foreground/50 font-mono"
             animate={{ x: ["0%", "-50%"] }}
@@ -793,7 +793,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
               <div className="shrink-0 hidden sm:block">
                 <UserAvatar name={isAuthenticated ? (user?.full_name || user?.email) : replyDraft.author_name} size="sm" src={isAuthenticated ? user?.avatar_url : ""} />
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-2">
                 {!isAuthenticated && (
                   <Input
                     required placeholder="Your name"
