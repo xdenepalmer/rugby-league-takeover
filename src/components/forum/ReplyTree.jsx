@@ -40,6 +40,7 @@ export default function ReplyTree({
   timeAgo,
   people = [],
   resolveAvatar,
+  resolveMeta,
 }) {
   if (!replies.length) return null;
   const indent = depth > 0 ? "ml-3 border-l border-border/40 pl-3 md:ml-5 md:pl-5" : "";
@@ -54,9 +55,19 @@ export default function ReplyTree({
         return (
           <div key={reply.id} className="grid gap-2">
             <div className="border border-border/40 bg-muted/[0.03] p-3 transition-colors hover:bg-muted/[0.06]">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <ReplyAvatar name={reply.author_name} src={resolveAvatar ? resolveAvatar(reply.user_id, reply.author_avatar) : reply.author_avatar} />
                 <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
+                {(() => {
+                  const meta = resolveMeta ? resolveMeta(reply.user_id) : null;
+                  if (!meta) return null;
+                  return (
+                    <>
+                      {meta.location && <span className="text-[10px] text-muted-foreground/50" title={meta.location}>📍 {meta.location}</span>}
+                      {meta.team && <span className="text-[10px] text-muted-foreground/50" title={`Supports ${meta.team}`}>🏉 {meta.team}</span>}
+                    </>
+                  );
+                })()}
                 <span className="font-mono text-[9px] text-muted-foreground/40">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
               <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground/80">{reply.body}</p>
@@ -105,6 +116,7 @@ export default function ReplyTree({
                 timeAgo={timeAgo}
                 people={people}
                 resolveAvatar={resolveAvatar}
+                resolveMeta={resolveMeta}
               />
             )}
           </div>

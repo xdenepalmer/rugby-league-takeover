@@ -6,6 +6,7 @@ import { SUPPORTED_TEAMS } from "@/lib/public-forms";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,8 +16,13 @@ const profileFields = (user) => ({
   full_name: user?.full_name || "",
   phone: user?.phone || "",
   postcode: user?.postcode || "",
+  city: user?.city || "",
+  country: user?.country || "",
+  bio: user?.bio || "",
   favourite_team: user?.favourite_team || "",
   avatar_url: user?.avatar_url || "",
+  show_location_on_forum: user?.show_location_on_forum === true,
+  show_team_on_forum: user?.show_team_on_forum === true,
   marketing_opt_in: user?.marketing_opt_in === true,
 });
 
@@ -51,6 +57,14 @@ export default function ProfileTab() {
           <Input value={draft.postcode} onChange={(e) => update("postcode", e.target.value)} className="rounded-none" />
         </div>
         <div className="grid gap-2">
+          <Label>City / town</Label>
+          <Input value={draft.city} onChange={(e) => update("city", e.target.value)} placeholder="e.g. Sydney" className="rounded-none" />
+        </div>
+        <div className="grid gap-2">
+          <Label>Country</Label>
+          <Input value={draft.country} onChange={(e) => update("country", e.target.value)} placeholder="e.g. Australia" className="rounded-none" />
+        </div>
+        <div className="grid gap-2">
           <Label>Team you support</Label>
           <Select value={draft.favourite_team} onValueChange={(value) => update("favourite_team", value)}>
             <SelectTrigger className="rounded-none"><SelectValue placeholder="Select a team" /></SelectTrigger>
@@ -64,6 +78,23 @@ export default function ProfileTab() {
             <div className="flex-1"><MediaUploader label="Upload avatar" accept="image/*" onUploaded={(url) => update("avatar_url", url)} /></div>
           </div>
         </div>
+        <div className="grid gap-2 md:col-span-2">
+          <Label>Bio</Label>
+          <Textarea value={draft.bio} onChange={(e) => update("bio", e.target.value)} placeholder="A line or two about you (optional)" className="min-h-20 rounded-none" />
+        </div>
+      </div>
+
+      {/* Forum visibility — what shows next to your name on the forum */}
+      <div className="grid gap-3 border border-border bg-card p-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Forum profile</p>
+        <label className="flex items-center justify-between text-sm">
+          <span>Show my location (city / country) next to my name on the forum</span>
+          <Switch checked={draft.show_location_on_forum} onCheckedChange={(value) => update("show_location_on_forum", value)} />
+        </label>
+        <label className="flex items-center justify-between text-sm">
+          <span>Show the team I support next to my name on the forum</span>
+          <Switch checked={draft.show_team_on_forum} onCheckedChange={(value) => update("show_team_on_forum", value)} />
+        </label>
       </div>
 
       <label className="flex items-center justify-between border border-border bg-card p-4 text-sm">

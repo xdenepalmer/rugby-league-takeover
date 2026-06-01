@@ -22,6 +22,8 @@ import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea from "@/components/forum/MentionTextarea";
 import MediaAttach from "@/components/forum/MediaAttach";
 import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
+import ScorePredictor from "@/components/forum/ScorePredictor";
+
 
 
 /* ━━━ Constants & Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -355,6 +357,47 @@ function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, child
   );
 }
 
+/* ━━━ User Achievements Badge Component ━━━━━━━━━━━━━━━━━━ */
+function UserAchievements({ isMe }) {
+  if (!isMe) return null;
+  
+  let voted = false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("rlt_match_voted_")) {
+        voted = true;
+        break;
+      }
+    }
+  } catch (err) {}
+  
+  const claimed = !!localStorage.getItem("rlt_seat_claimed");
+  const posted = !!localStorage.getItem("rlt_forum_posted");
+  
+  if (!voted && !claimed && !posted) return null;
+  
+  return (
+    <div className="inline-flex items-center gap-1 ml-1" title="Vegas Supporter Achievements">
+      {voted && (
+        <span className="inline-flex h-3.5 w-3.5 items-center justify-center bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[8px]" title="Expert Tipster (Unlocked)">
+          🏆
+        </span>
+      )}
+      {claimed && (
+        <span className="inline-flex h-3.5 w-3.5 items-center justify-center bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[8px]" title="Stadium Resident (Unlocked)">
+          📍
+        </span>
+      )}
+      {posted && (
+        <span className="inline-flex h-3.5 w-3.5 items-center justify-center bg-pink-500/10 border border-pink-500/30 text-pink-400 text-[8px]" title="Hype Master (Unlocked)">
+          ⚡
+        </span>
+      )}
+    </div>
+  );
+}
+
 /* ━━━ Author Badge Component ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function AuthorBadge({ name, authorPostCounts }) {
   const badge = getAuthorBadge(name, authorPostCounts);
@@ -363,6 +406,21 @@ function AuthorBadge({ name, authorPostCounts }) {
     <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border`}>
       {badge.emoji} {badge.label}
     </span>
+  );
+}
+
+/* ━━━ Author Meta (opt-in location / team shown next to name) ━━ */
+function AuthorMeta({ meta, className = "" }) {
+  if (!meta || (!meta.location && !meta.team)) return null;
+  return (
+    <>
+      {meta.location && (
+        <span className={`inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 ${className}`} title={meta.location}>📍 {meta.location}</span>
+      )}
+      {meta.team && (
+        <span className={`inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 ${className}`} title={`Supports ${meta.team}`}>🏉 {meta.team}</span>
+      )}
+    </>
   );
 }
 
@@ -672,7 +730,7 @@ function CategoryPill({ value, isActive, onClick, count }) {
 }
 
 /* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar }) {
+function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta }) {
   const meta = getCategoryMeta(post.category);
   const MetaIcon = meta.icon;
   const engagement = getEngagement(post);
@@ -744,9 +802,11 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                 <UserAvatar name={post.author_name} size="lg" src={resolveAvatar ? resolveAvatar(post.user_id, post.author_avatar) : post.author_avatar} />
               </UserProfileHoverCard>
               <div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
                   <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
+                  <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
+                  <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
                   <span className="text-[10px] text-muted-foreground/30">•</span>
                   <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
                 </div>
@@ -833,7 +893,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
 function ForumPostCard({
   post, isAuthenticated, user, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
-  onOpenThread, onDeletePost, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar,
+  onOpenThread, onDeletePost, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -945,9 +1005,11 @@ function ForumPostCard({
             <UserAvatar name={post.author_name} showStatus={index < 3} src={resolveAvatar ? resolveAvatar(post.user_id, post.author_avatar) : post.author_avatar} />
           </UserProfileHoverCard>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="min-w-0 truncate text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
               <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
+              <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
+              <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
               <span className="text-[10px] text-muted-foreground/30">•</span>
               <span className="text-[10px] font-mono text-muted-foreground/40 tabular-nums">{timeAgo(post.created_date)}</span>
             </div>
@@ -1429,7 +1491,7 @@ function MobileFAB({ onClick }) {
 }
 
 /* ━━━ Compose Sidebar (Premium Enhanced) ━━━━━━━━━━━━━━━━━ */
-function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [], onFilterSearch, onClaimSeat, searchQuery }) {
+function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [], onFilterSearch, onClaimSeat, searchQuery, onSharePrediction }) {
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Compose Card */}
@@ -1538,11 +1600,17 @@ function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForRe
         currentSearch={searchQuery}
       />
 
+      {/* Score Predictor */}
+      <ScorePredictor
+        onSharePrediction={onSharePrediction}
+      />
+
       {/* Top Contributors */}
       <TopContributors allThreads={allThreads} />
 
       {/* Online Users */}
       <OnlineUsersWidget threads={allThreads} />
+
 
       {/* Recent Activity */}
       <RecentActivityFeed allThreads={allThreads} />
@@ -1606,12 +1674,22 @@ export default function Forum() {
     meta: { silent: true },
     staleTime: 60000,
   });
-  const avatarById = useMemo(() => {
-    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), a.avatar_url]));
-    if (isAuthenticated && user?.id && user?.avatar_url) map.set(String(user.id), user.avatar_url); // viewer's own, always current
+  // Per-user forum profile: avatar + the optional location/team a member chose to
+  // display. Built from the forumAvatars function; the viewer's own row is merged
+  // in live so their changes show immediately.
+  const profileById = useMemo(() => {
+    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "" }]));
+    if (isAuthenticated && user?.id) {
+      map.set(String(user.id), {
+        avatar_url: user.avatar_url || "",
+        location: user.show_location_on_forum ? [user.city, user.country].filter(Boolean).join(", ") : "",
+        team: user.show_team_on_forum ? (user.favourite_team || "") : "",
+      });
+    }
     return map;
   }, [avatarData, isAuthenticated, user]);
-  const avatarFor = (userId, snapshot) => (userId && avatarById.get(String(userId))) || snapshot || "";
+  const avatarFor = (userId, snapshot) => (userId && profileById.get(String(userId))?.avatar_url) || snapshot || "";
+  const forumMetaFor = (userId) => (userId && profileById.get(String(userId))) || null;
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -1677,6 +1755,7 @@ export default function Forum() {
     onDelete: handleDelete,
     timeAgo,
     resolveAvatar: avatarFor,
+    resolveMeta: forumMetaFor,
   };
 
   const allThreads = buildForumThreads(posts);
@@ -1915,29 +1994,50 @@ export default function Forum() {
               </div>
             </motion.div>
 
-            {/* Seating Planner at top of feed for MatchDay category */}
+            {/* Seating Planner & Score Predictor for MatchDay category */}
             <AnimatePresence>
               {selectedCategory === "MatchDay" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
+                  className="overflow-hidden space-y-4 mb-4"
                 >
-                  <StadiumSeatPlanner
-                    onFilterSearch={(q) => setSearchQuery(q)}
-                    onClaimSeat={(q) => {
-                      setDraft((d) => ({
-                        ...d,
-                        title: `[${q}] Supporter Meetup!`,
-                        body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
-                        category: "MatchDay",
-                      }));
-                      setShowMobileCompose(true);
-                      window.scrollTo({ top: 300, behavior: "smooth" });
-                    }}
-                    currentSearch={searchQuery}
-                  />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <StadiumSeatPlanner
+                      onFilterSearch={(q) => setSearchQuery(q)}
+                      onClaimSeat={(q) => {
+                        setDraft((d) => ({
+                          ...d,
+                          title: `[${q}] Supporter Meetup!`,
+                          body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
+                          category: "MatchDay",
+                        }));
+                        setShowMobileCompose(true);
+                        window.scrollTo({ top: 300, behavior: "smooth" });
+                        try {
+                          localStorage.setItem("rlt_seat_claimed", q);
+                          window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
+                        } catch (err) {}
+                      }}
+                      currentSearch={searchQuery}
+                    />
+                    <ScorePredictor
+                      onSharePrediction={(matchup, homeScore, awayScore) => {
+                        const home = matchup.home_team;
+                        const away = matchup.away_team;
+                        const label = matchup.label || "Opening Showdown";
+                        setDraft((d) => ({
+                          ...d,
+                          title: `[Prediction] ${home} ${homeScore} - ${awayScore} ${away}`,
+                          body: `Here is my match prediction for ${label}: ${home} ${homeScore} - ${awayScore} ${away}! Let's go! What are your score predictions?`,
+                          category: "MatchDay",
+                        }));
+                        setShowMobileCompose(true);
+                        window.scrollTo({ top: 300, behavior: "smooth" });
+                      }}
+                    />
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1959,6 +2059,7 @@ export default function Forum() {
                   authorPostCounts={authorPostCounts}
                   authorReplyCounts={authorReplyCounts}
                   resolveAvatar={avatarFor}
+                  resolveMeta={forumMetaFor}
                 />
               ))}
 
@@ -1989,8 +2090,24 @@ export default function Forum() {
                   category: "MatchDay",
                 }));
                 window.scrollTo({ top: 300, behavior: "smooth" });
+                try {
+                  localStorage.setItem("rlt_seat_claimed", q);
+                  window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
+                } catch (err) {}
               }}
               searchQuery={searchQuery}
+              onSharePrediction={(matchup, homeScore, awayScore) => {
+                const home = matchup.home_team;
+                const away = matchup.away_team;
+                const label = matchup.label || "Opening Showdown";
+                setDraft((d) => ({
+                  ...d,
+                  title: `[Prediction] ${home} ${homeScore} - ${awayScore} ${away}`,
+                  body: `Here is my match prediction for ${label}: ${home} ${homeScore} - ${awayScore} ${away}! Let's go! What are your score predictions?`,
+                  category: "MatchDay",
+                }));
+                window.scrollTo({ top: 300, behavior: "smooth" });
+              }}
             />
           </div>
         </div>
@@ -2013,6 +2130,7 @@ export default function Forum() {
             authorPostCounts={authorPostCounts}
             authorReplyCounts={authorReplyCounts}
             resolveAvatar={avatarFor}
+            resolveMeta={forumMetaFor}
           />
         )}
       </AnimatePresence>

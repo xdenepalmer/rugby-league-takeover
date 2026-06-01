@@ -18,6 +18,28 @@
       "type": "string",
       "description": "User avatar image URL"
     },
+    "city": {
+      "type": "string",
+      "description": "User's city / town"
+    },
+    "country": {
+      "type": "string",
+      "description": "User's country"
+    },
+    "bio": {
+      "type": "string",
+      "description": "Short about-me shown on the user's forum profile"
+    },
+    "show_location_on_forum": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show the user's city/country next to their name on the forum"
+    },
+    "show_team_on_forum": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show the user's favourite team next to their name on the forum"
+    },
     "marketing_opt_in": {
       "type": "boolean",
       "default": false,
