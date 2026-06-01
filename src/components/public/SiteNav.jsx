@@ -131,15 +131,15 @@ export default function SiteNav({ settings = {} }) {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
-        delayChildren: 0.1
+        staggerChildren: 0.04,
+        delayChildren: 0.05
       }
     }
   };
 
   const itemVariants = {
-    hidden: { x: 30, opacity: 0 },
-    show: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 25 } }
+    hidden: { x: 12, opacity: 0 },
+    show: { x: 0, opacity: 1, transition: { type: "tween", ease: "easeOut", duration: 0.18 } }
   };
 
   return (
@@ -270,24 +270,30 @@ export default function SiteNav({ settings = {} }) {
       <AnimatePresence>
         {open && (
           <>
-            {/* Dark blur backdrop */}
+            {/* Dark high-contrast backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "linear" }}
+              style={{ willChange: "opacity" }}
               onClick={() => setOpen(false)}
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden pointer-events-auto"
+              className="fixed inset-0 z-50 bg-black/65 lg:hidden pointer-events-auto"
             />
  
             <motion.nav 
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 350, damping: 30 }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex w-72 max-w-[86vw] flex-col justify-between border-l border-border bg-background/98 px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto cmd-glass lg:hidden"
+              transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.28 }}
+              style={{ willChange: "transform" }}
+              className="fixed bottom-0 right-0 top-0 z-50 flex w-72 max-w-[86vw] flex-col justify-between border-l border-border bg-background px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto lg:hidden"
             >
               {/* Technical Grid background decoration */}
-              <div className="absolute inset-0 cmd-grid-bg opacity-10 pointer-events-none" />
+              <div 
+                className="absolute inset-0 cmd-grid-bg opacity-10 pointer-events-none" 
+                style={{ animation: "none" }}
+              />
               
               <div className="relative z-10">
                 {/* Drawer Header */}

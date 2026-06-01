@@ -458,8 +458,7 @@ export default function AdminLayout({ children }) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-30 lg:hidden"
-                style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", background: "rgba(0,0,0,0.55)" }}
+                className="fixed inset-0 z-30 bg-black/65 lg:hidden"
                 onClick={() => setMobileOpen(false)}
               />
               <motion.aside
@@ -467,7 +466,7 @@ export default function AdminLayout({ children }) {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="ios-scroll fixed left-0 top-0 z-40 h-dvh w-72 max-w-[86vw] border-r border-border cmd-glass cmd-scrollbar overflow-y-auto pb-safe pt-safe lg:hidden"
+                className="ios-scroll fixed left-0 top-0 z-40 h-dvh w-72 max-w-[86vw] border-r border-border bg-background cmd-scrollbar overflow-y-auto pb-safe pt-safe lg:hidden"
               >
                 <div className="flex items-center justify-between px-4 py-4 border-b border-border">
                   <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary">
@@ -589,7 +588,7 @@ export default function AdminLayout({ children }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-background/55 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-black/65 lg:hidden"
               onClick={() => setMobileMoreOpen(false)}
             />
             <motion.section

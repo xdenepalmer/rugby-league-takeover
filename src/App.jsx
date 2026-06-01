@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client';
@@ -12,16 +12,32 @@ import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import InstallAppPrompt from '@/components/InstallAppPrompt';
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
-// Add page imports here
-import Home from './pages/Home';
-import Admin from './pages/Admin';
-import Account from './pages/Account';
-import Store from './pages/Store';
-import Forum from './pages/Forum';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
+
+// Lazy-loaded pages
+const Home = lazy(() => import("./pages/Home"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Account = lazy(() => import("./pages/Account"));
+const Store = lazy(() => import("./pages/Store"));
+const Forum = lazy(() => import("./pages/Forum"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
+// Sleek, theme-responsive loading spinner for route chunk loading
+const LoadingFallback = () => (
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background text-foreground">
+    <div className="relative flex items-center justify-center mb-4">
+      {/* Outer pulsing neon circle */}
+      <div className="absolute h-12 w-12 rounded-full border-2 border-primary/20 animate-ping" />
+      {/* Inner spinning loader */}
+      <div className="h-10 w-10 rounded-full border-t-2 border-r-2 border-primary animate-spin" />
+    </div>
+    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-primary animate-pulse">
+      Loading Module...
+    </span>
+  </div>
+);
 
 const AuthenticatedApp = () => {
   const { isLoadingPublicSettings, authError } = useAuth();
@@ -33,11 +49,7 @@ const AuthenticatedApp = () => {
 
   // Block only on the initial app/public-settings load.
   if (isLoadingPublicSettings) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingFallback />;
   }
 
   // A gated-app "not registered" error only matters on protected routes.
@@ -45,23 +57,25 @@ const AuthenticatedApp = () => {
     return <UserNotRegisteredError />;
   }
 
-  // Render the main app
+  // Render the main app with route code-splitting suspense
   return (
-    <Routes>
-      {/* Add your page Route elements here */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/store" element={<Store />} />
-        <Route path="/forum" element={<Forum />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-      </Route>
-      <Route path="/admin/*" element={<RequireAdmin><Admin /></RequireAdmin>} />
-      <Route path="/account/*" element={<RequireAuth><Account /></RequireAuth>} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        {/* Add your page Route elements here */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/store" element={<Store />} />
+          <Route path="/forum" element={<Forum />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+        </Route>
+        <Route path="/admin/*" element={<RequireAdmin><Admin /></RequireAdmin>} />
+        <Route path="/account/*" element={<RequireAuth><Account /></RequireAuth>} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 

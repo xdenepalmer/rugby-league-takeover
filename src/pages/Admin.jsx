@@ -1,30 +1,39 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-import OverviewPanel from "@/components/admin/panels/OverviewPanel";
-import ContentPanel from "@/components/admin/panels/ContentPanel";
-import EventsPanel from "@/components/admin/panels/EventsPanel";
-import StorePanel from "@/components/admin/panels/StorePanel";
-import CommunityPanel from "@/components/admin/panels/CommunityPanel";
-import PeoplePanel from "@/components/admin/panels/PeoplePanel";
-import SettingsPanel from "@/components/admin/panels/SettingsPanel";
+
+const OverviewPanel = lazy(() => import("@/components/admin/panels/OverviewPanel"));
+const ContentPanel = lazy(() => import("@/components/admin/panels/ContentPanel"));
+const EventsPanel = lazy(() => import("@/components/admin/panels/EventsPanel"));
+const StorePanel = lazy(() => import("@/components/admin/panels/StorePanel"));
+const CommunityPanel = lazy(() => import("@/components/admin/panels/CommunityPanel"));
+const PeoplePanel = lazy(() => import("@/components/admin/panels/PeoplePanel"));
+const SettingsPanel = lazy(() => import("@/components/admin/panels/SettingsPanel"));
+
+const PanelLoading = () => (
+  <div className="flex h-48 w-full items-center justify-center">
+    <div className="h-6 w-6 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+  </div>
+);
 
 // Access is enforced by <RequireAdmin> in App.jsx. This component only owns the
 // dashboard layout and its deep-linkable section routes.
 export default function Admin() {
   return (
     <AdminLayout>
-      <Routes>
-        <Route index element={<Navigate to="overview" replace />} />
-        <Route path="overview" element={<OverviewPanel />} />
-        <Route path="content" element={<ContentPanel />} />
-        <Route path="events" element={<EventsPanel />} />
-        <Route path="store" element={<StorePanel />} />
-        <Route path="community" element={<CommunityPanel />} />
-        <Route path="people" element={<PeoplePanel />} />
-        <Route path="settings" element={<SettingsPanel />} />
-        <Route path="*" element={<Navigate to="overview" replace />} />
-      </Routes>
+      <Suspense fallback={<PanelLoading />}>
+        <Routes>
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<OverviewPanel />} />
+          <Route path="content" element={<ContentPanel />} />
+          <Route path="events" element={<EventsPanel />} />
+          <Route path="store" element={<StorePanel />} />
+          <Route path="community" element={<CommunityPanel />} />
+          <Route path="people" element={<PeoplePanel />} />
+          <Route path="settings" element={<SettingsPanel />} />
+          <Route path="*" element={<Navigate to="overview" replace />} />
+        </Routes>
+      </Suspense>
     </AdminLayout>
   );
 }

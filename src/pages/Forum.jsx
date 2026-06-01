@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useInView, useMotionValue, useTransform, useSpring } from "framer-motion";
@@ -32,6 +32,20 @@ import { topBadge, parseBadgeIds } from "@/lib/slot-badges";
 /* ━━━ Constants & Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const emptyPost = { author_name: "", title: "", body: "", category: "General", media_url: "" };
 const emptyReply = { author_name: "", body: "", media_url: "" };
+
+const containsActiveReply = (post, activeId) => {
+  if (!activeId) return false;
+  if (post.id === activeId) return true;
+  if (!post.replies) return false;
+  const checkReplies = (replies) => {
+    for (const r of replies) {
+      if (r.id === activeId) return true;
+      if (r.replies && checkReplies(r.replies)) return true;
+    }
+    return false;
+  };
+  return checkReplies(post.replies);
+};
 
 const CATEGORY_META = {
   All:      { label: "All Topics",       icon: Globe,        gradient: "from-slate-400/25 to-slate-500/5",  accent: "text-slate-300",   dot: "bg-slate-300",   ring: "ring-slate-400/20",   hue: 220, glow: "rgba(148,163,184,0.15)" },
@@ -239,7 +253,7 @@ function FloatingParticles() {
 }
 
 /* ━━━ User Avatar (Enhanced) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function UserAvatar({ name, size = "md", showStatus = false, src = "" }) {
+const UserAvatar = memo(function UserAvatar({ name, size = "md", showStatus = false, src = "" }) {
   const initial = (name || "?")[0].toUpperCase();
   const second = (name || "??").length > 1 ? name.split(/\s+/)?.[1]?.[0]?.toUpperCase() || "" : "";
   const seed = [...(name || "")].reduce((t, c) => t + c.charCodeAt(0), 0);
@@ -273,7 +287,7 @@ function UserAvatar({ name, size = "md", showStatus = false, src = "" }) {
       )}
     </div>
   );
-}
+});
 
 /* ━━━ User Profile Hover Card ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, children }) {
@@ -602,7 +616,7 @@ function LiveActivityTicker({ threads }) {
 }
 
 /* ━━━ Online Users Widget ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function OnlineUsersWidget({ threads }) {
+const OnlineUsersWidget = memo(function OnlineUsersWidget({ threads }) {
   const uniqueUsers = useMemo(() => {
     const names = new Set();
     threads.forEach((t) => {
@@ -637,7 +651,7 @@ function OnlineUsersWidget({ threads }) {
       </div>
     </div>
   );
-}
+});
 
 /* ━━━ Sort Tabs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const SORT_OPTIONS = [
@@ -677,7 +691,7 @@ function SortTabs({ active, onChange }) {
 }
 
 /* ━━━ Trending Card (Premium) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function TrendingCard({ thread, rank, onClick }) {
+const TrendingCard = memo(function TrendingCard({ thread, rank, onClick }) {
   const meta = getCategoryMeta(thread.category);
   const engagement = getEngagement(thread);
   const MetaIcon = meta.icon;
@@ -722,10 +736,10 @@ function TrendingCard({ thread, rank, onClick }) {
       <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/3 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </motion.div>
   );
-}
+});
 
 /* ━━━ Category Pill (Interactive) ━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function CategoryPill({ value, isActive, onClick, count }) {
+const CategoryPill = memo(function CategoryPill({ value, isActive, onClick, count }) {
   const meta = getCategoryMeta(value);
   const MetaIcon = meta.icon;
 
@@ -759,10 +773,10 @@ function CategoryPill({ value, isActive, onClick, count }) {
       )}
     </motion.button>
   );
-}
+});
 
 /* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta }) {
+const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta }) {
   const meta = getCategoryMeta(post.category);
   const MetaIcon = meta.icon;
   const engagement = getEngagement(post);
@@ -869,7 +883,7 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
                   <MessageCircle className="h-3 w-3" />
                   {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
                 </p>
-                <ReplyTree replies={replies} {...replyApi} />
+                <ReplyTree replies={replies} activeReplyDraft={activeReplyDraft} {...replyApi} />
               </div>
             )}
           </div>
@@ -919,13 +933,13 @@ function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isS
       </motion.div>
     </>
   );
-}
+});
 
 /* ━━━ Post Card (Premium with 3D tilt) ━━━━━━━━━━━━━━━━━━━ */
-function ForumPostCard({
+const ForumPostCard = memo(function ForumPostCard({
   post, isAuthenticated, user, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
-  onOpenThread, onDeletePost, replyApi, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta,
+  onOpenThread, onDeletePost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -1166,7 +1180,7 @@ function ForumPostCard({
                     </button>
                   )}
                 </div>
-                <ReplyTree replies={visibleReplies} {...replyApi} />
+                <ReplyTree replies={visibleReplies} activeReplyDraft={activeReplyDraft} {...replyApi} />
                 {showAllReplies && hiddenCount > 0 && (
                   <button
                     type="button"
@@ -1252,10 +1266,10 @@ function ForumPostCard({
       </div>
     </motion.article>
   );
-}
+});
 
 /* ━━━ Top Contributors Leaderboard ━━━━━━━━━━━━━━━━━━━━━━━ */
-function TopContributors({ allThreads }) {
+const TopContributors = memo(function TopContributors({ allThreads }) {
   const topUsers = useMemo(() => {
     const totalCounts = {};
     allThreads.forEach(t => {
@@ -1303,7 +1317,7 @@ function TopContributors({ allThreads }) {
       </div>
     </div>
   );
-}
+});
 
 /* ━━━ Recent Activity Mini-Feed ━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function RecentActivityFeed({ allThreads }) {
@@ -1743,13 +1757,13 @@ export default function Forum() {
     }
     return map;
   }, [avatarData, isAuthenticated, user]);
-  const avatarFor = (userId, snapshot) => (userId && profileById.get(String(userId))?.avatar_url) || snapshot || "";
-  const forumMetaFor = (userId) => {
+  const avatarFor = useCallback((userId, snapshot) => (userId && profileById.get(String(userId))?.avatar_url) || snapshot || "", [profileById]);
+  const forumMetaFor = useCallback((userId) => {
     const p = userId && profileById.get(String(userId));
     if (!p) return null;
     const teamLogo = p.team ? (teamLogoByName.get(String(p.team).trim().toLowerCase()) || "") : "";
     return { ...p, teamLogo, badge: topBadge(p.badges) };
-  };
+  }, [profileById, teamLogoByName]);
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -1774,49 +1788,70 @@ export default function Forum() {
     createMutation.mutate(draft);
   };
 
-  const getReplyDraft = (postId) => replyDrafts[postId] || emptyReply;
-  const updateReplyDraft = (postId, updates) => {
+  const getReplyDraft = useCallback((postId) => replyDrafts[postId] || emptyReply, [replyDrafts]);
+  const updateReplyDraft = useCallback((postId, updates) => {
     setReplyDrafts((c) => ({ ...c, [postId]: { ...emptyReply, ...c[postId], ...updates } }));
-  };
+  }, []);
 
-  const handleReply = (post, e) => {
+  const handleReply = useCallback((post, e) => {
     e.preventDefault();
-    const reply = getReplyDraft(post.id);
-    if (!post.id || (!isAuthenticated && !reply.author_name) || !reply.body) return;
-    createMutation.mutate({
-      author_name: reply.author_name,
-      title: `Re: ${post.title || "Discussion Thread"}`,
-      body: reply.body, category: post.category || "General", parent_id: post.id,
-      media_url: reply.media_url || "",
+    setReplyDrafts((currentDrafts) => {
+      const reply = currentDrafts[post.id] || emptyReply;
+      if (!post.id || (!isAuthenticated && !reply.author_name) || !reply.body) return currentDrafts;
+      createMutation.mutate({
+        author_name: reply.author_name,
+        title: `Re: ${post.title || "Discussion Thread"}`,
+        body: reply.body, category: post.category || "General", parent_id: post.id,
+        media_url: reply.media_url || "",
+      });
+      return currentDrafts;
     });
-  };
+  }, [isAuthenticated, createMutation]);
 
   const deleteMutation = useMutation({
     mutationFn: (postId) => base44.functions.invoke("forumAction", { action: "delete", postId }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); toast({ title: "Removed" }); },
   });
 
-  const handleDelete = (node) => {
+  const handleDelete = useCallback((node) => {
     if (!node?.id) return;
     if (typeof window !== "undefined" && !window.confirm("Remove this and any replies under it?")) return;
     deleteMutation.mutate(node.id);
-  };
+  }, [deleteMutation]);
+
+  const handleToggleReply = useCallback((postId) => {
+    setActiveReplyId((curr) => (curr === postId ? null : postId));
+  }, []);
+
+  const handleOpenThread = useCallback((p) => {
+    setThreadModalPost(p);
+  }, []);
 
   // Shared API for the recursive ReplyTree (reply to / delete any comment at any depth).
-  const replyApi = {
+  const replyApi = useMemo(() => ({
     isAuthenticated,
     user,
     isSubmitting: createMutation.isPending,
     activeReplyId,
-    onToggleReply: (id) => setActiveReplyId(activeReplyId === id ? null : id),
-    getReplyDraft,
-    onUpdateReply: (id, updates) => updateReplyDraft(id, updates),
-    onReply: (node, e) => handleReply(node, e),
+    onToggleReply: handleToggleReply,
+    onUpdateReply: updateReplyDraft,
+    onReply: handleReply,
     onDelete: handleDelete,
     timeAgo,
     resolveAvatar: avatarFor,
     resolveMeta: forumMetaFor,
-  };
+  }), [
+    isAuthenticated,
+    user,
+    createMutation.isPending,
+    activeReplyId,
+    handleToggleReply,
+    updateReplyDraft,
+    handleReply,
+    handleDelete,
+    avatarFor,
+    forumMetaFor
+  ]);
 
   const allThreads = buildForumThreads(posts);
 
@@ -2109,24 +2144,31 @@ export default function Forum() {
 
             {/* Thread Feed */}
             <div className="space-y-3">
-              {filteredThreads.map((post, index) => (
-                <ForumPostCard
-                  key={post.id} post={post} index={index}
-                  isAuthenticated={isAuthenticated} user={user}
-                  appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
-                  replyOpen={activeReplyId === post.id} replyDraft={getReplyDraft(post.id)}
-                  onToggleReply={() => setActiveReplyId(activeReplyId === post.id ? null : post.id)}
-                  onUpdateReply={(updates) => updateReplyDraft(post.id, updates)}
-                  onReply={(e) => handleReply(post, e)}
-                  onOpenThread={(p) => setThreadModalPost(p)}
-                  onDeletePost={handleDelete}
-                  replyApi={replyApi}
-                  authorPostCounts={authorPostCounts}
-                  authorReplyCounts={authorReplyCounts}
-                  resolveAvatar={avatarFor}
-                  resolveMeta={forumMetaFor}
-                />
-              ))}
+              {filteredThreads.map((post, index) => {
+                const isActiveThread = activeReplyId && (activeReplyId === post.id || containsActiveReply(post, activeReplyId));
+                const activeReplyDraft = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
+
+                return (
+                  <ForumPostCard
+                    key={post.id} post={post} index={index}
+                    isAuthenticated={isAuthenticated} user={user}
+                    appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
+                    replyOpen={activeReplyId === post.id}
+                    replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}
+                    onToggleReply={handleToggleReply}
+                    onUpdateReply={updateReplyDraft}
+                    onReply={handleReply}
+                    onOpenThread={handleOpenThread}
+                    onDeletePost={handleDelete}
+                    replyApi={replyApi}
+                    activeReplyDraft={activeReplyDraft}
+                    authorPostCounts={authorPostCounts}
+                    authorReplyCounts={authorReplyCounts}
+                    resolveAvatar={avatarFor}
+                    resolveMeta={forumMetaFor}
+                  />
+                );
+              })}
 
               {filteredThreads.length === 0 && (
                 <EmptyState
@@ -2188,10 +2230,11 @@ export default function Forum() {
             user={user}
             appReady={appParams.hasBase44Config}
             isSubmitting={createMutation.isPending}
-            replyDraft={getReplyDraft(threadModalPost.id)}
-            onUpdateReply={(updates) => updateReplyDraft(threadModalPost.id, updates)}
-            onReply={(e) => { handleReply(threadModalPost, e); }}
+            replyDraft={replyDrafts[threadModalPost.id] || emptyReply}
+            onUpdateReply={updateReplyDraft}
+            onReply={handleReply}
             replyApi={replyApi}
+            activeReplyDraft={replyDrafts[activeReplyId] || emptyReply}
             authorPostCounts={authorPostCounts}
             authorReplyCounts={authorReplyCounts}
             resolveAvatar={avatarFor}
