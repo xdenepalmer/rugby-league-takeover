@@ -183,14 +183,14 @@ export default function SiteNav({ settings = {} }) {
         </Link>
         
         {/* Desktop Nav links with HUD bracket hover and glowing indicator */}
-        <nav className="hidden items-center gap-4 xl:gap-6 lg:flex" aria-label="Site navigation">
+        <nav className="hidden items-center gap-1.5 xl:gap-3 2xl:gap-5 lg:flex" aria-label="Site navigation">
           {links.map((link) => {
             const active = isLinkActive(link.href);
             return (
               <Link 
                 key={link.href} 
                 to={link.href} 
-                className={`group relative py-2 font-display text-[10px] xl:text-[10.5px] font-bold uppercase tracking-[0.2em] xl:tracking-[0.25em] whitespace-nowrap transition-all duration-300 ${
+                className={`group relative py-2 font-display text-[8.5px] xl:text-[10px] 2xl:text-[10.5px] font-bold uppercase tracking-[0.12em] xl:tracking-[0.2em] whitespace-nowrap transition-all duration-300 ${
                   active ? "text-primary" : "text-slate-300 hover:text-foreground"
                 }`}
               >
