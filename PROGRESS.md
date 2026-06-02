@@ -1,12 +1,13 @@
 # PROGRESS — Rugby League Takeover
 
-_Last updated: 2026-06-03 (RLT-001V)_
+_Last updated: 2026-06-03 (RLT-001W)_
 
-> **Current `main` ≈ `aabc8c87`.** Lint-gate recovery consolidated:
-> - **RLT-001V** (`bmad/story-rlt-001v-claude`): combined T+U lint fixes in one clean branch off current `main` — ScorePredictor/SlotMachine/AdsManager/AdSlot unused imports + `rules-of-hooks`. **`npm run lint` fully green**, tests 37/37, typecheck/build green. Awaiting merge. **Supersedes RLT-001T (`fb25524`) and RLT-001U (`5aae606`)** — merge V instead of T/U separately.
-> - **RLT-001S** (`84e69c6`): forum `getEngagement` clamp + 5 tests — merge after RLT-001V (re-apply on then-current `main` if it has moved).
-> - **RLT-001P/Q/R abandoned/superseded.** Manual Base44 Publish still required to go live.
-> - ⚠️ Concurrent agent commits keep churning the tree — merge RLT-001V promptly before `main` moves again.
+> **Current `origin/main` = `983fd82`** (now contains the committed slot-machine/tipping/ads feature work). Lint-gate recovery — stable-base approach:
+> - **RLT-001W** (`bmad/story-rlt-001w-lint-gate`, worktree from `origin/main` `983fd82`): removed 3 unused imports in `ScorePredictor.jsx` (`ChevronLeft`,`ChevronRight`,`Eye`) — the only remaining errors at that SHA. **`npm run lint` fully green (repo-wide)**, tests 37/37, typecheck/build green. Built in an **isolated worktree** to dodge the churning shared tree. Awaiting push/PR + merge.
+> - **RLT-001V BLOCKED** — local shared tree churned mid-story; contaminated commit `74cb431` reset (concurrent work preserved). Superseded by RLT-001W.
+> - **RLT-001S** (`84e69c6`): forum `getEngagement` clamp + 5 tests — merge after RLT-001W lands; re-apply on then-current `main` if it moved.
+> - **RLT-001P/Q/R/T/U superseded.** Manual Base44 Publish still required to go live.
+> - ⚠️ Bounded local commits are unsafe while Base44 auto-sync churns the shared tree — use fixed-SHA worktrees / GitHub PRs for source fixes.
 
 ## Current source of truth
 - **Reconciliation branch (current, recommended for next PR):** `bmad/reconcile-rlt-001k` — branched from canonical `origin/main` (`8c3dd79`, which already carries the live Antigravity UI/UX pass); approved RLT-001E baseline deltas replayed onto it (15 files clean-applied + 6 hand-merged keeping both Antigravity and RLT-001E). Validation 37/37 green. Fast-forwardable descendant of `origin/main` → a fresh PR from it will be conflict-free. Manual Base44 Publish required after merge.

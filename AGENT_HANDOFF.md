@@ -40,8 +40,11 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001V** — Re-applied combined T+U lint fixes on current `main` (`aabc8c87`) in one clean branch `bmad/story-rlt-001v-claude`: ScorePredictor (5 unused imports + `rules-of-hooks` `useMemo` hoist), SlotMachine (`useAnimation`), AdsManager (`Globe`), AdSlot (`useMemo`). **`npm run lint` fully green (repo-wide)**, tests 37/37, typecheck/build green. Import + hook-order only; no tipping/slot/ads behaviour change. Explicit-path staging. Commit `fix: restore combined lint gate`. No push. **Supersedes RLT-001T/U** — merge V, not T/U.
-- **RLT-001S** — engagement clamp (`84e69c6`); merge after RLT-001V (re-apply on then-current `main` if moved).
+- **RLT-001W** — Applied the lint-gate fix from a **fixed remote SHA** (`origin/main` `983fd82`) in an **isolated git worktree** (`bmad/story-rlt-001w-lint-gate`), avoiding the churning shared tree. Removed 3 unused imports in `ScorePredictor.jsx` (`ChevronLeft`,`ChevronRight`,`Eye`) — the only remaining lint errors at that SHA. **`npm run lint` fully green**, tests 37/37, typecheck/build green. No behaviour change; explicit-path staging. Commit `fix: restore lint gate from fixed main`. No push.
+- **RLT-001V** — BLOCKED by environment instability (local shared tree churned; contaminated commit `74cb431` reset, concurrent work preserved). Superseded by RLT-001W.
+- **RLT-001S** — engagement clamp (`84e69c6`); merge after RLT-001W lands lint-green (re-apply on then-current `main` if moved).
+- **RLT-001P/Q/R/T/U** — superseded. **RLT-001M/L** — PR #2 merged into `main` (`56ddbfc`); Manual Base44 Publish still required.
+- ⚠️ **Process:** Base44 auto-sync continuously overwrites the shared local tree — do source fixes via fixed-SHA worktrees or GitHub PRs, not the live local checkout.
 - **RLT-001T/U** — accepted in substance, **superseded by RLT-001V**. **RLT-001R/P/Q** abandoned/superseded.
 - **RLT-001M / L** — PR #2 squash-merged into `main` (`56ddbfc`); PR #1 closed superseded. Manual Base44 Publish still required.
 - ⚠️ **Process:** relentless concurrent-agent churn keeps moving `main` and shifting lint targets — merge RLT-001V promptly; consider a CI lint gate on the Base44 auto-sync commits.
