@@ -26,7 +26,7 @@ import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
 import ScorePredictor from "@/components/forum/ScorePredictor";
 import SlotMachineBadgeUnlock from "@/components/forum/SlotMachineBadgeUnlock";
 import TeamCrest from "@/components/public/TeamCrest";
-import { topBadge, parseBadgeIds } from "@/lib/slot-badges";
+import { topBadge, parseBadgeIds, SPIN_COOLDOWN_MS, SLOT_LAST_SPIN_KEY } from "@/lib/slot-badges";
 
 
 
@@ -1598,6 +1598,30 @@ export default function Forum() {
   const [draft, setDraft] = useState(emptyPost);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+
+  /* ── Collapsible tipping + slot machine position ── */
+  const [tippingExpanded, setTippingExpanded] = useState(() => {
+    try { return localStorage.getItem("rlt_tipping_expanded") === "true"; } catch { return false; }
+  });
+  const [slotSpinAvailable, setSlotSpinAvailable] = useState(() => {
+    const last = Number(localStorage.getItem(SLOT_LAST_SPIN_KEY) || 0);
+    return Date.now() - last >= SPIN_COOLDOWN_MS;
+  });
+  useEffect(() => {
+    const tick = () => {
+      const last = Number(localStorage.getItem(SLOT_LAST_SPIN_KEY) || 0);
+      setSlotSpinAvailable(Date.now() - last >= SPIN_COOLDOWN_MS);
+    };
+    const id = setInterval(tick, 5000);
+    return () => clearInterval(id);
+  }, []);
+  const toggleTipping = useCallback(() => {
+    setTippingExpanded((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("rlt_tipping_expanded", String(next)); } catch {}
+      return next;
+    });
+  }, []);
   const [sortBy, setSortBy] = useState("latest");
   const [submittedForReview, setSubmittedForReview] = useState(false);
   const [activeReplyId, setActiveReplyId] = useState(null);
@@ -1940,24 +1964,67 @@ export default function Forum() {
             {/* Live Activity Ticker */}
             <LiveActivityTicker threads={allThreads} />
 
-            {/* Mobile Footy Tipping + Vegas Badge Unlocker */}
-            <div className="space-y-4 lg:hidden">
-              <ScorePredictor
-                onSharePrediction={(matchup, homeScore, awayScore) => {
-                  const home = matchup.home_team;
-                  const away = matchup.away_team;
-                  const label = matchup.label || "NRL Fixture";
-                  setDraft((d) => ({
-                    ...d,
-                    title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
-                    body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
-                    category: "MatchDay",
-                  }));
-                  setShowMobileCompose(true);
-                  window.scrollTo({ top: 300, behavior: "smooth" });
-                }}
-              />
-              <SlotMachineBadgeUnlock />
+            {/* Slot Machine — TOP position when spin is available (mobile only) */}
+            {slotSpinAvailable && (
+              <div className="lg:hidden">
+                <SlotMachineBadgeUnlock />
+              </div>
+            )}
+
+            {/* Mobile Footy Tipping — Collapsible */}
+            <div className="lg:hidden">
+              <button
+                onClick={toggleTipping}
+                className="flex w-full items-center justify-between border border-border/50 bg-card/30 cmd-glass px-4 py-3 text-left transition-colors hover:bg-card/50 active:scale-[0.99]"
+                aria-expanded={tippingExpanded}
+                aria-controls="mobile-tipping-panel"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Trophy className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">Footy Tipping</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">Tap to {tippingExpanded ? "collapse" : "expand"} tips</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ rotate: tippingExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                  </motion.div>
+                </div>
+              </button>
+              <AnimatePresence initial={false}>
+                {tippingExpanded && (
+                  <motion.div
+                    id="mobile-tipping-panel"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="pt-2">
+                      <ScorePredictor
+                        onSharePrediction={(matchup, homeScore, awayScore) => {
+                          const home = matchup.home_team;
+                          const away = matchup.away_team;
+                          const label = matchup.label || "NRL Fixture";
+                          setDraft((d) => ({
+                            ...d,
+                            title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
+                            body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
+                            category: "MatchDay",
+                          }));
+                          setShowMobileCompose(true);
+                          window.scrollTo({ top: 300, behavior: "smooth" });
+                        }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Search + Filter Bar */}
@@ -2090,6 +2157,13 @@ export default function Forum() {
                 />
               )}
             </div>
+
+            {/* Slot Machine — BOTTOM position when no spin available (mobile only) */}
+            {!slotSpinAvailable && (
+              <div className="lg:hidden">
+                <SlotMachineBadgeUnlock />
+              </div>
+            )}
           </div>
 
           {/* ━━━ RIGHT: Sidebar ━━━ */}
