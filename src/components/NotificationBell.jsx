@@ -61,7 +61,7 @@ export default function NotificationBell() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button 
-          className={`relative flex h-9 w-9 items-center justify-center border transition-all duration-300 bg-secondary/40 ${
+          className={`relative flex h-11 w-11 items-center justify-center border transition-all duration-300 bg-secondary/40 cursor-pointer ${
             unread.length > 0
               ? "border-primary/50 text-primary shadow-[0_0_10px_rgba(249,115,22,0.15)] animate-pulse"
               : "border-border text-muted-foreground hover:border-primary hover:text-foreground hover:shadow-[0_0_10px_rgba(249,115,22,0.15)]"

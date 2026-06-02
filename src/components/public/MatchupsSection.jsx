@@ -83,7 +83,7 @@ export default function MatchupsSection() {
               )}
               {m.ticket_url && (
                 <div className="mt-4 text-center">
-                  <a href={m.ticket_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 border border-primary px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+                  <a href={m.ticket_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 border border-primary px-5 py-3 min-h-[44px] text-[10px] font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
                     Tickets <ArrowUpRight className="h-3.5 w-3.5" />
                   </a>
                 </div>

@@ -60,6 +60,24 @@ export default function SiteNav({ settings = {} }) {
     };
   }, []);
 
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  // Close drawer on ESC key
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const isLinkActive = (href) => {
     if (href.startsWith("/#")) {
       const hash = href.substring(1);
@@ -145,7 +163,7 @@ export default function SiteNav({ settings = {} }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)]">
       <div 
-        className={`pointer-events-auto mx-auto flex items-center justify-between transition-all duration-500 ${
+        className={`pointer-events-auto mx-auto flex items-center justify-between transition-[background-color,border-color,box-shadow,padding] duration-300 ${
           scrolled 
             ? "max-w-7xl border-b border-primary/30 bg-background/85 backdrop-blur-xl shadow-[0_4px_30px_rgba(3,5,18,0.4)] h-16 px-5 md:px-8" 
             : "max-w-7xl border-b border-border/10 bg-background/20 backdrop-blur-md h-20 px-5 md:px-8"
@@ -165,7 +183,7 @@ export default function SiteNav({ settings = {} }) {
         </Link>
         
         {/* Desktop Nav links with HUD bracket hover and glowing indicator */}
-        <nav className="hidden items-center gap-4 xl:gap-6 lg:flex">
+        <nav className="hidden items-center gap-4 xl:gap-6 lg:flex" aria-label="Site navigation">
           {links.map((link) => {
             const active = isLinkActive(link.href);
             return (
@@ -213,7 +231,7 @@ export default function SiteNav({ settings = {} }) {
           {/* Cart Status Badge */}
           <Link 
             to="/store" 
-            className={`relative flex h-9 w-9 items-center justify-center border transition-all duration-300 bg-secondary/40 ${
+            className={`relative flex h-11 w-11 items-center justify-center border cursor-pointer transition-all duration-300 bg-secondary/40 ${
               cartCount > 0 
                 ? "border-primary/50 text-primary shadow-[0_0_10px_rgba(249,115,22,0.15)] animate-pulse" 
                 : "border-border text-slate-300 hover:border-primary hover:text-foreground hover:shadow-[0_0_10px_rgba(249,115,22,0.15)]"
@@ -241,7 +259,7 @@ export default function SiteNav({ settings = {} }) {
           {isAuthenticated && (
             <Link 
               to="/account"
-              className="md:hidden flex h-9 w-9 items-center justify-center border border-border bg-secondary/40 transition-all duration-300 hover:border-primary hover:shadow-[0_0_10px_rgba(249,115,22,0.15)] overflow-hidden shrink-0"
+              className="md:hidden flex h-11 w-11 items-center justify-center border border-border bg-secondary/40 transition-all duration-300 hover:border-primary hover:shadow-[0_0_10px_rgba(249,115,22,0.15)] overflow-hidden shrink-0"
               aria-label="Go to my account"
             >
               {user?.avatar_url ? (
@@ -257,7 +275,7 @@ export default function SiteNav({ settings = {} }) {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden border border-border rounded-none h-9 w-9 bg-secondary/40 text-slate-300 hover:text-foreground hover:border-primary transition-all duration-300" 
+            className="md:hidden border border-border rounded-none h-11 w-11 cursor-pointer bg-secondary/40 text-slate-300 hover:text-foreground hover:border-primary transition-all duration-300" 
             onClick={() => setOpen(!open)}
             aria-label={open ? "Close menu" : "Open menu"}
           >
@@ -278,10 +296,15 @@ export default function SiteNav({ settings = {} }) {
               transition={{ duration: 0.2, ease: "linear" }}
               style={{ willChange: "opacity" }}
               onClick={() => setOpen(false)}
+              role="button"
+              aria-label="Close menu"
               className="fixed inset-0 z-50 bg-black/65 lg:hidden pointer-events-auto"
             />
  
             <motion.nav 
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -299,8 +322,8 @@ export default function SiteNav({ settings = {} }) {
                 {/* Drawer Header */}
                 <div className="flex items-center justify-between border-b border-border/60 pb-4 mb-6">
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-mono font-bold tracking-widest text-primary uppercase">Console Menu</span>
-                    <span className="text-[8px] font-mono text-slate-400 uppercase">SYSTEM // LIVE</span>
+                    <span className="text-[10px] font-mono font-bold tracking-widest text-primary uppercase">Console Menu</span>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase">SYSTEM // LIVE</span>
                   </div>
                   <button 
                     onClick={() => setOpen(false)} 
@@ -325,7 +348,7 @@ export default function SiteNav({ settings = {} }) {
                         <Link 
                           to={link.href} 
                           onClick={() => setOpen(false)} 
-                          className={`group relative flex items-center py-2 font-display text-xl uppercase tracking-wider transition-all ${
+                          className={`group relative flex items-center py-3 min-h-[44px] font-display text-xl uppercase tracking-wider cursor-pointer transition-all ${
                             active ? "text-primary font-bold" : "text-foreground hover:text-primary"
                           }`}
                         >
@@ -375,7 +398,7 @@ export default function SiteNav({ settings = {} }) {
                         )}
                         <button 
                           onClick={() => { setOpen(false); base44.auth.logout("/"); }} 
-                          className="text-left font-display text-xl uppercase tracking-wider text-destructive flex items-center hover:text-destructive/80 transition-all"
+                          className="text-left font-display text-xl uppercase tracking-wider text-destructive flex items-center hover:text-destructive/80 cursor-pointer transition-all"
                         >
                           Log out
                         </button>
@@ -385,14 +408,14 @@ export default function SiteNav({ settings = {} }) {
                         <Link 
                           to="/login" 
                           onClick={() => setOpen(false)} 
-                          className="font-display text-xl uppercase tracking-wider text-foreground hover:text-primary transition-all"
+                          className="font-display text-xl uppercase tracking-wider text-foreground hover:text-primary cursor-pointer transition-all"
                         >
                           Log in
                         </Link>
                         <Link 
                           to="/register" 
                           onClick={() => setOpen(false)} 
-                          className="font-display text-xl uppercase tracking-wider text-primary hover:text-primary/80 transition-all"
+                          className="font-display text-xl uppercase tracking-wider text-primary hover:text-primary/80 cursor-pointer transition-all"
                         >
                           Sign up
                         </Link>
@@ -404,7 +427,7 @@ export default function SiteNav({ settings = {} }) {
 
               {/* Drawer Footer info */}
               <div className="relative z-10 border-t border-border/40 pt-4 mt-6 text-center">
-                <p className="text-[8px] font-mono text-slate-400 font-bold uppercase tracking-widest">
+                <p className="text-[10px] font-mono text-slate-400 font-bold uppercase tracking-widest">
                   RLT Vegas // Takeover 2026
                 </p>
               </div>

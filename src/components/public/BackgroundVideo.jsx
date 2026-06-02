@@ -9,6 +9,9 @@ const mimeFor = (url) => ({ mp4: "video/mp4", webm: "video/webm", ogg: "video/og
 export default function BackgroundVideo({ src, sources }) {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
+  const [prefersReduced] = useState(() => 
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 
   const ordered = useMemo(() => {
     const list = (sources?.length ? sources : [src]).filter(Boolean);
@@ -33,8 +36,12 @@ export default function BackgroundVideo({ src, sources }) {
     };
   }, [key]);
 
+  if (prefersReduced) {
+    return <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none bg-background" />;
+  }
+
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none bg-background">
+    <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none bg-background">
       <video
         ref={videoRef}
         key={key}
@@ -43,7 +50,7 @@ export default function BackgroundVideo({ src, sources }) {
         muted
         loop
         playsInline
-        preload="auto"
+        preload="metadata"
         controls={false}
         disablePictureInPicture
         onCanPlay={() => videoRef.current?.play().then(() => setPlaying(true)).catch(() => setPlaying(false))}

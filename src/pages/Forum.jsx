@@ -6,7 +6,7 @@ import {
   MessageSquare, Send, Pin, Search, Heart, MessageCircle,
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Bookmark, Share2, Zap, Radio, ChevronDown, ChevronUp, Trash2,
-  Trophy, Activity, BarChart3, Globe,
+  Trophy, Activity, BarChart3, Globe, Star, Hand, Dice5,
   Plane, MapPin, Reply, ArrowUp
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -124,10 +124,10 @@ function nameHash(name) {
 
 /* ━━━ Author Badge Logic ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const BADGE_LEVELS = [
-  { min: 10, emoji: "🏆", label: "Legend",  bg: "bg-amber-500/15", border: "border-amber-500/30", text: "text-amber-400" },
-  { min: 5,  emoji: "⭐", label: "Regular", bg: "bg-slate-400/15", border: "border-slate-400/30", text: "text-slate-300" },
-  { min: 3,  emoji: "🔥", label: "Active",  bg: "bg-orange-500/15", border: "border-orange-500/30", text: "text-orange-400" },
-  { min: 1,  emoji: "👋", label: "New",     bg: "bg-blue-500/15", border: "border-blue-500/30", text: "text-blue-400" },
+  { min: 10, icon: "Trophy", label: "Legend",  bg: "bg-amber-500/15", border: "border-amber-500/30", text: "text-amber-400" },
+  { min: 5,  icon: "Star",   label: "Regular", bg: "bg-slate-400/15", border: "border-slate-400/30", text: "text-slate-300" },
+  { min: 3,  icon: "Flame",  label: "Active",  bg: "bg-orange-500/15", border: "border-orange-500/30", text: "text-orange-400" },
+  { min: 1,  icon: "Hand",   label: "New",     bg: "bg-blue-500/15", border: "border-blue-500/30", text: "text-blue-400" },
 ];
 
 function getAuthorBadge(name, authorPostCounts) {
@@ -137,6 +137,9 @@ function getAuthorBadge(name, authorPostCounts) {
   }
   return null;
 }
+
+/* Badge icon map — replaces emojis with Lucide SVGs */
+const BADGE_ICON_MAP = { Trophy, Star, Flame, Hand };
 
 /* ━━━ Share / Save helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const threadUrl = (post) => {
@@ -230,7 +233,7 @@ function FloatingParticles() {
   );
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
       {particles.map((p) => (
         <motion.div
           key={p.id}
@@ -339,7 +342,7 @@ function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, child
                   <p className="font-display text-base font-bold text-foreground truncate uppercase tracking-wide">{name || "Anonymous"}</p>
                   {badge && (
                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border mt-1`}>
-                      {badge.emoji} {badge.label}
+                      {BADGE_ICON_MAP[badge.icon] && React.createElement(BADGE_ICON_MAP[badge.icon], { className: "h-2.5 w-2.5" })} {badge.label}
                     </span>
                   )}
                 </div>
@@ -434,8 +437,8 @@ function AuthorBadge({ name, authorPostCounts }) {
   const badge = getAuthorBadge(name, authorPostCounts);
   if (!badge) return null;
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border`}>
-      {badge.emoji} {badge.label}
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border`}>
+      {BADGE_ICON_MAP[badge.icon] && React.createElement(BADGE_ICON_MAP[badge.icon], { className: "h-2.5 w-2.5" })} {badge.label}
     </span>
   );
 }
@@ -445,9 +448,9 @@ function AuthorMeta({ meta, className = "" }) {
   if (!meta || (!meta.location && !meta.team && !meta.badge && !meta.casino_xp)) return null;
   return (
     <>
-      {meta.badge && <span className={`inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300 ${className}`} title={`Slot badge: ${meta.badge.label}`}>{meta.badge.emoji} {meta.badge.label}</span>}
-      {meta.casino_xp > 0 && <span className={`inline-flex items-center gap-1 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 ${className}`} title={`${meta.casino_xp} XP · ${meta.casino_chips} chips · ${meta.casino_streak || 0} day streak`}>🎲 {meta.casino_rank}</span>}
-      {meta.location && <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}>📍 {meta.location}</span>}
+      {meta.badge && <span className={`inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-300 ${className}`} title={`Slot badge: ${meta.badge.label}`}>{meta.badge.emoji} {meta.badge.label}</span>}
+      {meta.casino_xp > 0 && <span className={`inline-flex items-center gap-1 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200 ${className}`} title={`${meta.casino_xp} XP · ${meta.casino_chips} chips · ${meta.casino_streak || 0} day streak`}><Dice5 className="h-2.5 w-2.5" /> {meta.casino_rank}</span>}
+      {meta.location && <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={meta.location}><MapPin className="h-2.5 w-2.5" /> {meta.location}</span>}
       {meta.team && <span className={`inline-flex items-center gap-1 text-[10px] text-slate-300 font-semibold ${className}`} title={`Supports ${meta.team}`}><TeamCrest name={meta.team} logo={meta.teamLogo} className="h-4 w-4 text-[7px]" /> {meta.team}</span>}
     </>
   );
@@ -790,7 +793,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
         {/* Sticky reply form at bottom */}
         <div className="ios-keyboard-spacer shrink-0 border-t border-border/30 bg-card/80 p-4 backdrop-blur-sm md:p-6">
           <form onSubmit={onReply} className="space-y-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-300">
               Write a Reply
             </p>
             <div className="flex gap-3">
@@ -799,12 +802,16 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 {!isAuthenticated && (
-                  <Input
-                    required placeholder="Your name"
-                    value={replyDraft.author_name}
-                    onChange={(e) => onUpdateReply({ author_name: e.target.value })}
-                    className="h-11 rounded-none border-border bg-background text-sm"
-                  />
+                  <>
+                    <label htmlFor="modal-reply-name" className="sr-only">Your name</label>
+                    <Input
+                      id="modal-reply-name"
+                      required placeholder="Your name"
+                      value={replyDraft.author_name}
+                      onChange={(e) => onUpdateReply({ author_name: e.target.value })}
+                      className="h-11 rounded-none border-border bg-background text-sm"
+                    />
+                  </>
                 )}
                 <MentionTextarea
                   required
@@ -1596,6 +1603,16 @@ export default function Forum() {
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [showMobileCompose, setShowMobileCompose] = useState(false);
+
+  // Lock body scroll when mobile compose sheet is open
+  useEffect(() => {
+    if (showMobileCompose) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showMobileCompose]);
   const [threadModalPost, setThreadModalPost] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -2194,13 +2211,17 @@ export default function Forum() {
                       <span className="text-xs font-bold text-foreground">{user?.full_name || user?.email}</span>
                     </div>
                   ) : (
-                    <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
+                    <>
+                      <label htmlFor="mobile-compose-name" className="sr-only">Your name</label>
+                      <Input id="mobile-compose-name" required placeholder="Your name" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
+                    </>
                   )}
                   <Select value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v })}>
                     <SelectTrigger className="h-11 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{categories.filter((c) => c.value !== "All").map((c) => <SelectItem key={c.value} value={c.value}>{getCategoryMeta(c.value).label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Input required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
+                  <label htmlFor="mobile-compose-title" className="sr-only">Topic title</label>
+                  <Input id="mobile-compose-title" required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
                   <MentionTextarea required people={mentionPeople} placeholder="What's on your mind? Use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
                   <MediaAttach value={draft.media_url} onChange={(url) => setDraft({ ...draft, media_url: url })} />
                   <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending} size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">

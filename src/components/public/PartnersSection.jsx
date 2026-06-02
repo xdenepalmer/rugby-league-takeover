@@ -146,7 +146,7 @@ export default function PartnersSection({ settings = {} }) {
       <div className="group flex h-full flex-col items-center justify-center gap-3 border border-border bg-card p-6 text-center transition-all duration-300 hover:border-primary/50 hover:bg-neutral-950/40 hover:shadow-[0_0_20px_rgba(249,115,22,0.05)]">
         <div className="flex h-16 w-full items-center justify-center">
           {partner.logo_url ? (
-            <img src={partner.logo_url} alt={partner.name} className="h-16 w-full max-w-[160px] object-contain grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105" />
+            <img src={partner.logo_url} alt={partner.name} loading="lazy" className="h-16 w-full max-w-[160px] object-contain grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105" />
           ) : (
             <PartnerLogoPlaceholder name={partner.name} id={partner.id} />
           )}

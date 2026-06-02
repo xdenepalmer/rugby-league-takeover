@@ -107,7 +107,7 @@ export default function TestimonialsSection({ settings = {} }) {
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">Rating</span>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button type="button" key={n} onClick={() => setDraft({ ...draft, rating: n })} aria-label={`${n} stars`}>
+                  <button type="button" key={n} onClick={() => setDraft({ ...draft, rating: n })} aria-label={`${n} stars`} className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2">
                     <Star className={`h-5 w-5 transition-colors ${n <= draft.rating ? "fill-primary text-primary" : "text-muted-foreground/40 hover:text-primary/60"}`} />
                   </button>
                 ))}

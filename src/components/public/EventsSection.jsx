@@ -31,7 +31,7 @@ function EventTickets({ event }) {
               <span>{ticket.sold_out ? "Sold out" : "Soon"}</span>
             </div>
           ) : (
-            <a key={i} href={ticket.url} target="_blank" rel="noreferrer" className="flex items-center justify-between border border-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+            <a key={i} href={ticket.url} target="_blank" rel="noreferrer" className="flex items-center justify-between border border-primary px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
               <span>{ticket.name || "Buy tickets"} {formatPrice(ticket.price_aud) && `· ${formatPrice(ticket.price_aud)}`}</span>
               <span className="flex items-center gap-1">Buy <ArrowUpRight className="h-4 w-4" /></span>
             </a>
@@ -43,7 +43,7 @@ function EventTickets({ event }) {
 
   if (event.ticket_url) {
     return (
-      <a href={event.ticket_url} target="_blank" rel="noreferrer" className="mt-6 inline-flex w-fit items-center gap-2 border border-primary px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+      <a href={event.ticket_url} target="_blank" rel="noreferrer" className="mt-6 inline-flex w-fit items-center gap-2 border border-primary px-5 py-3 min-h-[44px] text-xs font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
         <Ticket className="h-4 w-4" /> Tickets &amp; info <ArrowUpRight className="h-4 w-4" />
       </a>
     );
@@ -72,7 +72,7 @@ function EventCard({ event, featured }) {
     <article className={`group flex flex-col overflow-hidden border border-border bg-card ${featured ? "lg:col-span-2 lg:flex-row" : ""}`}>
       <div className={`relative overflow-hidden bg-secondary ${featured ? "lg:w-1/2" : ""}`}>
         {photo ? (
-          <img src={photo} alt={event.title} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${featured ? "h-64 lg:h-full" : "h-52"}`} />
+          <img src={photo} alt={event.title} loading="lazy" className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${featured ? "h-64 lg:h-full" : "h-52"}`} />
         ) : (
           <div className={`flex items-center justify-center ${featured ? "h-64 lg:h-full" : "h-52"}`}><CalendarDays className="h-10 w-10 text-muted-foreground" /></div>
         )}

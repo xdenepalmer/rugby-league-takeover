@@ -26,48 +26,73 @@ export default function PublicLayout() {
       </div>
 
       {/* iOS-Style Public Mobile Bottom Tab Bar */}
-      <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto">
+      <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto" aria-label="Main navigation">
         <div className="flex items-center justify-around px-2 py-1.5 w-full">
           <NavLink
             to="/"
+            aria-label="Home"
             className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
               }`
             }
           >
-            <Home className="h-5 w-5" />
-            <span>Home</span>
+            {({ isActive }) => (
+              <>
+                <Home className="h-5 w-5" />
+                <span>Home</span>
+                {isActive && (
+                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                )}
+              </>
+            )}
           </NavLink>
 
           <NavLink
             to="/store"
+            aria-label="Shop"
             className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
               }`
             }
           >
-            <ShoppingBag className="h-5 w-5" />
-            <span>Shop</span>
+            {({ isActive }) => (
+              <>
+                <ShoppingBag className="h-5 w-5" />
+                <span>Shop</span>
+                {isActive && (
+                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                )}
+              </>
+            )}
           </NavLink>
 
           <NavLink
             to="/forum"
+            aria-label="Forum"
             className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
               }`
             }
           >
-            <MessageSquare className="h-5 w-5" />
-            <span>Forum</span>
+            {({ isActive }) => (
+              <>
+                <MessageSquare className="h-5 w-5" />
+                <span>Forum</span>
+                {isActive && (
+                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                )}
+              </>
+            )}
           </NavLink>
 
           <NavLink
             to="/account"
+            aria-label="Account"
             className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
               }`
             }
@@ -86,6 +111,9 @@ export default function PublicLayout() {
                   <User className="h-5 w-5" />
                 )}
                 <span>Account</span>
+                {isActive && (
+                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                )}
               </>
             )}
           </NavLink>
@@ -93,14 +121,22 @@ export default function PublicLayout() {
           {isAdmin && (
             <NavLink
               to="/admin"
+              aria-label="Admin dashboard"
               className={({ isActive }) =>
-                `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-all ${
+                `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                   isActive ? "text-emerald-400" : "text-muted-foreground/80 hover:text-foreground"
                 }`
               }
             >
-              <ShieldCheck className="h-5 w-5" />
-              <span>Admin</span>
+              {({ isActive }) => (
+                <>
+                  <ShieldCheck className="h-5 w-5" />
+                  <span>Admin</span>
+                  {isActive && (
+                    <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                  )}
+                </>
+              )}
             </NavLink>
           )}
         </div>

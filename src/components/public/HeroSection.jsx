@@ -137,10 +137,10 @@ export default function HeroSection({ settings = {} }) {
         >
           <a 
             href="#news" 
-            className="group inline-flex items-center gap-3 border border-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300 rounded-none relative overflow-hidden"
+            className="group inline-flex items-center gap-3 border border-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300 rounded-none relative overflow-hidden cursor-pointer"
           >
             <span>{settings.hero_button_label || "Enter the site"}</span> 
-            <ArrowDown className="h-4 w-4 animate-bounce text-primary group-hover:text-primary-foreground" />
+            <ArrowDown aria-hidden="true" className="h-4 w-4 animate-bounce text-primary group-hover:text-primary-foreground" />
           </a>
         </motion.div>
 

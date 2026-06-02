@@ -50,7 +50,7 @@ function FlipUnit({ value, label }) {
           </AnimatePresence>
         </div>
       </div>
-      <span className="mt-3.5 text-[9px] font-bold uppercase tracking-[0.35em] text-muted-foreground">{label}</span>
+      <span className="mt-3.5 text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -74,7 +74,7 @@ export default function CountdownTimer({ settings = {} }) {
   if (settings.countdown_enabled === false || !target || !remaining) return null;
 
   return (
-    <section className="relative overflow-hidden border-y border-border bg-background/85 px-5 py-12 md:px-8 md:py-28">
+    <section role="timer" aria-label="Countdown to Las Vegas event" className="relative overflow-hidden border-y border-border bg-background/85 px-5 py-12 md:px-8 md:py-28">
       {/* Laser glow highlight */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.12),transparent_60%)] shadow-inner" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:40px_40px] opacity-15 pointer-events-none" />
@@ -114,7 +114,7 @@ export default function CountdownTimer({ settings = {} }) {
             href={settings.countdown_cta_url}
             target="_blank"
             rel="noreferrer"
-            className="mt-10 inline-flex items-center gap-2 border border-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] text-primary transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] rounded-none"
+            className="mt-10 inline-flex items-center gap-2 border border-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] text-primary transition-all duration-300 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] rounded-none cursor-pointer"
           >
             {settings.countdown_cta_label} <ArrowUpRight className="h-4 w-4" />
           </a>

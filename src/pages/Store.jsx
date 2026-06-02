@@ -15,7 +15,10 @@ import {
   ChevronRight,
   User,
   Mail,
-  CreditCard
+  CreditCard,
+  Flame,
+  Star,
+  Rocket
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -90,17 +93,17 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
       {/* Badges overlay */}
       <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
         {comingSoon ? (
-          <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(249,115,22,0.4)]">
-            ✨ COMING SOON
+          <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(249,115,22,0.4)] flex items-center gap-1">
+            <Sparkles className="h-3 w-3" /> COMING SOON
           </span>
         ) : showHotBadge && (
-          <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(249,115,22,0.4)]">
-            🔥 HOT
+          <span className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(249,115,22,0.4)] flex items-center gap-1">
+            <Flame className="h-3 w-3" /> HOT
           </span>
         )}
         {!comingSoon && showNewBadge && (
-          <span className="bg-accent text-accent-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(217,119,6,0.4)]">
-            ⭐ NEW
+          <span className="bg-accent text-accent-foreground text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 shadow-[0_0_12px_rgba(217,119,6,0.4)] flex items-center gap-1">
+            <Star className="h-3 w-3" /> NEW
           </span>
         )}
         {product.category && (
@@ -116,6 +119,7 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
           <img 
             src={product.image_url} 
             alt={product.name} 
+            loading="lazy"
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-hover:rotate-1" 
           />
         ) : (
@@ -263,6 +267,16 @@ export default function Store() {
   useEffect(() => {
     localStorage.setItem("rlt_cart", JSON.stringify(cart));
   }, [cart]);
+
+  // Lock body scroll when cart drawer is open
+  useEffect(() => {
+    if (cartOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [cartOpen]);
 
   // Prefill checkout details for signed-in buyers (they can still edit them).
   useEffect(() => {
@@ -432,7 +446,7 @@ export default function Store() {
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 <p className="text-sm font-semibold">Payment successful! Your order has been placed. Check your email for details.</p>
               </div>
-              <button onClick={clearAlerts} className="text-xs uppercase tracking-wider font-bold hover:text-white transition-colors underline">Dismiss</button>
+              <button onClick={clearAlerts} className="min-h-[44px] min-w-[44px] p-3 text-xs uppercase tracking-wider font-bold hover:text-white transition-colors underline cursor-pointer">Dismiss</button>
             </motion.div>
           )}
 
@@ -447,7 +461,7 @@ export default function Store() {
                 <AlertCircle className="h-5 w-5" />
                 <p className="text-sm font-semibold">Checkout cancelled. Your items are safe in your cart.</p>
               </div>
-              <button onClick={clearAlerts} className="text-xs uppercase tracking-wider font-bold hover:text-white transition-colors underline">Dismiss</button>
+              <button onClick={clearAlerts} className="min-h-[44px] min-w-[44px] p-3 text-xs uppercase tracking-wider font-bold hover:text-white transition-colors underline cursor-pointer">Dismiss</button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -460,7 +474,7 @@ export default function Store() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider border transition-all ${
+                className={`px-4 py-2.5 min-h-[44px] text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? "border-primary bg-primary text-primary-foreground shadow-[0_0_12px_rgba(249,115,22,0.3)]"
                     : "border-border bg-card/40 hover:border-primary/50 text-slate-300 hover:text-foreground"
@@ -518,7 +532,9 @@ export default function Store() {
               transition={{ duration: 0.2, ease: "linear" }}
               style={{ willChange: "opacity" }}
               onClick={() => setCartOpen(false)}
-              className="fixed inset-0 z-40 bg-black/65 lg:hidden"
+              className="fixed inset-0 z-40 bg-black/65 lg:hidden cursor-pointer"
+              role="button"
+              aria-label="Close cart"
             />
 
             <motion.div 
@@ -528,6 +544,9 @@ export default function Store() {
               transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
               style={{ willChange: "transform" }}
               className="fixed bottom-0 right-0 top-0 z-50 flex h-dvh w-full flex-col border-l border-border/80 bg-card p-5 pb-safe shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md md:p-6"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Shopping cart"
             >
               {/* Decorative side tag */}
               <div className="absolute left-[-2px] top-0 bottom-0 w-[2px] cmd-accent-bar" />
@@ -538,7 +557,8 @@ export default function Store() {
                 </h3>
                 <button 
                   onClick={() => setCartOpen(false)}
-                  className="text-xs uppercase tracking-[0.25em] text-slate-300 hover:text-primary transition-colors font-bold"
+                  className="min-h-[44px] px-4 py-3 text-xs uppercase tracking-[0.25em] text-slate-300 hover:text-primary transition-colors font-bold cursor-pointer"
+                  aria-label="Close cart"
                 >
                   Close
                 </button>
@@ -557,7 +577,7 @@ export default function Store() {
                     <p className="text-sm font-semibold uppercase tracking-wider">Your cart is empty</p>
                     <button 
                       onClick={() => setCartOpen(false)}
-                      className="mt-4 text-xs font-bold uppercase tracking-widest text-primary hover:underline"
+                      className="mt-4 min-h-[44px] px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:underline cursor-pointer"
                     >
                       Browse items <ChevronRight className="h-3 w-3 inline" />
                     </button>
@@ -574,7 +594,7 @@ export default function Store() {
                       >
                         <div className="h-16 w-16 flex-shrink-0 bg-muted/10 border border-border/50 overflow-hidden">
                           {item.image_url && (
-                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover transition-transform duration-300 group-hover/item:scale-105" />
+                            <img src={item.image_url} alt={item.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover/item:scale-105" />
                           )}
                         </div>
                         <div className="flex flex-1 flex-col justify-between">
@@ -619,7 +639,7 @@ export default function Store() {
                   {/* Shipping status banner */}
                   <div className="mb-4 bg-muted/20 border border-border/40 p-3 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                      <span>{needsMore > 0 ? `Spend $${needsMore.toFixed(2)} AUD more for free shipping` : "You qualify for free shipping! 🚀"}</span>
+                      <span className="flex items-center gap-1">{needsMore > 0 ? `Spend $${needsMore.toFixed(2)} AUD more for free shipping` : <><Rocket className="h-3 w-3 inline" /> You qualify for free shipping!</>}</span>
                     </div>
                     <div className="h-1.5 w-full bg-border overflow-hidden rounded-full">
                       <motion.div 
@@ -638,15 +658,17 @@ export default function Store() {
 
                   <form onSubmit={handleCheckout} className="grid gap-3">
                     {checkoutError && (
-                      <p className="border border-primary/50 bg-primary/10 p-3 text-xs font-semibold text-foreground flex items-center gap-2">
+                      <p className="border border-primary/50 bg-primary/10 p-3 text-xs font-semibold text-foreground flex items-center gap-2" role="alert" aria-live="polite">
                         <AlertCircle className="h-4 w-4 text-primary flex-shrink-0" />
                         <span>{checkoutError}</span>
                       </p>
                     )}
                     
                     <div className="relative">
+                      <label htmlFor="checkout-name" className="sr-only">Your full name</label>
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
+                        id="checkout-name"
                         required 
                         placeholder="Your full name" 
                         value={checkoutName}
@@ -655,8 +677,10 @@ export default function Store() {
                       />
                     </div>
                     <div className="relative">
+                      <label htmlFor="checkout-email" className="sr-only">Receipt email address</label>
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
+                        id="checkout-email"
                         required 
                         type="email" 
                         placeholder="Receipt email address" 

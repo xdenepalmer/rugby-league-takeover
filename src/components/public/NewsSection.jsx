@@ -37,6 +37,7 @@ function NewsCard({ article, index }) {
         <img 
           src={article.image_url} 
           alt={article.title} 
+          loading="lazy"
           className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-108 group-hover:grayscale-0 group-hover:opacity-100" 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-70" />
@@ -66,7 +67,7 @@ function NewsCard({ article, index }) {
 
         {/* Read More Trigger hover link */}
         <div className="mt-6 pt-4 border-t border-border/30 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors duration-300">
-          <span>Read Article</span>
+          <span>Latest Update</span>
           <ArrowRight className="w-4 h-4 text-primary -translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300" />
         </div>
       </div>

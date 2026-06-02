@@ -129,6 +129,16 @@
     -webkit-user-select: none;
     user-select: none;
   }
+
+  /* Visible focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 @layer utilities {
@@ -185,6 +195,7 @@
   }
 
   .ios-tabbar-item {
+    position: relative;
     min-height: 58px;
     border-radius: 18px;
     touch-action: manipulation;
@@ -322,6 +333,7 @@
   display: flex;
   width: max-content;
   animation: marquee 30s linear infinite;
+  will-change: transform;
 }
 
 /* ─── Admin Command Centre Animations ─────────────────────── */
@@ -489,11 +501,7 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
-  }
-
-  /* Decorative continuous tickers/marquees are intentional and keep scrolling. */
-  .animate-marquee {
-    animation: marquee 30s linear infinite !important;
+    will-change: auto !important;
   }
 }
 
@@ -548,3 +556,26 @@
   animation: vegas-flash-red 1s infinite;
   animation-delay: 0.5s;
 }
+
+/* ─── Mobile Performance Optimizations ─────────────────────── */
+
+@media (max-width: 768px) {
+  /* Kill expensive box-shadow animations on LED bulbs */
+  .animate-vegas-gold-1, .animate-vegas-gold-2,
+  .animate-vegas-red-1, .animate-vegas-red-2 {
+    box-shadow: none !important;
+  }
+
+  /* Replace backdrop-filter with solid background on mobile */
+  .cmd-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: hsl(var(--card) / 0.92);
+  }
+
+  /* Reduce tab bar blur intensity for GPU savings */
+  .ios-tabbar {
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  }
+}

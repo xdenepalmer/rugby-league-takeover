@@ -27,7 +27,7 @@ function ClockRow({ icon: Icon, label, sublabel, time, date, accent }) {
     <div className="flex items-center gap-4 px-5 py-4">
       <Icon className={`h-5 w-5 shrink-0 ${accent ? "text-primary" : "text-accent"}`} />
       <div className="min-w-0 flex-1">
-        <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{label}{sublabel ? ` · ${sublabel}` : ""}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{label}{sublabel ? ` · ${sublabel}` : ""}</p>
         <p className="font-display text-2xl tabular-nums leading-tight text-foreground sm:text-3xl">{time}</p>
       </div>
       <p className="text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:text-[11px]">{date}</p>
@@ -48,7 +48,7 @@ export default function LocalVegasClock() {
   const vegas = fmt(now, VEGAS_TZ);
 
   return (
-    <div className="mx-auto mt-12 max-w-md divide-y divide-border border border-border bg-card/95 text-left shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
+    <div role="status" aria-label="Current Las Vegas time" className="mx-auto mt-12 max-w-md divide-y divide-border border border-border bg-card/95 text-left shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
       <ClockRow icon={Clock} label="Your time" sublabel={tzLabel(now, localTz)} time={local.time} date={local.date} />
       <ClockRow icon={MapPin} label="Las Vegas" sublabel={tzLabel(now, VEGAS_TZ)} time={vegas.time} date={vegas.date} accent />
     </div>

@@ -81,6 +81,7 @@ export default function TravelSection({ packages, settings = {} }) {
                   <img 
                     src={pkg.image_url} 
                     alt={pkg.name} 
+                    loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-60" />
@@ -166,33 +167,49 @@ export default function TravelSection({ packages, settings = {} }) {
                 name="website"
               />
               
-              <Input 
-                required 
-                placeholder="Full Name" 
-                value={form.name} 
-                onChange={(e) => setForm({ ...form, name: e.target.value })} 
-                className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
-              />
-              <Input 
-                placeholder="Phone number" 
-                value={form.phone} 
-                onChange={(e) => setForm({ ...form, phone: e.target.value })} 
-                className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
-              />
-              <Input 
-                required 
-                type="email" 
-                placeholder="Email address" 
-                value={form.email} 
-                onChange={(e) => setForm({ ...form, email: e.target.value })} 
-                className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
-              />
-              <Input 
-                placeholder="Postcode" 
-                value={form.postcode} 
-                onChange={(e) => setForm({ ...form, postcode: e.target.value })} 
-                className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
-              />
+              <div>
+                <label htmlFor="reg-name" className="sr-only">Full Name</label>
+                <Input 
+                  id="reg-name"
+                  required 
+                  placeholder="Full Name" 
+                  value={form.name} 
+                  onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                  className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
+                />
+              </div>
+              <div>
+                <label htmlFor="reg-phone" className="sr-only">Phone number</label>
+                <Input 
+                  id="reg-phone"
+                  placeholder="Phone number" 
+                  value={form.phone} 
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })} 
+                  className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
+                />
+              </div>
+              <div>
+                <label htmlFor="reg-email" className="sr-only">Email address</label>
+                <Input 
+                  id="reg-email"
+                  required 
+                  type="email" 
+                  placeholder="Email address" 
+                  value={form.email} 
+                  onChange={(e) => setForm({ ...form, email: e.target.value })} 
+                  className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
+                />
+              </div>
+              <div>
+                <label htmlFor="reg-postcode" className="sr-only">Postcode</label>
+                <Input 
+                  id="reg-postcode"
+                  placeholder="Postcode" 
+                  value={form.postcode} 
+                  onChange={(e) => setForm({ ...form, postcode: e.target.value })} 
+                  className="h-12 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground" 
+                />
+              </div>
               
               <Select required value={form.team_supported} onValueChange={(value) => setForm({ ...form, team_supported: value })}>
                 <SelectTrigger className="h-12 rounded-none bg-background/50 border-border text-left text-muted-foreground focus:ring-primary md:col-span-2">
