@@ -79,4 +79,11 @@ Append-only chronological log of BMAD agent actions, commands, and results.
   4. `AuthLayout.jsx`: form panel now `overflow-y-auto max-h-dvh` so tall auth forms don't clip.
 - No test changes required (mobile-viewport-shells still green). No backend/entity/function/checkout/forum changes.
 - Validation: `npm test` 37/37 · lint · typecheck · build all green.
-- Commit: "fix: polish mobile viewport hardening". No push / no PR.
+- Commit: `a79df80` "fix: polish mobile viewport hardening". No push / no PR.
+
+## RLT-001E-MERGE — Merge approved RLT-001E into baseline
+- Target `bmad/baseline-integration` @ `dacd266` (clean) ← merged `bmad/story-rlt-001e-claude` @ `a79df80` via `git merge --no-ff`.
+- Result: **no conflicts** (story branched off `dacd266`, baseline unmoved). 21 files in merge: index.html, manifest, 8 shells, index.css, Store/Account/Home/HeroSection/PublicLayout/SiteNav/AdminShell/SiteSettingsManager/AuthLayout, 5 tests, BMAD docs.
+- Merge commit: `e02f524`; a follow-up docs commit records RLT-001E/FIXUP/MERGE completion.
+- Validation on merged baseline: `npm test` 37/37 · lint · typecheck · build all green.
+- No backend/entity/function/checkout/forum changes. **Manual Base44 Publish required** for changes to go live. No push / no PR. `main` untouched.

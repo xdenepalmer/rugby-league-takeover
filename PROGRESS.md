@@ -1,9 +1,9 @@
 # PROGRESS — Rugby League Takeover
 
-_Last updated: 2026-06-02 (RLT-001H-AMENDED)_
+_Last updated: 2026-06-02 (RLT-001E-MERGE)_
 
 ## Current source of truth
-- **Integration branch (current):** `bmad/baseline-integration` @ RLT-001H doc commit — clean baseline restored from approved `e059872`.
+- **Integration branch (current):** `bmad/baseline-integration` @ RLT-001E merge — RLT-001E + FIXUP merged in (`--no-ff`, no conflicts); validation 37/37 green. Manual Base44 Publish required to go live.
 - **Backup preserve branch:** `bmad/baseline-preserve-current-state` (validated pre-BMAD state @ `14d17a1`) — do not delete.
 - **Store-shipping WIP branch:** `bmad/wip-store-shipping` (`f0684600`) — concurrent checkout/shipping work, isolated by RLT-001F; resume via RLT-011 only if the Architect chooses.
 - **Codex store-shipping story WIP branch:** `bmad/story-rlt-011-codex-store-shipping` (`46d069b`) — current dirty WIP preserved by RLT-001H; `.gitignore` included for preservation only and is not approved for baseline.
@@ -29,7 +29,7 @@ _Last updated: 2026-06-02 (RLT-001H-AMENDED)_
 - RLT-001F — concurrent store-shipping WIP isolated; baseline restored clean — **Architect-approved**.
 - RLT-001G — Antigravity UI/UX WIP isolated; baseline restored clean — **completed**.
 - RLT-001H — active Codex store-shipping WIP preserved; branch discipline restored — **completed**. No feature implementation completed.
-- RLT-001E — mobile/PWA/brand/store hardening — **implemented on `bmad/story-rlt-001e-claude`**; awaiting Architect/Antigravity review + merge.
+- RLT-001E (+ FIXUP) — mobile/PWA/brand/store hardening — **merged into `bmad/baseline-integration`** (RLT-001E-MERGE, `--no-ff`, no conflicts). Antigravity final UX pass P0 12/12. Manual Base44 Publish required to go live.
 
 ## RLT-001E summary (story branch `bmad/story-rlt-001e-claude`, off `dacd266`)
 - `min-h-dvh` across 8 shells + HeroSection double-viewport fix; local PWA icons (`/icons/*`) in manifest (maskable + shortcut icons) and index.html; OG/Twitter/description metadata; remote Base44 logo delocalized (HeroSection, SiteNav, SiteSettingsManager, index.html, manifest); Store checkout info-style preview notice (no `alert`), `inputMode=email`, Stripe secure-checkout trust signal; skip-to-content link. 5 deferred tests now green. Validation 37/37. No backend/entity/function changes.
