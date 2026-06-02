@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { format, isToday } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download, Search, ClipboardList, Users, CalendarCheck,
-  Hash, Check, X, Phone, MapPin, Mail, Shield
+  Hash, Check, X, Phone, MapPin, Mail, Shield,
+  ClipboardCopy, Send
 } from "lucide-react";
 import { downloadCsv } from "@/lib/csv";
 import { SUPPORTED_TEAMS } from "@/lib/public-forms";
@@ -36,6 +37,8 @@ const cardVariant = {
 export default function RegistrationsTable({ registrations }) {
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [copied, setCopied] = useState(false);
 
   /* Filter logic (unchanged) */
   const filtered = useMemo(() => {
@@ -66,6 +69,80 @@ export default function RegistrationsTable({ registrations }) {
     () => registrations.filter((r) => r.created_date && isToday(new Date(r.created_date))).length,
     [registrations]
   );
+  const consentedCount = useMemo(
+    () => registrations.filter((r) => r.consent_to_contact === true).length,
+    [registrations]
+  );
+
+  /* Derive the email target list: selected (if any) → filtered+consented */
+  const emailTargets = useMemo(() => {
+    if (selectedIds.size > 0) {
+      return filtered.filter(
+        (r) => selectedIds.has(r.id) && r.consent_to_contact === true && r.email
+      );
+    }
+    return filtered.filter((r) => r.consent_to_contact === true && r.email);
+  }, [filtered, selectedIds]);
+
+  /* Selection helpers */
+  const toggleSelect = useCallback((id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (filtered.every((r) => prev.has(r.id))) {
+        const next = new Set(prev);
+        filtered.forEach((r) => next.delete(r.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach((r) => next.add(r.id));
+      return next;
+    });
+  }, [filtered]);
+
+  /* Email All handler */
+  const handleEmailAll = useCallback(() => {
+    const emails = emailTargets.map((r) => r.email);
+    if (emails.length === 0) return;
+    if (emails.length > 50) {
+      const ok = window.confirm(
+        `You're about to BCC ${emails.length} addresses. Some email clients limit mailto: links to ~50 addresses or ~2 000 characters. Continue?`
+      );
+      if (!ok) return;
+    }
+    const subject = encodeURIComponent("Rugby League Takeover Las Vegas — Update");
+    const bcc = emails.map(encodeURIComponent).join(",");
+    window.location.href = `mailto:?bcc=${bcc}&subject=${subject}`;
+  }, [emailTargets]);
+
+  /* Copy Emails handler */
+  const handleCopyEmails = useCallback(async () => {
+    const emails = emailTargets.map((r) => r.email);
+    if (emails.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(emails.join(", "));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* fallback */
+      const ta = document.createElement("textarea");
+      ta.value = emails.join(", ");
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [emailTargets]);
 
   return (
     <section id="registrations-admin" className="scroll-mt-28">
@@ -91,23 +168,64 @@ export default function RegistrationsTable({ registrations }) {
                 </p>
               </div>
             </div>
-            <button
-              onClick={exportCsv}
-              disabled={!filtered.length}
-              className="group flex min-h-11 items-center justify-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
-                         transition-all hover:border-primary/50 hover:bg-primary/5 disabled:opacity-30 disabled:pointer-events-none"
-            >
-              <Download className="h-3.5 w-3.5 text-primary transition-transform group-hover:-translate-y-0.5" />
-              Export CSV
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Email All */}
+              <button
+                onClick={handleEmailAll}
+                disabled={emailTargets.length === 0}
+                className="group flex min-h-11 items-center justify-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
+                           transition-all hover:border-amber-400/50 hover:bg-amber-400/5 disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <Send className="h-3.5 w-3.5 text-amber-400 transition-transform group-hover:-translate-y-0.5" />
+                Email All
+                <span className="inline-flex items-center justify-center rounded-sm bg-amber-400/15 px-1.5 text-[8px] tabular-nums text-amber-400">
+                  {emailTargets.length}
+                </span>
+              </button>
+
+              {/* Copy Emails */}
+              <button
+                onClick={handleCopyEmails}
+                disabled={emailTargets.length === 0}
+                className="group relative flex min-h-11 items-center justify-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
+                           transition-all hover:border-emerald-400/50 hover:bg-emerald-400/5 disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ClipboardCopy className="h-3.5 w-3.5 text-emerald-400 transition-transform group-hover:-translate-y-0.5" />
+                {copied ? "Copied!" : "Copy Emails"}
+                <AnimatePresence>
+                  {copied && (
+                    <motion.span
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-emerald-500 px-2 py-0.5 text-[8px] font-bold text-white"
+                    >
+                      Copied to clipboard!
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+
+              {/* Export CSV */}
+              <button
+                onClick={exportCsv}
+                disabled={!filtered.length}
+                className="group flex min-h-11 items-center justify-center gap-2 border border-border px-4 py-2 text-[10px] font-bold uppercase tracking-wider
+                           transition-all hover:border-primary/50 hover:bg-primary/5 disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <Download className="h-3.5 w-3.5 text-primary transition-transform group-hover:-translate-y-0.5" />
+                Export CSV
+              </button>
+            </div>
           </div>
 
           {/* ── Stats bar ── */}
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
             {[
               { label: "Total Registrations", value: registrations.length, icon: Users,         color: "text-primary" },
               { label: "Unique Teams",        value: uniqueTeams,          icon: Shield,        color: "text-accent"  },
               { label: "Today's Sign-ups",    value: todayCount,           icon: CalendarCheck, color: "text-emerald-400" },
+              { label: "Consented Contacts",  value: consentedCount,       icon: Mail,          color: "text-amber-400" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div
                 key={label}
@@ -137,6 +255,30 @@ export default function RegistrationsTable({ registrations }) {
                          placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
                          transition-colors cmd-glass"
             />
+          </div>
+
+          {/* Select all toggle */}
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              onClick={toggleSelectAll}
+              className={`flex items-center gap-2 border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all
+                ${allFilteredSelected
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground hover:bg-muted/30"
+                }`}
+            >
+              <div className={`flex h-3.5 w-3.5 items-center justify-center border transition-colors
+                ${allFilteredSelected ? "border-primary bg-primary/20" : "border-muted-foreground/40"}`}
+              >
+                {allFilteredSelected && <Check className="h-2.5 w-2.5 text-primary" />}
+              </div>
+              {allFilteredSelected ? "Deselect All" : "Select All"}
+            </button>
+            {selectedIds.size > 0 && (
+              <span className="text-[9px] font-mono text-muted-foreground">
+                {selectedIds.size} selected
+              </span>
+            )}
           </div>
 
           {/* Team pill filters */}
@@ -187,10 +329,29 @@ export default function RegistrationsTable({ registrations }) {
                       key={item.id}
                       variants={cardVariant}
                       layout
-                      className="group border border-border/60 bg-card/50 transition-all hover:border-primary/30 hover:bg-card/80"
+                      className={`group relative border bg-card/50 transition-all hover:border-primary/30 hover:bg-card/80 ${
+                        selectedIds.has(item.id)
+                          ? "border-primary/60 ring-1 ring-primary/20"
+                          : "border-border/60"
+                      }`}
                     >
                       {/* Card top accent */}
                       <div className={`h-[2px] w-full ${tc.ring} opacity-40`} />
+
+                      {/* Selection checkbox */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(item.id); }}
+                        className="absolute right-2.5 top-4 z-10"
+                        aria-label={selectedIds.has(item.id) ? "Deselect" : "Select"}
+                      >
+                        <div className={`flex h-4 w-4 items-center justify-center border transition-colors
+                          ${selectedIds.has(item.id)
+                            ? "border-primary bg-primary/20"
+                            : "border-muted-foreground/30 hover:border-muted-foreground/60"}`}
+                        >
+                          {selectedIds.has(item.id) && <Check className="h-2.5 w-2.5 text-primary" />}
+                        </div>
+                      </button>
 
                       <div className="p-4">
                         {/* Avatar + Name row */}

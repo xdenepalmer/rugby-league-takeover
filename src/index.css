@@ -572,6 +572,13 @@
   animation-delay: 0.5s;
 }
 
+/* ─── Ad Slot Shimmer ─────────────────────── */
+
+@keyframes ad-shimmer {
+  0% { background-position: -250% 0; }
+  100% { background-position: 250% 0; }
+}
+
 /* ─── Mobile Performance Optimizations ─────────────────────── */
 
 @media (max-width: 768px) {

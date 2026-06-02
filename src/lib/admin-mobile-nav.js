@@ -9,6 +9,7 @@ export const mobilePrimaryAdminTabs = [
 export const mobileMoreAdminItems = [
   { kind: "route", label: "Events", to: "/admin/events", icon: "CalendarDays" },
   { kind: "route", label: "People", to: "/admin/people", icon: "Users" },
+  { kind: "route", label: "Ads", to: "/admin/ads", icon: "Megaphone" },
   { kind: "route", label: "Settings", to: "/admin/settings", icon: "Settings" },
   { kind: "link", label: "View Site", to: "/", icon: "ExternalLink" },
   { kind: "action", action: "export", label: "Export Data", icon: "Download" },

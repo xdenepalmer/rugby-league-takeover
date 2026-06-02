@@ -9,6 +9,7 @@ const StorePanel = lazy(() => import("@/components/admin/panels/StorePanel"));
 const CommunityPanel = lazy(() => import("@/components/admin/panels/CommunityPanel"));
 const PeoplePanel = lazy(() => import("@/components/admin/panels/PeoplePanel"));
 const SettingsPanel = lazy(() => import("@/components/admin/panels/SettingsPanel"));
+const AdsPanel = lazy(() => import("@/components/admin/panels/AdsPanel"));
 
 const PanelLoading = () => (
   <div className="flex h-48 w-full items-center justify-center">
@@ -31,6 +32,7 @@ export default function Admin() {
           <Route path="community" element={<CommunityPanel />} />
           <Route path="people" element={<PeoplePanel />} />
           <Route path="settings" element={<SettingsPanel />} />
+          <Route path="ads" element={<AdsPanel />} />
           <Route path="*" element={<Navigate to="overview" replace />} />
         </Routes>
       </Suspense>

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, CalendarDays, ShoppingBag,
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
   Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
-  Shield, Zap, Download, Keyboard, MoreHorizontal
+  Shield, Zap, Download, Keyboard, MoreHorizontal, Megaphone
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -26,6 +26,7 @@ const navItems = [
   { to: "/admin/community", label: "Community",  icon: MessagesSquare,  shortcut: "⌘5", key: "5", badgeKey: "community" },
   { to: "/admin/people",    label: "People",     icon: Users,           shortcut: "⌘6", key: "6" },
   { to: "/admin/settings",  label: "Settings",   icon: Settings,        shortcut: "⌘7", key: "7" },
+  { to: "/admin/ads",       label: "Ads",        icon: Megaphone,       shortcut: "⌘8", key: "8" },
 ];
 
 const mobileIconMap = {
@@ -39,6 +40,7 @@ const mobileIconMap = {
   ExternalLink,
   Download,
   MoreHorizontal,
+  Megaphone,
 };
 
 /* ── Live clock hook ─────────────────────────────────────────── */

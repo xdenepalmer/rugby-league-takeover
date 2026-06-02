@@ -1,0 +1,268 @@
+﻿{
+    "tournament":  {
+                       "name":  "NRL Premiership",
+                       "slug":  "nrl",
+                       "category":  {
+                                        "name":  "Rugby League",
+                                        "slug":  "rugby-league",
+                                        "sport":  {
+                                                      "name":  "Rugby",
+                                                      "slug":  "rugby",
+                                                      "id":  12
+                                                  },
+                                        "priority":  0,
+                                        "country":  {
+
+                                                    },
+                                        "id":  83,
+                                        "flag":  "rugby-league",
+                                        "fieldTranslations":  {
+                                                                  "nameTranslation":  {
+                                                                                          "ar":  "دوري الرجبي",
+                                                                                          "hi":  "रग्बी लीग",
+                                                                                          "bn":  "রাগবি লীগ",
+                                                                                          "ru":  "Регби-лига"
+                                                                                      },
+                                                                  "shortNameTranslation":  {
+
+                                                                                           }
+                                                              }
+                                    },
+                       "uniqueTournament":  {
+                                                "name":  "NRL",
+                                                "slug":  "nrl",
+                                                "primaryColorHex":  "#00b74f",
+                                                "secondaryColorHex":  "#00b74f",
+                                                "category":  {
+                                                                 "name":  "Rugby League",
+                                                                 "slug":  "rugby-league",
+                                                                 "sport":  {
+                                                                               "name":  "Rugby",
+                                                                               "slug":  "rugby",
+                                                                               "id":  12
+                                                                           },
+                                                                 "priority":  0,
+                                                                 "country":  {
+
+                                                                             },
+                                                                 "id":  83,
+                                                                 "flag":  "rugby-league",
+                                                                 "fieldTranslations":  {
+                                                                                           "nameTranslation":  {
+                                                                                                                   "ar":  "دوري الرجبي",
+                                                                                                                   "hi":  "रग्बी लीग",
+                                                                                                                   "bn":  "রাগবি লীগ",
+                                                                                                                   "ru":  "Регби-лига"
+                                                                                                               },
+                                                                                           "shortNameTranslation":  {
+
+                                                                                                                    }
+                                                                                       }
+                                                             },
+                                                "userCount":  4599,
+                                                "hasPerformanceGraphFeature":  false,
+                                                "country":  {
+
+                                                            },
+                                                "id":  294,
+                                                "hasEventPlayerStatistics":  false,
+                                                "displayInverseHomeAwayTeams":  false,
+                                                "fieldTranslations":  {
+                                                                          "nameTranslation":  {
+                                                                                                  "ar":  "الدوري الوطني للرغبي",
+                                                                                                  "hi":  "एनआरएल",
+                                                                                                  "bn":  "এনআরএল"
+                                                                                              },
+                                                                          "shortNameTranslation":  {
+
+                                                                                                   }
+                                                                      }
+                                            },
+                       "priority":  0,
+                       "isGroup":  false,
+                       "isLive":  false,
+                       "id":  362,
+                       "fieldTranslations":  {
+                                                 "nameTranslation":  {
+                                                                         "hi":  "एनआरएल",
+                                                                         "ar":  "الدوري الوطني للرجبي",
+                                                                         "bn":  "এনআরএল"
+                                                                     },
+                                                 "shortNameTranslation":  {
+
+                                                                          }
+                                             }
+                   },
+    "season":  {
+                   "name":  "NRL Premiership 2026",
+                   "year":  "2026",
+                   "editor":  false,
+                   "id":  86317
+               },
+    "roundInfo":  {
+                      "round":  9
+                  },
+    "customId":  "eKbsqKb",
+    "status":  {
+                   "code":  100,
+                   "description":  "Ended",
+                   "type":  "finished"
+               },
+    "winnerCode":  1,
+    "venue":  {
+                  "city":  {
+                               "name":  "Sydney",
+                               "country":  {
+                                               "alpha2":  "AU",
+                                               "alpha3":  "AUS",
+                                               "name":  "Australia",
+                                               "slug":  "australia"
+                                           },
+                               "id":  19363
+                           },
+                  "hidden":  true,
+                  "slug":  "shark-park",
+                  "name":  "Shark Park",
+                  "capacity":  22000,
+                  "country":  {
+                                  "alpha2":  "AU",
+                                  "alpha3":  "AUS",
+                                  "name":  "Australia",
+                                  "slug":  "australia"
+                              },
+                  "id":  10256,
+                  "fieldTranslations":  {
+                                            "nameTranslation":  {
+                                                                    "ar":  "شارك بارك",
+                                                                    "hi":  "शार्क पार्क",
+                                                                    "bn":  "সার্ক পার্ক"
+                                                                },
+                                            "shortNameTranslation":  {
+
+                                                                     }
+                                        },
+                  "stadium":  {
+                                  "name":  "Shark Park",
+                                  "capacity":  22000
+                              }
+              },
+    "homeTeam":  {
+                     "name":  "Cronulla Sharks",
+                     "slug":  "cronulla-sharks",
+                     "shortName":  "Cronulla",
+                     "gender":  "M",
+                     "sport":  {
+                                   "name":  "Rugby",
+                                   "slug":  "rugby",
+                                   "id":  12
+                               },
+                     "userCount":  1109,
+                     "nameCode":  "CSS",
+                     "national":  false,
+                     "type":  0,
+                     "country":  {
+
+                                 },
+                     "id":  4266,
+                     "subTeams":  [
+
+                                  ],
+                     "teamColors":  {
+                                        "primary":  "#374df5",
+                                        "secondary":  "#374df5",
+                                        "text":  "#ffffff"
+                                    },
+                     "fieldTranslations":  {
+                                               "nameTranslation":  {
+                                                                       "ar":  "كرونولا شاركس",
+                                                                       "ru":  "Кроналла-Сазерленд Шаркс"
+                                                                   },
+                                               "shortNameTranslation":  {
+                                                                            "ar":  "كرونولا",
+                                                                            "bn":  "ক্রোনুলা",
+                                                                            "hi":  "क्रोनुल्ला"
+                                                                        }
+                                           }
+                 },
+    "awayTeam":  {
+                     "name":  "Wests Tigers",
+                     "slug":  "wests-tigers",
+                     "shortName":  "Wests",
+                     "gender":  "M",
+                     "sport":  {
+                                   "name":  "Rugby",
+                                   "slug":  "rugby",
+                                   "id":  12
+                               },
+                     "userCount":  983,
+                     "nameCode":  "WTG",
+                     "national":  false,
+                     "type":  0,
+                     "country":  {
+                                     "alpha2":  "AU",
+                                     "alpha3":  "AUS",
+                                     "name":  "Australia",
+                                     "slug":  "australia"
+                                 },
+                     "id":  4254,
+                     "subTeams":  [
+
+                                  ],
+                     "teamColors":  {
+                                        "primary":  "#374df5",
+                                        "secondary":  "#374df5",
+                                        "text":  "#ffffff"
+                                    },
+                     "fieldTranslations":  {
+                                               "nameTranslation":  {
+                                                                       "ar":  "ويستس تايجرز",
+                                                                       "ru":  "Вестс Тайгерз"
+                                                                   },
+                                               "shortNameTranslation":  {
+                                                                            "ar":  "ويستس",
+                                                                            "bn":  "ওয়েস্ট",
+                                                                            "hi":  "वेस्ट्स"
+                                                                        }
+                                           }
+                 },
+    "homeScore":  {
+                      "current":  52,
+                      "display":  52,
+                      "period1":  18,
+                      "period2":  34,
+                      "normaltime":  52
+                  },
+    "awayScore":  {
+                      "current":  10,
+                      "display":  10,
+                      "period1":  10,
+                      "period2":  0,
+                      "normaltime":  10
+                  },
+    "time":  {
+                 "played":  4722,
+                 "periodLength":  2400,
+                 "overtimeLength":  600,
+                 "totalPeriodCount":  2,
+                 "currentPeriodStartTimestamp":  1777794937
+             },
+    "changes":  {
+                    "changes":  [
+                                    "status.code",
+                                    "status.description",
+                                    "status.type",
+                                    "homeScore.normaltime",
+                                    "awayScore.normaltime",
+                                    "time.currentPeriodStart"
+                                ],
+                    "changeTimestamp":  1777794939
+                },
+    "hasGlobalHighlights":  true,
+    "crowdsourcingDataDisplayEnabled":  false,
+    "id":  15105856,
+    "slug":  "cronulla-sharks-wests-tigers",
+    "startTimestamp":  1777788300,
+    "finalResultOnly":  false,
+    "feedLocked":  false,
+    "isEditor":  false
+}
