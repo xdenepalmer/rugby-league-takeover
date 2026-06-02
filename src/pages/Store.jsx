@@ -15,7 +15,9 @@ import {
   ChevronRight,
   User,
   Mail,
-  CreditCard
+  CreditCard,
+  Info,
+  Lock
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -234,6 +236,7 @@ export default function Store() {
   const [checkoutEmail, setCheckoutEmail] = useState("");
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutNotice, setCheckoutNotice] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const { data: products = [], isLoading } = useQuery({ 
@@ -335,12 +338,15 @@ export default function Store() {
     if (cart.length === 0 || !checkoutEmail) return;
 
     if (window.self !== window.top) {
-      alert("Checkout works from the published app, not inside the preview window.");
+      // Info-style notice (not an error): the preview iframe blocks the Stripe redirect.
+      setCheckoutError("");
+      setCheckoutNotice("Checkout works from the published app, not inside the preview window. Open the live site to complete your order.");
       return;
     }
 
     setCheckingOut(true);
     setCheckoutError("");
+    setCheckoutNotice("");
     try {
       const response = await base44.functions.invoke("createCheckout", {
         items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
@@ -371,7 +377,7 @@ export default function Store() {
   };
 
   return (
-    <main className="relative min-h-screen bg-background px-5 pb-16 pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8 overflow-hidden">
+    <main className="relative min-h-dvh bg-background px-5 pb-[calc(5rem+var(--safe-bottom))] pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8 overflow-hidden">
       {/* Background visual components */}
       <div className="absolute inset-0 cmd-grid-bg opacity-30 z-0 pointer-events-none" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-primary/5 blur-3xl z-0 pointer-events-none" />
@@ -638,12 +644,18 @@ export default function Store() {
 
                   <form onSubmit={handleCheckout} className="grid gap-3">
                     {checkoutError && (
-                      <p className="border border-primary/50 bg-primary/10 p-3 text-xs font-semibold text-foreground flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                      <p className="border border-destructive/50 bg-destructive/10 p-3 text-xs font-semibold text-foreground flex items-center gap-2" role="alert">
+                        <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
                         <span>{checkoutError}</span>
                       </p>
                     )}
-                    
+                    {checkoutNotice && (
+                      <p className="border border-sky-500/40 bg-sky-500/10 p-3 text-xs font-medium text-slate-200 flex items-center gap-2" role="status">
+                        <Info className="h-4 w-4 text-sky-400 flex-shrink-0" />
+                        <span>{checkoutNotice}</span>
+                      </p>
+                    )}
+
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
@@ -656,13 +668,15 @@ export default function Store() {
                     </div>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input 
-                        required 
-                        type="email" 
-                        placeholder="Receipt email address" 
+                      <Input
+                        required
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        placeholder="Receipt email address"
                         value={checkoutEmail}
                         onChange={(e) => setCheckoutEmail(e.target.value)}
-                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary" 
+                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary"
                       />
                     </div>
                     
@@ -674,6 +688,9 @@ export default function Store() {
                       <CreditCard className="h-4 w-4" />
                       {checkingOut ? "Connecting to Stripe..." : `Checkout • $${cartSubtotal.toFixed(2)} AUD`}
                     </Button>
+                    <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                      <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe
+                    </p>
                   </form>
                 </div>
               )}

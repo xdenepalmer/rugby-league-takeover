@@ -60,3 +60,23 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Validation on clean baseline before branch repair: `npm test` 33/33 · lint · typecheck · build all green.
 - Confirmed `bmad/wip-antigravity-uiux` points to `65d417f`; fetched origin; repaired local `main` via approved `git reset --hard origin/main`, now `8c3dd79` and clean. No push / no PR.
 - Returned to `bmad/baseline-integration`; updated BMAD files only. No feature implementation completed. Next implementation story remains RLT-001E from clean baseline after review approval.
+
+## RLT-001E — Mobile/PWA/brand/store hardening (Claude)
+- Branch `bmad/story-rlt-001e-claude` created from approved baseline `dacd266`. Antigravity WIP (`65d417f`) referenced only, not copied wholesale.
+- Brought 5 deferred contract tests (app-shell-metadata, local-brand-assets, mobile-viewport-shells, store-checkout-ux, expanded manifest); excluded forum-function-policy (RLT-001C).
+- Viewport: `min-h-screen`→`min-h-dvh` in AuthLayout, AdminShell, PublicLayout, Account, Home, Store, HeroSection (Forum already done); fixed HeroSection double-viewport (inner container no longer forces a second full height).
+- PWA/brand: index.html now uses local `/icons/icon-192.png` + apple-touch-icon, adds description + OG + Twitter metadata; manifest uses local icons (192/512 + maskable-512) and per-shortcut local icons; removed remote Base44 logo from HeroSection/SiteNav/SiteSettingsManager/index.html/manifest (DB `site_logo_url` override preserved).
+- Store checkout UX: removed `alert()`; preview-iframe case now shows an info-style notice (`checkoutNotice`, not error styling); real errors styled as alert (role="alert"); added `inputMode="email"`/`autoComplete="email"`; added "Secure checkout by Stripe" trust signal. Checkout behaviour/cart state unchanged.
+- A11y: skip-to-content link in PublicLayout targeting `#main-content`.
+- No backend/entity/function/checkout-logic changes. Validation: `npm test` 37/37 · lint · typecheck · build all green.
+- Commit: `67b0c92` "chore: harden mobile pwa brand and store ux". No push / no PR.
+
+## RLT-001E-FIXUP — Antigravity-reviewed viewport/a11y polish (Claude)
+- On `bmad/story-rlt-001e-claude` (clean @ `67b0c92`). Applied only the 4 conditional-pass items:
+  1. `Account.jsx`: `pb-28` → `pb-[calc(7rem+var(--safe-bottom))]`.
+  2. `Store.jsx`: `pb-16` → `pb-[calc(5rem+var(--safe-bottom))]`.
+  3. `src/index.css`: added `#root { min-height: 100vh; min-height: 100dvh; }` (dvh with vh fallback) alongside the existing `min-height: 100%`.
+  4. `AuthLayout.jsx`: form panel now `overflow-y-auto max-h-dvh` so tall auth forms don't clip.
+- No test changes required (mobile-viewport-shells still green). No backend/entity/function/checkout/forum changes.
+- Validation: `npm test` 37/37 · lint · typecheck · build all green.
+- Commit: "fix: polish mobile viewport hardening". No push / no PR.

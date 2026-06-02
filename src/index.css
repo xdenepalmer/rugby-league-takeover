@@ -109,6 +109,12 @@
     min-height: 100%;
   }
 
+  /* Root-level dynamic viewport height (mobile browser chrome aware) with fallback. */
+  #root {
+    min-height: 100vh; /* fallback for browsers without dvh */
+    min-height: 100dvh;
+  }
+
   /* Prevent iOS Safari from zooming in when focusing a form field. Inputs must be
      at least 16px on touch devices, so we bump them only on coarse pointers. */
   @media (pointer: coarse) {
