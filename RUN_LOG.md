@@ -110,3 +110,13 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Scope check: 21 files changed vs `origin/main`; **no `base44/functions|entities`, no `config.jsonc`, no StoreOrder/checkout-backend, no store-shipping, no forum-policy/rewards/coupons/reviews/notifications**.
 - Validation: `npm test` 37/37 · `npm run lint` · `npm run typecheck` · `npm run build` all green.
 - **Manual Base44 Publish required after final merge.** No push / no PR / PR #1 not closed. Commit message: `chore: reconcile BMAD baseline onto canonical main`.
+
+## RLT-001V — Combined lint gate on local main (BLOCKED — environment instability)
+- Attempted to re-apply the combined forum+ads lint fixes on a branch from local `main`. The shared working tree was **continuously overwritten mid-story** by Base44 auto-sync / a concurrent agent (`ScorePredictor.jsx` rewritten ≥3×; `AdSlot.jsx`/`SlotMachineBadgeUnlock.jsx` carried 400–660 lines of uncommitted concurrent WIP). Staging swept that WIP into a commit (`74cb431`, contaminated) — **reset via `git reset --mixed`** (concurrent work preserved, not discarded). No clean deliverable possible from the churning local tree. Escalated for a stable-base approach.
+
+## RLT-001W — Apply lint-gate fix via fixed remote main branch (Claude)
+- Source of truth: **`origin/main` @ `983fd82`** (which now contains the concurrent slot-machine/tipping/ads feature work **committed** — AdSlot 558, SlotMachine 1445, ScorePredictor 1188 lines). Worked in an **isolated git worktree** from that fixed SHA (`C:\Users\deneo\rlt-001w-wt`), so the churning shared tree was never touched and no concurrent work was at risk.
+- Lint at `983fd82` had narrowed to **3 errors**, all in `ScorePredictor.jsx`: unused `ChevronLeft`, `ChevronRight`, `Eye` (the newer committed code already resolved the earlier unused imports and the `ConfettiBurst` rules-of-hooks issue). Removed exactly those 3 unused imports; kept `Flame`/`Award`/`AlertTriangle`/`RefreshCw`/`Trash2` (in use). No suppressions, no behaviour change.
+- Branch `bmad/story-rlt-001w-lint-gate` from `origin/main` (`983fd82`). Explicit-path staging (no `git add -A`; the worktree's symlinked `node_modules` not staged).
+- Validation (in worktree): `npm run lint` **exit 0 — fully green (repo-wide)** · `npm test` 37/37 · `npm run typecheck` · `npm run build` green.
+- **RLT-001S** (forum engagement clamp, `84e69c6`) remains next, to be re-applied/merged on the then-current main once this lint gate lands. Commit `fix: restore lint gate from fixed main`. No push.

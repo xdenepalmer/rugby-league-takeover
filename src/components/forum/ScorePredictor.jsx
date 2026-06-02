@@ -5,7 +5,7 @@ import {
   Trophy, Users, Share2, TrendingUp, Calendar, Sparkles, Shield,
   Target, CheckCircle2, Zap, Crown, Lock,
   Radio, Clock, MapPin, Star, ArrowRight, BarChart3, XCircle,
-  ChevronLeft, ChevronRight, Flame, Award, Eye, AlertTriangle, RefreshCw, Trash2,
+  Flame, Award, AlertTriangle, RefreshCw, Trash2,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
