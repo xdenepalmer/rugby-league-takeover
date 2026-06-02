@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Users, Share2, TrendingUp, Calendar, Flame, Sparkles, Shield, Target, Coins, CheckCircle2, ChevronRight, Zap, Crown } from "lucide-react";
+import { Trophy, Users, Share2, TrendingUp, Calendar, Flame, Sparkles, Shield, Target, Coins, CheckCircle2, ChevronRight, Zap, Crown, Info } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { buildRollingNrlFixtures, formatKickoff, isNearFixture } from "@/lib/nrl-fixtures";
@@ -134,6 +134,12 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
           </div>
           <span className={`shrink-0 border px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.18em] ${status.tone}`}>{tip ? "Tipped" : status.label}</span>
         </div>
+        {game.generated && (
+          <div className="mt-1.5 flex items-center gap-1 text-[8px] text-amber-400/70">
+            <Info className="h-3 w-3 shrink-0" />
+            <span>Sample draw — real fixtures coming soon</span>
+          </div>
+        )}
 
         <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           {[game.home_team, game.away_team].map((team) => {
@@ -169,18 +175,25 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-1.5">
-          {[1, 2, 3, 4, 5].map((chip) => (
-            <button
-              key={chip}
-              type="button"
-              disabled={locked}
-              onClick={(e) => { e.stopPropagation(); setConfidence(chip); }}
-              className={`flex h-8 flex-1 items-center justify-center border text-[10px] font-bold transition-all ${confidence >= chip ? "border-amber-400/50 bg-amber-400/15 text-amber-200" : "border-border/30 bg-black/20 text-slate-500"}`}
-            >
-              <Coins className="h-3 w-3" />
-            </button>
-          ))}
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-300">Confidence</span>
+            <span className="text-[8px] text-slate-400">{confidence}/5 chips wagered</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                disabled={locked}
+                onClick={(e) => { e.stopPropagation(); setConfidence(chip); }}
+                aria-label={`${chip} confidence chip${chip > 1 ? 's' : ''}`}
+                className={`flex h-8 flex-1 items-center justify-center border text-[10px] font-bold transition-all ${confidence >= chip ? "border-amber-400/50 bg-amber-400/15 text-amber-200" : "border-border/30 bg-black/20 text-slate-500"}`}
+              >
+                <Coins className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
         </div>
 
         <CommunityPulse game={game} entries={entries} />
