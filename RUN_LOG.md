@@ -36,5 +36,12 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Replaced generic README with project-specific Rugby League Takeover README.
 - Identity: `package.json` name → `rugby-league-takeover` (+ description); `package-lock.json` root/package name updated; `base44/config.jsonc` name → `Rugby League Takeover`.
 - Scope: control-plane/docs only; no `src/`, `tests/`, functions, entities (except `config.jsonc`), CSS, or PWA assets touched. Concurrent Codex working-tree files left uncommitted.
-- Validation: see handoff report. Commit: "docs: establish BMAD baseline controls".
+- Validation: see handoff report. Commit: `f6d1271` "docs: establish BMAD baseline controls". Architect-approved.
 - No push / no PR.
+
+## RLT-001F — Isolate concurrent store-shipping WIP from baseline
+- Found dirty store-shipping/orders WIP on `bmad/baseline-integration` (`f6d1271`): modified `StoreOrder.jsonc`, `createCheckout`, `stripeWebhook`, `OrdersTab.jsx`, `OrdersManager.jsx`, `Store.jsx`, `tests/checkout-rules*`, `.gitignore`; untracked `src/lib/store-shipping.js` + 4 store/account tests. No BMAD/doc files dirty.
+- Preserved WIP on new branch `bmad/wip-store-shipping`; commit `f0684600` — "wip: preserve store shipping checkout changes". No work discarded.
+- Restored `bmad/baseline-integration` to `f6d1271` (clean). Validation on clean baseline: `npm test` 33/33 · lint · typecheck · build all green. The prior single failure ("Stripe checkout … shipping") was WIP-only and is gone.
+- Updated BMAD files (TASKS/PROGRESS/AGENT_HANDOFF/RUN_LOG); commit: "chore: record store shipping WIP isolation".
+- No push / no PR. Approved commits `ec63822`/`f6d1271` not altered.
