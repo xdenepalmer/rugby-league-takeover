@@ -21,6 +21,8 @@ test("web app manifest includes install-critical fields", () => {
   assert.ok(iconSizes.has("192x192"), "manifest is missing a 192x192 icon");
   assert.ok(iconSizes.has("512x512"), "manifest is missing a 512x512 icon");
   assert.ok((manifest.icons || []).some((icon) => String(icon.purpose || "").includes("maskable")), "manifest is missing a maskable icon");
+  assert.ok((manifest.icons || []).every((icon) => String(icon.src || "").startsWith("/icons/")), "manifest icons must be local for reliable PWA installs");
+  assert.ok((manifest.icons || []).some((icon) => icon.src === "/icons/icon-maskable-512.png"), "manifest should use the local maskable icon asset");
 });
 
 test("web app manifest exposes admin and fan shortcuts", () => {
@@ -30,4 +32,5 @@ test("web app manifest exposes admin and fan shortcuts", () => {
   assert.ok(shortcutUrls.has("/admin"), "manifest is missing an admin shortcut");
   assert.ok(shortcutUrls.has("/forum"), "manifest is missing a forum shortcut");
   assert.ok(shortcutUrls.has("/store"), "manifest is missing a store shortcut");
+  assert.ok((manifest.shortcuts || []).every((shortcut) => (shortcut.icons || []).some((icon) => String(icon.src || "").startsWith("/icons/"))), "manifest shortcuts need local icons");
 });

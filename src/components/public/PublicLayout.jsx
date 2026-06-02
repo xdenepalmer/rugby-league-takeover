@@ -16,12 +16,20 @@ export default function PublicLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col">
+      {/* Skip to content — visible only when focused (keyboard users) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:border focus:border-primary focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-foreground"
+      >
+        Skip to content
+      </a>
+
       {/* Top Site Navigation */}
       <SiteNav settings={settingsRecords[0] || {}} />
-      
+
       {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
-      <div className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
+      <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
         <Outlet />
       </div>
 
