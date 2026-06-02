@@ -1391,9 +1391,23 @@ export default function SlotMachineBadgeUnlock() {
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <motion.div
-              animate={spinning ? { rotate: [0, 10, -10, 0] } : {}}
-              transition={{ duration: 0.5, repeat: spinning ? Infinity : 0 }}
-              className="grid h-10 w-10 place-items-center border border-purple-400/30 bg-black/60 text-xl shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+              animate={spinning
+                ? { rotate: [0, 10, -10, 0] }
+                : canSpin
+                ? { rotate: [0, -3, 3, -3, 0], scale: [1, 1.02, 1] }
+                : {}
+              }
+              transition={spinning
+                ? { duration: 0.5, repeat: Infinity }
+                : canSpin
+                ? { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                : {}
+              }
+              className={`grid h-10 w-10 place-items-center border bg-black/60 text-xl ${
+                canSpin
+                  ? "border-amber-300/40 shadow-[0_0_25px_rgba(251,191,36,0.25)]"
+                  : "border-purple-400/30 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+              }`}
             >
               🎰
             </motion.div>
@@ -1467,6 +1481,30 @@ export default function SlotMachineBadgeUnlock() {
 
         {/* ─── First-Time Empty State ─── */}
         {totalSpins === 0 && earnedCount === 0 && <EmptyStateGuide />}
+
+        {/* ─── Collection Complete Celebration ─── */}
+        <AnimatePresence>
+          {earnedCount === totalBadges && totalBadges > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 overflow-hidden"
+            >
+              <div className="border-2 border-amber-400/40 bg-gradient-to-r from-amber-900/30 via-amber-800/20 to-amber-900/30 p-4 text-center">
+                <motion.div
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-4xl mb-2"
+                >
+                  🏆
+                </motion.div>
+                <p className="text-sm font-black uppercase tracking-wider text-amber-200">Collection Complete!</p>
+                <p className="mt-1 text-[10px] text-amber-300/60">You've unlocked all {totalBadges} badges. Legendary status achieved.</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ─── Machine Body ─── */}
         <div className="relative overflow-hidden border border-purple-500/20 bg-black p-3 shadow-[inset_0_0_50px_rgba(0,0,0,0.98),0_0_30px_rgba(88,28,135,0.12)]">

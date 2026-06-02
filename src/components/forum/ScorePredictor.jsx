@@ -257,12 +257,26 @@ function HeroStats({ tips, fixtures, totalPoints }) {
   );
 }
 
-function RoundBadge({ label }) {
+function RoundBadge({ label, games, tips }) {
   if (!label) return null;
+  const gameCount = games?.length || 0;
+  const tippedCount = games?.filter((g) => tips?.[g.id]).length || 0;
+  const allTipped = gameCount > 0 && tippedCount === gameCount;
   return (
-    <div className="flex items-center gap-1.5 px-2 py-1.5">
+    <div className="flex items-center gap-2 px-2 py-2">
       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-      <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-primary/60">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-primary/60">{label}</span>
+        {gameCount > 0 && (
+          <span className={`text-[7px] font-mono px-1.5 py-0.5 border ${
+            allTipped
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+              : "border-border/20 bg-black/30 text-slate-500"
+          }`}>
+            {tippedCount}/{gameCount}
+          </span>
+        )}
+      </div>
       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
     </div>
   );
@@ -1139,8 +1153,19 @@ export default function ScorePredictor({ onSharePrediction }) {
                 Footy Tipping
               </h3>
               <p className="mt-1 text-[7px] font-mono uppercase tracking-[0.3em] text-slate-400">
-                NRL 2026 · {totalPoints} pts · {tippedCount} locked
+                NRL 2026 · {totalPoints} pts · {tippedCount}/{fixtures.length} tipped
               </p>
+              {/* Mini progress bar */}
+              {fixtures.length > 0 && (
+                <div className="mt-1.5 h-1 w-full max-w-[140px] bg-black/40 overflow-hidden border border-border/10">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.round((tippedCount / fixtures.length) * 100)}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-primary to-accent"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -1182,17 +1207,26 @@ export default function ScorePredictor({ onSharePrediction }) {
               onClick={() => setFilter(item.id)}
               className={`relative flex items-center justify-center gap-1 min-h-9 text-[8px] font-bold uppercase tracking-[0.15em] transition-all ${
                 filter === item.id
-                  ? "bg-primary text-primary-foreground"
+                  ? "text-primary-foreground"
                   : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
               }`}
             >
-              <item.icon className="h-3 w-3" />
-              {item.label}
-              {item.count > 0 && (
-                <span className={`ml-0.5 text-[7px] ${filter === item.id ? "opacity-80" : "text-primary"}`}>
-                  ({item.count})
-                </span>
+              {filter === item.id && (
+                <motion.div
+                  layoutId="filter-indicator"
+                  className="absolute inset-0 bg-primary"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
               )}
+              <span className="relative z-10 flex items-center gap-1">
+                <item.icon className="h-3 w-3" />
+                {item.label}
+                {item.count > 0 && (
+                  <span className={`ml-0.5 text-[7px] ${filter === item.id ? "opacity-80" : "text-primary"}`}>
+                    ({item.count})
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>
@@ -1217,34 +1251,57 @@ export default function ScorePredictor({ onSharePrediction }) {
               )}
             </div>
             <div className="mt-3 flex items-center justify-between gap-2">
-              <div className="min-w-0 text-center flex-1">
+              <motion.div
+                className="min-w-0 text-center flex-1"
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+              >
                 <TeamCrest name={activeGame.home_team} className="mx-auto h-12 w-12 text-xs" />
                 <p className="mt-1 truncate text-[10px] font-bold text-foreground">{shortName(activeGame.home_team)}</p>
-              </div>
+              </motion.div>
               <div className="text-center px-2">
                 {activeGame.status === "finished" && activeGame.home_score != null ? (
                   <>
-                    <p className="font-display text-xl text-foreground">{activeGame.home_score} - {activeGame.away_score}</p>
+                    <motion.p
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                      className="font-display text-xl text-foreground"
+                    >
+                      {activeGame.home_score} - {activeGame.away_score}
+                    </motion.p>
                     <p className="text-[7px] text-slate-500 uppercase tracking-wider">Final</p>
                   </>
                 ) : (
                   <>
-                    <p className="font-display text-2xl text-primary/80">VS</p>
+                    <motion.p
+                      animate={{ scale: [1, 1.08, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      className="font-display text-2xl text-primary/80"
+                    >
+                      VS
+                    </motion.p>
                     <p className="text-[7px] text-slate-500">{formatKickoff(activeGame.kickoff)}</p>
                   </>
                 )}
               </div>
-              <div className="min-w-0 text-center flex-1">
+              <motion.div
+                className="min-w-0 text-center flex-1"
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.15 }}
+              >
                 <TeamCrest name={activeGame.away_team} className="mx-auto h-12 w-12 text-xs" />
                 <p className="mt-1 truncate text-[10px] font-bold text-foreground">{shortName(activeGame.away_team)}</p>
-              </div>
+              </motion.div>
             </div>
             <button
               type="button"
               onClick={handleShare}
-              className="mt-3 flex min-h-9 w-full items-center justify-center gap-2 border border-primary/25 bg-black/30 text-[9px] font-bold uppercase tracking-[0.2em] text-primary transition-all hover:bg-primary hover:text-primary-foreground"
+              className="group mt-3 flex min-h-9 w-full items-center justify-center gap-2 border border-primary/25 bg-black/30 text-[9px] font-bold uppercase tracking-[0.2em] text-primary transition-all hover:bg-primary hover:text-primary-foreground"
             >
-              <Share2 className="h-3 w-3" /> Share To Forum
+              <Share2 className="h-3 w-3 transition-transform group-hover:rotate-12" /> Share To Forum
             </button>
           </motion.div>
         )}
@@ -1254,7 +1311,7 @@ export default function ScorePredictor({ onSharePrediction }) {
           <AnimatePresence mode="popLayout">
             {groupedFixtures.map((group) => (
               <div key={group.label}>
-                <RoundBadge label={group.label} />
+                <RoundBadge label={group.label} games={group.games} tips={tips} />
                 <div className="space-y-2">
                   {group.games.map((game) => (
                     <FixtureCard
@@ -1319,12 +1376,24 @@ export default function ScorePredictor({ onSharePrediction }) {
               <Zap className="h-3.5 w-3.5 text-primary" />
               <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">How It Works</p>
             </div>
-            <ul className="mt-3 space-y-2 text-[10px] leading-relaxed text-slate-400">
-              <li className="flex gap-2"><Target className="mt-0.5 h-3 w-3 shrink-0 text-primary" />Pick a winner & set your margin prediction.</li>
-              <li className="flex gap-2"><Lock className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />Lock it in — tips are <strong className="text-foreground">permanent</strong>. No take-backs!</li>
-              <li className="flex gap-2"><Award className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" /><strong className="text-foreground">+{PTS_CORRECT}pts</strong> correct pick, <strong className="text-foreground">+{PTS_MARGIN_BONUS}pts</strong> bonus for perfect margin.</li>
-              <li className="flex gap-2"><Trophy className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />Climb the ladder — results update live from the NRL API.</li>
-            </ul>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[
+              { step: 1, icon: Target, color: "text-primary", text: "Pick a winner & set your margin prediction" },
+              { step: 2, icon: Lock, color: "text-amber-400", text: "Lock it in \u2014 tips are permanent. No take-backs!" },
+              { step: 3, icon: Award, color: "text-emerald-400", text: `+${PTS_CORRECT}pts correct pick, +${PTS_MARGIN_BONUS}pts perfect margin bonus` },
+              { step: 4, icon: Trophy, color: "text-amber-400", text: "Climb the ladder \u2014 results update live from the NRL API" },
+            ].map((item) => (
+              <div key={item.step} className="flex items-start gap-2.5 p-2 border border-border/10 bg-black/20">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-primary/10 border border-primary/20">
+                  <span className="text-[8px] font-black text-primary">{item.step}</span>
+                </div>
+                <div className="flex items-start gap-1.5 min-w-0">
+                  <item.icon className={`mt-0.5 h-3 w-3 shrink-0 ${item.color}`} />
+                  <p className="text-[10px] leading-relaxed text-slate-400">{item.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
           </div>
         </div>
 
