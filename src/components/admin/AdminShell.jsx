@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 
 export default function AdminShell({ user, children }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-dvh bg-background text-foreground">
       <header className="border-b border-border bg-secondary px-5 py-5 md:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

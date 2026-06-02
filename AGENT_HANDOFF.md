@@ -14,6 +14,7 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 - **Manual Base44 Publish:** nothing is live until published in Base44.
 - **Ambiguity rule:** _If ambiguity exists, stop and request Architect clarification._ Do not guess scope.
 - **No push / no PR** without explicit Architect instruction.
+- **No direct shared-branch work:** no agent may work directly on `main` or `bmad/baseline-integration` without an Architect-approved BMAD story.
 
 ## Handoff protocol
 1. Architect issues a story (ID, title, approval, strict scope, allowed/forbidden files, steps, validation, expected result, required report).
@@ -39,10 +40,23 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001F** — Isolate concurrent store-shipping WIP from the approved baseline (source-control hygiene). Completed.
+- **RLT-001K** — Reconciled approved RLT-001E baseline onto canonical `origin/main` (`8c3dd79`) on new branch `bmad/reconcile-rlt-001k`. `origin/main` already carries the live Antigravity UI/UX pass; reconciliation keeps BOTH that and RLT-001E. 15 baseline-only files clean-applied + 6 overlap files hand-merged (manifest, index.css, HeroSection, PublicLayout, SiteNav, Store.jsx). 37/37 validation green. No backend/entity/function/store-shipping changes. Manual Base44 Publish required after final merge. No push / no PR; PR #1 left open but superseded.
+- **RLT-001J** — Read-only conflict analysis; established `origin/main` = Antigravity WIP (`65d417f`) + sync commit; recommended Option B. Completed.
+- **RLT-001I** — Pushed `bmad/baseline-integration` and opened PR #1; GitHub flagged CONFLICTING. Completed (not merged).
+- **RLT-001E-MERGE** — Merged approved RLT-001E (+ FIXUP) from `bmad/story-rlt-001e-claude` (`a79df80`) into `bmad/baseline-integration` via `--no-ff` (no conflicts). Antigravity final UX pass P0 12/12. 37/37 validation green. Manual Base44 Publish required to go live. No backend/entity/function changes.
+- **RLT-001H-AMENDED** — Preserve active Codex store-shipping WIP including `.gitignore` safety change and restore branch discipline. Completed.
+- Active Codex store-shipping WIP is preserved on `bmad/story-rlt-011-codex-store-shipping` (`46d069b`). No feature implementation completed.
+- `.gitignore` was preserved with the WIP branch only; it is not an approved baseline change and needs a future control-plane story if it should land.
+- Local `main` was repaired to `origin/main` (`8c3dd79`). No push performed.
+- **RLT-001G** — Isolate Antigravity UI/UX WIP from the approved baseline (source-control hygiene). Completed.
+- RLT-001F (store-shipping WIP isolation) — Architect-approved.
 - RLT-001D (BMAD files + identity) — Architect-approved.
 
+## Antigravity working rule
+Antigravity must work through **`ui-ux-pro-max`** specifications and an **approved BMAD story** before any UI implementation change is committed to baseline. Unapproved UI/UX edits to the shared working tree are isolated to a WIP branch (RLT-001G precedent). Prefer committing to a dedicated Antigravity branch.
+
 ## Next action router
-- → **Architect:** schedule **RLT-001E** (mobile/PWA/brand/store hardening); decide **RLT-001C** (forum publish policy); decide whether to resume **RLT-011** (store-shipping WIP on `bmad/wip-store-shipping`).
-- → **Push / PR:** awaiting explicit Architect instruction (none performed).
-- → **Branches:** integration = `bmad/baseline-integration` (clean, validated); backup preserve = `bmad/baseline-preserve-current-state` (`14d17a1`); store-shipping WIP = `bmad/wip-store-shipping` (`f0684600`).
+- → **Architect + Claude review:** review `bmad/reconcile-rlt-001k` (RLT-001K). On approval, authorize pushing it and opening a **replacement PR** (`bmad/reconcile-rlt-001k` → `main`, conflict-free), then **close PR #1** referencing the new one. Still pending: **RLT-001C** (forum publish policy); whether to resume **RLT-011** (store-shipping).
+- → **Push / PR:** RLT-001K committed locally only — **no push** performed; awaiting explicit Architect instruction for the replacement PR. PR #1 remains open (superseded), not merged, not closed.
+- → **Manual Base44 Publish** required after the reconciled branch is merged — GitHub sync alone does not publish.
+- → **Branches:** reconciliation (current) = `bmad/reconcile-rlt-001k` (from `origin/main`, validated 37/37); integration (superseded) = `bmad/baseline-integration` (`4aa991f`, = PR #1 head); backup preserve = `bmad/baseline-preserve-current-state` (`14d17a1`); store-shipping WIP = `bmad/wip-store-shipping` (`f0684600`); Codex store-shipping story WIP = `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); Antigravity UI/UX WIP = `bmad/wip-antigravity-uiux` (`65d417f`); local `main` = `origin/main` (`8c3dd79`).
