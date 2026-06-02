@@ -148,9 +148,54 @@ export default function Home() {
         <MerchSection settings={settings} />
         <PartnersSection settings={settings} />
         <TestimonialsSection settings={settings} />
-        <footer className="border-t border-border bg-secondary/90 px-5 py-10 text-center backdrop-blur-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
-          <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Powered by <span className="text-foreground">{settings.footer_powered_by || "DENEO.AI"}</span></p>
+        <footer className="border-t border-border bg-secondary/90 backdrop-blur-sm">
+          {/* Footer nav links */}
+          <div className="px-5 py-8 md:py-12">
+            <div className="mx-auto max-w-5xl">
+              <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Explore</p>
+                  <ul className="space-y-2">
+                    {["Latest News", "About Us", "Travel Packages", "Events"].map((link) => (
+                      <li key={link}><a href={`/#${link.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">{link}</a></li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Community</p>
+                  <ul className="space-y-2">
+                    {[{label:"Forum", href:"/forum"}, {label:"Merch Store", href:"/store"}, {label:"Partners", href:"/#partners"}, {label:"Testimonials", href:"/#testimonials"}].map((link) => (
+                      <li key={link.label}><a href={link.href} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Account</p>
+                  <ul className="space-y-2">
+                    {[{label:"Sign In", href:"/login"}, {label:"Register", href:"/register"}, {label:"My Account", href:"/account"}].map((link) => (
+                      <li key={link.label}><a href={link.href} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Connect</p>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">Join the movement. Rugby League's biggest fan invasion of Las Vegas.</p>
+                  <div className="mt-3 flex items-center gap-1">
+                    <span className="inline-block h-1 w-6 bg-primary" />
+                    <span className="inline-block h-1 w-4 bg-accent" />
+                    <span className="inline-block h-1 w-2 bg-primary/50" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Bottom bar */}
+          <div className="border-t border-border/50 px-5 py-5">
+            <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 sm:flex-row sm:justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Powered by <span className="text-foreground/80">{settings.footer_powered_by || "DENEO.AI"}</span></p>
+            </div>
+          </div>
         </footer>
       </div>
     </main>

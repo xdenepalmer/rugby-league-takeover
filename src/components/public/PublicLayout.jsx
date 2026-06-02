@@ -33,6 +33,13 @@ export default function PublicLayout() {
         <Outlet />
       </div>
 
+      {/* Site-wide footer (non-Home pages) */}
+      <footer className="border-t border-border/50 bg-secondary/80 px-5 py-4 text-center backdrop-blur-sm">
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          Rugby League Takeover Las Vegas © 2026
+        </p>
+      </footer>
+
       {/* iOS-Style Public Mobile Bottom Tab Bar */}
       <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto" aria-label="Main navigation">
         <div className="flex items-center justify-around px-2 py-1.5 w-full">
