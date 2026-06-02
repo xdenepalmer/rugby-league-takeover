@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Users, Share2, TrendingUp, Calendar, Flame, Sparkles, Shield, Target, Coins, CheckCircle2, ChevronRight, Zap, Crown, Info, Radio } from "lucide-react";
+import { Trophy, Users, Share2, TrendingUp, Calendar, Flame, Sparkles, Shield, Target, CheckCircle2, ChevronRight, Zap, Crown, Info, Radio } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { buildRollingNrlFixtures, formatKickoff, isNearFixture } from "@/lib/nrl-fixtures";
@@ -63,14 +63,13 @@ function TipProgress({ tips, fixtures }) {
 
 function TipsterProfile({ tips, fixtures }) {
   const tipped = fixtures.filter((g) => tips[g.id]).length;
-  const chips = Object.values(tips).reduce((sum, tip) => sum + Number(tip.confidence || 0), 0);
   const streak = Number(readJson(PROFILE_KEY, { streak: 0 }).streak || 0);
   const rank = tipped >= 8 ? "Immortal Tipster" : tipped >= 5 ? "Sharp Shooter" : tipped >= 2 ? "Form Analyst" : "Rookie Punter";
   return (
     <div className="grid grid-cols-3 divide-x divide-border/30 border border-border/40 bg-card/20">
       {[
         { icon: Trophy, label: "Rank", value: rank },
-        { icon: Coins, label: "Chips", value: chips || 25 },
+        { icon: Target, label: "Tips", value: tipped },
         { icon: Flame, label: "Streak", value: `${streak || tipped}x` },
       ].map(({ icon: Icon, label, value }) => (
         <div key={label} className="min-w-0 p-2.5 text-center">
@@ -108,7 +107,6 @@ function CommunityPulse({ game, entries }) {
 function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
   const [selectedTeam, setSelectedTeam] = useState(tip?.selected_team || game.home_team);
   const [margin, setMargin] = useState(tip?.margin || 8);
-  const [confidence, setConfidence] = useState(tip?.confidence || 3);
   const scores = deriveScores(game, selectedTeam, margin);
   const status = getStatus(game.kickoff, game.status);
   const locked = status.label === "Locked" || status.label === "Final" || status.label === "Live";
@@ -116,7 +114,6 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
   useEffect(() => {
     setSelectedTeam(tip?.selected_team || game.home_team);
     setMargin(tip?.margin || 8);
-    setConfidence(tip?.confidence || 3);
   }, [game.id, tip, game.home_team]);
 
   return (
@@ -191,27 +188,6 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
           </div>
         </div>
 
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-300">Confidence</span>
-            <span className="text-[8px] text-slate-400">{confidence}/5 chips wagered</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {[1, 2, 3, 4, 5].map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                disabled={locked}
-                onClick={(e) => { e.stopPropagation(); setConfidence(chip); }}
-                aria-label={`${chip} confidence chip${chip > 1 ? 's' : ''}`}
-                className={`flex h-8 flex-1 items-center justify-center border text-[10px] font-bold transition-all ${confidence >= chip ? "border-amber-400/50 bg-amber-400/15 text-amber-200" : "border-border/30 bg-black/20 text-slate-500"}`}
-              >
-                <Coins className="h-3 w-3" />
-              </button>
-            ))}
-          </div>
-        </div>
-
         <CommunityPulse game={game} entries={entries} />
 
         <button
@@ -219,7 +195,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
           disabled={locked}
           onClick={(e) => {
             e.stopPropagation();
-            onTip(game, { selected_team: selectedTeam, margin, confidence, predicted_home_score: scores.home, predicted_away_score: scores.away });
+            onTip(game, { selected_team: selectedTeam, margin, predicted_home_score: scores.home, predicted_away_score: scores.away });
           }}
           className={`mt-3 flex min-h-10 w-full items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${locked ? "bg-slate-800 text-slate-500" : tip ? "border border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
         >
@@ -236,15 +212,14 @@ function Leaderboard({ entries, tips }) {
     const totals = new Map();
     entries.forEach((entry) => {
       const name = entry.tipper_name || "Mystery Fan";
-      const curr = totals.get(name) || { name, tips: 0, chips: 0 };
+      const curr = totals.get(name) || { name, tips: 0 };
       curr.tips += 1;
-      curr.chips += Number(entry.confidence || 1);
       totals.set(name, curr);
     });
-    const yours = { name: "You", tips: Object.keys(tips).length, chips: Object.values(tips).reduce((s, t) => s + Number(t.confidence || 0), 0), me: true };
+    const yours = { name: "You", tips: Object.keys(tips).length, me: true };
     return [yours, ...Array.from(totals.values())]
       .filter((r) => r.tips > 0)
-      .sort((a, b) => b.chips - a.chips || b.tips - a.tips)
+      .sort((a, b) => b.tips - a.tips)
       .slice(0, 5);
   }, [entries, tips]);
 
@@ -260,7 +235,7 @@ function Leaderboard({ entries, tips }) {
             <span className="w-5 text-center text-xs">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold text-foreground">{row.name}</p>
-              <p className="text-[8px] text-slate-400">{row.tips} tips · {row.chips} confidence chips</p>
+              <p className="text-[8px] text-slate-400">{row.tips} tips</p>
             </div>
           </div>
         )) : <p className="text-xs text-slate-400">Be first to lock a tip.</p>}
@@ -362,7 +337,6 @@ export default function ScorePredictor({ onSharePrediction }) {
         predicted_home_score: tip.predicted_home_score,
         predicted_away_score: tip.predicted_away_score,
         margin: tip.margin,
-        confidence: tip.confidence,
         tipper_name: "Vegas Fan",
         kickoff: game.kickoff,
       });
@@ -371,7 +345,7 @@ export default function ScorePredictor({ onSharePrediction }) {
 
   const handleShare = () => {
     if (!activeGame || !onSharePrediction) return;
-    const tip = tips[activeGame.id] || { selected_team: activeGame.home_team, margin: 8, confidence: 3, ...deriveScores(activeGame, activeGame.home_team, 8) };
+    const tip = tips[activeGame.id] || { selected_team: activeGame.home_team, margin: 8, ...deriveScores(activeGame, activeGame.home_team, 8) };
     const homeScore = tip.predicted_home_score ?? tip.home ?? 24;
     const awayScore = tip.predicted_away_score ?? tip.away ?? 16;
     onSharePrediction(activeGame, homeScore, awayScore);
@@ -397,7 +371,7 @@ export default function ScorePredictor({ onSharePrediction }) {
         </div>
 
         <p className="mt-3 text-xs leading-relaxed text-slate-300">
-          Tip every nearby NRL game, stake confidence chips, chase streaks, and compare your read with the community pulse.
+          Tip every nearby NRL game, predict margins, chase streaks, and compare your read with the community pulse.
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
