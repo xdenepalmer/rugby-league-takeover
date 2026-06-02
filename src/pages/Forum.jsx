@@ -178,7 +178,7 @@ const toggleSavedPost = (id) => {
 
 function ShareButton({ post }) {
   return (
-    <button type="button" onClick={() => shareThread(post)} title="Share / copy link" className="flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs text-slate-300 transition-colors hover:text-foreground">
+    <button type="button" onClick={() => shareThread(post)} title="Share / copy link" className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs text-slate-300 transition-colors hover:text-foreground">
       <Share2 className="h-3.5 w-3.5" />
     </button>
   );
@@ -192,7 +192,7 @@ function SaveButton({ post }) {
     toast({ title: now ? "Saved" : "Removed", description: now ? "Added to your saved threads." : "Removed from saved threads." });
   };
   return (
-    <button type="button" onClick={onToggle} title={saved ? "Saved" : "Save thread"} className={`flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs transition-colors ${saved ? "text-primary" : "text-slate-300 hover:text-foreground"}`}>
+    <button type="button" onClick={onToggle} title={saved ? "Saved" : "Save thread"} className={`forum-action-button flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs transition-colors ${saved ? "text-primary" : "text-slate-300 hover:text-foreground"}`}>
       <Bookmark className={`h-3.5 w-3.5 ${saved ? "fill-primary" : ""}`} />
     </button>
   );
@@ -562,7 +562,7 @@ const SORT_OPTIONS = [
 
 function SortTabs({ active, onChange }) {
   return (
-    <div className="grid grid-cols-3 border border-border/50 bg-card/30 p-0.5 sm:flex sm:items-center">
+    <div className="forum-sort-tabs grid grid-cols-3 border border-border/50 bg-card/30 p-0.5 sm:flex sm:items-center">
       {SORT_OPTIONS.map((opt) => {
         const isActive = active === opt.id;
         return (
@@ -649,14 +649,14 @@ const CategoryPill = memo(function CategoryPill({ value, isActive, onClick, coun
       onClick={onClick}
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.96 }}
-      className={`relative flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-250 ${
+      className={`relative flex min-h-11 min-w-0 items-center justify-center gap-2 border px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-250 sm:shrink-0 sm:justify-start sm:whitespace-nowrap ${
         isActive
           ? `border-primary/40 bg-gradient-to-r ${meta.gradient} text-foreground shadow-[0_0_16px_hsl(var(--primary)/0.12),inset_0_1px_0_hsl(var(--primary)/0.1)]`
           : `border-border/50 bg-card/20 text-slate-300 hover:text-foreground hover:bg-card/40 hover:border-border`
       }`}
     >
       <MetaIcon className={`h-3 w-3 ${isActive ? meta.accent : "text-slate-400"}`} />
-      <span>{meta.label}</span>
+      <span className="truncate">{meta.label}</span>
       {count > 0 && (
         <span className={`ml-1 px-1.5 py-0 text-[8px] font-mono tabular-nums ${
           isActive ? "bg-primary/20 text-primary" : "bg-muted/30 text-slate-300"
@@ -1003,7 +1003,7 @@ const ForumPostCard = memo(function ForumPostCard({
           <button
             type="button"
             onClick={onToggleReply}
-            className={`flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 border ${
+            className={`forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 border ${
               replyOpen
                 ? "bg-accent/10 text-accent border-accent/20"
                 : "text-slate-300 hover:text-accent hover:bg-accent/5 border-transparent"
@@ -1022,7 +1022,7 @@ const ForumPostCard = memo(function ForumPostCard({
             <button
               type="button"
               onClick={() => onDeletePost(post)}
-              className="flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-destructive transition-colors border border-transparent"
+              className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-destructive transition-colors border border-transparent"
               title="Remove this thread"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -1042,7 +1042,7 @@ const ForumPostCard = memo(function ForumPostCard({
           </button>
 
           {/* Mobile stats */}
-          <div className="flex min-h-11 items-center justify-center gap-1 text-[10px] text-slate-300 font-bold md:hidden">
+          <div className="forum-action-button flex min-h-11 items-center justify-center gap-1 text-[10px] text-slate-300 font-bold md:hidden">
             <Eye className="h-3 w-3 text-primary" />
             <span className="font-mono font-bold tabular-nums text-slate-200">{engagement.views}</span>
           </div>
@@ -1828,7 +1828,7 @@ export default function Forum() {
   };
 
   return (
-    <main className="forum-mobile-shell relative min-h-screen overflow-x-hidden bg-background text-foreground">
+    <main className="forum-mobile-shell relative min-h-dvh overflow-x-hidden bg-background text-foreground">
       {/* ━━━ HERO SECTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <section className="forum-mobile-hero relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 cmd-grid-bg opacity-40" />
@@ -1891,7 +1891,7 @@ export default function Forum() {
       </section>
 
       {/* ━━━ MAIN CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="mx-auto max-w-6xl px-3 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
+      <div className="forum-mobile-content mx-auto max-w-6xl px-2 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
         {/* Trending */}
         {allThreads.length >= 3 && (
           <motion.div
@@ -1971,7 +1971,7 @@ export default function Forum() {
                 </div>
 
                 {/* Categories */}
-                <div className="forum-filter-rail -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+                <div className="forum-filter-rail grid grid-cols-2 gap-2 pb-1 sm:flex sm:flex-wrap">
                   {categories.map((cat) => (
                     <CategoryPill
                       key={cat.value}
