@@ -4,11 +4,7 @@
  * Endpoints:
  *   GET /api/rugby/tournament/294/season/{seasonId}/matches/next/0  → upcoming
  *   GET /api/rugby/tournament/294/season/{seasonId}/matches/last/0  → recent results
- *
- * Falls back to buildRollingNrlFixtures() if the API is unreachable.
  */
-
-import { buildRollingNrlFixtures, NRL_CLUBS } from "./nrl-fixtures";
 
 const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY || "";
 const API_HOST = "rugbyapi2.p.rapidapi.com";
@@ -16,8 +12,6 @@ const NRL_TOURNAMENT_ID = 294;
 const NRL_SEASON_2026 = 86317;
 
 // ── Team‑name normaliser ────────────────────────────────────────────
-// The API uses its own names; our app uses the NRL_CLUBS list. This map
-// resolves the most common mismatches so tipping works with either source.
 const TEAM_ALIAS = {
   "Manly Sea Eagles": "Manly Warringah Sea Eagles",
   "St George Illawarra Dragons": "St. George Illawarra Dragons",
@@ -31,7 +25,7 @@ function mapStatus(apiStatus) {
   const t = apiStatus.type || "";
   if (t === "inprogress") return "live";
   if (t === "finished") return "finished";
-  return "upcoming"; // notstarted, etc.
+  return "upcoming";
 }
 
 // ── Single event → fixture shape ────────────────────────────────────
@@ -52,7 +46,7 @@ function toFixture(ev) {
     label: round ? `NRL Round ${round}` : "NRL Fixture",
     venue: ev.venue?.name || "",
     is_published: true,
-    generated: false,           // real data — no "Sample draw" badge
+    generated: false,
     api_source: true,
     status: mapStatus(ev.status),
     home_score: ev.homeScore?.current ?? null,
@@ -92,18 +86,24 @@ export async function fetchNrlFixtures() {
 }
 
 /**
- * Fetch upcoming fixtures only — primary hook for ScorePredictor.
- * Falls back to generated fixtures on any failure.
+ * Fetch upcoming + recent real NRL fixtures.
+ * Returns empty array on failure — no fake games.
  */
 export async function fetchUpcomingFixtures() {
   try {
-    const { upcoming } = await fetchNrlFixtures();
-    if (upcoming.length > 0) return upcoming;
+    const { upcoming, recent } = await fetchNrlFixtures();
+    // Deduplicate (in case any overlap)
+    const seen = new Set();
+    const all = [...upcoming, ...recent].filter((g) => {
+      if (seen.has(g.id)) return false;
+      seen.add(g.id);
+      return true;
+    });
+    return all;
   } catch (err) {
-    console.warn("[nrl-api] Falling back to generated fixtures:", err.message);
+    console.warn("[nrl-api] API unavailable:", err.message);
+    return [];
   }
-  // Fallback — generated fixtures with "Sample draw" badge
-  return buildRollingNrlFixtures(new Date(), 5);
 }
 
 /**
