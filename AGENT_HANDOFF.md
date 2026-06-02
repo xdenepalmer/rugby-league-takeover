@@ -14,6 +14,7 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 - **Manual Base44 Publish:** nothing is live until published in Base44.
 - **Ambiguity rule:** _If ambiguity exists, stop and request Architect clarification._ Do not guess scope.
 - **No push / no PR** without explicit Architect instruction.
+- **No direct shared-branch work:** no agent may work directly on `main` or `bmad/baseline-integration` without an Architect-approved BMAD story.
 
 ## Handoff protocol
 1. Architect issues a story (ID, title, approval, strict scope, allowed/forbidden files, steps, validation, expected result, required report).
@@ -39,6 +40,10 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
+- **RLT-001H-AMENDED** — Preserve active Codex store-shipping WIP including `.gitignore` safety change and restore branch discipline. Completed.
+- Active Codex store-shipping WIP is preserved on `bmad/story-rlt-011-codex-store-shipping` (`46d069b`). No feature implementation completed.
+- `.gitignore` was preserved with the WIP branch only; it is not an approved baseline change and needs a future control-plane story if it should land.
+- Local `main` was repaired to `origin/main` (`8c3dd79`). No push performed.
 - **RLT-001G** — Isolate Antigravity UI/UX WIP from the approved baseline (source-control hygiene). Completed.
 - RLT-001F (store-shipping WIP isolation) — Architect-approved.
 - RLT-001D (BMAD files + identity) — Architect-approved.
@@ -47,6 +52,6 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 Antigravity must work through **`ui-ux-pro-max`** specifications and an **approved BMAD story** before any UI implementation change is committed to baseline. Unapproved UI/UX edits to the shared working tree are isolated to a WIP branch (RLT-001G precedent). Prefer committing to a dedicated Antigravity branch.
 
 ## Next action router
-- → **Architect:** schedule **RLT-001E** (mobile/PWA/brand/store hardening); decide **RLT-001C** (forum publish policy); decide whether to resume **RLT-011** (store-shipping) and how to land the Antigravity UI/UX pass via a proper story.
+- → **Architect:** review RLT-001H; schedule **RLT-001E** (mobile/PWA/brand/store hardening) as next implementation from clean baseline; decide **RLT-001C** (forum publish policy); decide whether to resume **RLT-011** (store-shipping) and how to land the Antigravity UI/UX pass via a proper story.
 - → **Push / PR:** awaiting explicit Architect instruction (none performed).
-- → **Branches:** integration = `bmad/baseline-integration` (`5086ad0`, clean, validated); backup preserve = `bmad/baseline-preserve-current-state` (`14d17a1`); store-shipping WIP = `bmad/wip-store-shipping` (`f0684600`); Antigravity UI/UX WIP = `bmad/wip-antigravity-uiux` (`65d417f`).
+- → **Branches:** integration = `bmad/baseline-integration` (clean, validated); backup preserve = `bmad/baseline-preserve-current-state` (`14d17a1`); store-shipping WIP = `bmad/wip-store-shipping` (`f0684600`); Codex store-shipping story WIP = `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); Antigravity UI/UX WIP = `bmad/wip-antigravity-uiux` (`65d417f`); local `main` = `origin/main` (`8c3dd79`).

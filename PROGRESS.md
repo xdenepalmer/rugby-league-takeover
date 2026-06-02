@@ -1,18 +1,21 @@
 # PROGRESS — Rugby League Takeover
 
-_Last updated: 2026-06-02 (RLT-001G)_
+_Last updated: 2026-06-02 (RLT-001H-AMENDED)_
 
 ## Current source of truth
-- **Integration branch (current):** `bmad/baseline-integration` @ `5086ad0` — clean, validated baseline.
+- **Integration branch (current):** `bmad/baseline-integration` @ RLT-001H doc commit — clean baseline restored from approved `e059872`.
 - **Backup preserve branch:** `bmad/baseline-preserve-current-state` (validated pre-BMAD state @ `14d17a1`) — do not delete.
 - **Store-shipping WIP branch:** `bmad/wip-store-shipping` (`f0684600`) — concurrent checkout/shipping work, isolated by RLT-001F; resume via RLT-011 only if the Architect chooses.
+- **Codex store-shipping story WIP branch:** `bmad/story-rlt-011-codex-store-shipping` (`46d069b`) — current dirty WIP preserved by RLT-001H; `.gitignore` included for preservation only and is not approved for baseline.
 - **Antigravity UI/UX WIP branch:** `bmad/wip-antigravity-uiux` (`65d417f`) — unapproved UI/UX pass (18 files), isolated by RLT-001G; must come back through `ui-ux-pro-max` + an approved BMAD story.
-- Canonical base for logic/backend remains `origin/main`.
+- **Local main repaired:** local `main` reset to `origin/main` (`8c3dd79`) during RLT-001H. No push performed.
+- Canonical base for logic/backend remains `origin/main`; baseline branch remains the approved integration line.
 
 ## Core rules
 - **Backend authority:** Base44 functions/entities are authoritative. The frontend is **projection only** — never trust client state for security or data integrity.
 - **Manual Base44 Publish required:** merged code is not live until the app is published in Base44. GitHub sync alone does not publish to users.
 - **Antigravity** is the dedicated UI/UX engineer and must use the **`ui-ux-pro-max`** skill (https://github.com/sickn33/antigravity-awesome-skills/tree/main) for UI/UX work.
+- **No direct shared-branch work:** no agent may work directly on `main` or `bmad/baseline-integration` without an Architect-approved BMAD story.
 
 ## Validation status (clean baseline, RLT-001F @ `f6d1271`)
 - `npm test` — ✅ pass (33/33)
@@ -25,6 +28,7 @@ _Last updated: 2026-06-02 (RLT-001G)_
 - RLT-001D — BMAD control-plane files + project identity — **Architect-approved**.
 - RLT-001F — concurrent store-shipping WIP isolated; baseline restored clean — **Architect-approved**.
 - RLT-001G — Antigravity UI/UX WIP isolated; baseline restored clean — **completed**.
+- RLT-001H — active Codex store-shipping WIP preserved; branch discipline restored — **completed**. No feature implementation completed.
 
 ## Current priorities (recommended next)
 1. **RLT-001E — mobile/PWA/brand/store hardening** (deferred preserved tests + source).
@@ -34,6 +38,7 @@ _Last updated: 2026-06-02 (RLT-001G)_
 ## Process reminder
 - **Antigravity** must work through **`ui-ux-pro-max`** specifications and an **approved BMAD story** before any UI implementation change is committed to baseline. Unapproved UI/UX passes will be isolated to a WIP branch (see RLT-001G).
 - Concurrent agents should commit to their own branches, not the shared baseline working tree.
+- `.gitignore` local tooling ignores were preserved only on the WIP branch; landing them on baseline requires a future control-plane story.
 
 ## Known deferred items
 - **RLT-001C** — forum publish policy (moderate-before-publish vs auto-publish; `submitForumPost.is_published`).

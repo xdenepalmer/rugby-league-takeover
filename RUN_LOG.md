@@ -52,3 +52,11 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Restored `bmad/baseline-integration` to `5086ad0` (clean). Validation on clean baseline: `npm test` 33/33 · lint · typecheck · build all green.
 - Updated BMAD files; commit: "chore: record antigravity WIP isolation".
 - No push / no PR. Approved commits not altered. Reminder recorded: Antigravity changes must route through `ui-ux-pro-max` + an approved BMAD story before landing on baseline.
+
+## RLT-001H-AMENDED — Preserve active Codex store-shipping WIP and repair branch discipline
+- Re-inspected shared tree on `main` @ `65d417f`; dirty files were store-shipping WIP plus `.gitignore` safety change only. No BMAD markdown docs, README, package files, lockfile, or `base44/config.jsonc` dirty.
+- Preserved current dirty WIP on `bmad/story-rlt-011-codex-store-shipping`; commit `46d069b` — "wip: preserve rlt-011 store shipping work". `.gitignore` was committed to this WIP branch for preservation only and remains unapproved for baseline.
+- Restored `bmad/baseline-integration` to approved baseline `e059872` and kept local BMAD/agent tooling out of status via local-only `.git/info/exclude`; baseline tracked files remained clean.
+- Validation on clean baseline before branch repair: `npm test` 33/33 · lint · typecheck · build all green.
+- Confirmed `bmad/wip-antigravity-uiux` points to `65d417f`; fetched origin; repaired local `main` via approved `git reset --hard origin/main`, now `8c3dd79` and clean. No push / no PR.
+- Returned to `bmad/baseline-integration`; updated BMAD files only. No feature implementation completed. Next implementation story remains RLT-001E from clean baseline after review approval.

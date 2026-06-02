@@ -20,6 +20,7 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-001E | Mobile/PWA/brand/store hardening | queued | The 5 deferred preserved tests + their source (8-shell `min-h-dvh`, local PWA icons, brand-asset delocalization, Store inline-error UX) |
 | RLT-001F | Isolate concurrent store-shipping WIP from baseline | completed | Architect-approved; WIP preserved on `bmad/wip-store-shipping` (`f0684600`); baseline restored clean |
 | RLT-001G | Isolate Antigravity UI/UX WIP from baseline | completed | WIP preserved on `bmad/wip-antigravity-uiux` (`65d417f`); baseline restored clean |
+| RLT-001H | Preserve active Codex store-shipping WIP and repair branch discipline | completed | WIP preserved on `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); `.gitignore` preserved only, not approved for baseline; local `main` repaired to `origin/main` (`8c3dd79`) |
 | RLT-002 | Replace starter README | completed (in RLT-001D) | Project-specific README |
 | RLT-003 | Normalize project identity metadata | completed (in RLT-001D) | `package.json`, `package-lock.json`, `base44/config.jsonc` |
 | RLT-004 | Harden StoreOrder creation authority | queued | Server-authoritative order creation |
@@ -29,4 +30,4 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-008 | Clean install/build validation | queued | Fresh `npm ci` + build determinism |
 | RLT-009 | Account My Orders section | queued (after baseline) | Order history in `/account` |
 | RLT-010 | Checkout Trust Layer | queued (after Antigravity UX spec) | Trust/conversion UX; needs Antigravity `ui-ux-pro-max` spec |
-| RLT-011 | Store shipping checkout completion | backlog | Preserved WIP on `bmad/wip-store-shipping` (`f0684600`); resume only if Architect chooses to continue it |
+| RLT-011 | Store shipping checkout completion | backlog | Preserved WIP on `bmad/wip-store-shipping` (`f0684600`) and `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); resume only if Architect chooses to continue it |
