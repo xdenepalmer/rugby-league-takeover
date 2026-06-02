@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Megaphone, AlertTriangle } from "lucide-react";
+import { Megaphone, AlertTriangle, X, ChevronRight, Eye } from "lucide-react";
 
 /* ── Size presets with responsive fallback chain ── */
 const SIZE_MAP = {
@@ -197,8 +197,34 @@ function selectAdWeighted(candidates) {
   return candidates[candidates.length - 1]; // fallback
 }
 
+/* ── Minimize preference helpers (sessionStorage per position) ── */
+function getMinimized(position) {
+  try { return sessionStorage.getItem(`rlt_ad_min_${position}`) === "1"; } catch { return false; }
+}
+function setMinimized(position, val) {
+  try { sessionStorage.setItem(`rlt_ad_min_${position}`, val ? "1" : "0"); } catch { /* noop */ }
+}
+
 /* ── Rotation interval (ms) ── */
 const ROTATION_INTERVAL = 12000; // 12s per ad
+
+/* ── Shimmer keyframe style (injected once) ── */
+const SHIMMER_STYLE_ID = "rlt-ad-shimmer-css";
+if (typeof document !== "undefined" && !document.getElementById(SHIMMER_STYLE_ID)) {
+  const style = document.createElement("style");
+  style.id = SHIMMER_STYLE_ID;
+  style.textContent = `
+    @keyframes ad-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @keyframes ad-shimmer-placeholder {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 /* ── Component ── */
 export default function AdSlot({ position, size, isAdmin = false, className = "" }) {
@@ -206,14 +232,19 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
   const [currentAd, setCurrentAd] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [imgRetried, setImgRetried] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgSrc, setImgSrc] = useState(null); // lazy-loaded src
   const [effectiveSize, setEffectiveSize] = useState(size);
+  const [minimized, setMinimizedState] = useState(() => getMinimized(position));
+  const [isHovered, setIsHovered] = useState(false);
+  const [viewable, setViewable] = useState(false);
   const tracked = useRef(false);
   const containerRef = useRef(null);
   const wrapperRef = useRef(null);
   const rotationTimer = useRef(null);
   const mountedRef = useRef(true);
+  const viewabilityTimerRef = useRef(null);
 
   /* ── Cleanup on unmount ── */
   useEffect(() => {
@@ -261,8 +292,10 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     const picked = selectAdWeighted(candidates);
     setCurrentAd(picked || null);
     setImgError(false);
+    setImgRetried(false);
     setImgLoaded(false);
     setImgSrc(null);
+    setViewable(false);
     tracked.current = false;
   }, [position]);
 
@@ -301,8 +334,10 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
       if (next && next.id !== currentAd?.id) {
         setCurrentAd(next);
         setImgError(false);
+        setImgRetried(false);
         setImgLoaded(false);
         setImgSrc(null);
+        setViewable(false);
         tracked.current = false;
       }
     }, ROTATION_INTERVAL);
@@ -358,6 +393,58 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     };
   }, [currentAd, enabled, position]);
 
+  /* ── Viewability badge: show "100% viewable" after 2s visible (admin only) ── */
+  useEffect(() => {
+    if (!isAdmin || !currentAd || !containerRef.current) return;
+    clearTimeout(viewabilityTimerRef.current);
+    setViewable(false);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          viewabilityTimerRef.current = setTimeout(() => {
+            if (mountedRef.current) setViewable(true);
+          }, 2000);
+        } else {
+          clearTimeout(viewabilityTimerRef.current);
+          if (mountedRef.current) setViewable(false);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(containerRef.current);
+    return () => {
+      observer.disconnect();
+      clearTimeout(viewabilityTimerRef.current);
+    };
+  }, [isAdmin, currentAd]);
+
+  /* ── Minimize / restore handlers ── */
+  const handleMinimize = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMinimizedState(true);
+    setMinimized(position, true);
+  }, [position]);
+
+  const handleRestore = useCallback(() => {
+    setMinimizedState(false);
+    setMinimized(position, false);
+  }, [position]);
+
+  /* ── Image error with retry-once ── */
+  const handleImgError = useCallback(() => {
+    if (!mountedRef.current) return;
+    if (!imgRetried && currentAd?.image_url) {
+      // Retry once with cache-bust
+      setImgRetried(true);
+      setImgSrc(currentAd.image_url + (currentAd.image_url.includes("?") ? "&" : "?") + "_retry=1");
+    } else {
+      setImgError(true);
+    }
+  }, [imgRetried, currentAd?.image_url]);
+
   /* ── Disabled globally ── */
   if (!enabled) return null;
 
@@ -389,13 +476,12 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     );
   }
 
-  /* ── Broken image fallback ── */
+  /* ── Broken image fallback (after retry) ── */
   if (imgError) {
-    if (!isAdmin) return null;
     return (
       <div
         ref={wrapperRef}
-        className={`relative flex items-center justify-center border border-red-500/20 bg-red-500/[0.03] ${className}`}
+        className={`relative overflow-hidden border border-border/30 cmd-glass ${className}`}
         style={{
           contain: "layout style",
           maxWidth: preset ? preset.w : "100%",
@@ -404,15 +490,37 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
           width: "100%",
         }}
       >
-        <div className="flex flex-col items-center gap-1 opacity-60">
-          <AlertTriangle className="h-5 w-5 text-red-400/60" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-400/70 font-mono">
-            Image Failed
-          </span>
-          <span className="text-[8px] text-muted-foreground/40 font-mono truncate max-w-[200px]">
-            {currentAd.title || "Untitled ad"}
-          </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+          <div className="flex items-center gap-2 opacity-50">
+            <AlertTriangle className="h-4 w-4 text-amber-400/60" />
+            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 font-mono">
+              Ad Unavailable
+            </span>
+          </div>
+          {currentAd.title && (
+            <span className="text-[8px] text-muted-foreground/30 font-mono truncate max-w-[200px]">
+              {currentAd.title}
+            </span>
+          )}
+          {/* Fallback: clicking still works if there's a target URL */}
+          {currentAd.target_url && isValidUrl(currentAd.target_url) && (
+            <a
+              href={currentAd.target_url}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="mt-1 text-[8px] font-mono text-primary/50 hover:text-primary/80 underline underline-offset-2 transition-colors"
+            >
+              Visit sponsor →
+            </a>
+          )}
         </div>
+        {/* Subtle scan-line effect */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, currentColor 2px, currentColor 3px)",
+          }}
+        />
       </div>
     );
   }
@@ -431,6 +539,31 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
 
   /* ── Multi-ad indicator ── */
   const hasMultiple = ads.length > 1;
+
+  /* ── Minimized state: thin "Show Ad" bar ── */
+  if (minimized) {
+    return (
+      <div
+        ref={wrapperRef}
+        className={`relative ${className}`}
+        style={{ contain: "layout style", maxWidth: preset ? preset.w : "100%", width: "100%" }}
+      >
+        <motion.button
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          onClick={handleRestore}
+          className="flex w-full items-center justify-center gap-2 py-1 border border-border/30 bg-card/30 backdrop-blur-sm hover:bg-card/50 transition-colors cursor-pointer group"
+          aria-label="Show advertisement"
+        >
+          <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
+          <span className="text-[7px] font-bold uppercase tracking-[0.3em] text-muted-foreground/40 font-mono group-hover:text-muted-foreground/60 transition-colors">
+            Show Ad
+          </span>
+        </motion.button>
+      </div>
+    );
+  }
 
   /* ── Active ad with crossfade ── */
   return (
@@ -452,7 +585,15 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="group/ad relative overflow-hidden border border-border/40 cmd-glass"
-          style={{ maxWidth: preset ? preset.w : "100%", width: "100%" }}
+          style={{
+            maxWidth: preset ? preset.w : "100%",
+            width: "100%",
+            transition: "box-shadow 0.4s ease, border-color 0.4s ease",
+            boxShadow: isHovered ? "0 0 20px -4px hsl(var(--primary) / 0.15)" : "none",
+            borderColor: isHovered ? "hsl(var(--primary) / 0.3)" : undefined,
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           role="complementary"
           aria-label={`Sponsored: ${currentAd.title || "Advertisement"}`}
         >
@@ -469,9 +610,12 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
             />
           </div>
 
-          {/* "Sponsored" label — theme-aware with CSS vars */}
-          <span
-            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.2em] font-mono backdrop-blur-sm"
+          {/* "Sponsored" label — hidden by default, fades in on hover */}
+          <motion.span
+            initial={false}
+            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : -4 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.2em] font-mono backdrop-blur-sm pointer-events-none"
             style={{
               background: "hsl(var(--background) / 0.6)",
               color: "hsl(var(--muted-foreground) / 0.7)",
@@ -480,11 +624,26 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
             }}
           >
             Sponsored
-          </span>
+          </motion.span>
+
+          {/* Close/minimize button — appears on hover */}
+          <motion.button
+            initial={false}
+            animate={{ opacity: isHovered ? 0.7 : 0, scale: isHovered ? 1 : 0.8 }}
+            transition={{ duration: 0.2 }}
+            whileHover={{ opacity: 1, scale: 1.1 }}
+            onClick={handleMinimize}
+            className="absolute top-0.5 left-0.5 z-30 flex h-5 w-5 items-center justify-center bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors cursor-pointer"
+            style={{ pointerEvents: isHovered ? "auto" : "none" }}
+            aria-label="Minimize advertisement"
+            title="Minimize ad"
+          >
+            <X className="h-2.5 w-2.5 text-white/70" />
+          </motion.button>
 
           {/* Multi-ad rotation indicator */}
           {hasMultiple && (
-            <div className="absolute top-0 left-0 z-20 flex gap-[3px] px-2 py-1.5">
+            <div className="absolute top-0 left-7 z-20 flex gap-[3px] px-2 py-1.5">
               {ads.map((a) => (
                 <span
                   key={a.id}
@@ -499,13 +658,35 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
             </div>
           )}
 
-          {/* Loading skeleton */}
+          {/* Viewability badge — admin only, after 2s visible */}
+          {isAdmin && (
+            <AnimatePresence>
+              {viewable && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8, x: 8 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: 8 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-sm"
+                >
+                  <Eye className="h-2.5 w-2.5 text-emerald-400" />
+                  <span className="text-[7px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                    100% Viewable
+                  </span>
+                </motion.span>
+              )}
+            </AnimatePresence>
+          )}
+
+          {/* Shimmer placeholder while image loads */}
           {!imgLoaded && (
             <div
-              className="absolute inset-0 animate-pulse"
+              className="absolute inset-0"
               style={{
                 aspectRatio: preset ? `${preset.w}/${preset.h}` : undefined,
-                background: "hsl(var(--muted) / 0.2)",
+                background: "linear-gradient(90deg, hsl(var(--muted) / 0.08) 25%, hsl(var(--muted) / 0.18) 50%, hsl(var(--muted) / 0.08) 75%)",
+                backgroundSize: "400% 100%",
+                animation: "ad-shimmer-placeholder 1.8s ease-in-out infinite",
               }}
             />
           )}
@@ -523,14 +704,17 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
               <img
                 src={imgSrc}
                 alt={currentAd.title || "Advertisement"}
-                className={`block w-full object-cover transition-all duration-500 group-hover/ad:scale-[1.02] ${
-                  imgLoaded ? "opacity-100" : "opacity-0"
-                }`}
-                style={{ aspectRatio: preset ? `${preset.w}/${preset.h}` : undefined }}
+                className="block w-full object-cover"
+                style={{
+                  aspectRatio: preset ? `${preset.w}/${preset.h}` : undefined,
+                  opacity: imgLoaded ? 1 : 0,
+                  transform: isHovered ? "scale(1.01)" : "scale(1)",
+                  transition: "opacity 0.5s ease, transform 0.4s ease",
+                }}
                 loading="lazy"
                 decoding="async"
                 onLoad={() => { if (mountedRef.current) setImgLoaded(true); }}
-                onError={() => { if (mountedRef.current) setImgError(true); }}
+                onError={handleImgError}
               />
             ) : (
               /* Placeholder before lazy load triggers */

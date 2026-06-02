@@ -28,6 +28,9 @@ const STORAGE_VERSION_KEY = "rlt_slot_version";
 const CURRENT_STORAGE_VERSION = 2;
 const BADGE_WIN_TIMESTAMP_KEY = "rlt_slot_badge_win_ts";
 const NEW_BADGE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const WIN_HISTORY_KEY = "rlt_slot_win_history";
+const LAST_WIN_SPIN_KEY = "rlt_slot_last_win_spin";
+const MAX_HISTORY = 8;
 
 const VALID_BADGE_IDS = new Set(SLOT_BADGES.map((b) => b.id));
 
@@ -136,6 +139,156 @@ function isBadgeNew(badgeId) {
   const winTime = ts[badgeId];
   if (!winTime) return false;
   return Date.now() - winTime < NEW_BADGE_WINDOW_MS;
+}
+
+function getWinHistory() {
+  return safeGetJSON(WIN_HISTORY_KEY, []);
+}
+function addWinHistory(badgeId) {
+  const history = getWinHistory();
+  history.unshift({ badge_id: badgeId, timestamp: Date.now() });
+  safeSetItem(WIN_HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+}
+function getLastWinSpin() {
+  return safeGetNumber(LAST_WIN_SPIN_KEY, 0);
+}
+function setLastWinSpin(spinCount) {
+  safeSetItem(LAST_WIN_SPIN_KEY, String(spinCount));
+}
+
+/* ─── Lucky Meter (pity system display) ─── */
+function LuckyMeter({ spinsSinceWin }) {
+  if (spinsSinceWin < 3) return null;
+  const fill = Math.min(spinsSinceWin / 12, 1); // fills up over ~12 spins
+  const label = fill >= 0.8 ? "Almost there!" : fill >= 0.5 ? "Getting lucky..." : "Building luck...";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      className="mt-2 border border-amber-400/15 bg-amber-950/10 p-2"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[8px] font-mono uppercase tracking-wider text-amber-300/60 flex items-center gap-1">
+          <Sparkles className="h-2.5 w-2.5" /> Lucky Meter
+        </span>
+        <span className="text-[7px] font-bold text-amber-200/70">{label}</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden bg-black/60 border border-amber-500/10">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${fill * 100}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="h-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-200"
+          style={{ boxShadow: fill > 0.6 ? "0 0 12px rgba(251,191,36,0.5)" : "none" }}
+        />
+      </div>
+      <p className="mt-1 text-[7px] text-amber-300/40">{spinsSinceWin} spins since last badge win</p>
+    </motion.div>
+  );
+}
+
+/* ─── Win History Log ─── */
+function WinHistoryLog() {
+  const [expanded, setExpanded] = useState(false);
+  const history = useMemo(() => getWinHistory(), []);
+  if (history.length === 0) return null;
+
+  return (
+    <div className="mt-3 border border-purple-500/10 bg-black/30">
+      <button
+        type="button"
+        onClick={() => setExpanded((p) => !p)}
+        className="flex w-full items-center justify-between p-2 text-[8px] font-mono uppercase tracking-wider text-purple-200/50 hover:text-purple-200/70 transition-colors"
+      >
+        <span className="flex items-center gap-1">
+          <Trophy className="h-3 w-3" /> Recent Wins ({history.length})
+        </span>
+        <motion.span animate={{ rotate: expanded ? 180 : 0 }}>▼</motion.span>
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-1 px-2 pb-2">
+              {history.map((entry, i) => {
+                const badge = SLOT_BADGES.find((b) => b.id === entry.badge_id);
+                if (!badge) return null;
+                const tier = TIER_STYLES[badge.tier] || TIER_STYLES.Common;
+                const ago = Date.now() - entry.timestamp;
+                const agoText = ago < 3600000 ? "< 1h ago"
+                  : ago < 86400000 ? `${Math.floor(ago / 3600000)}h ago`
+                  : `${Math.floor(ago / 86400000)}d ago`;
+                return (
+                  <div key={`${entry.badge_id}-${i}`} className={`flex items-center gap-2 p-1.5 border ${tier.border} ${tier.bg}`}>
+                    <span className="text-lg">{badge.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[9px] font-bold truncate ${tier.text}`}>{badge.label}</p>
+                      <p className="text-[7px] text-purple-300/40">{badge.tier}</p>
+                    </div>
+                    <span className="text-[7px] text-purple-300/40 shrink-0">{agoText}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── Statistics Panel ─── */
+function StatsPanel({ totalSpins, ownedCount, totalBadges, streak, topBadge }) {
+  const [expanded, setExpanded] = useState(false);
+  const winHistory = useMemo(() => getWinHistory(), []);
+  const winRate = totalSpins > 0 ? Math.round((winHistory.length / Math.min(totalSpins, MAX_HISTORY)) * 100) : 0;
+  const collPct = totalBadges > 0 ? Math.round((ownedCount / totalBadges) * 100) : 0;
+
+  return (
+    <div className="mt-3 border border-purple-500/10 bg-black/30">
+      <button
+        type="button"
+        onClick={() => setExpanded((p) => !p)}
+        className="flex w-full items-center justify-between p-2 text-[8px] font-mono uppercase tracking-wider text-purple-200/50 hover:text-purple-200/70 transition-colors"
+      >
+        <span className="flex items-center gap-1">
+          <Gem className="h-3 w-3" /> Statistics
+        </span>
+        <motion.span animate={{ rotate: expanded ? 180 : 0 }}>▼</motion.span>
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-2 gap-px bg-purple-500/10 mx-2 mb-2">
+              {[
+                { label: "Total Spins", value: totalSpins },
+                { label: "Badges Won", value: `${ownedCount}/${totalBadges}` },
+                { label: "Collection", value: `${collPct}%` },
+                { label: "Win Rate", value: `~${winRate}%` },
+                { label: "Streak", value: streak > 0 ? `🔥 ${streak} days` : "—" },
+                { label: "Rarest Badge", value: topBadge ? `${topBadge.emoji} ${topBadge.tier}` : "—" },
+              ].map((s) => (
+                <div key={s.label} className="bg-black/60 p-2 text-center">
+                  <p className="text-[7px] font-mono uppercase tracking-wider text-purple-300/40">{s.label}</p>
+                  <p className="text-[10px] font-bold text-purple-100/80 mt-0.5">{s.value}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 /* ─── Loading Skeleton ─── */
@@ -1048,6 +1201,10 @@ export default function SlotMachineBadgeUnlock() {
       setLastWonBadgeId(result.badge.id);
       setNearMissResult(null);
 
+      // Track win history and pity system
+      if (isNew) addWinHistory(result.badge.id);
+      setLastWinSpin(totalSpins + 1);
+
       if (isNew) {
         // Dramatic delay for new badge reveal
         const t1 = setTimeout(() => playJackpotVictory(), 200);
@@ -1139,9 +1296,22 @@ export default function SlotMachineBadgeUnlock() {
 
     timersRef.current.push(setTimeout(() => setLeverDown(false), 380));
 
-    // Spin ticker sounds
+    // Spin ticker sounds + drum roll escalation before each reel stops
     Array.from({ length: 18 }).forEach((_, i) => {
       timersRef.current.push(setTimeout(() => playBeep(280 + i * 18, 0.045, "triangle", 0.055), i * 90));
+    });
+
+    // Drum roll: rapid escalating beeps in the last 0.5s before each reel stops
+    REEL_DURATIONS.forEach((duration) => {
+      const drumStart = (duration * 1000) - 500;
+      if (drumStart > 0) {
+        for (let d = 0; d < 8; d++) {
+          timersRef.current.push(setTimeout(
+            () => playBeep(600 + d * 80, 0.03, "square", 0.04),
+            drumStart + d * 55
+          ));
+        }
+      }
     });
 
     // Reel stop click sounds + bounce-back indication
@@ -1179,6 +1349,9 @@ export default function SlotMachineBadgeUnlock() {
 
   // Streak at-risk: user has a streak but hasn't spun today
   const streakAtRisk = streak > 0 && !hasSpunToday && cooldownLeft <= 0;
+
+  // Pity system: spins since last win
+  const spinsSinceWin = totalSpins - getLastWinSpin();
 
   // Group badges by tier
   const badgesByTier = useMemo(() => {
@@ -1372,7 +1545,13 @@ export default function SlotMachineBadgeUnlock() {
                 </span>
               ) : cooldownLeft > 0 ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Lock className="h-4 w-4" /> Next spin in {fmtCountdown(cooldownLeft)}
+                  <Lock className="h-4 w-4" />
+                  {cooldownLeft > 3600000
+                    ? `Come back in ${Math.ceil(cooldownLeft / 3600000)}h`
+                    : cooldownLeft > 60000
+                    ? `${Math.ceil(cooldownLeft / 60000)} min left`
+                    : `${Math.ceil(cooldownLeft / 1000)}s left`
+                  }
                 </span>
               ) : (
                 <motion.span
@@ -1397,6 +1576,9 @@ export default function SlotMachineBadgeUnlock() {
             </div>
           </div>
         </div>
+
+        {/* ─── Lucky Meter (pity system) ─── */}
+        <LuckyMeter spinsSinceWin={spinsSinceWin} />
 
         {/* ─── Badge Grid with Tier Grouping ─── */}
         <div className="mt-5 border-t border-purple-500/15 pt-4">
@@ -1440,6 +1622,18 @@ export default function SlotMachineBadgeUnlock() {
             </p>
           )}
         </div>
+
+        {/* ─── Win History ─── */}
+        <WinHistoryLog />
+
+        {/* ─── Statistics ─── */}
+        <StatsPanel
+          totalSpins={totalSpins}
+          ownedCount={earnedCount}
+          totalBadges={totalBadges}
+          streak={streak}
+          topBadge={topOwnedBadge}
+        />
       </div>
     </motion.div>
   );

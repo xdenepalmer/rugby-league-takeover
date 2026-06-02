@@ -17,6 +17,7 @@ import TeamCrest from "@/components/public/TeamCrest";
 const STORAGE_KEY = "rlt_footy_tips_v2";
 const PROFILE_KEY = "rlt_footy_tipster_profile";
 const POINTS_KEY = "rlt_footy_points";
+const TIP_STREAK_KEY = "rlt_tip_streak";
 const MARGIN_PRESETS = [1, 6, 12, 18, 24, 30, 40];
 
 // ── Safe localStorage with corruption detection ─────────────────────
@@ -139,6 +140,31 @@ function playLockSound() {
   setTimeout(() => playTone(659.25, 0.1, "square", 0.06), 80);
   setTimeout(() => playTone(783.99, 0.15, "square", 0.06), 160);
 }
+function playSelectSound(isHome) {
+  playTone(isHome ? 440 : 494, 0.06, "sine", 0.04);
+}
+
+// ── Animated counter hook ───────────────────────────────────────────
+function useAnimatedCounter(target, duration = 800) {
+  const [value, setValue] = useState(0);
+  const prevRef = useRef(0);
+  useEffect(() => {
+    if (target === prevRef.current) return;
+    const start = prevRef.current;
+    const diff = target - start;
+    const startTime = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      setValue(Math.round(start + diff * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+    prevRef.current = target;
+  }, [target, duration]);
+  return value;
+}
 
 // ── Confetti burst on tip lock ──────────────────────────────────────
 function ConfettiBurst({ active }) {
@@ -207,14 +233,19 @@ function HeroStats({ tips, fixtures, totalPoints }) {
 
   const accuracy = checked > 0 ? Math.round((correct / checked) * 100) : null;
   const rank = totalPoints >= 30 ? "🏆 Immortal" : totalPoints >= 15 ? "🎯 Sharpshooter" : totalPoints >= 5 ? "📊 Analyst" : tipped > 0 ? "🆕 Rookie" : "👀 Scout";
+  const tipStreak = readJson(TIP_STREAK_KEY, 0);
+
+  // Animated counters
+  const animPts = useAnimatedCounter(totalPoints);
+  const animAcc = useAnimatedCounter(accuracy || 0);
 
   return (
     <div className="grid grid-cols-4 gap-px overflow-hidden border border-border/40 bg-border/20">
       {[
-        { label: "Rank", value: rank, sub: `${totalPoints} pts` },
-        { label: "Accuracy", value: accuracy != null ? `${accuracy}%` : "—", sub: `${correct}/${checked}` },
+        { label: "Rank", value: rank, sub: `${animPts} pts` },
+        { label: "Accuracy", value: accuracy != null ? `${animAcc}%` : "—", sub: `${correct}/${checked}` },
         { label: "Tipped", value: `${tipped}`, sub: `of ${total}` },
-        { label: "Points", value: `${totalPoints}`, sub: `${PTS_CORRECT}pt/win` },
+        { label: "Streak", value: tipStreak > 0 ? `🔥 ${tipStreak}` : "—", sub: tipStreak > 2 ? "On fire!" : `${PTS_CORRECT}pt/win` },
       ].map((stat) => (
         <div key={stat.label} className="bg-black/40 p-2 text-center">
           <p className="text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500">{stat.label}</p>
@@ -481,7 +512,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                     type="button"
                     disabled={!canInteract}
                     whileTap={canInteract ? { scale: 0.95 } : {}}
-                    onClick={(e) => { e.stopPropagation(); setSelectedTeam(team); }}
+                onClick={(e) => { e.stopPropagation(); playSelectSound(team === game.home_team); setSelectedTeam(team); }}
                     className={`relative min-w-0 border p-2.5 text-center transition-all ${
                       selected
                         ? "border-primary/50 bg-gradient-to-b from-primary/15 to-primary/5 text-foreground"
@@ -561,7 +592,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
               </div>
             </div>
 
-            <CommunityPulse game={game} entries={entries} />
+            <CommunityPulse game={game} entries={entries} tip={tip} />
 
             {/* Lock button — one-time permanent action */}
             <motion.button
@@ -599,13 +630,14 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
   );
 }
 
-function CommunityPulse({ game, entries }) {
+function CommunityPulse({ game, entries, tip }) {
   const gameEntries = entries.filter((e) => e.game_id === game.id);
   const home = gameEntries.filter((e) => e.selected_team === game.home_team).length;
   const away = gameEntries.filter((e) => e.selected_team === game.away_team).length;
   const total = Math.max(home + away, 1);
   const homePct = Math.round((home / total) * 100) || 50;
   const awayPct = 100 - homePct;
+  const userPicked = tip?.selected_team;
 
   return (
     <div className="mt-3">
@@ -613,26 +645,57 @@ function CommunityPulse({ game, entries }) {
         <span className="text-slate-500 flex items-center gap-1">
           <Users className="h-2.5 w-2.5" /> Community pulse
         </span>
-        <span className="text-slate-500">{gameEntries.length || "—"} tips</span>
+        <div className="flex items-center gap-2">
+          {userPicked && (
+            <span className="flex items-center gap-0.5 text-emerald-400/80">
+              <CheckCircle2 className="h-2 w-2" /> You: {shortName(userPicked)}
+            </span>
+          )}
+          <span className="text-slate-500">{gameEntries.length || "—"} tips</span>
+        </div>
       </div>
-      <div className="relative flex h-7 overflow-hidden border border-border/20 bg-black/40">
+      <div className="relative flex h-8 overflow-hidden border border-border/20 bg-black/40">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${homePct}%` }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="flex items-center justify-start pl-2 bg-gradient-to-r from-primary/50 to-primary/15"
+          className={`flex items-center justify-start gap-1 pl-1.5 bg-gradient-to-r from-primary/50 to-primary/15 ${
+            userPicked === game.home_team ? 'ring-1 ring-inset ring-primary/40' : ''
+          }`}
         >
-          <span className="text-[8px] font-bold text-white/90">{shortName(game.home_team)} {homePct}%</span>
+          <TeamCrest name={game.home_team} className="h-4 w-4 text-[6px] shrink-0" />
+          <span className="text-[8px] font-bold text-white/90 truncate">{homePct}%</span>
         </motion.div>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${awayPct}%` }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-          className="flex items-center justify-end pr-2 bg-gradient-to-l from-accent/50 to-accent/15"
+          className={`flex items-center justify-end gap-1 pr-1.5 bg-gradient-to-l from-accent/50 to-accent/15 ${
+            userPicked === game.away_team ? 'ring-1 ring-inset ring-accent/40' : ''
+          }`}
         >
-          <span className="text-[8px] font-bold text-white/90">{awayPct}% {shortName(game.away_team)}</span>
+          <span className="text-[8px] font-bold text-white/90 truncate">{awayPct}%</span>
+          <TeamCrest name={game.away_team} className="h-4 w-4 text-[6px] shrink-0" />
         </motion.div>
       </div>
+      {/* Social proof */}
+      {gameEntries.length > 0 && (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="flex -space-x-1">
+            {Array.from({ length: Math.min(gameEntries.length, 4) }).map((_, i) => (
+              <div key={i} className="h-4 w-4 rounded-full border border-black bg-gradient-to-br from-slate-600 to-slate-700" />
+            ))}
+            {gameEntries.length > 4 && (
+              <div className="h-4 w-4 rounded-full border border-black bg-primary/20 flex items-center justify-center">
+                <span className="text-[5px] font-bold text-primary">+{gameEntries.length - 4}</span>
+              </div>
+            )}
+          </div>
+          <span className="text-[7px] text-slate-500">
+            {gameEntries.length} fan{gameEntries.length !== 1 ? 's' : ''} tipped
+          </span>
+        </div>
+      )}
     </div>
   );
 }
