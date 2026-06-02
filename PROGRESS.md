@@ -29,9 +29,13 @@ _Last updated: 2026-06-02 (RLT-001H-AMENDED)_
 - RLT-001F — concurrent store-shipping WIP isolated; baseline restored clean — **Architect-approved**.
 - RLT-001G — Antigravity UI/UX WIP isolated; baseline restored clean — **completed**.
 - RLT-001H — active Codex store-shipping WIP preserved; branch discipline restored — **completed**. No feature implementation completed.
+- RLT-001E — mobile/PWA/brand/store hardening — **implemented on `bmad/story-rlt-001e-claude`**; awaiting Architect/Antigravity review + merge.
+
+## RLT-001E summary (story branch `bmad/story-rlt-001e-claude`, off `dacd266`)
+- `min-h-dvh` across 8 shells + HeroSection double-viewport fix; local PWA icons (`/icons/*`) in manifest (maskable + shortcut icons) and index.html; OG/Twitter/description metadata; remote Base44 logo delocalized (HeroSection, SiteNav, SiteSettingsManager, index.html, manifest); Store checkout info-style preview notice (no `alert`), `inputMode=email`, Stripe secure-checkout trust signal; skip-to-content link. 5 deferred tests now green. Validation 37/37. No backend/entity/function changes.
 
 ## Current priorities (recommended next)
-1. **RLT-001E — mobile/PWA/brand/store hardening** (deferred preserved tests + source).
+1. Review + merge `bmad/story-rlt-001e-claude` into `bmad/baseline-integration`.
 2. RLT-001C — decide forum publish/moderation policy.
 3. RLT-011 — store shipping checkout completion (only if Architect resumes `bmad/wip-store-shipping`).
 

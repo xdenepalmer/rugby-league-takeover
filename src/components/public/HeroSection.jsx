@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowDown, Sparkles } from "lucide-react";
 
-const logoUrl = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/24c67d277_LASVEGAS.png";
+const logoUrl = "/icons/icon-192.png";
 
 // Text reveal animations variants
 const titleContainerVariants = {
@@ -36,7 +36,7 @@ export default function HeroSection({ settings = {} }) {
   const titleLines = title.split("\n");
 
   return (
-    <section id="home" className="relative min-h-screen overflow-hidden flex items-center justify-center bg-transparent">
+    <section id="home" className="relative min-h-dvh overflow-hidden flex items-center justify-center bg-transparent">
       {/* Background Gradients and scan overlays */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030512]/40 to-[#030512] z-10" />
@@ -68,7 +68,7 @@ export default function HeroSection({ settings = {} }) {
       <div className="absolute top-1/3 left-1/6 w-8 h-8 border border-primary/20 bg-primary/5 cmd-float hidden md:block" style={{ animationDelay: "1s" }} />
       <div className="absolute bottom-1/3 right-1/6 w-12 h-12 border border-accent/20 bg-accent/5 cmd-float hidden md:block" style={{ animationDelay: "2s" }} />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-28 text-center md:px-8 md:pb-24">
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-28 text-center md:px-8 md:pb-24">
         
         {/* Site Logo with smooth spring entry */}
         <motion.img

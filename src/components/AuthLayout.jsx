@@ -4,7 +4,7 @@ import { Hexagon, Sparkles } from "lucide-react";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background relative overflow-hidden">
+    <div className="min-h-dvh grid lg:grid-cols-2 bg-background relative overflow-hidden">
       {/* ── LEFT HALF: ATMOSPHERIC VEGAS STREAM (Hidden on mobile) ── */}
       <div className="relative hidden lg:flex flex-col items-center justify-center p-12 overflow-hidden border-r border-border/40 select-none">
         

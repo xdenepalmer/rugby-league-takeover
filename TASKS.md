@@ -17,7 +17,7 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-001B | Reconcile origin-canonical forum mobile layer | completed | In-scope (`index.css` + `Forum.jsx` + `forum-mobile-layout` test) on `bmad/baseline-integration` @ `ec63822` |
 | RLT-001C | Decide forum publish policy (moderate vs auto-publish) | queued | Gates `forum-function-policy.test.mjs`; touches `submitForumPost` |
 | RLT-001D | BMAD files + project identity/docs | completed | Architect-approved (`f6d1271`) |
-| RLT-001E | Mobile/PWA/brand/store hardening | queued | The 5 deferred preserved tests + their source (8-shell `min-h-dvh`, local PWA icons, brand-asset delocalization, Store inline-error UX) |
+| RLT-001E | Mobile/PWA/brand/store hardening | completed | Implemented on `bmad/story-rlt-001e-claude`; 8-shell `min-h-dvh`, HeroSection double-vh fix, local PWA icons/manifest/OG metadata, brand-asset delocalization, Store inline checkout notice + trust signal, skip-link; 5 deferred tests now green |
 | RLT-001F | Isolate concurrent store-shipping WIP from baseline | completed | Architect-approved; WIP preserved on `bmad/wip-store-shipping` (`f0684600`); baseline restored clean |
 | RLT-001G | Isolate Antigravity UI/UX WIP from baseline | completed | WIP preserved on `bmad/wip-antigravity-uiux` (`65d417f`); baseline restored clean |
 | RLT-001H | Preserve active Codex store-shipping WIP and repair branch discipline | completed | WIP preserved on `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); `.gitignore` preserved only, not approved for baseline; local `main` repaired to `origin/main` (`8c3dd79`) |

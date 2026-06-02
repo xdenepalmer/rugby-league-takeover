@@ -113,7 +113,7 @@ export default function Home() {
   const videoSources = settings.background_video_urls?.length ? settings.background_video_urls : stadiumVideoUrls;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <main className="relative min-h-dvh overflow-hidden bg-background text-foreground">
       <BackgroundVideo sources={videoSources} />
       <div className="relative z-10">
         <HeroSection settings={settings} />
