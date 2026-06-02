@@ -40,7 +40,7 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001E** — Mobile/PWA/brand/store hardening. Implemented by Claude on `bmad/story-rlt-001e-claude` (off `dacd266`); 37/37 validation green; awaiting Architect/Antigravity review + merge into `bmad/baseline-integration`. No backend/entity/function changes.
+- **RLT-001E** (+ **RLT-001E-FIXUP**) — Mobile/PWA/brand/store hardening and Antigravity-reviewed viewport/a11y polish. Implemented by Claude on `bmad/story-rlt-001e-claude` (off `dacd266`); 37/37 validation green; awaiting Architect/Antigravity final approval + merge into `bmad/baseline-integration`. No backend/entity/function changes.
 - **RLT-001H-AMENDED** — Preserve active Codex store-shipping WIP including `.gitignore` safety change and restore branch discipline. Completed.
 - Active Codex store-shipping WIP is preserved on `bmad/story-rlt-011-codex-store-shipping` (`46d069b`). No feature implementation completed.
 - `.gitignore` was preserved with the WIP branch only; it is not an approved baseline change and needs a future control-plane story if it should land.

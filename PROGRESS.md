@@ -33,6 +33,7 @@ _Last updated: 2026-06-02 (RLT-001H-AMENDED)_
 
 ## RLT-001E summary (story branch `bmad/story-rlt-001e-claude`, off `dacd266`)
 - `min-h-dvh` across 8 shells + HeroSection double-viewport fix; local PWA icons (`/icons/*`) in manifest (maskable + shortcut icons) and index.html; OG/Twitter/description metadata; remote Base44 logo delocalized (HeroSection, SiteNav, SiteSettingsManager, index.html, manifest); Store checkout info-style preview notice (no `alert`), `inputMode=email`, Stripe secure-checkout trust signal; skip-to-content link. 5 deferred tests now green. Validation 37/37. No backend/entity/function changes.
+- **RLT-001E-FIXUP** (Antigravity conditional-pass items): Account/Store bottom padding now safe-area aware (`pb-[calc(7rem+var(--safe-bottom))]` / `pb-[calc(5rem+var(--safe-bottom))]`); `#root` gets `100dvh` with `100vh` fallback; AuthLayout form panel `overflow-y-auto` + `max-h-dvh` so tall forms don't clip. Validation 37/37 green.
 
 ## Current priorities (recommended next)
 1. Review + merge `bmad/story-rlt-001e-claude` into `bmad/baseline-integration`.

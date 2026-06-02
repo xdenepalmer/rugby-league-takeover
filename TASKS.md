@@ -18,6 +18,7 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-001C | Decide forum publish policy (moderate vs auto-publish) | queued | Gates `forum-function-policy.test.mjs`; touches `submitForumPost` |
 | RLT-001D | BMAD files + project identity/docs | completed | Architect-approved (`f6d1271`) |
 | RLT-001E | Mobile/PWA/brand/store hardening | completed | Implemented on `bmad/story-rlt-001e-claude`; 8-shell `min-h-dvh`, HeroSection double-vh fix, local PWA icons/manifest/OG metadata, brand-asset delocalization, Store inline checkout notice + trust signal, skip-link; 5 deferred tests now green |
+| RLT-001E-FIXUP | Antigravity-reviewed viewport/a11y polish | completed | On `bmad/story-rlt-001e-claude`: Account/Store safe-area bottom padding, `#root` dvh+fallback, AuthLayout panel overflow-y-auto |
 | RLT-001F | Isolate concurrent store-shipping WIP from baseline | completed | Architect-approved; WIP preserved on `bmad/wip-store-shipping` (`f0684600`); baseline restored clean |
 | RLT-001G | Isolate Antigravity UI/UX WIP from baseline | completed | WIP preserved on `bmad/wip-antigravity-uiux` (`65d417f`); baseline restored clean |
 | RLT-001H | Preserve active Codex store-shipping WIP and repair branch discipline | completed | WIP preserved on `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); `.gitignore` preserved only, not approved for baseline; local `main` repaired to `origin/main` (`8c3dd79`) |

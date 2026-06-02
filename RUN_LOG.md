@@ -69,4 +69,14 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Store checkout UX: removed `alert()`; preview-iframe case now shows an info-style notice (`checkoutNotice`, not error styling); real errors styled as alert (role="alert"); added `inputMode="email"`/`autoComplete="email"`; added "Secure checkout by Stripe" trust signal. Checkout behaviour/cart state unchanged.
 - A11y: skip-to-content link in PublicLayout targeting `#main-content`.
 - No backend/entity/function/checkout-logic changes. Validation: `npm test` 37/37 · lint · typecheck · build all green.
-- Commit: "chore: harden mobile pwa brand and store ux". No push / no PR.
+- Commit: `67b0c92` "chore: harden mobile pwa brand and store ux". No push / no PR.
+
+## RLT-001E-FIXUP — Antigravity-reviewed viewport/a11y polish (Claude)
+- On `bmad/story-rlt-001e-claude` (clean @ `67b0c92`). Applied only the 4 conditional-pass items:
+  1. `Account.jsx`: `pb-28` → `pb-[calc(7rem+var(--safe-bottom))]`.
+  2. `Store.jsx`: `pb-16` → `pb-[calc(5rem+var(--safe-bottom))]`.
+  3. `src/index.css`: added `#root { min-height: 100vh; min-height: 100dvh; }` (dvh with vh fallback) alongside the existing `min-height: 100%`.
+  4. `AuthLayout.jsx`: form panel now `overflow-y-auto max-h-dvh` so tall auth forms don't clip.
+- No test changes required (mobile-viewport-shells still green). No backend/entity/function/checkout/forum changes.
+- Validation: `npm test` 37/37 · lint · typecheck · build all green.
+- Commit: "fix: polish mobile viewport hardening". No push / no PR.
