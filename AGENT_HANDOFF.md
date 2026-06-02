@@ -39,10 +39,14 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001F** — Isolate concurrent store-shipping WIP from the approved baseline (source-control hygiene). Completed.
+- **RLT-001G** — Isolate Antigravity UI/UX WIP from the approved baseline (source-control hygiene). Completed.
+- RLT-001F (store-shipping WIP isolation) — Architect-approved.
 - RLT-001D (BMAD files + identity) — Architect-approved.
 
+## Antigravity working rule
+Antigravity must work through **`ui-ux-pro-max`** specifications and an **approved BMAD story** before any UI implementation change is committed to baseline. Unapproved UI/UX edits to the shared working tree are isolated to a WIP branch (RLT-001G precedent). Prefer committing to a dedicated Antigravity branch.
+
 ## Next action router
-- → **Architect:** schedule **RLT-001E** (mobile/PWA/brand/store hardening); decide **RLT-001C** (forum publish policy); decide whether to resume **RLT-011** (store-shipping WIP on `bmad/wip-store-shipping`).
+- → **Architect:** schedule **RLT-001E** (mobile/PWA/brand/store hardening); decide **RLT-001C** (forum publish policy); decide whether to resume **RLT-011** (store-shipping) and how to land the Antigravity UI/UX pass via a proper story.
 - → **Push / PR:** awaiting explicit Architect instruction (none performed).
-- → **Branches:** integration = `bmad/baseline-integration` (clean, validated); backup preserve = `bmad/baseline-preserve-current-state` (`14d17a1`); store-shipping WIP = `bmad/wip-store-shipping` (`f0684600`).
+- → **Branches:** integration = `bmad/baseline-integration` (`5086ad0`, clean, validated); backup preserve = `bmad/baseline-preserve-current-state` (`14d17a1`); store-shipping WIP = `bmad/wip-store-shipping` (`f0684600`); Antigravity UI/UX WIP = `bmad/wip-antigravity-uiux` (`65d417f`).

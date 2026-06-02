@@ -1,12 +1,12 @@
 # PROGRESS — Rugby League Takeover
 
-_Last updated: 2026-06-02 (RLT-001F)_
+_Last updated: 2026-06-02 (RLT-001G)_
 
 ## Current source of truth
-- **Integration branch (current):** `bmad/baseline-integration` — clean, validated baseline.
+- **Integration branch (current):** `bmad/baseline-integration` @ `5086ad0` — clean, validated baseline.
 - **Backup preserve branch:** `bmad/baseline-preserve-current-state` (validated pre-BMAD state @ `14d17a1`) — do not delete.
 - **Store-shipping WIP branch:** `bmad/wip-store-shipping` (`f0684600`) — concurrent checkout/shipping work, isolated by RLT-001F; resume via RLT-011 only if the Architect chooses.
-- **Baseline commit:** RLT-001D docs @ `f6d1271` (RLT-001F adds a docs commit on top).
+- **Antigravity UI/UX WIP branch:** `bmad/wip-antigravity-uiux` (`65d417f`) — unapproved UI/UX pass (18 files), isolated by RLT-001G; must come back through `ui-ux-pro-max` + an approved BMAD story.
 - Canonical base for logic/backend remains `origin/main`.
 
 ## Core rules
@@ -23,12 +23,17 @@ _Last updated: 2026-06-02 (RLT-001F)_
 
 ## Status milestones
 - RLT-001D — BMAD control-plane files + project identity — **Architect-approved**.
-- RLT-001F — concurrent store-shipping WIP isolated; baseline restored clean — **completed**.
+- RLT-001F — concurrent store-shipping WIP isolated; baseline restored clean — **Architect-approved**.
+- RLT-001G — Antigravity UI/UX WIP isolated; baseline restored clean — **completed**.
 
 ## Current priorities (recommended next)
-1. RLT-001E — mobile/PWA/brand/store hardening (deferred preserved tests + source).
+1. **RLT-001E — mobile/PWA/brand/store hardening** (deferred preserved tests + source).
 2. RLT-001C — decide forum publish/moderation policy.
 3. RLT-011 — store shipping checkout completion (only if Architect resumes `bmad/wip-store-shipping`).
+
+## Process reminder
+- **Antigravity** must work through **`ui-ux-pro-max`** specifications and an **approved BMAD story** before any UI implementation change is committed to baseline. Unapproved UI/UX passes will be isolated to a WIP branch (see RLT-001G).
+- Concurrent agents should commit to their own branches, not the shared baseline working tree.
 
 ## Known deferred items
 - **RLT-001C** — forum publish policy (moderate-before-publish vs auto-publish; `submitForumPost.is_published`).

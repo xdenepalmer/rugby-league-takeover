@@ -43,5 +43,12 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Found dirty store-shipping/orders WIP on `bmad/baseline-integration` (`f6d1271`): modified `StoreOrder.jsonc`, `createCheckout`, `stripeWebhook`, `OrdersTab.jsx`, `OrdersManager.jsx`, `Store.jsx`, `tests/checkout-rules*`, `.gitignore`; untracked `src/lib/store-shipping.js` + 4 store/account tests. No BMAD/doc files dirty.
 - Preserved WIP on new branch `bmad/wip-store-shipping`; commit `f0684600` — "wip: preserve store shipping checkout changes". No work discarded.
 - Restored `bmad/baseline-integration` to `f6d1271` (clean). Validation on clean baseline: `npm test` 33/33 · lint · typecheck · build all green. The prior single failure ("Stripe checkout … shipping") was WIP-only and is gone.
-- Updated BMAD files (TASKS/PROGRESS/AGENT_HANDOFF/RUN_LOG); commit: "chore: record store shipping WIP isolation".
+- Updated BMAD files (TASKS/PROGRESS/AGENT_HANDOFF/RUN_LOG); commit `5086ad0` "chore: record store shipping WIP isolation". Architect-approved.
 - No push / no PR. Approved commits `ec63822`/`f6d1271` not altered.
+
+## RLT-001G — Isolate Antigravity UI/UX WIP from baseline
+- Found dirty UI/UX WIP on `bmad/baseline-integration` (`5086ad0`): 18 tracked files — `public/manifest.webmanifest`, `src/components/NotificationBell.jsx`, all `src/components/public/*` (AboutSection, BackgroundVideo, CountdownTimer, EventsSection, HeroSection, LocalVegasClock, MatchupsSection, NewsSection, PartnersSection, PublicLayout, SiteNav, TestimonialsSection, TravelSection), `src/index.css`, `src/pages/Forum.jsx`, `src/pages/Store.jsx`. No BMAD/doc files dirty.
+- Preserved WIP on new branch `bmad/wip-antigravity-uiux` via `git add -u` (tracked modifications only; tooling dirs left untracked); commit `65d417f` — "wip: preserve antigravity ui ux pass". No work discarded.
+- Restored `bmad/baseline-integration` to `5086ad0` (clean). Validation on clean baseline: `npm test` 33/33 · lint · typecheck · build all green.
+- Updated BMAD files; commit: "chore: record antigravity WIP isolation".
+- No push / no PR. Approved commits not altered. Reminder recorded: Antigravity changes must route through `ui-ux-pro-max` + an approved BMAD story before landing on baseline.
