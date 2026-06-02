@@ -210,7 +210,12 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
 function Leaderboard({ entries, tips }) {
   const community = useMemo(() => {
     const totals = new Map();
+    const seen = new Set();
     entries.forEach((entry) => {
+      // Deduplicate: one tip per game per tipper
+      const key = `${entry.game_id}-${entry.tipper_name || "Mystery Fan"}`;
+      if (seen.has(key)) return;
+      seen.add(key);
       const name = entry.tipper_name || "Mystery Fan";
       const curr = totals.get(name) || { name, tips: 0 };
       curr.tips += 1;
@@ -327,7 +332,7 @@ export default function ScorePredictor({ onSharePrediction }) {
       window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "tip_locked" } }));
     } catch { /* ignore */ }
 
-    if (queriesEnabled) {
+    if (queriesEnabled && !tips[game.id]) {
       createTip.mutate({
         game_id: game.id,
         game_label: game.label || "NRL Fixture",
