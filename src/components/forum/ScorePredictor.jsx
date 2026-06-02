@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Users, Share2, TrendingUp, Calendar, Flame, Sparkles, Shield, Target, Coins, CheckCircle2, ChevronRight, Zap, Crown, Info } from "lucide-react";
+import { Trophy, Users, Share2, TrendingUp, Calendar, Flame, Sparkles, Shield, Target, Coins, CheckCircle2, ChevronRight, Zap, Crown, Info, Radio } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { buildRollingNrlFixtures, formatKickoff, isNearFixture } from "@/lib/nrl-fixtures";
+import { fetchUpcomingFixtures } from "@/lib/nrl-api";
 import TeamCrest from "@/components/public/TeamCrest";
 
 const STORAGE_KEY = "rlt_footy_tips_v2";
@@ -29,7 +30,10 @@ function deriveScores(game, selectedTeam, margin) {
     : { home: loser, away: winner };
 }
 
-function getStatus(kickoff) {
+function getStatus(kickoff, apiStatus) {
+  // API-sourced statuses take priority
+  if (apiStatus === "live") return { label: "Live", tone: "text-red-300 border-red-400/25 bg-red-400/10 animate-pulse" };
+  if (apiStatus === "finished") return { label: "Final", tone: "text-slate-300 border-slate-400/20 bg-slate-400/10" };
   if (!kickoff) return { label: "Open", tone: "text-emerald-300 border-emerald-400/25 bg-emerald-400/10" };
   const diff = new Date(kickoff).getTime() - Date.now();
   if (diff < 0) return { label: "Locked", tone: "text-slate-300 border-slate-400/20 bg-slate-400/10" };
@@ -106,8 +110,8 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
   const [margin, setMargin] = useState(tip?.margin || 8);
   const [confidence, setConfidence] = useState(tip?.confidence || 3);
   const scores = deriveScores(game, selectedTeam, margin);
-  const status = getStatus(game.kickoff);
-  const locked = status.label === "Locked";
+  const status = getStatus(game.kickoff, game.status);
+  const locked = status.label === "Locked" || status.label === "Final" || status.label === "Live";
 
   useEffect(() => {
     setSelectedTeam(tip?.selected_team || game.home_team);
@@ -132,8 +136,20 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
             </div>
             <p className="mt-1 truncate text-[8px] font-bold uppercase tracking-[0.2em] text-primary/80">{game.label || "NRL Fixture"}</p>
           </div>
-          <span className={`shrink-0 border px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.18em] ${status.tone}`}>{tip ? "Tipped" : status.label}</span>
+          <span className={`shrink-0 border px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.18em] ${status.tone}`}>
+            {status.label === "Live" && <Radio className="inline h-2.5 w-2.5 mr-0.5" />}
+            {tip && status.label !== "Final" && status.label !== "Live" ? "Tipped" : status.label}
+          </span>
         </div>
+        {game.status === "finished" && game.home_score != null && (
+          <div className="mt-1.5 flex items-center justify-center gap-2 border border-border/30 bg-black/30 py-1.5 px-3">
+            <span className="text-xs font-bold text-foreground">{game.home_team.split(" ").pop()}</span>
+            <span className="font-display text-lg tabular-nums text-primary">{game.home_score}</span>
+            <span className="text-[8px] text-slate-500">-</span>
+            <span className="font-display text-lg tabular-nums text-primary">{game.away_score}</span>
+            <span className="text-xs font-bold text-foreground">{game.away_team.split(" ").pop()}</span>
+          </div>
+        )}
         {game.generated && (
           <div className="mt-1.5 flex items-center gap-1 text-[8px] text-amber-400/70">
             <Info className="h-3 w-3 shrink-0" />
@@ -260,6 +276,16 @@ export default function ScorePredictor({ onSharePrediction }) {
   const [activeGameId, setActiveGameId] = useState("");
   const queriesEnabled = appParams.hasBase44Config;
 
+  // ── Real NRL fixtures from RugbyAPI2 ──
+  const { data: apiFixtures = [] } = useQuery({
+    queryKey: ["nrlApiFixtures"],
+    queryFn: fetchUpcomingFixtures,
+    staleTime: 5 * 60 * 1000,    // 5 min cache to conserve API calls
+    gcTime: 15 * 60 * 1000,
+    retry: 1,
+    meta: { silent: true },
+  });
+
   const { data: matchups = [] } = useQuery({
     queryKey: ["matchups"],
     queryFn: () => base44.entities.Matchup.list("kickoff", 100),
@@ -277,17 +303,23 @@ export default function ScorePredictor({ onSharePrediction }) {
   });
 
   const fixtures = useMemo(() => {
+    // Admin-entered games take top priority
     const adminGames = (matchups || [])
       .filter((m) => m.is_published !== false && m.home_team && m.away_team)
       .map((m) => ({ ...m, id: m.id || `${m.home_team}-${m.away_team}-${m.kickoff || "tba"}` }));
-    const generated = buildRollingNrlFixtures(new Date(), 5);
     const seen = new Set(adminGames.map((g) => `${g.home_team}-${g.away_team}-${String(g.kickoff).slice(0, 10)}`));
-    return [...adminGames, ...generated.filter((g) => !seen.has(`${g.home_team}-${g.away_team}-${String(g.kickoff).slice(0, 10)}`))]
+
+    // API fixtures fill in (already falls back to generated internally)
+    const apiGames = (apiFixtures || []).filter(
+      (g) => !seen.has(`${g.home_team}-${g.away_team}-${String(g.kickoff).slice(0, 10)}`)
+    );
+
+    return [...adminGames, ...apiGames]
       .filter((g) => filter === "all" || filter === "mine" ? true : isNearFixture(g.kickoff))
       .filter((g) => filter !== "mine" || tips[g.id])
       .sort((a, b) => new Date(a.kickoff || 0) - new Date(b.kickoff || 0))
       .slice(0, filter === "all" ? 24 : 10);
-  }, [matchups, filter, tips]);
+  }, [matchups, apiFixtures, filter, tips]);
 
   useEffect(() => {
     if (!activeGameId && fixtures[0]?.id) setActiveGameId(fixtures[0].id);
