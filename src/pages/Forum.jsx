@@ -65,8 +65,11 @@ const categories = [
 ];
 
 const getEngagement = (post) => {
-  const likes = Number(post.like_count ?? (Array.isArray(post.liked_by) ? post.liked_by.length : 0)) || 0;
-  const views = Number(post.view_count || 0);
+  // Clamp to 0: bad/legacy data can carry negative like_count/view_count, and a
+  // negative engagement number should never render to fans. Fallback behaviour
+  // (liked_by length, missing → 0) is preserved.
+  const likes = Math.max(0, Number(post.like_count ?? (Array.isArray(post.liked_by) ? post.liked_by.length : 0)) || 0);
+  const views = Math.max(0, Number(post.view_count || 0) || 0);
   return {
     likes,
     views,
