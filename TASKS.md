@@ -26,6 +26,10 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-001I | Publish BMAD baseline to GitHub via PR | completed | Pushed `bmad/baseline-integration` (`4aa991f`); opened **PR #1** (base `main`). GitHub reports CONFLICTING (baseline ↔ `origin/main` divergence). Not merged |
 | RLT-001J | PR conflict reconciliation analysis | completed | Read-only. Found `origin/main` already carries the live Antigravity UI/UX pass; recommended Option B (branch from main, replay baseline). PR #1 superseded |
 | RLT-001K | Reconcile RLT-001E baseline onto canonical origin/main | completed | Branch `bmad/reconcile-rlt-001k` from `origin/main` (`8c3dd79`); 15 files clean-applied + 6 overlap hand-merged (kept Antigravity + RLT-001E). 37/37 validation green. No backend/store-shipping. Manual Base44 Publish required after merge |
+| RLT-001T | Restore current main lint gate (forum tipping) | superseded by RLT-001V | Forum lint fix accepted in substance; folded into RLT-001V |
+| RLT-001U | Restore ads lint gate | superseded by RLT-001V | Ads lint fix accepted in substance; folded into RLT-001V |
+| RLT-001V | Re-apply combined lint gate fixes on current main | completed (await merge) | `bmad/story-rlt-001v-claude` from `main` (`aabc8c87`); all 8 lint errors fixed across ScorePredictor/SlotMachine/AdsManager/AdSlot incl. rules-of-hooks. **`npm run lint` fully green**, tests 37/37, typecheck/build green |
+| RLT-001S | Re-apply forum engagement clamp on current main | completed (await lint-green merge) | `bmad/story-rlt-001s-claude` (`84e69c6`); merge after RLT-001V lands (lint green). May need re-apply on then-current main |
 | RLT-002 | Replace starter README | completed (in RLT-001D) | Project-specific README |
 | RLT-003 | Normalize project identity metadata | completed (in RLT-001D) | `package.json`, `package-lock.json`, `base44/config.jsonc` |
 | RLT-004 | Harden StoreOrder creation authority | queued | Server-authoritative order creation |

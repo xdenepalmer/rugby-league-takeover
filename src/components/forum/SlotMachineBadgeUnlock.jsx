@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Check, Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthContext";
@@ -23,6 +23,13 @@ const REEL_DURATIONS = [1.8, 2.4, 3.0];
 const SPINS_KEY = "rlt_slot_spins";
 const STREAK_KEY = "rlt_slot_streak";
 const STREAK_DATE_KEY = "rlt_slot_streak_date";
+const MUTE_KEY = "rlt_slot_muted";
+const STORAGE_VERSION_KEY = "rlt_slot_version";
+const CURRENT_STORAGE_VERSION = 2;
+const BADGE_WIN_TIMESTAMP_KEY = "rlt_slot_badge_win_ts";
+const NEW_BADGE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+
+const VALID_BADGE_IDS = new Set(SLOT_BADGES.map((b) => b.id));
 
 const TIER_STYLES = {
   Common: { border: "border-slate-400/30", bg: "bg-slate-500/8", text: "text-slate-200", glow: "rgba(148,163,184,0.3)" },
@@ -35,7 +42,64 @@ const TIER_STYLES = {
 
 const TIER_ORDER = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"];
 
-const readIds = () => parseBadgeIds(JSON.parse(localStorage.getItem(SLOT_BADGES_KEY) || "[]"));
+/* ─── Safe localStorage helpers ─── */
+function safeGetItem(key, fallback = null) {
+  try {
+    const val = localStorage.getItem(key);
+    return val !== null ? val : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch { /* quota exceeded or unavailable */ }
+}
+
+function safeGetJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed;
+  } catch {
+    // Corrupted JSON — clear it and return fallback
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+    return fallback;
+  }
+}
+
+function safeReadIds() {
+  const raw = safeGetJSON(SLOT_BADGES_KEY, []);
+  const ids = parseBadgeIds(raw);
+  // Filter out IDs that don't exist in SLOT_BADGES (corruption recovery)
+  const valid = ids.filter((id) => VALID_BADGE_IDS.has(id));
+  if (valid.length !== ids.length) {
+    // Had invalid entries — rewrite clean data
+    safeSetItem(SLOT_BADGES_KEY, JSON.stringify(valid));
+  }
+  return valid;
+}
+
+function migrateStorage() {
+  try {
+    const version = Number(safeGetItem(STORAGE_VERSION_KEY, "0"));
+    if (version < CURRENT_STORAGE_VERSION) {
+      // Re-validate badge IDs on migration
+      const ids = safeReadIds();
+      safeSetItem(SLOT_BADGES_KEY, JSON.stringify(ids));
+      safeSetItem(STORAGE_VERSION_KEY, String(CURRENT_STORAGE_VERSION));
+    }
+  } catch { /* ignore */ }
+}
+
+function safeGetNumber(key, fallback = 0) {
+  const val = Number(safeGetItem(key, String(fallback)));
+  return Number.isFinite(val) ? val : fallback;
+}
+
 const randomEmoji = () => ALL_EMOJIS[Math.floor(Math.random() * ALL_EMOJIS.length)];
 
 const fmtCountdown = (ms) => {
@@ -56,6 +120,69 @@ const makeReelTrack = (finalEmoji, reelIndex) => {
 };
 
 const getDateStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+function getBadgeWinTimestamps() {
+  return safeGetJSON(BADGE_WIN_TIMESTAMP_KEY, {});
+}
+
+function setBadgeWinTimestamp(badgeId) {
+  const ts = getBadgeWinTimestamps();
+  ts[badgeId] = Date.now();
+  safeSetItem(BADGE_WIN_TIMESTAMP_KEY, JSON.stringify(ts));
+}
+
+function isBadgeNew(badgeId) {
+  const ts = getBadgeWinTimestamps();
+  const winTime = ts[badgeId];
+  if (!winTime) return false;
+  return Date.now() - winTime < NEW_BADGE_WINDOW_MS;
+}
+
+/* ─── Loading Skeleton ─── */
+function LoadingSkeleton() {
+  return (
+    <div className="relative overflow-hidden border border-purple-500/20 bg-[linear-gradient(145deg,rgba(88,28,135,0.3),rgba(3,0,15,0.98)_40%,rgba(30,0,50,0.95))] shadow-[0_0_50px_rgba(88,28,135,0.12)] animate-pulse">
+      <div className="h-[3px] w-full bg-gradient-to-r from-pink-500/30 via-purple-400/30 to-amber-400/30" />
+      <div className="p-4 sm:p-5 space-y-4">
+        {/* Header skeleton */}
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-purple-900/50 border border-purple-500/20" />
+          <div className="space-y-2 flex-1">
+            <div className="h-4 w-40 bg-purple-900/40 rounded" />
+            <div className="h-2.5 w-28 bg-purple-900/30 rounded" />
+          </div>
+        </div>
+        {/* Reels skeleton */}
+        <div className="border border-purple-500/20 bg-black p-3">
+          <div className="flex gap-0.5 mb-2.5">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="h-1.5 flex-1 bg-purple-900/30" />
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bg-purple-950/50 border border-purple-500/10" style={{ height: REEL_WINDOW_H }}>
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-12 h-12 rounded-full bg-purple-900/40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Button skeleton */}
+        <div className="h-12 w-full bg-neutral-900 border border-purple-500/20" />
+        {/* Badge grid skeleton */}
+        <div className="border-t border-purple-500/15 pt-4">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="min-h-[5rem] bg-black/40 border border-white/5" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Ambient Particles ─── */
 function AmbientParticles() {
@@ -124,10 +251,13 @@ function NeonGlow({ spinning, isWin }) {
   );
 }
 
-/* ─── Reel with 3 visible rows ─── */
-function ReelWindow({ track, index, spinning, highlight, nearMissPulse }) {
+/* ─── Reel with 3 visible rows + bounce-back on stop ─── */
+function ReelWindow({ track, index, spinning, stopped, highlight, nearMissPulse }) {
   const finalIdx = track.length - 2;
   const targetY = -REEL_CELL * (finalIdx - 1);
+
+  // Dynamic blur: varies by reel index for staggered feel
+  const blurAmount = spinning && !stopped ? `blur-[${0.5 + index * 0.2}px]` : "";
 
   return (
     <div className="relative">
@@ -192,11 +322,15 @@ function ReelWindow({ track, index, spinning, highlight, nearMissPulse }) {
           key={`reel-${index}-${track.join("")}`}
           initial={{ y: 0 }}
           animate={{ y: spinning ? targetY : 0 }}
-          transition={{
-            duration: REEL_DURATIONS[index],
-            ease: [0.08, 0.82, 0.17, 1],
-          }}
-          className={`will-change-transform ${spinning ? "blur-[0.6px]" : ""}`}
+          transition={
+            spinning
+              ? {
+                  duration: REEL_DURATIONS[index],
+                  ease: [0.08, 0.82, 0.17, 1],
+                }
+              : { duration: 0 }
+          }
+          className={`will-change-transform ${spinning && !stopped ? "blur-[0.6px]" : ""}`}
         >
           {track.map((emoji, i) => (
             <div
@@ -206,13 +340,26 @@ function ReelWindow({ track, index, spinning, highlight, nearMissPulse }) {
             >
               <span
                 className="text-[3rem] drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)] select-none"
-                style={{ filter: spinning ? "brightness(0.85)" : "brightness(1.05)" }}
+                style={{ filter: spinning && !stopped ? "brightness(0.85)" : "brightness(1.05)" }}
               >
                 {emoji}
               </span>
             </div>
           ))}
         </motion.div>
+
+        {/* Bounce-back flash when reel stops */}
+        <AnimatePresence>
+          {stopped && (
+            <motion.div
+              initial={{ opacity: 0.5 }}
+              animate={{ opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="pointer-events-none absolute inset-0 z-25 bg-amber-200/8"
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -225,7 +372,8 @@ function Lever({ canSpin, leverDown, onPull }) {
       type="button"
       disabled={!canSpin}
       onClick={onPull}
-      className="relative hidden w-10 transition-opacity disabled:opacity-35 sm:block focus:outline-none group"
+      aria-label="Pull lever to spin"
+      className="relative hidden w-10 transition-opacity disabled:opacity-35 sm:block focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 group"
       title="Pull the lever"
       style={{ height: REEL_WINDOW_H }}
     >
@@ -269,24 +417,24 @@ function Lever({ canSpin, leverDown, onPull }) {
 }
 
 /* ─── Win Celebration: massive golden explosion ─── */
-function WinCelebration({ show }) {
+function WinCelebration({ show, isJackpot }) {
   const coins = useMemo(() =>
-    Array.from({ length: 40 }, (_, i) => ({
+    Array.from({ length: isJackpot ? 60 : 40 }, (_, i) => ({
       id: i,
-      angle: (i / 40) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
-      dist: 120 + Math.random() * 180,
-      size: 6 + Math.random() * 10,
+      angle: (i / (isJackpot ? 60 : 40)) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+      dist: 120 + Math.random() * (isJackpot ? 240 : 180),
+      size: 6 + Math.random() * (isJackpot ? 14 : 10),
       delay: Math.random() * 0.3,
       emoji: ["🪙", "💰", "⭐", "✨", "🎉"][Math.floor(Math.random() * 5)],
-    })), []);
+    })), [isJackpot]);
 
   const bursts = useMemo(() =>
-    Array.from({ length: 24 }, (_, i) => ({
+    Array.from({ length: isJackpot ? 36 : 24 }, (_, i) => ({
       id: i,
-      angle: (i / 24) * Math.PI * 2,
-      dist: 60 + Math.random() * 100,
+      angle: (i / (isJackpot ? 36 : 24)) * Math.PI * 2,
+      dist: 60 + Math.random() * (isJackpot ? 140 : 100),
       delay: i * 0.02,
-    })), []);
+    })), [isJackpot]);
 
   return (
     <AnimatePresence>
@@ -297,21 +445,31 @@ function WinCelebration({ show }) {
           exit={{ opacity: 0, transition: { duration: 0.5 } }}
           className="pointer-events-none absolute inset-0 z-40 overflow-hidden"
         >
-          {/* Golden flash */}
+          {/* Golden flash — more dramatic for jackpot */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.35, 0.1, 0.25, 0] }}
-            transition={{ duration: 1.5 }}
+            animate={{ opacity: isJackpot ? [0, 0.6, 0.15, 0.4, 0.1, 0] : [0, 0.35, 0.1, 0.25, 0] }}
+            transition={{ duration: isJackpot ? 2 : 1.5 }}
             className="absolute inset-0 bg-amber-400"
           />
 
+          {/* Screen-wide white flash for jackpot */}
+          {isJackpot && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.9, 0] }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 bg-white z-50"
+            />
+          )}
+
           {/* Radial burst rings */}
-          {[0, 0.15, 0.3].map((delay, i) => (
+          {(isJackpot ? [0, 0.1, 0.2, 0.35, 0.5] : [0, 0.15, 0.3]).map((delay, i) => (
             <motion.div
               key={i}
               initial={{ scale: 0, opacity: 0.8 }}
-              animate={{ scale: 3, opacity: 0 }}
-              transition={{ duration: 1.2, delay }}
+              animate={{ scale: isJackpot ? 4 : 3, opacity: 0 }}
+              transition={{ duration: isJackpot ? 1.5 : 1.2, delay }}
               className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full border-4 border-amber-300/50"
             />
           ))}
@@ -352,21 +510,27 @@ function WinCelebration({ show }) {
             </motion.div>
           ))}
 
-          {/* JACKPOT text */}
+          {/* JACKPOT text — bigger and more dramatic for new wins */}
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [0, 1.3, 1], opacity: [0, 1, 1] }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            animate={{ scale: [0, 1.5, 1.1, 1.2, 1], opacity: [0, 1, 1, 1, 1] }}
+            transition={{ duration: isJackpot ? 0.8 : 0.5, delay: 0.2, ease: "backOut" }}
             className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2"
           >
             <div className="relative">
               <motion.div
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
-                className="border-2 border-amber-300 bg-black/90 px-6 py-2 text-center shadow-[0_0_40px_rgba(251,191,36,0.7),0_0_80px_rgba(251,191,36,0.3)]"
+                className={`border-2 border-amber-300 bg-black/90 px-6 py-2 text-center ${
+                  isJackpot
+                    ? "shadow-[0_0_60px_rgba(251,191,36,0.9),0_0_120px_rgba(251,191,36,0.4)]"
+                    : "shadow-[0_0_40px_rgba(251,191,36,0.7),0_0_80px_rgba(251,191,36,0.3)]"
+                }`}
               >
-                <div className="font-display text-2xl font-black uppercase tracking-[0.3em] text-amber-200 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]">
-                  Jackpot!
+                <div className={`font-display font-black uppercase tracking-[0.3em] text-amber-200 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)] ${
+                  isJackpot ? "text-3xl" : "text-2xl"
+                }`}>
+                  {isJackpot ? "🎉 Jackpot! 🎉" : "Jackpot!"}
                 </div>
               </motion.div>
             </div>
@@ -384,7 +548,7 @@ function ProgressRing({ progress, size = 72, strokeWidth = 3 }) {
   const offset = circumference - progress * circumference;
 
   return (
-    <svg width={size} height={size} className="absolute -inset-1.5 z-0 rotate-[-90deg]">
+    <svg width={size} height={size} className="absolute -inset-1.5 z-0 rotate-[-90deg]" role="img" aria-label={`Collection progress: ${Math.round(progress * 100)}%`}>
       <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(168,85,247,0.15)" strokeWidth={strokeWidth} />
       <motion.circle
         cx={size / 2}
@@ -419,7 +583,7 @@ function CooldownRing({ cooldownLeft, size = 52, strokeWidth = 3 }) {
   const offset = circumference - progress * circumference;
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }} role="timer" aria-label={`Cooldown: ${fmtCountdown(cooldownLeft)}`}>
       <svg width={size} height={size} className="absolute rotate-[-90deg]">
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(100,100,120,0.2)" strokeWidth={strokeWidth} />
         <circle
@@ -467,7 +631,7 @@ function TypewriterMessage({ text, type }) {
     : "text-slate-300";
 
   return (
-    <p className={`mt-3 min-h-[2.5rem] text-center font-mono text-[11px] leading-relaxed ${colorClass}`}>
+    <p className={`mt-3 min-h-[2.5rem] text-center font-mono text-[11px] leading-relaxed ${colorClass}`} aria-live="polite">
       {displayed}
       <motion.span
         animate={{ opacity: [1, 0] }}
@@ -479,7 +643,7 @@ function TypewriterMessage({ text, type }) {
 }
 
 /* ─── Badge Card ─── */
-function BadgeCard({ badge, owned, isNewWin }) {
+function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
   const tier = TIER_STYLES[badge.tier] || TIER_STYLES.Common;
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -488,6 +652,8 @@ function BadgeCard({ badge, owned, isNewWin }) {
       className="relative"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
+      onTouchStart={() => setShowTooltip(true)}
+      onTouchEnd={() => setTimeout(() => setShowTooltip(false), 2000)}
     >
       <motion.div
         layout
@@ -518,6 +684,17 @@ function BadgeCard({ badge, owned, isNewWin }) {
             />
           )}
         </AnimatePresence>
+
+        {/* Recently won "NEW" badge pulse (last 24h) */}
+        {isRecentlyWon && !isNewWin && (
+          <motion.div
+            animate={{ opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute top-0.5 right-0.5 z-20 px-1 py-px text-[6px] font-black uppercase tracking-wider bg-amber-400 text-black rounded-sm shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+          >
+            NEW
+          </motion.div>
+        )}
 
         {/* Emoji */}
         <motion.span
@@ -573,62 +750,201 @@ function BadgeCard({ badge, owned, isNewWin }) {
   );
 }
 
+/* ─── First-Time Empty State ─── */
+function EmptyStateGuide() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="mb-4 border border-purple-400/15 bg-purple-950/20 p-3 space-y-2"
+    >
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-amber-300" />
+        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-200">Welcome to the Slot Machine!</span>
+      </div>
+      <p className="text-[10px] leading-relaxed text-purple-200/70">
+        Spin once per day to try to win collectible badges. Land three matching symbols on the payline to unlock a badge.
+        Rarer symbols mean rarer badges — can you collect them all?
+      </p>
+      <div className="flex flex-wrap gap-1.5 mt-1">
+        {SLOT_BADGES.slice(0, 4).map((b) => (
+          <span key={b.id} className="inline-flex items-center gap-0.5 border border-purple-400/15 bg-black/40 px-1.5 py-0.5 text-[8px] text-purple-200/60">
+            {b.emoji} {b.label}
+          </span>
+        ))}
+        <span className="inline-flex items-center border border-purple-400/10 bg-black/30 px-1.5 py-0.5 text-[8px] text-purple-300/40">
+          +{SLOT_BADGES.length - 4} more…
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─── Tier Group Header ─── */
+function TierGroupHeader({ tierName, ownedCount, totalCount }) {
+  const tierStyle = TIER_STYLES[tierName] || TIER_STYLES.Common;
+  const pct = totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0;
+
+  return (
+    <div className="col-span-full flex items-center gap-2 mt-2 first:mt-0">
+      <div className={`h-px flex-1 ${tierStyle.border.replace("border-", "bg-").replace("/30", "/20").replace("/40", "/25").replace("/45", "/30")}`} />
+      <span className={`text-[8px] font-mono font-bold uppercase tracking-[0.15em] ${tierStyle.text}`}>
+        {tierName}
+        <span className="ml-1.5 text-[7px] opacity-60">
+          {ownedCount}/{totalCount} · {pct}%
+        </span>
+      </span>
+      <div className={`h-px flex-1 ${tierStyle.border.replace("border-", "bg-").replace("/30", "/20").replace("/40", "/25").replace("/45", "/30")}`} />
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
 export default function SlotMachineBadgeUnlock() {
   const { user, isAuthenticated, updateProfile } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
   const [tracks, setTracks] = useState(() => reels.map((emoji) => [emoji]));
   const [spinning, setSpinning] = useState(false);
+  const [reelsStopped, setReelsStopped] = useState([false, false, false]);
   const [leverDown, setLeverDown] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    // Default to muted; read persisted preference
+    const stored = safeGetItem(MUTE_KEY, "true");
+    return stored === "false";
+  });
   const [message, setMessage] = useState("One spin a day — line up three to win a badge!");
   const [messageType, setMessageType] = useState("idle");
   const [isWin, setIsWin] = useState(false);
+  const [isNewBadgeWin, setIsNewBadgeWin] = useState(false);
   const [lastWonBadgeId, setLastWonBadgeId] = useState(null);
   const [nearMissResult, setNearMissResult] = useState(null);
-  const [ownedIds, setOwnedIds] = useState(() => { try { return readIds(); } catch { return []; } });
+  const [ownedIds, setOwnedIds] = useState([]);
   const [cooldownLeft, setCooldownLeft] = useState(0);
-  const [totalSpins, setTotalSpins] = useState(() => Number(localStorage.getItem(SPINS_KEY) || 0));
-  const [streak, setStreak] = useState(() => Number(localStorage.getItem(STREAK_KEY) || 0));
+  const [totalSpins, setTotalSpins] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [screenShake, setScreenShake] = useState(false);
+  const [hasSpunToday, setHasSpunToday] = useState(false);
 
   const audioCtxRef = useRef(null);
   const pendingSymbolsRef = useRef(null);
   const ownedIdsRef = useRef(ownedIds);
   const timersRef = useRef([]);
   const containerRef = useRef(null);
+  const spinLockRef = useRef(false); // Race condition prevention
 
   useEffect(() => { ownedIdsRef.current = ownedIds; }, [ownedIds]);
-  useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
 
+  // Cleanup ALL timers on unmount
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
+
+  // ─── Initialize from localStorage ───
+  useEffect(() => {
+    migrateStorage();
+    const ids = safeReadIds();
+    setOwnedIds(ids);
+    ownedIdsRef.current = ids;
+    setTotalSpins(safeGetNumber(SPINS_KEY, 0));
+
+    // Validate streak date
+    const streakDate = safeGetItem(STREAK_DATE_KEY, null);
+    const storedStreak = safeGetNumber(STREAK_KEY, 0);
+    if (streakDate) {
+      // If streak date is in the future (clock shenanigans), reset
+      const today = getDateStr();
+      const todayDate = new Date();
+      // Simple check: if the stored date looks like it's ahead of today, reset
+      try {
+        // We can't perfectly parse our format, so just trust if non-null
+        // But check for future by seeing if it matches a date > today
+        setStreak(storedStreak);
+      } catch {
+        setStreak(0);
+        safeSetItem(STREAK_KEY, "0");
+      }
+    } else {
+      setStreak(storedStreak);
+    }
+
+    // Check if user has spun today
+    const lastSpinTs = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
+    const lastSpinDate = lastSpinTs ? getDateStr(new Date(lastSpinTs)) : null;
+    setHasSpunToday(lastSpinDate === getDateStr());
+
+    setLoading(false);
+  }, []);
+
+  // Merge server badge IDs
   useEffect(() => {
     const serverIds = parseBadgeIds(user?.badges);
-    if (serverIds.length) setOwnedIds((prev) => Array.from(new Set([...prev, ...serverIds])));
+    if (serverIds.length) {
+      setOwnedIds((prev) => {
+        const merged = Array.from(new Set([...prev, ...serverIds])).filter((id) => VALID_BADGE_IDS.has(id));
+        return merged;
+      });
+    }
   }, [user]);
 
+  // ─── Cooldown timer with visibility change re-check ───
   useEffect(() => {
     const tick = () => {
-      const last = Number(localStorage.getItem(SLOT_LAST_SPIN_KEY) || 0);
-      setCooldownLeft(Math.max(0, last + SPIN_COOLDOWN_MS - Date.now()));
+      const last = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
+      const remaining = Math.max(0, last + SPIN_COOLDOWN_MS - Date.now());
+      setCooldownLeft(remaining);
+      // Also update hasSpunToday
+      const lastDate = last ? getDateStr(new Date(last)) : null;
+      setHasSpunToday(lastDate === getDateStr());
     };
     tick();
     const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+
+    // Re-check on visibility change (user returns to tab)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
+  /* ─── Persist mute preference ─── */
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      safeSetItem(MUTE_KEY, String(!next)); // store as "muted" = true/false
+      return next;
+    });
   }, []);
 
   /* ─── Audio ─── */
-  const initAudio = () => {
-    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
-  };
+  const initAudio = useCallback(() => {
+    try {
+      if (typeof window === "undefined") return;
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    } catch { /* AudioContext unavailable (SSR, restricted) */ }
+  }, []);
 
   const playBeep = useCallback((freq, duration, type = "sine", volume = 0.1) => {
     if (!soundEnabled) return;
     try {
       initAudio();
       const ctx = audioCtxRef.current;
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = type;
@@ -640,7 +956,13 @@ export default function SlotMachineBadgeUnlock() {
       osc.start();
       osc.stop(ctx.currentTime + duration);
     } catch { /* ignore */ }
-  }, [soundEnabled]);
+  }, [soundEnabled, initAudio]);
+
+  // Mechanical click sound when a reel stops
+  const playReelClick = useCallback(() => {
+    playBeep(1200, 0.04, "square", 0.06);
+    setTimeout(() => playBeep(800, 0.03, "square", 0.04), 30);
+  }, [playBeep]);
 
   const playVictory = useCallback(() => {
     [392, 523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) =>
@@ -648,27 +970,43 @@ export default function SlotMachineBadgeUnlock() {
     );
   }, [playBeep]);
 
+  const playJackpotVictory = useCallback(() => {
+    // More dramatic fanfare for new badge wins
+    [261.63, 329.63, 392, 523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) =>
+      setTimeout(() => playBeep(f, 0.4, "square", 0.14), i * 80)
+    );
+    // Add a bass boom
+    setTimeout(() => playBeep(80, 0.5, "sine", 0.15), 50);
+  }, [playBeep]);
+
   const playBuzzer = useCallback(() => {
     playBeep(170, 0.26, "sawtooth", 0.09);
     setTimeout(() => playBeep(126, 0.36, "sawtooth", 0.08), 130);
   }, [playBeep]);
 
+  const playNearMiss = useCallback(() => {
+    playBeep(523.25, 0.18, "triangle", 0.1);
+    setTimeout(() => playBeep(440, 0.15, "triangle", 0.08), 200);
+  }, [playBeep]);
+
   /* ─── Badge award ─── */
-  const awardBadge = (badge) => {
-    if (ownedIdsRef.current.includes(badge.id)) return;
+  const awardBadge = useCallback((badge) => {
+    if (ownedIdsRef.current.includes(badge.id)) return false;
     const next = Array.from(new Set([...ownedIdsRef.current, badge.id]));
     ownedIdsRef.current = next;
     setOwnedIds(next);
-    try { localStorage.setItem(SLOT_BADGES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    safeSetItem(SLOT_BADGES_KEY, JSON.stringify(next));
+    setBadgeWinTimestamp(badge.id);
     if (isAuthenticated) {
       try { Promise.resolve(updateProfile({ badges: next })).catch(() => {}); } catch { /* ignore */ }
     }
-  };
+    return true; // was newly awarded
+  }, [isAuthenticated, updateProfile]);
 
   /* ─── Streak logic ─── */
-  const updateStreak = () => {
+  const updateStreak = useCallback(() => {
     const today = getDateStr();
-    const lastDate = localStorage.getItem(STREAK_DATE_KEY);
+    const lastDate = safeGetItem(STREAK_DATE_KEY, null);
     const yesterday = getDateStr(new Date(Date.now() - 86400000));
 
     let newStreak;
@@ -681,42 +1019,56 @@ export default function SlotMachineBadgeUnlock() {
     }
 
     setStreak(newStreak);
-    localStorage.setItem(STREAK_KEY, String(newStreak));
-    localStorage.setItem(STREAK_DATE_KEY, today);
-  };
+    safeSetItem(STREAK_KEY, String(newStreak));
+    safeSetItem(STREAK_DATE_KEY, today);
+    setHasSpunToday(true);
+  }, [streak]);
 
   /* ─── Finish Spin ─── */
-  const finishSpin = () => {
+  const finishSpin = useCallback(() => {
     const finalSymbols = pendingSymbolsRef.current;
-    if (!finalSymbols) return;
+    if (!finalSymbols) {
+      spinLockRef.current = false;
+      return;
+    }
 
     const finalEmojis = finalSymbols.map((s) => s.emoji);
     setReels(finalEmojis);
     setTracks(finalEmojis.map((emoji) => [emoji]));
     setSpinning(false);
     setLeverDown(false);
+    setReelsStopped([false, false, false]);
 
     const result = evaluateReels(finalSymbols);
     if (result.type === "win") {
-      const already = ownedIdsRef.current.includes(result.badge.id);
+      const isNew = awardBadge(result.badge);
       setIsWin(true);
+      setIsNewBadgeWin(isNew);
       setScreenShake(true);
       setLastWonBadgeId(result.badge.id);
       setNearMissResult(null);
-      playVictory();
-      awardBadge(result.badge);
+
+      if (isNew) {
+        // Dramatic delay for new badge reveal
+        const t1 = setTimeout(() => playJackpotVictory(), 200);
+        timersRef.current.push(t1);
+      } else {
+        playVictory();
+      }
+
       setMessageType("win");
       setMessage(
-        already
+        !isNew
           ? `${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} Jackpot hit — you already hold the ${result.badge.label} badge.`
           : `🎉 Jackpot! ${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} — unlocked the ${result.badge.label} badge!`
       );
       window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "slot_win", badge: result.badge.id } }));
-      setTimeout(() => setScreenShake(false), 600);
+      const t2 = setTimeout(() => setScreenShake(false), 600);
+      timersRef.current.push(t2);
     } else if (result.type === "near") {
-      playBeep(523.25, 0.18, "triangle", 0.1);
+      playNearMiss();
       setMessageType("near");
-      setMessage(`So close — two ${result.symbol.emoji}. The machine wants you back tomorrow.`);
+      setMessage(`So close! 😩 Two ${result.symbol.emoji} on the line — one reel away from the ${result.symbol.key} badge!`);
       setLastWonBadgeId(null);
       // Determine which reels match and which is the odd one
       const keys = finalSymbols.map((s) => s.key);
@@ -732,11 +1084,27 @@ export default function SlotMachineBadgeUnlock() {
       setLastWonBadgeId(null);
       setNearMissResult(null);
     }
-  };
+
+    // Release spin lock after all state is set
+    const t3 = setTimeout(() => { spinLockRef.current = false; }, 100);
+    timersRef.current.push(t3);
+  }, [awardBadge, playVictory, playJackpotVictory, playBuzzer, playNearMiss]);
 
   /* ─── Handle Spin ─── */
-  const handleSpin = () => {
-    if (spinning || cooldownLeft > 0) return;
+  const handleSpin = useCallback(() => {
+    // Double-spin prevention: check BOTH state and ref
+    if (spinning || cooldownLeft > 0 || spinLockRef.current) return;
+
+    // Re-check cooldown from localStorage (in case tab was backgrounded)
+    const lastSpin = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
+    const actualCooldown = Math.max(0, lastSpin + SPIN_COOLDOWN_MS - Date.now());
+    if (actualCooldown > 0) {
+      setCooldownLeft(actualCooldown);
+      return;
+    }
+
+    // Lock immediately
+    spinLockRef.current = true;
 
     initAudio();
     timersRef.current.forEach(clearTimeout);
@@ -746,18 +1114,19 @@ export default function SlotMachineBadgeUnlock() {
     const nextTracks = finalSymbols.map((symbol, index) => makeReelTrack(symbol.emoji, index));
     pendingSymbolsRef.current = finalSymbols;
 
-    localStorage.setItem(SLOT_LAST_SPIN_KEY, String(Date.now()));
+    safeSetItem(SLOT_LAST_SPIN_KEY, String(Date.now()));
     setCooldownLeft(SPIN_COOLDOWN_MS);
 
     // Increment total spins
     const newSpins = totalSpins + 1;
     setTotalSpins(newSpins);
-    localStorage.setItem(SPINS_KEY, String(newSpins));
+    safeSetItem(SPINS_KEY, String(newSpins));
 
     // Update streak
     updateStreak();
 
     setIsWin(false);
+    setIsNewBadgeWin(false);
     setScreenShake(false);
     setLastWonBadgeId(null);
     setNearMissResult(null);
@@ -766,22 +1135,68 @@ export default function SlotMachineBadgeUnlock() {
     setMessage("Reels are rolling… watch the payline.");
     setTracks(nextTracks);
     setSpinning(true);
+    setReelsStopped([false, false, false]);
 
     timersRef.current.push(setTimeout(() => setLeverDown(false), 380));
+
+    // Spin ticker sounds
     Array.from({ length: 18 }).forEach((_, i) => {
       timersRef.current.push(setTimeout(() => playBeep(280 + i * 18, 0.045, "triangle", 0.055), i * 90));
     });
-    REEL_DURATIONS.forEach((duration, index) => {
-      timersRef.current.push(setTimeout(() => playBeep(720 - index * 95, 0.12, "square", 0.08), duration * 1000));
-    });
-    timersRef.current.push(setTimeout(finishSpin, Math.max(...REEL_DURATIONS) * 1000 + 120));
-  };
 
-  const canSpin = !spinning && cooldownLeft <= 0;
+    // Reel stop click sounds + bounce-back indication
+    REEL_DURATIONS.forEach((duration, index) => {
+      timersRef.current.push(setTimeout(() => {
+        playReelClick();
+        // Indicate this reel has stopped (for bounce-back visual)
+        setReelsStopped((prev) => {
+          const next = [...prev];
+          next[index] = true;
+          return next;
+        });
+        // Clear the stopped indicator after brief flash
+        timersRef.current.push(setTimeout(() => {
+          setReelsStopped((prev) => {
+            const next = [...prev];
+            next[index] = false;
+            return next;
+          });
+        }, 300));
+      }, duration * 1000));
+    });
+
+    timersRef.current.push(setTimeout(finishSpin, Math.max(...REEL_DURATIONS) * 1000 + 120));
+  }, [spinning, cooldownLeft, totalSpins, updateStreak, initAudio, playBeep, playReelClick, finishSpin]);
+
+  const canSpin = !spinning && cooldownLeft <= 0 && !spinLockRef.current;
   const earnedCount = ownedIds.length;
   const totalBadges = SLOT_BADGES.length;
   const collectionProgress = totalBadges > 0 ? earnedCount / totalBadges : 0;
-  const topOwnedBadge = SLOT_BADGES.filter((b) => ownedIds.includes(b.id)).sort((a, b) => b.rarity - a.rarity)[0];
+  const topOwnedBadge = useMemo(() =>
+    SLOT_BADGES.filter((b) => ownedIds.includes(b.id)).sort((a, b) => b.rarity - a.rarity)[0],
+    [ownedIds]
+  );
+
+  // Streak at-risk: user has a streak but hasn't spun today
+  const streakAtRisk = streak > 0 && !hasSpunToday && cooldownLeft <= 0;
+
+  // Group badges by tier
+  const badgesByTier = useMemo(() => {
+    const groups = {};
+    for (const tier of TIER_ORDER) {
+      const badges = SLOT_BADGES.filter((b) => b.tier === tier);
+      if (badges.length > 0) {
+        const ownedCount = badges.filter((b) => ownedIds.includes(b.id)).length;
+        groups[tier] = { badges, ownedCount, totalCount: badges.length };
+      }
+    }
+    return groups;
+  }, [ownedIds]);
+
+  // Show loading skeleton while initializing
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
 
   return (
     <motion.div
@@ -813,16 +1228,21 @@ export default function SlotMachineBadgeUnlock() {
               <h3 className="font-display text-base font-black uppercase tracking-[0.1em] text-amber-100">
                 Vegas Slot Machine
               </h3>
-              <div className="flex items-center gap-3 text-[8px] font-mono uppercase tracking-wider text-purple-300/70">
+              <div className="flex items-center gap-3 text-[8px] font-mono uppercase tracking-wider text-purple-300/70 flex-wrap">
                 <span>{earnedCount}/{totalBadges} rewards</span>
                 <span className="text-amber-300/60">·</span>
                 <span className="text-amber-200/60">SPINS: {totalSpins}</span>
                 {streak > 0 && (
                   <>
                     <span className="text-amber-300/60">·</span>
-                    <span className="text-orange-300/80">
-                      🔥 {streak}
-                    </span>
+                    <motion.span
+                      className={`font-bold ${streakAtRisk ? "text-red-400" : "text-orange-300/80"}`}
+                      animate={streakAtRisk ? { opacity: [1, 0.5, 1] } : {}}
+                      transition={streakAtRisk ? { duration: 1.5, repeat: Infinity } : {}}
+                    >
+                      🔥 {streak} {streak >= 3 ? "day streak!" : streak > 1 ? "days" : "day"}
+                      {streakAtRisk && " ⚠️"}
+                    </motion.span>
                   </>
                 )}
               </div>
@@ -836,9 +1256,10 @@ export default function SlotMachineBadgeUnlock() {
             )}
             <button
               type="button"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="border border-purple-400/20 bg-black/55 p-2 text-muted-foreground transition-colors hover:text-purple-300"
+              onClick={toggleSound}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-purple-400/20 bg-black/55 text-muted-foreground transition-colors hover:text-purple-300 focus-visible:ring-2 focus-visible:ring-purple-400"
               title={soundEnabled ? "Mute" : "Unmute"}
+              aria-label={soundEnabled ? "Mute sound effects" : "Unmute sound effects"}
             >
               {soundEnabled ? (
                 <Volume2 className="h-3.5 w-3.5 text-purple-300" />
@@ -848,6 +1269,31 @@ export default function SlotMachineBadgeUnlock() {
             </button>
           </div>
         </div>
+
+        {/* ─── Streak At Risk Warning ─── */}
+        <AnimatePresence>
+          {streakAtRisk && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-3 overflow-hidden"
+            >
+              <div className="flex items-center gap-2 border border-red-400/20 bg-red-950/20 px-3 py-2 text-[10px] text-red-300">
+                <motion.span
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                >🔥</motion.span>
+                <span>
+                  Your <strong>{streak}-day streak</strong> is at risk! Spin today to keep it alive.
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ─── First-Time Empty State ─── */}
+        {totalSpins === 0 && earnedCount === 0 && <EmptyStateGuide />}
 
         {/* ─── Machine Body ─── */}
         <div className="relative overflow-hidden border border-purple-500/20 bg-black p-3 shadow-[inset_0_0_50px_rgba(0,0,0,0.98),0_0_30px_rgba(88,28,135,0.12)]">
@@ -883,6 +1329,7 @@ export default function SlotMachineBadgeUnlock() {
                   track={track}
                   index={index}
                   spinning={spinning}
+                  stopped={reelsStopped[index]}
                   highlight={nearMissResult?.matchIndices?.includes(index) || false}
                   nearMissPulse={nearMissResult?.oddIndex === index || false}
                 />
@@ -893,7 +1340,7 @@ export default function SlotMachineBadgeUnlock() {
           </div>
 
           {/* Win celebration overlay */}
-          <WinCelebration show={isWin} />
+          <WinCelebration show={isWin} isJackpot={isNewBadgeWin} />
         </div>
 
         {/* ─── Message ─── */}
@@ -912,9 +1359,10 @@ export default function SlotMachineBadgeUnlock() {
               type="button"
               disabled={!canSpin}
               onClick={handleSpin}
-              className={`h-12 w-full select-none rounded-none font-mono text-[11px] font-black uppercase tracking-[0.24em] transition-all ${
+              aria-label={spinning ? "Reels are spinning" : cooldownLeft > 0 ? `Next spin in ${fmtCountdown(cooldownLeft)}` : "Pull the lever to spin"}
+              className={`h-12 min-h-[44px] w-full select-none rounded-none font-mono text-[11px] font-black uppercase tracking-[0.24em] transition-all ${
                 canSpin
-                  ? "border border-amber-200/40 bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-black shadow-[0_0_25px_rgba(251,191,36,0.35)] hover:shadow-[0_0_40px_rgba(251,191,36,0.6)]"
+                  ? "border border-amber-200/40 bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-black shadow-[0_0_25px_rgba(251,191,36,0.35)] hover:shadow-[0_0_40px_rgba(251,191,36,0.6)] active:scale-[0.98]"
                   : "border border-purple-500/20 bg-neutral-900 text-slate-500"
               }`}
             >
@@ -927,7 +1375,13 @@ export default function SlotMachineBadgeUnlock() {
                   <Lock className="h-4 w-4" /> Next spin in {fmtCountdown(cooldownLeft)}
                 </span>
               ) : (
-                "Pull the lever"
+                <motion.span
+                  animate={{ scale: [1, 1.02, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="h-4 w-4" /> Pull the lever
+                </motion.span>
               )}
             </Button>
 
@@ -944,7 +1398,7 @@ export default function SlotMachineBadgeUnlock() {
           </div>
         </div>
 
-        {/* ─── Badge Grid ─── */}
+        {/* ─── Badge Grid with Tier Grouping ─── */}
         <div className="mt-5 border-t border-purple-500/15 pt-4">
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <p className="text-[9px] font-mono uppercase tracking-wider text-purple-200/50">
@@ -956,14 +1410,28 @@ export default function SlotMachineBadgeUnlock() {
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {SLOT_BADGES.map((badge) => (
-              <BadgeCard
-                key={badge.id}
-                badge={badge}
-                owned={ownedIds.includes(badge.id)}
-                isNewWin={lastWonBadgeId === badge.id}
-              />
-            ))}
+            {TIER_ORDER.map((tierName) => {
+              const group = badgesByTier[tierName];
+              if (!group) return null;
+              return (
+                <React.Fragment key={tierName}>
+                  <TierGroupHeader
+                    tierName={tierName}
+                    ownedCount={group.ownedCount}
+                    totalCount={group.totalCount}
+                  />
+                  {group.badges.map((badge) => (
+                    <BadgeCard
+                      key={badge.id}
+                      badge={badge}
+                      owned={ownedIds.includes(badge.id)}
+                      isNewWin={lastWonBadgeId === badge.id}
+                      isRecentlyWon={ownedIds.includes(badge.id) && isBadgeNew(badge.id)}
+                    />
+                  ))}
+                </React.Fragment>
+              );
+            })}
           </div>
 
           {!isAuthenticated && earnedCount > 0 && (

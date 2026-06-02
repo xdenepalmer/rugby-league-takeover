@@ -579,6 +579,18 @@
   100% { background-position: 250% 0; }
 }
 
+/* ─── Tip Lock Shake ─────────────────────── */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-4px) rotate(-0.5deg); }
+  30% { transform: translateX(4px) rotate(0.5deg); }
+  45% { transform: translateX(-3px) rotate(-0.3deg); }
+  60% { transform: translateX(3px) rotate(0.3deg); }
+  75% { transform: translateX(-1px); }
+  90% { transform: translateX(1px); }
+}
+
 /* ─── Mobile Performance Optimizations ─────────────────────── */
 
 @media (max-width: 768px) {

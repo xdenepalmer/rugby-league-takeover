@@ -5,7 +5,7 @@ import {
   Trophy, Users, Share2, TrendingUp, Calendar, Sparkles, Shield,
   Target, CheckCircle2, Zap, Crown, Lock,
   Radio, Clock, MapPin, Star, ArrowRight, BarChart3, XCircle,
-  ChevronLeft, ChevronRight, Flame, Award, Eye,
+  ChevronLeft, ChevronRight, Flame, Award, Eye, AlertTriangle, RefreshCw, Trash2,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
@@ -17,13 +17,46 @@ import TeamCrest from "@/components/public/TeamCrest";
 const STORAGE_KEY = "rlt_footy_tips_v2";
 const PROFILE_KEY = "rlt_footy_tipster_profile";
 const POINTS_KEY = "rlt_footy_points";
+const MARGIN_PRESETS = [1, 6, 12, 18, 24, 30, 40];
 
+// ── Safe localStorage with corruption detection ─────────────────────
 const readJson = (key, fallback) => {
-  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch { return fallback; }
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null || raw === undefined) return fallback;
+    const parsed = JSON.parse(raw);
+    if (typeof fallback === 'object' && !Array.isArray(fallback) && (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null)) {
+      console.warn(`[RLT] Corrupted data for ${key}, resetting`);
+      localStorage.removeItem(key);
+      return fallback;
+    }
+    return parsed;
+  } catch (e) {
+    console.warn(`[RLT] Failed to parse ${key}, resetting:`, e);
+    try { localStorage.removeItem(key); } catch { /* noop */ }
+    return fallback;
+  }
 };
 const writeJson = (key, value) => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
 };
+
+// ── Tip validation ──────────────────────────────────────────────────
+function isValidTip(tip) {
+  return tip && typeof tip === 'object'
+    && typeof tip.selected_team === 'string' && tip.selected_team.length > 0
+    && typeof tip.margin === 'number' && tip.margin >= 1 && tip.margin <= 60
+    && typeof tip.tipped_at === 'string';
+}
+
+function sanitizeTips(tips) {
+  if (!tips || typeof tips !== 'object') return {};
+  const clean = {};
+  Object.entries(tips).forEach(([id, tip]) => {
+    if (isValidTip(tip)) clean[id] = tip;
+  });
+  return clean;
+}
 
 const shortName = (name) => String(name || "").split(" ").pop();
 
@@ -31,7 +64,7 @@ const shortName = (name) => String(name || "").split(" ").pop();
 const PTS_CORRECT = 3;
 const PTS_MARGIN_BONUS = 2;
 
-// ── Game Logic ──────────────────────────────────────────────────────
+// ── Game Logic ────────────────────────────────────────────────
 function deriveScores(game, selectedTeam, margin) {
   const seed = String(game.id || game.home_team).split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
   const loser = 10 + (seed % 18);
@@ -109,24 +142,25 @@ function playLockSound() {
 
 // ── Confetti burst on tip lock ──────────────────────────────────────
 function ConfettiBurst({ active }) {
-  if (!active) return null;
-  const particles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
+  const particles = useMemo(() => Array.from({ length: 24 }, (_, i) => ({
     id: i,
-    x: (Math.random() - 0.5) * 260,
-    y: -(Math.random() * 160 + 40),
-    r: Math.random() * 540,
-    color: ["#00ff88", "#ff6b35", "#00d4ff", "#ffd700", "#ff3366", "#a855f7"][i % 6],
-    size: 3 + Math.random() * 5,
-    shape: i % 3 === 0 ? "circle" : "square",
+    x: (Math.random() - 0.5) * 300,
+    y: -(Math.random() * 180 + 50),
+    r: Math.random() * 720,
+    color: ["#00ff88", "#ff6b35", "#00d4ff", "#ffd700", "#ff3366", "#a855f7", "#34d399", "#f472b6"][i % 8],
+    size: 3 + Math.random() * 6,
+    shape: i % 3 === 0 ? "circle" : i % 3 === 1 ? "square" : "diamond",
+    delay: Math.random() * 0.15,
   })), []);
+  if (!active) return null;
   return (
     <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
       {particles.map((p) => (
         <motion.div
           key={p.id}
           initial={{ x: "50%", y: "70%", opacity: 1, scale: 1, rotate: 0 }}
-          animate={{ x: `calc(50% + ${p.x}px)`, y: `calc(70% + ${p.y}px)`, opacity: 0, scale: 0.3, rotate: p.r }}
-          transition={{ duration: 1.1, ease: "easeOut" }}
+          animate={{ x: `calc(50% + ${p.x}px)`, y: `calc(70% + ${p.y}px)`, opacity: 0, scale: 0.2, rotate: p.r }}
+          transition={{ duration: 1.3, ease: "easeOut", delay: p.delay }}
           style={{
             position: "absolute", width: p.size, height: p.size,
             backgroundColor: p.color,
@@ -251,11 +285,12 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
   const [margin, setMargin] = useState(tip?.margin || 8);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
+  const lockingRef = useRef(false); // Prevent double-lock race condition
   const scores = deriveScores(game, selectedTeam, margin);
   const status = getStatus(game.kickoff, game.status);
   const timeLocked = status.label === "Locked" || status.label === "Final" || status.label === "Live";
   const alreadyTipped = !!tip;
-  const canInteract = !timeLocked && !alreadyTipped; // Once tipped = permanent
+  const canInteract = !timeLocked && !alreadyTipped && !lockingRef.current; // Once tipped = permanent
   const countdown = useCountdown(game.kickoff);
   const tipResult = checkTipResult(game, tip);
 
@@ -268,11 +303,29 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
 
   const handleLock = (e) => {
     e.stopPropagation();
-    if (!canInteract) return;
+    if (!canInteract || lockingRef.current) return;
+    // Double-lock prevention with ref
+    lockingRef.current = true;
+    // Validate before locking
+    if (!selectedTeam || margin < 1 || margin > 60) {
+      lockingRef.current = false;
+      return;
+    }
     setShowConfetti(true);
     playLockSound();
-    setTimeout(() => setShowConfetti(false), 1200);
+    // Screen shake effect
+    try {
+      const el = e.currentTarget?.closest('article');
+      if (el) {
+        el.style.animation = 'none';
+        el.offsetHeight; // force reflow
+        el.style.animation = 'shake 0.4s ease-out';
+      }
+    } catch { /* noop */ }
+    setTimeout(() => setShowConfetti(false), 1400);
     onTip(game, { selected_team: selectedTeam, margin, predicted_home_score: scores.home, predicted_away_score: scores.away });
+    // Release lock after animation
+    setTimeout(() => { lockingRef.current = false; }, 1500);
   };
 
   // Show points animation when result first becomes available
@@ -457,7 +510,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
               </div>
             </div>
 
-            {/* Margin slider */}
+            {/* Margin slider + quick-picks */}
             <div className="mt-3 border border-border/20 bg-black/30 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400">Win margin</span>
@@ -473,11 +526,30 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                   <span className="text-[8px] text-slate-500">pts</span>
                 </div>
               </div>
+              {/* Quick-pick margin buttons */}
+              <div className="mt-2 flex items-center gap-1">
+                {MARGIN_PRESETS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    disabled={!canInteract}
+                    onClick={(e) => { e.stopPropagation(); setMargin(m); }}
+                    className={`flex-1 min-h-[28px] text-[8px] font-bold font-mono border transition-all ${
+                      margin === m
+                        ? "border-primary/50 bg-primary/20 text-primary"
+                        : "border-border/20 bg-black/20 text-slate-500 hover:border-primary/25 hover:text-slate-300"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
               <input
                 type="range" min="1" max="40" value={margin}
                 disabled={!canInteract}
                 onChange={(e) => setMargin(Number(e.target.value))}
                 className="mt-2 w-full accent-primary"
+                aria-label="Win margin prediction"
               />
               <div className="mt-1.5 flex items-center justify-between">
                 <span className="text-[8px] text-slate-500">Your prediction</span>
@@ -495,22 +567,28 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
             <motion.button
               type="button"
               disabled={!canInteract}
-              whileTap={canInteract ? { scale: 0.96 } : {}}
-              whileHover={canInteract ? { boxShadow: "0 0 24px hsl(var(--primary) / 0.3)" } : {}}
+              whileTap={canInteract ? { scale: 0.94 } : {}}
+              whileHover={canInteract ? { boxShadow: "0 0 28px hsl(var(--primary) / 0.35)" } : {}}
               onClick={handleLock}
-              className={`mt-3 flex min-h-12 w-full items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${
+              aria-label={timeLocked ? "Game has started" : `Lock tip for ${shortName(selectedTeam)} by ${margin} points`}
+              className={`mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${
                 timeLocked
                   ? "bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                  : "bg-gradient-to-r from-primary via-accent to-primary text-white shadow-[0_0_16px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_28px_hsl(var(--primary)/0.35)]"
+                  : "bg-gradient-to-r from-primary via-accent to-primary text-white shadow-[0_0_16px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_28px_hsl(var(--primary)/0.35)] active:scale-95"
               }`}
             >
               {timeLocked ? (
                 <><Shield className="h-3.5 w-3.5" /> Game Started</>
               ) : (
                 <>
-                  <Target className="h-4 w-4" />
+                  <motion.div
+                    animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 3 }}
+                  >
+                    <Target className="h-4 w-4" />
+                  </motion.div>
                   <span>Lock My Tip</span>
-                  <span className="text-[7px] opacity-70 ml-1">(Final)</span>
+                  <Lock className="h-3 w-3 opacity-60" />
                 </>
               )}
             </motion.button>
@@ -623,21 +701,50 @@ function Leaderboard({ entries, tips, totalPoints }) {
 // ── Main Export ──────────────────────────────────────────────────────
 export default function ScorePredictor({ onSharePrediction }) {
   const queryClient = useQueryClient();
-  const [tips, setTips] = useState(() => readJson(STORAGE_KEY, {}));
+  const [tips, setTips] = useState(() => sanitizeTips(readJson(STORAGE_KEY, {})));
   const [filter, setFilter] = useState("near");
   const [activeGameId, setActiveGameId] = useState("");
+  const [dataCorrupted, setDataCorrupted] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const queriesEnabled = appParams.hasBase44Config;
 
   // Persistent points
   const [totalPoints, setTotalPoints] = useState(() => readJson(POINTS_KEY, 0));
 
+  // Cross-tab sync: listen for localStorage changes from other tabs
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY) {
+        try {
+          const updated = sanitizeTips(JSON.parse(e.newValue || '{}'));
+          setTips(updated);
+        } catch { /* ignore invalid */ }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // Corruption detection
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw && typeof JSON.parse(raw) !== 'object') {
+        setDataCorrupted(true);
+      }
+    } catch {
+      setDataCorrupted(true);
+    }
+  }, []);
+
   // ── Real NRL fixtures from RugbyAPI2 ──
-  const { data: apiFixtures = [], isLoading: apiLoading } = useQuery({
+  const { data: apiFixtures = [], isLoading: apiLoading, isError: apiError, refetch: retryApi } = useQuery({
     queryKey: ["nrlApiFixtures"],
     queryFn: fetchUpcomingFixtures,
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
-    retry: 1,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
     meta: { silent: true },
   });
 
@@ -715,17 +822,21 @@ export default function ScorePredictor({ onSharePrediction }) {
     // Tips are permanent — only allow if not already tipped
     if (tips[game.id]) return;
 
-    const next = {
-      ...tips,
-      [game.id]: {
-        ...tip,
-        game_id: game.id,
-        home_team: game.home_team,
-        away_team: game.away_team,
-        kickoff: game.kickoff,
-        tipped_at: new Date().toISOString(),
-      },
+    // Validate the tip before accepting
+    const tipObj = {
+      ...tip,
+      game_id: game.id,
+      home_team: game.home_team,
+      away_team: game.away_team,
+      kickoff: game.kickoff,
+      tipped_at: new Date().toISOString(),
     };
+    if (!isValidTip(tipObj)) {
+      console.warn('[RLT] Invalid tip rejected:', tipObj);
+      return;
+    }
+
+    const next = { ...tips, [game.id]: tipObj };
     setTips(next);
     writeJson(STORAGE_KEY, next);
     writeJson(PROFILE_KEY, { streak: Math.max(1, Object.keys(next).length), updated_at: new Date().toISOString() });
@@ -735,20 +846,38 @@ export default function ScorePredictor({ onSharePrediction }) {
     } catch { /* ignore */ }
 
     if (queriesEnabled) {
-      createTip.mutate({
-        game_id: game.id,
-        game_label: game.label || "NRL Fixture",
-        home_team: game.home_team,
-        away_team: game.away_team,
-        selected_team: tip.selected_team,
-        predicted_home_score: tip.predicted_home_score,
-        predicted_away_score: tip.predicted_away_score,
-        margin: tip.margin,
-        tipper_name: "Vegas Fan",
-        kickoff: game.kickoff,
-      });
+      createTip.mutate(
+        {
+          game_id: game.id,
+          game_label: game.label || "NRL Fixture",
+          home_team: game.home_team,
+          away_team: game.away_team,
+          selected_team: tip.selected_team,
+          predicted_home_score: tip.predicted_home_score,
+          predicted_away_score: tip.predicted_away_score,
+          margin: tip.margin,
+          tipper_name: "Vegas Fan",
+          kickoff: game.kickoff,
+        },
+        {
+          onError: (err) => {
+            // Don't lose the local tip — warn but keep state
+            console.warn('[RLT] Failed to sync tip to server:', err);
+          },
+        }
+      );
     }
   }, [tips, queriesEnabled, createTip]);
+
+  // Reset handler (for corruption recovery)
+  const handleResetTips = useCallback(() => {
+    setTips({});
+    setTotalPoints(0);
+    writeJson(STORAGE_KEY, {});
+    writeJson(POINTS_KEY, 0);
+    setDataCorrupted(false);
+    setShowResetConfirm(false);
+  }, []);
 
   const handleShare = () => {
     if (!activeGame || !onSharePrediction) return;
@@ -768,6 +897,74 @@ export default function ScorePredictor({ onSharePrediction }) {
       <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-primary" />
 
       <div className="p-4 sm:p-5">
+        {/* Data corruption banner */}
+        {dataCorrupted && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mb-4 border border-amber-500/30 bg-amber-500/5 p-3"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-amber-300">Tips data may be corrupted</p>
+                <p className="text-[9px] text-amber-400/60 mt-0.5">Some saved tips couldn't be read. You can reset to start fresh.</p>
+              </div>
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="shrink-0 flex items-center gap-1 px-2 py-1 border border-amber-500/30 bg-amber-500/10 text-[8px] font-bold uppercase text-amber-300 hover:bg-amber-500/20 transition-colors"
+              >
+                <RefreshCw className="h-3 w-3" /> Reset
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Reset confirmation dialog */}
+        <AnimatePresence>
+          {showResetConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowResetConfirm(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                className="border border-border bg-card cmd-glass p-6 max-w-sm mx-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-red-500/10 border border-red-500/20">
+                    <Trash2 className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-display text-lg uppercase">Reset All Tips?</h4>
+                    <p className="text-[11px] text-muted-foreground">This will permanently delete all your saved tips and points.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="px-4 py-2 border border-border text-xs uppercase tracking-wider font-bold hover:bg-muted/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleResetTips}
+                    className="px-4 py-2 bg-red-500 text-white text-xs uppercase tracking-wider font-bold hover:bg-red-600 transition-colors"
+                  >
+                    <Trash2 className="inline h-3 w-3 mr-1" /> Delete Everything
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
@@ -800,6 +997,15 @@ export default function ScorePredictor({ onSharePrediction }) {
             )}
             {apiLoading && (
               <span className="text-[7px] text-slate-500 animate-pulse">Loading fixtures…</span>
+            )}
+            {apiError && (
+              <button
+                onClick={() => retryApi()}
+                className="flex items-center gap-1 text-[7px] text-red-400 hover:text-red-300 transition-colors"
+              >
+                <AlertTriangle className="h-2.5 w-2.5" /> API Error
+                <RefreshCw className="h-2.5 w-2.5" />
+              </button>
             )}
           </div>
         </div>
@@ -913,16 +1119,39 @@ export default function ScorePredictor({ onSharePrediction }) {
           </AnimatePresence>
           {fixtures.length === 0 && (
             <div className="border border-border/30 bg-black/30 p-6 text-center">
-              <Shield className="mx-auto h-8 w-8 text-slate-600" />
-              <p className="mt-2 text-xs font-bold text-slate-400">
-                {apiLoading ? "Loading real NRL fixtures…"
-                  : filter === "mine" ? "No tips locked yet."
-                  : "No fixtures available."}
-              </p>
-              {filter === "mine" && (
-                <button onClick={() => setFilter("near")} className="mt-2 text-[10px] text-primary hover:underline">
-                  Browse upcoming games →
-                </button>
+              {apiLoading ? (
+                <>
+                  <div className="mx-auto h-8 w-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  <p className="mt-3 text-xs font-bold text-slate-400">Loading real NRL fixtures…</p>
+                  <p className="mt-1 text-[9px] text-slate-500">Connecting to live data feed</p>
+                </>
+              ) : apiError ? (
+                <>
+                  <AlertTriangle className="mx-auto h-8 w-8 text-amber-400/60" />
+                  <p className="mt-2 text-xs font-bold text-amber-300">Couldn't load fixtures</p>
+                  <p className="mt-1 text-[9px] text-slate-500">The NRL data feed is temporarily unavailable.</p>
+                  <button
+                    onClick={() => retryApi()}
+                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 border border-primary/30 bg-primary/10 text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Try Again
+                  </button>
+                </>
+              ) : filter === "mine" ? (
+                <>
+                  <Target className="mx-auto h-8 w-8 text-slate-600" />
+                  <p className="mt-2 text-xs font-bold text-slate-400">No tips locked yet</p>
+                  <p className="mt-1 text-[9px] text-slate-500">Pick your winners and lock them in!</p>
+                  <button onClick={() => setFilter("near")} className="mt-3 inline-flex items-center gap-1 text-[10px] text-primary hover:underline">
+                    Browse upcoming games <ArrowRight className="h-3 w-3" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Shield className="mx-auto h-8 w-8 text-slate-600" />
+                  <p className="mt-2 text-xs font-bold text-slate-400">No fixtures available</p>
+                  <p className="mt-1 text-[9px] text-slate-500">Check back later for the latest NRL draw.</p>
+                </>
               )}
             </div>
           )}

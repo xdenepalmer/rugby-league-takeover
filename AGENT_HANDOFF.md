@@ -40,7 +40,11 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001K** — Reconciled approved RLT-001E baseline onto canonical `origin/main` (`8c3dd79`) on new branch `bmad/reconcile-rlt-001k`. `origin/main` already carries the live Antigravity UI/UX pass; reconciliation keeps BOTH that and RLT-001E. 15 baseline-only files clean-applied + 6 overlap files hand-merged (manifest, index.css, HeroSection, PublicLayout, SiteNav, Store.jsx). 37/37 validation green. No backend/entity/function/store-shipping changes. Manual Base44 Publish required after final merge. No push / no PR; PR #1 left open but superseded.
+- **RLT-001V** — Re-applied combined T+U lint fixes on current `main` (`aabc8c87`) in one clean branch `bmad/story-rlt-001v-claude`: ScorePredictor (5 unused imports + `rules-of-hooks` `useMemo` hoist), SlotMachine (`useAnimation`), AdsManager (`Globe`), AdSlot (`useMemo`). **`npm run lint` fully green (repo-wide)**, tests 37/37, typecheck/build green. Import + hook-order only; no tipping/slot/ads behaviour change. Explicit-path staging. Commit `fix: restore combined lint gate`. No push. **Supersedes RLT-001T/U** — merge V, not T/U.
+- **RLT-001S** — engagement clamp (`84e69c6`); merge after RLT-001V (re-apply on then-current `main` if moved).
+- **RLT-001T/U** — accepted in substance, **superseded by RLT-001V**. **RLT-001R/P/Q** abandoned/superseded.
+- **RLT-001M / L** — PR #2 squash-merged into `main` (`56ddbfc`); PR #1 closed superseded. Manual Base44 Publish still required.
+- ⚠️ **Process:** relentless concurrent-agent churn keeps moving `main` and shifting lint targets — merge RLT-001V promptly; consider a CI lint gate on the Base44 auto-sync commits.
 - **RLT-001J** — Read-only conflict analysis; established `origin/main` = Antigravity WIP (`65d417f`) + sync commit; recommended Option B. Completed.
 - **RLT-001I** — Pushed `bmad/baseline-integration` and opened PR #1; GitHub flagged CONFLICTING. Completed (not merged).
 - **RLT-001E-MERGE** — Merged approved RLT-001E (+ FIXUP) from `bmad/story-rlt-001e-claude` (`a79df80`) into `bmad/baseline-integration` via `--no-ff` (no conflicts). Antigravity final UX pass P0 12/12. 37/37 validation green. Manual Base44 Publish required to go live. No backend/entity/function changes.

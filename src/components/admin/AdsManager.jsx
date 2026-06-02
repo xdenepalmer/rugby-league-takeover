@@ -5,7 +5,7 @@ import {
   BarChart3, MousePointerClick, MonitorSmartphone,
   LayoutTemplate, X, Save, ChevronDown, Copy, ExternalLink,
   Calendar, AlertTriangle, CheckCircle2, RefreshCw, Link2,
-  ImageIcon, Zap, Clock, Globe,
+  ImageIcon, Zap, Clock,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";

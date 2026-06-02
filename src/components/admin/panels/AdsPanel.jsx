@@ -1,12 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Activity } from "lucide-react";
+import { Megaphone, Activity, Shield, Gauge, BarChart3, Eye } from "lucide-react";
 import AdsManager from "../AdsManager";
 
 export default function AdsPanel() {
   return (
     <div className="grid gap-5">
-      {/* Section Header - same pattern as SettingsPanel */}
+      {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -31,6 +31,27 @@ export default function AdsPanel() {
             Manage advertising placements across the site. Toggle the system on or off,
             assign ads to positions, and track performance — all plug-and-play.
           </p>
+
+          {/* Feature highlights */}
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { icon: Eye,       label: "Viewability",     desc: "50% visible for 1s" },
+              { icon: Gauge,     label: "Smart Rotation",  desc: "Weighted by views" },
+              { icon: Shield,    label: "Fraud Protection", desc: "Rate-limited clicks" },
+              { icon: BarChart3, label: "Analytics",       desc: "Impressions & CTR" },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div
+                key={label}
+                className="flex items-start gap-2 border border-border/30 bg-muted/5 px-3 py-2"
+              >
+                <Icon className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-foreground/80">{label}</p>
+                  <p className="text-[8px] text-muted-foreground/60 font-mono">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </motion.div>
 
