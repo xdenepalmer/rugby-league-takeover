@@ -120,3 +120,13 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Branch `bmad/story-rlt-001w-lint-gate` from `origin/main` (`983fd82`). Explicit-path staging (no `git add -A`; the worktree's symlinked `node_modules` not staged).
 - Validation (in worktree): `npm run lint` **exit 0 — fully green (repo-wide)** · `npm test` 37/37 · `npm run typecheck` · `npm run build` green.
 - **RLT-001S** (forum engagement clamp, `84e69c6`) remains next, to be re-applied/merged on the then-current main once this lint gate lands. Commit `fix: restore lint gate from fixed main`. No push.
+
+## RLT-001W-MERGE — Merge fixed-SHA lint fix into main (Claude)
+- Pushed `bmad/story-rlt-001w-lint-gate`; opened **PR #3**. `origin/main` had advanced `983fd82 → 68c6d4e` ("UX polish pass 2", re-touched ScorePredictor) so the branch was stale-risk; ran a **local trial-merge** first → auto-merged with **no conflicts** and lint **green**, so safe to merge. Squash-merged PR #3 → `main` **`258c642`** "RLT-001W: Restore lint gate from fixed main". Validation on merged main: `npm run lint` **exit 0** · `npm test` 37/37 · typecheck · build green. (A transient network error hit the merge response but the merge landed: PR #3 `state=MERGED`.) Manual Base44 Publish still required.
+
+## RLT-001X — Re-apply forum engagement clamp from lint-green main (Claude)
+- Base: current `origin/main` had moved again to **`8fafdaf`** ("UX polish pass 3"), past the story's cited `258c642`; used current main (still lint-green, `getEngagement` still unclamped) to avoid immediate staleness. Worked in an **isolated worktree** (`C:\Users\deneo\rlt-001x-wt`).
+- Branch `bmad/story-rlt-001x-engagement-clamp` from `8fafdaf`. Clamped `getEngagement` `likes`/`views` with `Math.max(0, …)` (also neutralizes `NaN`); fallback (`liked_by` length, missing → 0) preserved. Re-created clean `tests/forum-engagement-counters.test.mjs` (source guard + negative→0 / passthrough / fallback / non-numeric). No thread/reply/publish/reward/tipping/slot/ads changes.
+- Explicit-path staging (no `git add -A`; symlinked `node_modules` excluded).
+- Validation (in worktree): `npm test` **42/42** · `npm run lint` **exit 0** · `npm run typecheck` · `npm run build` green.
+- **RLT-001X replaces RLT-001S cleanly**; old **RLT-001P/Q/R/S** branches remain superseded. **Manual Base44 Publish required after merge.** Commit `fix: clamp forum engagement counters`. No push.

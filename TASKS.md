@@ -29,8 +29,10 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-001T | Restore current main lint gate (forum tipping) | superseded by RLT-001V | Forum lint fix accepted in substance; folded into RLT-001V |
 | RLT-001U | Restore ads lint gate | superseded by RLT-001V | Ads lint fix accepted in substance; folded into RLT-001V |
 | RLT-001V | Re-apply combined lint gate fixes on local main | blocked (env instability) | Local shared tree churned mid-story; commit `74cb431` was contaminated by concurrent WIP and reset. Superseded by RLT-001W (fixed-remote approach) |
-| RLT-001W | Apply lint-gate fix via fixed remote main branch | completed (await merge) | Worktree branch `bmad/story-rlt-001w-lint-gate` from `origin/main` (`983fd82`); removed 3 unused imports in ScorePredictor (`ChevronLeft`,`ChevronRight`,`Eye`) — only remaining errors at that SHA. **`npm run lint` fully green**, tests 37/37, typecheck/build green. No churn/contamination |
-| RLT-001S | Re-apply forum engagement clamp on current main | completed (await lint-green merge) | `bmad/story-rlt-001s-claude` (`84e69c6`); merge after RLT-001W lands (lint green). Re-apply on then-current main if it has moved |
+| RLT-001W | Apply lint-gate fix via fixed remote main branch | merged | Worktree branch from `origin/main` (`983fd82`); removed 3 unused ScorePredictor imports. **Squash-merged → `main` `258c642`** (RLT-001W-MERGE; trial-merge verified conflict-free + green). Lint gate restored |
+| RLT-001S | Re-apply forum engagement clamp on current main | superseded by RLT-001X | `84e69c6` predated lint-green main; replaced cleanly by RLT-001X |
+| RLT-001X | Re-apply forum engagement clamp from lint-green main | completed (await merge) | Worktree branch `bmad/story-rlt-001x-engagement-clamp` from current `origin/main` (`8fafdaf`, lint-green); `getEngagement` clamp + 5 tests; tests 42/42, lint/typecheck/build green. No tipping/slot/ads/backend changes |
+| RLT-002 | Replace starter README | completed (in RLT-001D) | Project-specific README |
 | RLT-002 | Replace starter README | completed (in RLT-001D) | Project-specific README |
 | RLT-003 | Normalize project identity metadata | completed (in RLT-001D) | `package.json`, `package-lock.json`, `base44/config.jsonc` |
 | RLT-004 | Harden StoreOrder creation authority | queued | Server-authoritative order creation |

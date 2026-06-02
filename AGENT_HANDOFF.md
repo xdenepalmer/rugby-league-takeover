@@ -40,7 +40,10 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001W** — Applied the lint-gate fix from a **fixed remote SHA** (`origin/main` `983fd82`) in an **isolated git worktree** (`bmad/story-rlt-001w-lint-gate`), avoiding the churning shared tree. Removed 3 unused imports in `ScorePredictor.jsx` (`ChevronLeft`,`ChevronRight`,`Eye`) — the only remaining lint errors at that SHA. **`npm run lint` fully green**, tests 37/37, typecheck/build green. No behaviour change; explicit-path staging. Commit `fix: restore lint gate from fixed main`. No push.
+- **RLT-001X** — Re-applied the forum `getEngagement` clamp from current lint-green `main` (`8fafdaf`) in an **isolated worktree** (`bmad/story-rlt-001x-engagement-clamp`): likes/views `Math.max(0,…)` + 5 tests; fallback preserved. **tests 42/42, `npm run lint` green, typecheck/build green.** No tipping/slot/ads/backend changes; explicit-path staging. Commit `fix: clamp forum engagement counters`. No push. **Replaces RLT-001S cleanly.**
+- **RLT-001W** — MERGED via PR #3 squash → `main` `258c642` (RLT-001W-MERGE; trial-merge verified conflict-free + green). Lint gate restored.
+- **RLT-001V** — BLOCKED (env instability); superseded by RLT-001W. **RLT-001P/Q/R/S/T/U** superseded.
+- Manual Base44 Publish still required to take merged work live.
 - **RLT-001V** — BLOCKED by environment instability (local shared tree churned; contaminated commit `74cb431` reset, concurrent work preserved). Superseded by RLT-001W.
 - **RLT-001S** — engagement clamp (`84e69c6`); merge after RLT-001W lands lint-green (re-apply on then-current `main` if moved).
 - **RLT-001P/Q/R/T/U** — superseded. **RLT-001M/L** — PR #2 merged into `main` (`56ddbfc`); Manual Base44 Publish still required.
