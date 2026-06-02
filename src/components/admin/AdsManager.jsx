@@ -3,29 +3,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Megaphone, Plus, Trash2, Pencil, Eye, EyeOff,
   BarChart3, MousePointerClick, MonitorSmartphone,
-  LayoutTemplate, X, Save, ChevronDown
+  LayoutTemplate, X, Save, ChevronDown, Copy, ExternalLink,
+  Calendar, AlertTriangle, CheckCircle2, RefreshCw, Link2,
+  ImageIcon, Zap, Clock, Globe,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import ImageField from "./ImageField";
 
 /* ── Constants ── */
 const POSITIONS = [
-  { key: "banner-top",    label: "Banner Top",    desc: "Full-width above main content" },
-  { key: "banner-bottom", label: "Banner Bottom", desc: "Full-width below main content" },
-  { key: "sidebar",       label: "Sidebar",       desc: "Right column on desktop" },
-  { key: "in-feed",       label: "In-Feed",       desc: "Between content cards" },
-  { key: "footer",        label: "Footer",        desc: "Above site footer" },
+  { key: "banner-top",    label: "Banner Top",    desc: "Full-width above main content", icon: "↕" },
+  { key: "banner-bottom", label: "Banner Bottom", desc: "Full-width below main content", icon: "↕" },
+  { key: "sidebar",       label: "Sidebar",       desc: "Right column on desktop", icon: "▮" },
+  { key: "in-feed",       label: "In-Feed",       desc: "Between content cards", icon: "☰" },
+  { key: "footer",        label: "Footer",        desc: "Above site footer", icon: "▬" },
 ];
 
 const SIZES = [
-  { key: "leaderboard",       label: "Leaderboard",       dim: "728 × 90" },
-  { key: "medium-rectangle",  label: "Medium Rectangle",  dim: "300 × 250" },
-  { key: "wide-skyscraper",   label: "Wide Skyscraper",   dim: "160 × 600" },
-  { key: "mobile-banner",     label: "Mobile Banner",     dim: "320 × 50" },
+  { key: "leaderboard",       label: "Leaderboard",       dim: "728 × 90",  w: 728, h: 90 },
+  { key: "medium-rectangle",  label: "Medium Rectangle",  dim: "300 × 250", w: 300, h: 250 },
+  { key: "wide-skyscraper",   label: "Wide Skyscraper",   dim: "160 × 600", w: 160, h: 600 },
+  { key: "mobile-banner",     label: "Mobile Banner",     dim: "320 × 50",  w: 320, h: 50 },
 ];
 
 const emptyAd = () => ({
@@ -38,6 +39,7 @@ const emptyAd = () => ({
   is_active: true,
   start_date: "",
   end_date: "",
+  created_at: new Date().toISOString(),
 });
 
 /* ── Helpers ── */
@@ -45,50 +47,110 @@ function readLS(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 }
 function writeLS(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* noop */ }
+}
+function isValidUrl(url) {
+  if (!url) return false;
+  try { new URL(url); return true; } catch { return false; }
+}
+function isScheduleActive(ad) {
+  if (!ad) return false;
+  const today = new Date().toISOString().split("T")[0];
+  if (ad.start_date && today < ad.start_date) return false;
+  if (ad.end_date && today > ad.end_date) return false;
+  return true;
+}
+function getStatusLabel(ad) {
+  if (!ad.is_active) return { label: "Paused", color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
+  if (!isScheduleActive(ad)) return { label: "Scheduled", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+  return { label: "Live", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
+}
+
+/* ── Validation ── */
+function validateAd(ad) {
+  const errors = [];
+  if (!ad.title?.trim()) errors.push("Title is required");
+  if (!ad.image_url?.trim()) errors.push("Ad creative image is required");
+  if (ad.target_url && !isValidUrl(ad.target_url)) errors.push("Target URL is not a valid URL");
+  if (ad.start_date && ad.end_date && ad.start_date > ad.end_date) errors.push("End date must be after start date");
+  return errors;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function AdsManager() {
   /* ── State ── */
   const [adsEnabled, setAdsEnabled] = useState(() => localStorage.getItem("rlt_ads_enabled") === "true");
-  const [ads, setAds]     = useState(() => readLS("rlt_ad_config", []));
-  const [stats]           = useState(() => readLS("rlt_ad_stats", {}));
-  const [editing, setEditing] = useState(null);   // null | ad object
-  const [view, setView]       = useState("slots"); // "slots" | "form" | "analytics"
+  const [ads, setAds] = useState(() => readLS("rlt_ad_config", []));
+  const [stats, setStats] = useState(() => readLS("rlt_ad_stats", {}));
+  const [editing, setEditing] = useState(null);
+  const [view, setView] = useState("slots");
+  const [errors, setErrors] = useState([]);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   /* Persist on change */
-  useEffect(() => { localStorage.setItem("rlt_ads_enabled", String(adsEnabled)); }, [adsEnabled]);
-  useEffect(() => { writeLS("rlt_ad_config", ads); }, [ads]);
-
-  /* Listen for live stat updates from AdSlot CustomEvents */
   useEffect(() => {
-    const handle = () => {
-      /* no-op refresh — stats are read once on mount to avoid constant re-render loops */
-    };
-    window.addEventListener("rlt_ad_impression", handle);
-    window.addEventListener("rlt_ad_click", handle);
+    localStorage.setItem("rlt_ads_enabled", String(adsEnabled));
+  }, [adsEnabled]);
+
+  useEffect(() => {
+    writeLS("rlt_ad_config", ads);
+    // Notify same-tab listeners (AdSlot components)
+    try { window.dispatchEvent(new CustomEvent("rlt_ad_config_updated")); } catch { /* noop */ }
+  }, [ads]);
+
+  /* Refresh stats periodically */
+  useEffect(() => {
+    const refresh = () => setStats(readLS("rlt_ad_stats", {}));
+    const id = setInterval(refresh, 10000);
+    const handleImpression = () => setTimeout(refresh, 600);
+    window.addEventListener("rlt_ad_impression", handleImpression);
+    window.addEventListener("rlt_ad_click", handleImpression);
     return () => {
-      window.removeEventListener("rlt_ad_impression", handle);
-      window.removeEventListener("rlt_ad_click", handle);
+      clearInterval(id);
+      window.removeEventListener("rlt_ad_impression", handleImpression);
+      window.removeEventListener("rlt_ad_click", handleImpression);
     };
   }, []);
 
   /* ── CRUD ── */
   const saveAd = useCallback((ad) => {
+    const validationErrors = validateAd(ad);
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      toast({ title: "Validation Error", description: validationErrors[0], variant: "destructive" });
+      return;
+    }
+    setErrors([]);
     setAds((prev) => {
       const idx = prev.findIndex((a) => a.id === ad.id);
-      if (idx >= 0) { const copy = [...prev]; copy[idx] = ad; return copy; }
-      return [...prev, ad];
+      if (idx >= 0) { const copy = [...prev]; copy[idx] = { ...ad, updated_at: new Date().toISOString() }; return copy; }
+      return [...prev, { ...ad, created_at: new Date().toISOString() }];
     });
     setEditing(null);
     setView("slots");
-    toast({ title: "Ad saved", description: `"${ad.title || "Untitled"}" has been saved.` });
+    toast({ title: "Ad saved", description: `"${ad.title}" has been saved successfully.` });
   }, []);
 
   const deleteAd = useCallback((id) => {
     setAds((prev) => prev.filter((a) => a.id !== id));
+    setDeleteConfirm(null);
     toast({ title: "Ad removed" });
+  }, []);
+
+  const duplicateAd = useCallback((ad) => {
+    const dup = { ...ad, id: crypto.randomUUID(), title: `${ad.title} (Copy)`, created_at: new Date().toISOString() };
+    setAds((prev) => [...prev, dup]);
+    toast({ title: "Ad duplicated" });
+  }, []);
+
+  const toggleAdActive = useCallback((id) => {
+    setAds((prev) => prev.map((a) => a.id === id ? { ...a, is_active: !a.is_active } : a));
+  }, []);
+
+  const clearAllStats = useCallback(() => {
+    writeLS("rlt_ad_stats", {});
+    setStats({});
+    toast({ title: "Analytics cleared" });
   }, []);
 
   /* ── Analytics aggregation ── */
@@ -114,6 +176,9 @@ export default function AdsManager() {
 
   const maxImpressions = Math.max(1, ...Object.values(analytics.byPosition).map((v) => v.impressions));
 
+  const activeCount = ads.filter((a) => a.is_active && isScheduleActive(a)).length;
+  const scheduledCount = ads.filter((a) => a.is_active && !isScheduleActive(a)).length;
+
   /* ── Render ── */
   return (
     <section className="grid gap-5">
@@ -127,6 +192,19 @@ export default function AdsManager() {
             <h3 className="font-display text-xl uppercase tracking-wide">
               Global Ad System
             </h3>
+            <div className="mt-2 flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Megaphone className="h-3 w-3" /> {ads.length} total
+              </span>
+              <span className="flex items-center gap-1 text-emerald-400">
+                <Zap className="h-3 w-3" /> {activeCount} live
+              </span>
+              {scheduledCount > 0 && (
+                <span className="flex items-center gap-1 text-amber-400">
+                  <Clock className="h-3 w-3" /> {scheduledCount} scheduled
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -173,11 +251,12 @@ export default function AdsManager() {
       </div>
 
       {/* ──────────── View Tabs ──────────── */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {[
-          { key: "slots",     label: "Ad Slots",    icon: LayoutTemplate },
-          { key: "analytics", label: "Analytics",    icon: BarChart3 },
-        ].map(({ key, label, icon: Icon }) => (
+          { key: "slots",     label: "Ad Slots",  icon: LayoutTemplate, count: ads.length },
+          { key: "list",      label: "All Ads",   icon: Megaphone, count: ads.length },
+          { key: "analytics", label: "Analytics",  icon: BarChart3 },
+        ].map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
             onClick={() => setView(key)}
@@ -189,11 +268,12 @@ export default function AdsManager() {
           >
             <Icon className="h-3.5 w-3.5" />
             {label}
+            {count > 0 && <span className="text-[8px] ml-0.5 opacity-60">({count})</span>}
           </button>
         ))}
         <Button
           size="sm"
-          onClick={() => { setEditing(emptyAd()); setView("form"); }}
+          onClick={() => { setEditing(emptyAd()); setView("form"); setErrors([]); }}
           className="ml-auto rounded-none bg-primary hover:bg-primary/90 text-xs uppercase tracking-wider font-bold"
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -201,8 +281,10 @@ export default function AdsManager() {
         </Button>
       </div>
 
-      {/* ──────────── 2. AD SLOTS OVERVIEW ──────────── */}
+      {/* ──────────── VIEWS ──────────── */}
       <AnimatePresence mode="wait">
+
+        {/* ── 2. AD SLOTS POSITION OVERVIEW ── */}
         {view === "slots" && (
           <motion.div
             key="slots"
@@ -213,18 +295,20 @@ export default function AdsManager() {
             className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
           >
             {POSITIONS.map((pos) => {
-              const assigned = ads.find((a) => a.position === pos.key && a.is_active !== false);
+              const assigned = ads.filter((a) => a.position === pos.key);
+              const active = assigned.find((a) => a.is_active && isScheduleActive(a));
+              const posStats = analytics.byPosition[pos.key];
               return (
                 <div
                   key={pos.key}
                   className="border border-border bg-card/40 cmd-glass overflow-hidden group/slot"
                 >
-                  {/* Position preview mockup */}
+                  {/* Position preview */}
                   <div className="relative h-28 bg-gradient-to-b from-muted/20 to-muted/5 flex items-center justify-center overflow-hidden">
-                    {assigned?.image_url ? (
+                    {active?.image_url ? (
                       <img
-                        src={assigned.image_url}
-                        alt={assigned.title}
+                        src={active.image_url}
+                        alt={active.title}
                         className="h-full w-full object-cover opacity-60 transition-opacity duration-300 group-hover/slot:opacity-80"
                       />
                     ) : (
@@ -235,38 +319,62 @@ export default function AdsManager() {
                         </span>
                       </div>
                     )}
-                    {/* Position badge */}
                     <span className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.2em] text-white/80 font-mono">
                       {pos.key}
                     </span>
+                    {/* Stats overlay */}
+                    {(posStats.impressions > 0 || posStats.clicks > 0) && (
+                      <span className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 text-[7px] font-mono text-white/60">
+                        {posStats.impressions} imp · {posStats.clicks} clk
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-4">
-                    <h4 className="font-display text-sm uppercase tracking-wide mb-0.5">
-                      {pos.label}
-                    </h4>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <h4 className="font-display text-sm uppercase tracking-wide">{pos.label}</h4>
+                      {active && (
+                        <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 border ${getStatusLabel(active).color}`}>
+                          {getStatusLabel(active).label}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-muted-foreground/60 mb-3">{pos.desc}</p>
 
-                    {assigned ? (
+                    {active ? (
                       <div className="grid gap-2">
                         <div className="flex items-center gap-2">
-                          <Eye className="h-3 w-3 text-emerald-400" />
-                          <span className="text-xs font-mono text-foreground truncate">{assigned.title || "Untitled"}</span>
+                          <Eye className="h-3 w-3 text-emerald-400 shrink-0" />
+                          <span className="text-xs font-mono text-foreground truncate">{active.title || "Untitled"}</span>
                         </div>
+                        {active.target_url && (
+                          <div className="flex items-center gap-2">
+                            <Link2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span className="text-[10px] font-mono text-muted-foreground truncate">{active.target_url}</span>
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             className="flex-1 rounded-none text-[10px] uppercase tracking-wider"
-                            onClick={() => { setEditing({ ...assigned }); setView("form"); }}
+                            onClick={() => { setEditing({ ...active }); setView("form"); setErrors([]); }}
                           >
                             <Pencil className="mr-1.5 h-3 w-3" /> Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-wider"
+                            onClick={() => duplicateAd(active)}
+                          >
+                            <Copy className="h-3 w-3" />
                           </Button>
                           <Button
                             variant="destructive"
                             size="sm"
                             className="rounded-none text-[10px] uppercase tracking-wider"
-                            onClick={() => deleteAd(assigned.id)}
+                            onClick={() => setDeleteConfirm(active.id)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -277,10 +385,17 @@ export default function AdsManager() {
                         variant="outline"
                         size="sm"
                         className="w-full rounded-none text-[10px] uppercase tracking-wider border-dashed border-primary/20 text-primary hover:bg-primary/5"
-                        onClick={() => { setEditing({ ...emptyAd(), position: pos.key }); setView("form"); }}
+                        onClick={() => { setEditing({ ...emptyAd(), position: pos.key }); setView("form"); setErrors([]); }}
                       >
                         <Plus className="mr-1.5 h-3 w-3" /> Assign Ad
                       </Button>
+                    )}
+
+                    {/* Extra ads in this position */}
+                    {assigned.length > 1 && (
+                      <p className="mt-2 text-[8px] text-muted-foreground/50 font-mono">
+                        +{assigned.length - 1} more ad{assigned.length > 2 ? "s" : ""} in this slot
+                      </p>
                     )}
                   </div>
                 </div>
@@ -289,7 +404,104 @@ export default function AdsManager() {
           </motion.div>
         )}
 
-        {/* ──────────── 3. CREATE / EDIT FORM ──────────── */}
+        {/* ── 2b. ALL ADS LIST ── */}
+        {view === "list" && (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="border border-border bg-card/40 cmd-glass"
+          >
+            <div className="p-4 border-b border-border">
+              <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground font-mono">
+                All Advertisements · {ads.length} total
+              </p>
+            </div>
+            {ads.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground/40">
+                <Megaphone className="h-8 w-8" />
+                <p className="text-xs font-mono uppercase tracking-wider">No ads created yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {ads.map((ad) => {
+                  const status = getStatusLabel(ad);
+                  const pos = POSITIONS.find((p) => p.key === ad.position);
+                  const adStats = stats[`${ad.position}__${ad.id}`] || { impressions: 0, clicks: 0 };
+                  return (
+                    <div key={ad.id} className="flex items-center gap-4 p-4 hover:bg-muted/5 transition-colors">
+                      {/* Thumbnail */}
+                      <div className="w-16 h-12 border border-border/40 bg-muted/10 shrink-0 overflow-hidden flex items-center justify-center">
+                        {ad.image_url ? (
+                          <img src={ad.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-foreground truncate">{ad.title || "Untitled"}</p>
+                          <span className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 border shrink-0 ${status.color}`}>
+                            {status.label}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
+                          <span>{pos?.label || ad.position}</span>
+                          <span>·</span>
+                          <span>{adStats.impressions} imp</span>
+                          <span>{adStats.clicks} clk</span>
+                          {ad.start_date && <span>· from {ad.start_date}</span>}
+                          {ad.end_date && <span>to {ad.end_date}</span>}
+                        </div>
+                      </div>
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-8 w-8 p-0"
+                          onClick={() => toggleAdActive(ad.id)}
+                          title={ad.is_active ? "Pause" : "Activate"}
+                        >
+                          {ad.is_active ? <Eye className="h-3.5 w-3.5 text-emerald-400" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-8 w-8 p-0"
+                          onClick={() => { setEditing({ ...ad }); setView("form"); setErrors([]); }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-8 w-8 p-0"
+                          onClick={() => duplicateAd(ad)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                          onClick={() => setDeleteConfirm(ad.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── 3. CREATE / EDIT FORM ── */}
         {view === "form" && editing && (
           <motion.div
             key="form"
@@ -304,7 +516,7 @@ export default function AdsManager() {
                 {ads.find((a) => a.id === editing.id) ? "Edit Ad" : "New Ad"}
               </p>
               <button
-                onClick={() => { setEditing(null); setView("slots"); }}
+                onClick={() => { setEditing(null); setView("slots"); setErrors([]); }}
                 className="flex h-8 w-8 items-center justify-center border border-border hover:border-primary/30 hover:text-primary transition-colors"
               >
                 <X className="h-4 w-4" />
@@ -312,32 +524,74 @@ export default function AdsManager() {
             </div>
 
             <div className="grid gap-4 p-5">
+              {/* Validation errors */}
+              {errors.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="border border-red-500/30 bg-red-500/5 p-3"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">Validation Errors</span>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {errors.map((err, i) => (
+                      <li key={i} className="text-[11px] text-red-300 font-mono">• {err}</li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Title</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Title *</label>
                   <Input
                     placeholder="Ad campaign name"
                     value={editing.title}
                     onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                    className="h-11 rounded-none"
+                    className={`h-11 rounded-none ${!editing.title?.trim() && errors.length ? "border-red-500/50" : ""}`}
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Target URL</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    Target URL
+                    {editing.target_url && (
+                      isValidUrl(editing.target_url)
+                        ? <CheckCircle2 className="inline h-3 w-3 ml-1 text-emerald-400" />
+                        : <AlertTriangle className="inline h-3 w-3 ml-1 text-red-400" />
+                    )}
+                  </label>
                   <Input
                     placeholder="https://sponsor-website.com"
                     value={editing.target_url}
                     onChange={(e) => setEditing({ ...editing, target_url: e.target.value })}
-                    className="h-11 rounded-none"
+                    className={`h-11 rounded-none ${editing.target_url && !isValidUrl(editing.target_url) ? "border-red-500/50" : ""}`}
                   />
                 </div>
               </div>
 
               <ImageField
-                label="Ad Creative"
+                label="Ad Creative *"
                 value={editing.image_url}
                 onChange={(url) => setEditing({ ...editing, image_url: url })}
               />
+
+              {/* Live preview */}
+              {editing.image_url && (
+                <div className="border border-border/40 bg-black/20 p-3">
+                  <p className="text-[8px] font-bold uppercase tracking-[0.25em] text-muted-foreground/60 mb-2">Preview</p>
+                  <div className="mx-auto overflow-hidden border border-border/20" style={{ maxWidth: 400 }}>
+                    <img
+                      src={editing.image_url}
+                      alt="Preview"
+                      className="w-full object-contain"
+                      style={{ maxHeight: 200 }}
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 {/* Position selector */}
@@ -350,7 +604,7 @@ export default function AdsManager() {
                       className="h-11 w-full appearance-none border border-border bg-background px-3 pr-8 text-sm font-mono rounded-none focus:outline-none focus:ring-1 focus:ring-primary/40"
                     >
                       {POSITIONS.map((p) => (
-                        <option key={p.key} value={p.key}>{p.label}</option>
+                        <option key={p.key} value={p.key}>{p.label} — {p.desc}</option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -377,7 +631,10 @@ export default function AdsManager() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Start Date</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <Calendar className="inline h-3 w-3 mr-1" />Start Date
+                    <span className="text-muted-foreground/50 ml-1">(optional)</span>
+                  </label>
                   <Input
                     type="date"
                     value={editing.start_date}
@@ -386,13 +643,19 @@ export default function AdsManager() {
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">End Date</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <Calendar className="inline h-3 w-3 mr-1" />End Date
+                    <span className="text-muted-foreground/50 ml-1">(optional)</span>
+                  </label>
                   <Input
                     type="date"
                     value={editing.end_date}
                     onChange={(e) => setEditing({ ...editing, end_date: e.target.value })}
-                    className="h-11 rounded-none font-mono"
+                    className={`h-11 rounded-none font-mono ${editing.start_date && editing.end_date && editing.start_date > editing.end_date ? "border-red-500/50" : ""}`}
                   />
+                  {editing.start_date && editing.end_date && editing.start_date > editing.end_date && (
+                    <p className="text-[9px] text-red-400">End date must be after start date</p>
+                  )}
                 </div>
               </div>
 
@@ -405,17 +668,27 @@ export default function AdsManager() {
                   />
                 </label>
 
+                {editing.target_url && isValidUrl(editing.target_url) && (
+                  <a
+                    href={editing.target_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] font-mono text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Preview link
+                  </a>
+                )}
+
                 <div className="ml-auto flex gap-2">
                   <Button
                     variant="outline"
                     className="rounded-none text-xs uppercase tracking-wider"
-                    onClick={() => { setEditing(null); setView("slots"); }}
+                    onClick={() => { setEditing(null); setView("slots"); setErrors([]); }}
                   >
                     Cancel
                   </Button>
                   <Button
                     className="rounded-none bg-primary hover:bg-primary/90 text-xs uppercase tracking-wider font-bold"
-                    disabled={!editing.title && !editing.image_url}
                     onClick={() => saveAd(editing)}
                   >
                     <Save className="mr-2 h-4 w-4" />
@@ -438,32 +711,40 @@ export default function AdsManager() {
             className="grid gap-4"
           >
             {/* KPI cards */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               {[
-                { label: "Total Impressions", value: analytics.totalImpressions.toLocaleString(), icon: Eye },
-                { label: "Total Clicks",      value: analytics.totalClicks.toLocaleString(),      icon: MousePointerClick },
-                { label: "Click-Through Rate", value: `${analytics.ctr}%`,                        icon: BarChart3 },
-              ].map(({ label, value, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="border border-border bg-card/60 cmd-glass p-5"
-                >
+                { label: "Total Impressions", value: analytics.totalImpressions.toLocaleString(), icon: Eye, color: "text-primary" },
+                { label: "Total Clicks", value: analytics.totalClicks.toLocaleString(), icon: MousePointerClick, color: "text-accent" },
+                { label: "Click-Through Rate", value: `${analytics.ctr}%`, icon: BarChart3, color: "text-emerald-400" },
+                { label: "Active Ads", value: `${activeCount}`, icon: Megaphone, color: "text-amber-400" },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="border border-border bg-card/60 cmd-glass p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <Icon className="h-4 w-4 text-primary/60" />
+                    <Icon className={`h-4 w-4 ${color}`} />
                     <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground font-mono">
                       {label}
                     </span>
                   </div>
-                  <p className="font-display text-3xl uppercase tracking-wide">{value}</p>
+                  <p className={`font-display text-3xl uppercase tracking-wide ${color}`}>{value}</p>
                 </div>
               ))}
             </div>
 
             {/* Per-position breakdown */}
             <div className="border border-border bg-card/60 cmd-glass p-5">
-              <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground font-mono mb-4">
-                Per-Position Breakdown
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground font-mono">
+                  Per-Position Breakdown
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-none text-[9px] uppercase tracking-wider text-muted-foreground h-7"
+                  onClick={clearAllStats}
+                >
+                  <RefreshCw className="mr-1 h-3 w-3" /> Reset Stats
+                </Button>
+              </div>
 
               <div className="grid gap-3">
                 {POSITIONS.map((pos) => {
@@ -504,6 +785,45 @@ export default function AdsManager() {
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete Confirmation Dialog ── */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="border border-border bg-card cmd-glass p-6 max-w-sm mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-500/10 border border-red-500/20">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h4 className="font-display text-lg uppercase">Delete Ad?</h4>
+                  <p className="text-[11px] text-muted-foreground">This action cannot be undone. All analytics data for this ad will be preserved.</p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" className="rounded-none text-xs uppercase tracking-wider" onClick={() => setDeleteConfirm(null)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" className="rounded-none text-xs uppercase tracking-wider" onClick={() => deleteAd(deleteConfirm)}>
+                  <Trash2 className="mr-2 h-3 w-3" /> Delete
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
