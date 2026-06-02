@@ -1536,6 +1536,8 @@ export default function SlotMachineBadgeUnlock() {
               className={`h-12 min-h-[44px] w-full select-none rounded-none font-mono text-[11px] font-black uppercase tracking-[0.24em] transition-all ${
                 canSpin
                   ? "border border-amber-200/40 bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-black shadow-[0_0_25px_rgba(251,191,36,0.35)] hover:shadow-[0_0_40px_rgba(251,191,36,0.6)] active:scale-[0.98]"
+                  : spinning
+                  ? "border border-purple-400/30 bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900 text-purple-200 animate-pulse"
                   : "border border-purple-500/20 bg-neutral-900 text-slate-500"
               }`}
             >

@@ -309,12 +309,36 @@ function LockedTipReceipt({ game, tip }) {
     </motion.div>
   );
 }
+// ── Locked Stamp Overlay ────────────────────────────────────────────
+function LockedStamp({ show }) {
+  if (!show) return null;
+  return (
+    <motion.div
+      initial={{ scale: 2.5, opacity: 0, rotate: -15 }}
+      animate={{ scale: 1, opacity: 1, rotate: -12 }}
+      transition={{ type: "spring", stiffness: 500, damping: 20, delay: 0.1 }}
+      className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+    >
+      <div className="border-4 border-emerald-400/60 px-6 py-2 bg-emerald-500/10 backdrop-blur-sm">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="font-display text-2xl font-black uppercase tracking-[0.3em] text-emerald-400/80"
+        >
+          LOCKED
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+}
 
 // ── Fixture Card ────────────────────────────────────────────────────
 function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
   const [selectedTeam, setSelectedTeam] = useState(tip?.selected_team || game.home_team);
   const [margin, setMargin] = useState(tip?.margin || 8);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showStamp, setShowStamp] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
   const lockingRef = useRef(false); // Prevent double-lock race condition
   const scores = deriveScores(game, selectedTeam, margin);
@@ -343,6 +367,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
       return;
     }
     setShowConfetti(true);
+    setShowStamp(true);
     playLockSound();
     // Screen shake effect
     try {
@@ -354,6 +379,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
       }
     } catch { /* noop */ }
     setTimeout(() => setShowConfetti(false), 1400);
+    setTimeout(() => setShowStamp(false), 2500);
     onTip(game, { selected_team: selectedTeam, margin, predicted_home_score: scores.home, predicted_away_score: scores.away });
     // Release lock after animation
     setTimeout(() => { lockingRef.current = false; }, 1500);
@@ -385,6 +411,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
       }`}
     >
       <ConfettiBurst active={showConfetti} />
+      <LockedStamp show={showStamp} />
       <AnimatePresence>
         <PointsPopup points={tipResult?.points} show={showPoints} />
       </AnimatePresence>
@@ -450,6 +477,15 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
               </span>
             </>
           )}
+          {status.label === "Closing" && (
+            <motion.span
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+              className="flex items-center gap-0.5 text-red-400 font-bold"
+            >
+              <Flame className="h-2.5 w-2.5" /> Hot
+            </motion.span>
+          )}
         </div>
 
         {/* === STATE 1: FINISHED MATCH === */}
@@ -472,9 +508,23 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
               }).reduce((arr, el, i) => i === 0 ? [el] : [...arr, (
                 <div key="score" className="text-center">
                   <div className="flex items-baseline gap-1.5">
-                    <motion.span initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="font-display text-2xl tabular-nums text-foreground">{game.home_score}</motion.span>
+                    <motion.span
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.1 }}
+                      className="font-display text-2xl tabular-nums text-foreground"
+                    >
+                      {game.home_score}
+                    </motion.span>
                     <span className="text-xs text-slate-600">-</span>
-                    <motion.span initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="font-display text-2xl tabular-nums text-foreground">{game.away_score}</motion.span>
+                    <motion.span
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                      className="font-display text-2xl tabular-nums text-foreground"
+                    >
+                      {game.away_score}
+                    </motion.span>
                   </div>
                   <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500">Full time</p>
                 </div>
@@ -527,6 +577,15 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                       />
                     )}
                     <TeamCrest name={team} className="mx-auto h-10 w-10 text-xs" />
+                    {/* Light beam behind selected team */}
+                    {selected && (
+                      <motion.div
+                        initial={{ opacity: 0, scaleY: 0 }}
+                        animate={{ opacity: 0.15, scaleY: 1 }}
+                        exit={{ opacity: 0, scaleY: 0 }}
+                        className="absolute inset-x-0 top-0 bottom-0 bg-gradient-to-b from-primary via-primary/50 to-transparent origin-top -z-10"
+                      />
+                    )}
                     <p className="mt-1.5 truncate text-[9px] font-bold uppercase tracking-wide">{shortName(team)}</p>
                     {selected && (
                       <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute right-1 top-1">
@@ -537,7 +596,15 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                 );
               })}
               <div className="text-center">
-                <p className="font-display text-xl text-primary/80">VS</p>
+                <motion.p
+                  key={selectedTeam}
+                  initial={{ scale: 1.3, opacity: 0.6 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  className="font-display text-xl text-primary/80"
+                >
+                  VS
+                </motion.p>
               </div>
             </div>
 
@@ -717,10 +784,11 @@ function Leaderboard({ entries, tips, totalPoints }) {
     return [yours, ...Array.from(totals.values()).map((r) => ({ ...r, points: r.tips * 2 }))]
       .filter((r) => r.tips > 0)
       .sort((a, b) => (b.points || 0) - (a.points || 0))
-      .slice(0, 6);
+      .slice(0, 8);
   }, [entries, tips, totalPoints]);
 
   const medals = ["🥇", "🥈", "🥉"];
+  const maxPts = Math.max(1, ...community.map((r) => r.points || 0));
 
   return (
     <div className="border border-border/30 bg-black/30 p-3">
@@ -732,28 +800,51 @@ function Leaderboard({ entries, tips, totalPoints }) {
         <span className="text-[7px] text-slate-500">{PTS_CORRECT}pt/correct · {PTS_MARGIN_BONUS}pt margin bonus</span>
       </div>
       <div className="space-y-1.5">
-        {community.length ? community.map((row, i) => (
+        {community.length ? community.map((row, i) => {
+          const barWidth = maxPts > 0 ? Math.max(8, ((row.points || 0) / maxPts) * 100) : 0;
+          return (
           <motion.div
             key={`${row.name}-${i}`}
-            initial={{ opacity: 0, x: -8 }}
+            initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className={`flex items-center gap-2 border p-2 ${
+            transition={{ delay: i * 0.05 }}
+            className={`relative flex items-center gap-2 border p-2 overflow-hidden ${
               row.me
                 ? "border-primary/30 bg-gradient-to-r from-primary/10 to-transparent"
+                : i === 0
+                ? "border-amber-400/20 bg-gradient-to-r from-amber-500/[0.06] to-transparent"
                 : "border-border/15 bg-black/20"
             }`}
           >
-            <span className="w-5 text-center text-xs">{medals[i] || `${i + 1}`}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-foreground">{row.name}</p>
+            {/* Background progress bar */}
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${barWidth}%` }}
+              transition={{ duration: 0.8, delay: i * 0.05, ease: "easeOut" }}
+              className={`absolute inset-y-0 left-0 ${
+                row.me ? "bg-primary/[0.08]" : i === 0 ? "bg-amber-400/[0.06]" : "bg-white/[0.02]"
+              }`}
+            />
+            <span className="relative w-5 text-center text-xs">
+              {i === 0 && !row.me ? "👑" : medals[i] || `${i + 1}`}
+            </span>
+            <div className="relative min-w-0 flex-1">
+              <p className={`truncate text-xs font-bold ${
+                row.me ? "text-primary" : i === 0 ? "text-amber-200" : "text-foreground"
+              }`}>
+                {row.name}
+              </p>
+              <p className="text-[7px] text-slate-500">{row.tips} tip{row.tips !== 1 ? 's' : ''} locked</p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold tabular-nums text-primary">{row.points || 0}</span>
+            <div className="relative flex items-center gap-2">
+              <span className={`text-[11px] font-bold tabular-nums ${
+                row.me ? "text-primary" : i === 0 ? "text-amber-300" : "text-foreground/80"
+              }`}>{row.points || 0}</span>
               <span className="text-[7px] text-slate-500">pts</span>
             </div>
           </motion.div>
-        )) : (
+          );
+        }) : (
           <p className="text-xs text-slate-500">Be first to lock a tip.</p>
         )}
       </div>
