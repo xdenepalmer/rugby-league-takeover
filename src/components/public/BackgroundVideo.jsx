@@ -3,6 +3,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 const extOf = (url) => String(url).split("?")[0].split(".").pop()?.toLowerCase();
 const mimeFor = (url) => ({ mp4: "video/mp4", webm: "video/webm", ogg: "video/ogg", mov: "video/quicktime" }[extOf(url)] || "");
 
+// Order sources so browser-friendly formats win. QuickTime (.mov) does NOT play
+// in Chrome/Edge/Firefox, so it must never be the first/only source — otherwise
+// autoplay silently fails and only the poster shows. mp4 first, mov last.
+const FORMAT_RANK = { mp4: 0, webm: 1, ogg: 2, mov: 9 };
+
 // A high-quality static image of Allegiant Stadium to serve as the background poster
 const DEFAULT_POSTER = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg";
 
@@ -11,19 +16,22 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
-  const ordered = useMemo(() => (sources?.length ? sources : [src]).filter(Boolean), [sources, src]);
+  const ordered = useMemo(() => {
+    const list = (sources?.length ? sources : [src]).filter(Boolean);
+    return [...list].sort((a, b) => (FORMAT_RANK[extOf(a)] ?? 5) - (FORMAT_RANK[extOf(b)] ?? 5));
+  }, [sources, src]);
   const key = ordered.join("|");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // ── Gating Checks for Mobile / Save Data / Reduced Motion ──
-    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    // ── Gating: respect data-saver and reduced-motion only. ──
+    // Do NOT disable purely on a mobile viewport — muted+playsInline autoplay is
+    // allowed on mobile and the background video is expected there by design.
     const isSaveData = !!(navigator.connection && navigator.connection.saveData);
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // If on mobile, save-data, or prefers-reduced-motion, do NOT load/play background video
-    if (isMobile || isSaveData || prefersReducedMotion) {
+    if (isSaveData || prefersReducedMotion) {
       setShouldPlayVideo(false);
       return;
     }
@@ -76,7 +84,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           muted
           loop
           playsInline
-          preload="none"
+          preload="metadata"
           controls={false}
           disablePictureInPicture
           onLoadedData={() => setVideoReady(true)}
