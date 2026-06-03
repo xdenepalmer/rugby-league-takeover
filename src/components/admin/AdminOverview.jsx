@@ -40,6 +40,7 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -4, transition: { duration: 0.25, ease: "easeOut" } }}
       transition={{ delay, duration: 0.4, ease: "easeOut" }}
       className="group relative overflow-hidden border border-border bg-card/60 cmd-glass hover:border-primary/30 transition-all duration-300"
     >
@@ -60,23 +61,31 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
               {label}
             </p>
-            <p className="font-display text-3xl tabular-nums leading-none text-foreground">
+            <p className="font-display text-3xl tabular-nums leading-none text-foreground counter-glow">
               {typeof value === "string" ? value : displayVal.toLocaleString()}
             </p>
           </div>
-          <div className="relative">
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.15, transition: { type: "spring", stiffness: 400, damping: 15 } }}
+          >
             <div className={`p-2 border border-border/50 ${color.replace("bg-gradient-to-r", "bg-opacity-10")} bg-muted/30 transition-colors group-hover:border-primary/30`}>
               <Icon className="h-5 w-5 text-primary transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
             </div>
-          </div>
+          </motion.div>
         </div>
 
         <div className="mt-3 flex items-center gap-2">
           {trend !== undefined && (
-            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+            <motion.span
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: delay + 0.3, duration: 0.35, ease: "easeOut" }}
+              className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${isPositive ? "text-emerald-400" : "text-red-400"}`}
+            >
               {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
               {Math.abs(trend)}%
-            </span>
+            </motion.span>
           )}
           <span className="text-[10px] text-muted-foreground">
             {trendLabel || subtext}
@@ -493,7 +502,10 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           <h2 className="font-display text-3xl md:text-4xl uppercase leading-none tracking-wide">
             Vegas Takeover HQ
           </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {(() => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; })()} — here's your command centre overview.
+          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             Real-time operational overview. Monitor registrations, revenue streams,
             community engagement, and system health from a single viewport.
           </p>
@@ -797,6 +809,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/5 border border-primary/10">
                   <Activity className="h-3 w-3 text-primary cmd-pulse" />
                   <span className="text-[8px] font-bold uppercase tracking-wider text-primary">Live</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary cmd-blink" />
                 </div>
               </div>
             </div>
@@ -893,6 +906,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/5 border border-accent/10">
                   <DollarSign className="h-3 w-3 text-accent" />
                   <span className="text-[8px] font-bold uppercase tracking-wider text-accent">Stripe</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent cmd-blink" />
                 </div>
               </div>
             </div>
