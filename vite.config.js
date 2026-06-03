@@ -50,5 +50,50 @@ export default defineConfig({
       brotliSize: true,
       open: false,
     }),
-  ]
+  ],
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+
+          const normalized = id.replace(/\\/g, '/')
+          if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-router-dom/')) {
+            return 'vendor-react'
+          }
+          if (normalized.includes('/node_modules/@base44/') || normalized.includes('/node_modules/axios/')) {
+            return 'vendor-base44'
+          }
+          if (normalized.includes('/node_modules/@tanstack/react-query/')) {
+            return 'vendor-query'
+          }
+          if (normalized.includes('/node_modules/framer-motion/') || normalized.includes('/node_modules/motion-dom/') || normalized.includes('/node_modules/motion-utils/')) {
+            return 'vendor-motion'
+          }
+          if (normalized.includes('/node_modules/lucide-react/')) {
+            return 'vendor-icons'
+          }
+          if (normalized.includes('/node_modules/recharts/') || normalized.includes('/node_modules/d3-') || normalized.includes('/node_modules/victory-vendor/')) {
+            return 'vendor-charts'
+          }
+          if (normalized.includes('/node_modules/date-fns/')) {
+            return 'vendor-date'
+          }
+          if (
+            normalized.includes('/node_modules/@radix-ui/') ||
+            normalized.includes('/node_modules/cmdk/') ||
+            normalized.includes('/node_modules/vaul/') ||
+            normalized.includes('/node_modules/input-otp/') ||
+            normalized.includes('/node_modules/embla-carousel-react/') ||
+            normalized.includes('/node_modules/react-day-picker/')
+          ) {
+            return 'vendor-ui'
+          }
+
+          return 'vendor-misc'
+        },
+      },
+    },
+  },
 });

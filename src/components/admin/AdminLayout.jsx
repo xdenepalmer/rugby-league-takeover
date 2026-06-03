@@ -105,6 +105,41 @@ function useLiveClock() {
   return time;
 }
 
+function LiveClock({ compact = false }) {
+  const clock = useLiveClock();
+  const timeStr = clock.toLocaleTimeString("en-AU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const dateStr = clock.toLocaleDateString("en-AU", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  if (compact) {
+    return (
+      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+        {timeStr}
+      </span>
+    );
+  }
+
+  return (
+    <div className="text-center">
+      <p className="font-mono text-xl font-bold tracking-widest text-foreground tabular-nums">
+        {timeStr}
+      </p>
+      <p className="text-[9px] font-mono uppercase tracking-wider text-slate-300">
+        {dateStr}
+      </p>
+    </div>
+  );
+}
+
 function useSystemStatus() {
   const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
 
@@ -193,7 +228,7 @@ function AttentionCard({ to, icon: Icon, label, count, clearLabel, tone = "prima
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `group flex min-h-[54px] items-center gap-3 border px-3 text-left transition-all ${
+        `admin-attention-card group flex min-h-[54px] items-center gap-3 border px-3 text-left transition-all ${
           isActive
             ? "border-primary/50 bg-primary/15 text-foreground"
             : "border-border/50 bg-card/30 text-muted-foreground hover:border-primary/30 hover:bg-card/60 hover:text-foreground"
@@ -227,26 +262,12 @@ export default function AdminLayout({ children }) {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const clock = useLiveClock();
   const statuses = useSystemStatus();
   const badgeCounts = useBadgeCounts();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
-
-  const timeStr = clock.toLocaleTimeString("en-AU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const dateStr = clock.toLocaleDateString("en-AU", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 
   /* Get current section name */
   const currentSection = getAdminSectionLabel(location.pathname);
@@ -346,14 +367,7 @@ export default function AdminLayout({ children }) {
             {/* Center: Live Clock + Status (hidden on mobile) */}
             <div className="hidden md:flex items-center gap-6">
               {/* Clock */}
-              <div className="text-center">
-                <p className="font-mono text-xl font-bold tracking-widest text-foreground tabular-nums">
-                  {timeStr}
-                </p>
-                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-300">
-                  {dateStr}
-                </p>
-              </div>
+              <LiveClock />
 
               {/* System Status Indicators */}
               <div className="flex items-center gap-3 border-l border-border pl-5">
@@ -705,9 +719,7 @@ export default function AdminLayout({ children }) {
             </div>
             <div className="flex items-center gap-3 md:hidden">
               {/* Mobile clock */}
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                {timeStr}
-              </span>
+              <LiveClock compact />
               {/* Mobile status dots */}
               <div className="flex gap-1">
                 {statuses.map((s) => (
@@ -723,7 +735,7 @@ export default function AdminLayout({ children }) {
           </div>
 
           <div className="px-4 pt-4 md:px-8">
-            <section className="relative overflow-hidden border border-border/70 bg-card/40 cmd-glass">
+            <section className="admin-route-banner relative overflow-hidden border border-border/70 bg-card/40 cmd-glass">
               <div className="h-[2px] w-full cmd-accent-bar" />
               <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5">
                 <div className="flex min-w-0 items-start gap-3">

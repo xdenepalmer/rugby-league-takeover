@@ -45,14 +45,14 @@ export default function NotificationBell() {
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      await Promise.all(unread.map((n) => base44.entities.Notification.update(n.id, { is_read: true })));
+      await Promise.allSettled(unread.map((n) => base44.entities.Notification.update(n.id, { is_read: true })));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] }),
   });
 
   const open = (notification) => {
     if (notification.is_read !== true) markRead.mutate(notification.id);
-    navigate(notification.link || "/forum");
+    navigate(notification.link || "/account");
   };
 
   if (!isAuthenticated) return null;
@@ -63,7 +63,7 @@ export default function NotificationBell() {
         <button 
           className={`relative flex h-11 w-11 items-center justify-center border transition-all duration-300 bg-secondary/40 cursor-pointer ${
             unread.length > 0
-              ? "border-primary/50 text-primary shadow-[0_0_10px_rgba(249,115,22,0.15)] animate-pulse"
+              ? "border-primary/50 text-primary shadow-[0_0_10px_rgba(249,115,22,0.15)]"
               : "border-border text-muted-foreground hover:border-primary hover:text-foreground hover:shadow-[0_0_10px_rgba(249,115,22,0.15)]"
           }`}
           aria-label="Notifications"

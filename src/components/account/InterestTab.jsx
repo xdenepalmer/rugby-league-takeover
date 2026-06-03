@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Plane, ArrowRight, Mail } from "lucide-react";
@@ -20,12 +21,12 @@ export default function InterestTab() {
       <div className="border border-border bg-card p-10 text-center">
         <Plane className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-4 text-muted-foreground">You haven't registered interest in a travel package yet.</p>
-        <a
-          href="/#travel"
+        <Link
+          to="/#travel"
           className="mt-4 inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors"
         >
           Register Interest <ArrowRight className="h-3 w-3" />
-        </a>
+        </Link>
       </div>
     );
   }
@@ -52,15 +53,15 @@ export default function InterestTab() {
             
             {/* Travel milestones progress timeline */}
             <div className="mt-4 border border-border/20 bg-muted/5 p-4 space-y-4">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-350">Package Status Milestones</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Package Status Milestones</p>
               <div className="relative border-l border-border/40 pl-6 space-y-4 ml-2">
                 {steps.map((step, idx) => {
                   const isCompleted = step.status === "completed";
                   const isActive = step.status === "active";
                   return (
-                    <div key={idx} className="relative">
+                    <div key={idx} className="relative" {...(isActive ? { "aria-current": "step" } : {})}>
                       {/* Indicator circle */}
-                      <div className={`absolute left-[-31px] top-0.5 flex h-4.5 w-4.5 items-center justify-center border transition-all ${
+                      <div className={`absolute left-[-31px] top-0.5 flex h-[18px] w-[18px] items-center justify-center border transition-all ${
                         isCompleted 
                           ? "bg-emerald-500/10 border-emerald-500 text-emerald-400 font-extrabold" 
                           : isActive 
@@ -71,7 +72,7 @@ export default function InterestTab() {
                       </div>
                       <div>
                         <span className={`text-xs font-bold uppercase tracking-wider block ${
-                          isCompleted ? "text-emerald-400" : isActive ? "text-primary" : "text-slate-350"
+                          isCompleted ? "text-emerald-400" : isActive ? "text-primary" : "text-slate-400"
                         }`}>
                           {step.title}
                         </span>

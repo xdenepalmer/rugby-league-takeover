@@ -155,12 +155,14 @@ export default function ActivityFeed({ orders = [], registrations = [], forumPos
         </div>
 
         {/* ── Filter buttons ── */}
-        <div className="flex items-center gap-1.5 mb-4">
+        <div className="flex items-center gap-1.5 mb-4" role="tablist">
           <Filter className="h-3 w-3 text-muted-foreground mr-1" />
           {FILTERS.map((f) => (
             <button
               key={f.key}
               type="button"
+              role="tab"
+              aria-selected={activeFilter === f.key}
               onClick={() => setActiveFilter(f.key)}
               className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider font-mono transition-all border ${
                 activeFilter === f.key

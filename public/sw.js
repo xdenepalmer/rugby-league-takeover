@@ -3,6 +3,7 @@
 const BUILD_ID = "__BUILD_ID__";
 const CACHE_NAME = `rlt-${BUILD_ID}`;
 const SHELL_URLS = ["/", "/offline.html", "/manifest.webmanifest"];
+const NAVIGATION_TIMEOUT_MS = 2500;
 
 const isBypassedRequest = (request) => {
   const url = new URL(request.url);
@@ -61,6 +62,43 @@ const staleWhileRevalidate = async (request) => {
   return cached || network;
 };
 
+// For app navigations, try the network first so fresh publishes win. On slow or
+// offline connections, fall back quickly to the cached route/app shell instead
+// of leaving mobile users staring at a blank load.
+const networkFirstNavigation = async (request) => {
+  const cache = await caches.open(CACHE_NAME);
+  let timeoutId;
+
+  const timeout = new Promise((resolve) => {
+    timeoutId = setTimeout(() => resolve(null), NAVIGATION_TIMEOUT_MS);
+  });
+
+  const network = fetch(request)
+    .then((response) => {
+      clearTimeout(timeoutId);
+      if (response && response.ok && response.type === "basic") {
+        cache.put(request, response.clone());
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  const firstResponse = await Promise.race([network, timeout]);
+  if (firstResponse) return firstResponse;
+
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const cachedShell = await cache.match("/");
+  if (cachedShell) return cachedShell;
+
+  const fallback = await cache.match("/offline.html");
+  if (fallback) return fallback;
+
+  const networkResponse = await network;
+  return networkResponse || Response.error();
+};
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (isBypassedRequest(request)) return;
@@ -70,7 +108,7 @@ self.addEventListener("fetch", (event) => {
   // App navigations: network-first so users always get the latest HTML, with an
   // offline fallback when the network is unavailable.
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));
+    event.respondWith(networkFirstNavigation(request));
     return;
   }
 

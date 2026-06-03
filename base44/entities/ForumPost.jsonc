@@ -21,19 +21,16 @@
     "category": {
       "type": "string",
       "enum": [
-        "General",
-        "Travel",
-        "Events",
-        "MatchDay",
-        "VegasTips",
         "general",
         "travel",
-        "tickets",
         "events",
+        "matchday",
+        "vegastips",
+        "tickets",
         "teams",
         "merch"
       ],
-      "default": "General",
+      "default": "general",
       "description": "Forum post category"
     },
     "parent_id": {

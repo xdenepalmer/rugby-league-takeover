@@ -270,10 +270,15 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     setShowRefundForm(false);
   };
 
-  const copyOrderSummary = () => {
+  const copyOrderSummary = async () => {
     const items = lineItems.map((i) => `${i.quantity}x ${i.name}`).join(", ");
     const summary = `Order #${String(order.id || "").slice(-6).toUpperCase()}\n${order.customer_name || "Customer"}\n${order.customer_email || ""}\n${order.shipping_address || ""}\nItems: ${items}\nTotal: $${Number(order.total_aud || 0).toFixed(2)} AUD`;
-    navigator.clipboard.writeText(summary);
+    try {
+      await navigator.clipboard.writeText(summary);
+      toast({ title: "Copied", description: "Order summary copied to clipboard." });
+    } catch (err) {
+      toast({ title: "Copy failed", description: err.message, variant: "destructive" });
+    }
   };
 
   return (
@@ -294,6 +299,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
         {/* Summary row */}
         <button
           type="button"
+          aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
           className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/5 sm:gap-4"
         >
@@ -430,7 +436,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Status</label>
+                      <label htmlFor={`order-status-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Status</label>
                       <Select
                         value={order.status || "pending"}
                         onValueChange={handleStatusChange}
@@ -453,7 +459,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Carrier</label>
+                      <label htmlFor={`order-carrier-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Carrier</label>
                       <Select value={carrier} onValueChange={(v) => { setCarrier(v); onUpdate(order.id, { carrier: v }); }}>
                         <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue placeholder="Select carrier" /></SelectTrigger>
                         <SelectContent>
@@ -464,7 +470,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
                     {/* Shipping Method Selector */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping Method</label>
+                      <label htmlFor={`order-shipping-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping Method</label>
                       <Select
                         value={order.shipping_method || "standard"}
                         onValueChange={handleShippingMethodChange}
@@ -481,8 +487,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Tracking Number</label>
+                      <label htmlFor={`order-tracking-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Tracking Number</label>
                       <Input
+                        id={`order-tracking-${order.id}`}
                         placeholder="e.g. AU123456789"
                         value={trackingNumber}
                         onChange={(e) => setTrackingNumber(e.target.value)}
@@ -491,9 +498,10 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Tracking URL</label>
+                      <label htmlFor={`order-tracking-url-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Tracking URL</label>
                       <div className="flex gap-1.5">
                         <Input
+                          id={`order-tracking-url-${order.id}`}
                           placeholder="https://track.auspost.com.au/..."
                           value={trackingUrl}
                           onChange={(e) => setTrackingUrl(e.target.value)}
@@ -510,8 +518,8 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
                     {/* Estimated Delivery (read-only) */}
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Estimated Delivery</label>
-                      <div className="h-11 flex items-center gap-2 px-3 border border-border/40 bg-muted/5 text-sm text-muted-foreground">
+                      <label htmlFor={`order-est-delivery-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Estimated Delivery</label>
+                      <div id={`order-est-delivery-${order.id}`} className="h-11 flex items-center gap-2 px-3 border border-border/40 bg-muted/5 text-sm text-muted-foreground">
                         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                         {order.estimated_delivery
                           ? format(new Date(order.estimated_delivery), "EEE dd MMM yyyy")
@@ -525,8 +533,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
                 {/* Notes */}
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment Notes (internal)</label>
+                  <label htmlFor={`order-notes-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment Notes (internal)</label>
                   <Textarea
+                    id={`order-notes-${order.id}`}
                     placeholder="Add internal notes…"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -537,11 +546,12 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
                 {/* Customer-Visible Note */}
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
+                  <label htmlFor={`order-customer-note-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
                     <Info className="h-3 w-3 text-blue-400" />
                     Customer-Visible Note
                   </label>
                   <Textarea
+                    id={`order-customer-note-${order.id}`}
                     placeholder="e.g. Your order is being packed with care!"
                     value={customerNote}
                     onChange={(e) => setCustomerNote(e.target.value)}
@@ -568,8 +578,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Refund Amount (AUD)</label>
+                            <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Refund Amount (AUD)</label>
                             <Input
+                              id={`order-refund-amount-${order.id}`}
                               type="number"
                               step="0.01"
                               min="0"
@@ -579,8 +590,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Reason</label>
+                            <label htmlFor={`order-refund-reason-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Reason</label>
                             <Textarea
+                              id={`order-refund-reason-${order.id}`}
                               placeholder="Reason for refund…"
                               value={refundReason}
                               onChange={(e) => setRefundReason(e.target.value)}
@@ -678,6 +690,9 @@ export default function OrdersManager({ orders }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast({ title: "Order updated", description: "Changes saved successfully." });
+    },
+    onError: (error) => {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
     },
   });
 

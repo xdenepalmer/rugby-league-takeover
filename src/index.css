@@ -47,41 +47,6 @@
     --sidebar-ring: 45 93% 47%;
   }
 
-  .dark {
-    --font-sans: 'Inter', sans-serif;
-    --font-display: 'Oswald', sans-serif;
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-right: env(safe-area-inset-right, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-    --safe-left: env(safe-area-inset-left, 0px);
-    --background: 224 71% 4%;
-    --foreground: 210 20% 98%;
-    --card: 224 71% 7%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71% 7%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 15 95% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 224 71% 3%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 217 33% 12%;
-    --muted-foreground: 215 20% 75%;
-    --accent: 45 93% 47%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 217 33% 15%;
-    --input: 217 33% 15%;
-    --ring: 45 93% 47%;
-    --sidebar-background: 224 71% 3%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 15 95% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 12%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 217 33% 15%;
-    --sidebar-ring: 45 93% 47%;
-  }
 }
 
 @layer base {
@@ -414,6 +379,7 @@
 
 .animate-float {
   animation: float 4s ease-in-out infinite;
+  will-change: transform;
 }
 
 /* ─── Admin Command Centre Animations ─────────────────────── */
@@ -558,20 +524,6 @@
   opacity: 0.7;
 }
 
-/* Scrollbar styling for admin panels */
-.cmd-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.cmd-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.cmd-scrollbar::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 2px;
-}
-.cmd-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.5);
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -765,10 +717,12 @@
 
 /* Status uptime bar */
 @keyframes uptime-fill {
-  from { width: 0%; }
+  from { transform: scaleX(0); }
 }
 
 .cmd-uptime-bar {
+  transform-origin: left;
+  will-change: transform;
   animation: uptime-fill 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 

@@ -77,7 +77,7 @@ function NewsCard({ article, index, onClick }) {
           src={article.image_url}
           alt={article.title}
           loading="lazy"
-          className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-108 group-hover:grayscale-0 group-hover:opacity-100"
+          className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-100"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-70" />
 
@@ -147,7 +147,7 @@ export default function NewsSection({ articles, settings = {} }) {
       className="relative border-t border-border bg-background/85 px-5 py-24 md:px-8 md:py-32 overflow-hidden"
     >
       {/* Background decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/2 blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.03] blur-[120px] pointer-events-none" />
 
       <div className="mx-auto max-w-7xl relative z-10">
         <SectionHeader

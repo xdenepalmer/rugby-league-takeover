@@ -21,7 +21,7 @@ export function orderShipped(order) {
     preview: order.tracking_number
       ? `Tracking: ${order.tracking_number}`
       : "Your order is on its way.",
-    link: `/orders/${order.id}`,
+    link: "/account",
     actor_name: "Rugby League Takeover",
   };
 }
@@ -37,7 +37,7 @@ export function orderDelivered(order) {
     type: "system",
     title: "Your order has been delivered! ✅",
     preview: "Your order has arrived — enjoy your gear!",
-    link: `/orders/${order.id}`,
+    link: "/account",
     actor_name: "Rugby League Takeover",
   };
 }
@@ -94,7 +94,7 @@ export function badgeEarned(userId, userEmail, badgeName) {
     type: "system",
     title: `Badge Earned: ${badgeName} 🏅`,
     preview: `You earned the "${badgeName}" badge — nice work!`,
-    link: "/profile",
+    link: "/account",
     actor_name: "Rugby League Takeover",
   };
 }
@@ -111,7 +111,7 @@ export function travelUpdate(registration, message) {
     type: "system",
     title: "Travel Update ✈️",
     preview: message.slice(0, 120),
-    link: "/travel",
+    link: "/account",
     actor_name: "Rugby League Takeover",
   };
 }
@@ -129,7 +129,7 @@ export function productDrop(userId, userEmail, product) {
     type: "system",
     title: `New Drop: ${product.name} 🔥`,
     preview: `${product.name} just dropped — grab it before it's gone!`,
-    link: product.id ? `/merch/${product.id}` : "/merch",
+    link: "/store",
     actor_name: "Rugby League Takeover",
   };
 }

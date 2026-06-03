@@ -25,7 +25,15 @@ export default function LazySection({ children, height = 300, fallback, classNam
   }, []);
 
   return (
-    <div ref={ref} className={className} style={{ minHeight: isIntersected ? "auto" : height }}>
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        minHeight: isIntersected ? "auto" : height,
+        contentVisibility: "auto",
+        containIntrinsicSize: `${height}px`,
+      }}
+    >
       {isIntersected ? (
         children
       ) : (

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Users as UsersIcon, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,15 +11,39 @@ import AdminNotepad from "@/components/admin/AdminNotepad";
 import DataExporter from "@/components/admin/DataExporter";
 import ActionQueue from "@/components/admin/ActionQueue";
 
-export default function OverviewPanel() {
-  const [showStats, setShowStats] = useState(false);
+/* Map ActionQueue panel names → admin routes */
+const PANEL_ROUTE_MAP = {
+  orders: "/admin/store",
+  store: "/admin/store",
+  products: "/admin/store",
+  forum: "/admin/community",
+  community: "/admin/community",
+  registrations: "/admin/people",
+  people: "/admin/people",
+  news: "/admin/content",
+  content: "/admin/content",
+  events: "/admin/events",
+  ads: "/admin/ads",
+};
 
-  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200) });
-  const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200) });
-  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200) });
-  const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50) });
-  const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200) });
-  const { data: testimonials = [] } = useQuery({ queryKey: ["testimonials"], queryFn: () => base44.entities.Testimonial.list("sort_order", 200), retry: false, meta: { silent: true } });
+export default function OverviewPanel() {
+  const navigate = useNavigate();
+  const [showStats, setShowStats] = useState(true);
+
+  const handleNavigate = useCallback(
+    (panel) => {
+      const route = PANEL_ROUTE_MAP[panel] || "/admin/overview";
+      navigate(route);
+    },
+    [navigate],
+  );
+
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200), staleTime: 60_000 });
+  const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200), staleTime: 60_000 });
+  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200), staleTime: 60_000 });
+  const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 50), staleTime: 60_000 });
+  const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200), staleTime: 60_000 });
+  const { data: testimonials = [] } = useQuery({ queryKey: ["testimonials"], queryFn: () => base44.entities.Testimonial.list("sort_order", 200), staleTime: 60_000, retry: false, meta: { silent: true } });
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -48,7 +73,7 @@ export default function OverviewPanel() {
           products={products}
           news={news}
           testimonials={testimonials}
-          onNavigate={(panel) => console.log("[ActionQueue] navigate →", panel)}
+          onNavigate={handleNavigate}
         />
       </motion.div>
 

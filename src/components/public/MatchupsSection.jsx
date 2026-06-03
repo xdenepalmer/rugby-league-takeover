@@ -32,6 +32,13 @@ const handleCalendarDownload = (m) => {
   const summary = `${m.home_team} vs ${m.away_team} - NRL Las Vegas`;
   const description = `Watch ${m.home_team} take on ${m.away_team} at ${m.venue || "Las Vegas"}.`;
   const location = m.venue || "Las Vegas, NV";
+  const formatIcsDate = (date) => {
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  };
+  const dtStart = formatIcsDate(m.kickoff);
+  const dtEnd = dtStart ? formatIcsDate(new Date(new Date(m.kickoff).getTime() + 3600000)) : null;
   const icsContent = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -39,17 +46,21 @@ const handleCalendarDownload = (m) => {
     `SUMMARY:${summary}`,
     `DESCRIPTION:${description}`,
     `LOCATION:${location}`,
+    ...(dtStart ? [`DTSTART:${dtStart}`] : []),
+    ...(dtEnd ? [`DTEND:${dtEnd}`] : []),
     "END:VEVENT",
     "END:VCALENDAR"
   ].join("\n");
   
   const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  link.href = url;
   link.download = `${m.home_team}_vs_${m.away_team}.ics`.replace(/\s+/g, "_");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 

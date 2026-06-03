@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { Link } from "react-router-dom";
 import {
   TrendingUp, DollarSign, Users, ShoppingCart, MessageSquare,
   ArrowUpRight, ArrowDownRight, Newspaper, Package,
+  PackageCheck, ShieldAlert, ArrowRight
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SystemStatusPanel from "./SystemStatusPanel";
@@ -71,48 +73,83 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
   );
 }
 
-/* ─── Chart Tooltip ──────────────────────────────────────── */
-function ChartTooltipContent({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
+function PriorityTile({ to, icon: Icon, label, value, detail, tone = "primary" }) {
+  const toneClass = tone === "accent"
+    ? "border-accent/30 bg-accent/10 text-accent"
+    : tone === "emerald"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : "border-primary/30 bg-primary/10 text-primary";
+
   return (
-    <div className="bg-card/95 border border-border p-3 shadow-xl backdrop-blur-sm">
-      <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
-        {label}
-      </p>
-      {payload.map((entry) => (
-        <p key={entry.name} className="text-sm font-bold" style={{ color: entry.color }}>
-          {entry.name}: {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
-        </p>
-      ))}
-    </div>
+    <Link
+      to={to}
+      className="admin-attention-card group flex min-h-[92px] items-center gap-3 border border-border/60 bg-background/25 p-3 transition-all hover:border-primary/30 hover:bg-card/60"
+    >
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center border ${toneClass}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground/70">
+          {label}
+        </span>
+        <span className="mt-1 block font-display text-2xl uppercase leading-none text-foreground">
+          {value}
+        </span>
+        <span className="mt-1 block truncate text-[10px] text-muted-foreground">
+          {detail}
+        </span>
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+    </Link>
   );
 }
 
+
+
 /* ─── Main AdminOverview ────────────────────────────────── */
 export default function AdminOverview({ counts, registrations = [], orders = [] }) {
-  const paidOrders = orders.filter(
-    (o) => o.status === "paid" || o.status === "completed" || o.status === "packing" || o.status === "shipped"
+  const paidOrders = useMemo(
+    () => orders.filter((o) => o.status === "paid" || o.status === "completed" || o.status === "packing" || o.status === "shipped"),
+    [orders]
   );
-  const totalRevenue = paidOrders.reduce((sum, o) => sum + Number(o.total_aud || 0), 0);
+  const totalRevenue = useMemo(
+    () => paidOrders.reduce((sum, o) => sum + Number(o.total_aud || 0), 0),
+    [paidOrders]
+  );
 
-  const now = Date.now();
-  const recentRegs = registrations.filter((r) => r.created_date && now - new Date(r.created_date).getTime() < 86400000).length;
-  const recentOrders = orders.filter((o) => o.created_date && now - new Date(o.created_date).getTime() < 86400000).length;
+  const recentWindowStart = Date.now() - 86400000;
+  const recentRegs = useMemo(
+    () => registrations.filter((r) => r.created_date && new Date(r.created_date).getTime() > recentWindowStart).length,
+    [registrations, recentWindowStart]
+  );
+  const recentOrders = useMemo(
+    () => orders.filter((o) => o.created_date && new Date(o.created_date).getTime() > recentWindowStart).length,
+    [orders, recentWindowStart]
+  );
+  const ordersToFulfil = useMemo(
+    () => orders.filter((o) => o.status === "paid" || o.status === "packing").length,
+    [orders]
+  );
+  const moderationCount = Number(counts.pendingPosts || 0) + Number(counts.pendingTestimonials || 0);
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  }, []);
 
   // Registrations chart data (real data, 7-day default)
-  const registrationsByDate = registrations.reduce((acc, reg) => {
+  const registrationsByDate = useMemo(() => registrations.reduce((acc, reg) => {
     if (!reg.created_date) return acc;
     const date = new Date(reg.created_date).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
     acc[date] = (acc[date] || 0) + 1;
     return acc;
-  }, {});
+  }, {}), [registrations]);
 
-  const revenueByDate = paidOrders.reduce((acc, order) => {
+  const revenueByDate = useMemo(() => paidOrders.reduce((acc, order) => {
     if (!order.created_date) return acc;
     const date = new Date(order.created_date).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
     acc[date] = (acc[date] || 0) + Number(order.total_aud || 0);
     return acc;
-  }, {});
+  }, {}), [paidOrders]);
 
   const regData = useMemo(() => {
     const rawData = Object.entries(registrationsByDate)
@@ -137,21 +174,13 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
   }, [revenueByDate]);
 
   // Order status distribution for pie chart
-  const statusCounts = orders.reduce((acc, o) => {
+  const statusCounts = useMemo(() => orders.reduce((acc, o) => {
     const s = o.status || "unknown";
     acc[s] = (acc[s] || 0) + 1;
     return acc;
-  }, {});
+  }, {}), [orders]);
 
-  const pieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
-  const PIE_COLORS = [
-    "hsl(15, 95%, 55%)",
-    "hsl(45, 93%, 47%)",
-    "hsl(160, 60%, 45%)",
-    "hsl(220, 50%, 50%)",
-    "hsl(0, 84%, 60%)",
-    "hsl(280, 50%, 55%)",
-  ];
+  const pieData = useMemo(() => Object.entries(statusCounts).map(([name, value]) => ({ name, value })), [statusCounts]);
 
   return (
     <div className="grid gap-5">
@@ -160,43 +189,67 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative overflow-hidden border border-border bg-card/60 cmd-glass"
+        className="admin-overview-hero relative overflow-hidden border border-border bg-card/60 cmd-glass"
       >
         <div className="cmd-accent-bar h-[2px] w-full" />
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary font-mono">
-              Operations Dashboard
-            </p>
-          </div>
-          <h2 className="font-display text-3xl md:text-4xl uppercase leading-none tracking-wide">
-            Today
-          </h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {(() => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; })()}  — here's what needs you.
-          </p>
+        <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1.35fr] lg:items-stretch lg:p-6">
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary font-mono">
+                  Operations Dashboard
+                </p>
+              </div>
+              <h2 className="font-display text-4xl uppercase leading-none tracking-wide md:text-5xl">
+                Today
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                {greeting}. Your fastest admin routes are grouped by live work, so phone checks and desktop sessions start in the right place.
+              </p>
+            </div>
 
-          {/* Quick stats bar */}
-          <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border/50 pt-4">
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 cmd-blink" />
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {recentRegs} signups today
-              </span>
+            <div className="mt-5 grid grid-cols-3 border border-border/50 bg-background/25">
+              <div className="border-r border-border/50 p-3">
+                <p className="font-display text-2xl leading-none text-foreground tabular-nums">{recentRegs}</p>
+                <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Signups today</p>
+              </div>
+              <div className="border-r border-border/50 p-3">
+                <p className="font-display text-2xl leading-none text-foreground tabular-nums">{recentOrders}</p>
+                <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Orders today</p>
+              </div>
+              <div className="p-3">
+                <p className="font-display text-2xl leading-none text-foreground tabular-nums">{counts.posts}</p>
+                <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Forum posts</p>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent cmd-blink" style={{ animationDelay: "0.3s" }} />
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {recentOrders} orders today
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary cmd-blink" style={{ animationDelay: "0.6s" }} />
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {counts.posts} community posts
-              </span>
-            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3 lg:h-full">
+            <PriorityTile
+              to="/admin/store"
+              icon={PackageCheck}
+              label="Fulfilment"
+              value={ordersToFulfil || "Clear"}
+              detail={ordersToFulfil ? "Paid or packing orders" : "No orders waiting"}
+              tone="accent"
+            />
+            <PriorityTile
+              to="/admin/community"
+              icon={ShieldAlert}
+              label="Moderation"
+              value={moderationCount || "Clear"}
+              detail={moderationCount ? "Posts or testimonials to review" : "No queue items"}
+              tone="primary"
+            />
+            <PriorityTile
+              to="/admin/people"
+              icon={Users}
+              label="People"
+              value={recentRegs || "Quiet"}
+              detail={recentRegs ? "New travel interest today" : "No new signups today"}
+              tone="emerald"
+            />
           </div>
         </div>
       </motion.div>
@@ -211,8 +264,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Total Revenue"
           value={`$${totalRevenue.toFixed(2)}`}
           subtext="AUD via Stripe"
-          trend={12.5}
-          trendLabel="vs last period"
           color="bg-gradient-to-r from-accent to-accent/60"
           delay={0.05}
         />
@@ -221,8 +272,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Interest Signups"
           value={counts.registrations}
           subtext="Ticket drop registrations"
-          trend={8.3}
-          trendLabel="growth rate"
           color="bg-gradient-to-r from-primary to-primary/60"
           delay={0.1}
         />
@@ -231,8 +280,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Merch Orders"
           value={counts.orders}
           subtext={`${paidOrders.length} paid`}
-          trend={5.1}
-          trendLabel="conversion"
           color="bg-gradient-to-r from-emerald-500 to-emerald-500/60"
           delay={0.15}
         />
@@ -241,8 +288,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Community Posts"
           value={counts.posts}
           subtext="Active discussions"
-          trend={22.0}
-          trendLabel="engagement"
           color="bg-gradient-to-r from-blue-500 to-blue-500/60"
           delay={0.2}
         />

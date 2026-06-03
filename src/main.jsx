@@ -4,7 +4,23 @@ import App from '@/App.jsx'
 import { registerServiceWorker } from '@/lib/register-service-worker'
 import '@/index.css'
 
-registerServiceWorker()
+const scheduleServiceWorkerRegistration = () => {
+  const register = () => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => registerServiceWorker(), { timeout: 3000 });
+      return;
+    }
+    setTimeout(() => registerServiceWorker(), 0);
+  };
+
+  if (document.readyState === 'complete') {
+    register();
+  } else {
+    window.addEventListener('load', register, { once: true });
+  }
+};
+
+scheduleServiceWorkerRegistration()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <App />

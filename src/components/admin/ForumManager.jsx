@@ -153,6 +153,7 @@ function PostCard({
           {selectMode && (
             <button
               type="button"
+              aria-label="Select post"
               onClick={() => onToggleSelect(post.id)}
               className="mt-1 shrink-0 p-1 text-muted-foreground hover:text-primary transition-colors"
             >
@@ -455,7 +456,7 @@ export default function ForumManager({ posts }) {
     staleTime: 60_000,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+  const refresh = useCallback(() => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }), [queryClient]);
 
   const updateMutation = useMutation({ 
     mutationFn: ({ id, data }) => base44.entities.ForumPost.update(id, data), 
@@ -534,41 +535,35 @@ export default function ForumManager({ posts }) {
   /* ── Bulk actions ── */
   const handleBulkApprove = useCallback(async () => {
     setBulkLoading(true);
-    for (const id of selectedIds) {
-      try {
-        await base44.entities.ForumPost.update(id, { is_published: true });
-      } catch { /* continue */ }
-    }
+    const count = selectedIds.size;
+    await Promise.allSettled([...selectedIds].map(id => base44.entities.ForumPost.update(id, { is_published: true })));
     window.dispatchEvent(new CustomEvent("rlt_admin_log", {
-      detail: { type: "info", text: `[FORUM-MOD] Bulk approved ${selectedIds.size} posts by ${me?.email || "unknown"}` }
+      detail: { type: "info", text: `[FORUM-MOD] Bulk approved ${count} posts by ${me?.email || "unknown"}` }
     }));
     setSelectedIds(new Set());
     setSelectMode(false);
     setBulkLoading(false);
     refresh();
-    toast({ title: `${selectedIds.size} posts approved` });
+    toast({ title: `${count} posts approved` });
   }, [selectedIds, me, refresh]);
 
   const handleBulkDelete = useCallback(async () => {
     setBulkLoading(true);
     const now = new Date().toISOString();
-    for (const id of selectedIds) {
-      try {
-        await base44.entities.ForumPost.update(id, {
-          deleted_at: now,
-          deleted_by: me?.email || "",
-          is_published: false,
-        });
-      } catch { /* continue */ }
-    }
+    const count = selectedIds.size;
+    await Promise.allSettled([...selectedIds].map(id => base44.entities.ForumPost.update(id, {
+      deleted_at: now,
+      deleted_by: me?.email || "",
+      is_published: false,
+    })));
     window.dispatchEvent(new CustomEvent("rlt_admin_log", {
-      detail: { type: "warn", text: `[FORUM-MOD] Bulk soft-deleted ${selectedIds.size} posts by ${me?.email || "unknown"}` }
+      detail: { type: "warn", text: `[FORUM-MOD] Bulk soft-deleted ${count} posts by ${me?.email || "unknown"}` }
     }));
     setSelectedIds(new Set());
     setSelectMode(false);
     setBulkLoading(false);
     refresh();
-    toast({ title: `${selectedIds.size} posts soft-deleted` });
+    toast({ title: `${count} posts soft-deleted` });
   }, [selectedIds, me, refresh]);
 
   const toggleSelect = useCallback((id) => {
@@ -637,6 +632,7 @@ export default function ForumManager({ posts }) {
           {/* Select mode toggle */}
           <button
             type="button"
+            aria-pressed={selectMode}
             onClick={() => {
               setSelectMode((v) => !v);
               setSelectedIds(new Set());

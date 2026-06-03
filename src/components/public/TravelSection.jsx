@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isLikelyBotSubmission, normalizeInterestRegistration } from "@/lib/public-forms";
+import { toast } from "@/components/ui/use-toast";
 import { appParams } from "@/lib/app-params";
 import SectionHeader from "./SectionHeader";
 import { motion } from "framer-motion";
@@ -115,6 +116,9 @@ export default function TravelSection({ packages, settings = {} }) {
       setSubmitted(true);
       setStep(4);
     },
+    onError: (error) => {
+      toast({ title: "Registration failed", description: error.message, variant: "destructive" });
+    },
   });
 
   const nextStep = () => {
@@ -146,7 +150,7 @@ export default function TravelSection({ packages, settings = {} }) {
   return (
     <section id="travel" className="relative border-t border-border bg-background/85 px-5 py-24 md:px-8 md:py-32 overflow-hidden">
       {/* Laser glow background element */}
-      <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-primary/2 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-primary/[0.03] rounded-full blur-[100px] pointer-events-none" />
 
       <div className="mx-auto max-w-7xl relative z-10">
         <SectionHeader eyebrow={settings.travel_eyebrow || "Travel Packages"} title={settings.travel_title || "Vegas Supporter Packages"}>
@@ -172,7 +176,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     src={pkg.image_url} 
                     alt={pkg.name} 
                     loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108" 
+                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/95 via-transparent to-transparent opacity-60" />
                   
@@ -289,7 +293,9 @@ export default function TravelSection({ packages, settings = {} }) {
                   <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 mb-2 border-b border-border/20 pb-1.5">Step 1: Your Details</h4>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
+                      <label htmlFor="travel-name" className="sr-only">Full Name</label>
                       <Input 
+                        id="travel-name"
                         required 
                         placeholder="Full Name *" 
                         value={form.name} 
@@ -298,7 +304,9 @@ export default function TravelSection({ packages, settings = {} }) {
                       />
                     </div>
                     <div>
+                      <label htmlFor="travel-phone" className="sr-only">Phone Number</label>
                       <Input 
+                        id="travel-phone"
                         placeholder="Phone Number" 
                         value={form.phone} 
                         onChange={(e) => setForm({ ...form, phone: e.target.value })} 
@@ -306,7 +314,9 @@ export default function TravelSection({ packages, settings = {} }) {
                       />
                     </div>
                     <div>
+                      <label htmlFor="travel-email" className="sr-only">Email Address</label>
                       <Input 
+                        id="travel-email"
                         required 
                         type="email" 
                         placeholder="Email Address *" 
@@ -316,7 +326,9 @@ export default function TravelSection({ packages, settings = {} }) {
                       />
                     </div>
                     <div>
+                      <label htmlFor="travel-postcode" className="sr-only">Postcode</label>
                       <Input 
+                        id="travel-postcode"
                         placeholder="Postcode" 
                         value={form.postcode} 
                         onChange={(e) => setForm({ ...form, postcode: e.target.value })} 
@@ -345,7 +357,7 @@ export default function TravelSection({ packages, settings = {} }) {
                   
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Select required value={form.travel_type} onValueChange={(value) => setForm({ ...form, travel_type: value })}>
-                      <SelectTrigger className="h-11 rounded-none bg-background/50 border-border text-left text-xs uppercase tracking-wider text-muted-foreground focus:ring-primary">
+                      <SelectTrigger aria-label="Travel Party Setup" className="h-11 rounded-none bg-background/50 border-border text-left text-xs uppercase tracking-wider text-muted-foreground focus:ring-primary">
                         <SelectValue placeholder="Travel Party Setup *" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border rounded-none">
@@ -356,7 +368,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     </Select>
 
                     <Select required value={form.budget_range} onValueChange={(value) => setForm({ ...form, budget_range: value })}>
-                      <SelectTrigger className="h-11 rounded-none bg-background/50 border-border text-left text-xs uppercase tracking-wider text-muted-foreground focus:ring-primary">
+                      <SelectTrigger aria-label="Expected Budget" className="h-11 rounded-none bg-background/50 border-border text-left text-xs uppercase tracking-wider text-muted-foreground focus:ring-primary">
                         <SelectValue placeholder="Expected Budget (AUD)" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border rounded-none">
@@ -367,7 +379,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     </Select>
 
                     <Select required value={form.team_supported} onValueChange={(value) => setForm({ ...form, team_supported: value })}>
-                      <SelectTrigger className="h-11 rounded-none bg-background/50 border-border text-left text-xs uppercase tracking-wider text-muted-foreground focus:ring-primary sm:col-span-2">
+                      <SelectTrigger aria-label="NRL Team You Support" className="h-11 rounded-none bg-background/50 border-border text-left text-xs uppercase tracking-wider text-muted-foreground focus:ring-primary sm:col-span-2">
                         <SelectValue placeholder="NRL Team You Support *" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border rounded-none">
@@ -380,7 +392,9 @@ export default function TravelSection({ packages, settings = {} }) {
                     </Select>
 
                     <div className="sm:col-span-2">
+                      <label htmlFor="travel-trip-details" className="sr-only">Trip Details</label>
                       <Textarea
+                        id="travel-trip-details"
                         placeholder="Tell us about the Vegas trip you are after (preferred airline, hotels, custom extensions)..."
                         value={form.trip_details}
                         onChange={(e) => setForm({ ...form, trip_details: e.target.value })}
@@ -432,7 +446,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     autoComplete="off"
                     value={form.website}
                     onChange={(e) => setForm({ ...form, website: e.target.value })}
-                    className="hidden"
+                    className="absolute left-[-9999px] opacity-0 h-0 overflow-hidden"
                     name="website"
                   />
 
@@ -442,7 +456,7 @@ export default function TravelSection({ packages, settings = {} }) {
                       type="checkbox"
                       checked={form.consent_to_contact}
                       onChange={(e) => setForm({ ...form, consent_to_contact: e.target.checked })}
-                      className="mt-0.5 h-4.5 w-4.5 rounded-none border-border bg-background/40 checked:bg-primary accent-primary"
+                      className="mt-0.5 h-4.5 w-4.5 rounded-none border-border bg-background/40 checked:bg-primary accent-primary focus:ring-2 focus:ring-primary"
                     />
                     <span>I agree to be contacted via email/phone regarding travel bookings, tickets updates, and supporter event releases.</span>
                   </label>

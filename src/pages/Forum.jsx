@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback, memo, lazy, Suspense } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback, useDeferredValue, memo, lazy, Suspense } from "react";
 import AdSlot from "@/components/ads/AdSlot";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -577,6 +577,7 @@ export default function Forum() {
   const [draft, setDraft] = useState(emptyPost);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [visibleCount, setVisibleCount] = useState(15);
 
   useEffect(() => {
@@ -834,17 +835,24 @@ export default function Forum() {
   // Category counts
   const categoryCounts = useMemo(() => {
     const counts = { All: allThreads.length };
-    FORUM_CATEGORIES.forEach((c) => { counts[c] = allThreads.filter((t) => t.category === c).length; });
+    FORUM_CATEGORIES.forEach((c) => { counts[c] = 0; });
+    allThreads.forEach((thread) => {
+      if (thread.category && counts[thread.category] !== undefined) {
+        counts[thread.category] += 1;
+      }
+    });
     return counts;
   }, [allThreads]);
 
   // Filter + Sort
   const filteredThreads = useMemo(() => {
+    const normalizedSearch = deferredSearchQuery.trim().toLowerCase();
     let result = allThreads
       .filter((p) => selectedCategory === "All" || p.category === selectedCategory)
       .filter((p) => {
+        if (!normalizedSearch) return true;
         const replyText = (p.replies || []).map((r) => `${r.body || ""} ${r.author_name || ""}`).join(" ");
-        return `${p.title || ""} ${p.body || ""} ${p.author_name || ""} ${replyText}`.toLowerCase().includes(searchQuery.toLowerCase());
+        return `${p.title || ""} ${p.body || ""} ${p.author_name || ""} ${replyText}`.toLowerCase().includes(normalizedSearch);
       });
 
     if (isAuthenticated && user) {
@@ -874,14 +882,14 @@ export default function Forum() {
     }
     // "latest" is default order
     return result;
-  }, [allThreads, selectedCategory, searchQuery, sortBy, isAuthenticated, user, userFilter]);
+  }, [allThreads, selectedCategory, deferredSearchQuery, sortBy, isAuthenticated, user, userFilter]);
 
   const threadsToRender = useMemo(() => {
     return filteredThreads.slice(0, visibleCount);
   }, [filteredThreads, visibleCount]);
 
-  const totalReplies = allThreads.reduce((s, t) => s + (t.replies || []).length, 0);
-  const uniqueMembers = new Set(allThreads.map((t) => t.author_name)).size;
+  const totalReplies = useMemo(() => allThreads.reduce((s, t) => s + (t.replies || []).length, 0), [allThreads]);
+  const uniqueMembers = useMemo(() => new Set(allThreads.map((t) => t.author_name)).size, [allThreads]);
 
   const clearAllFilters = () => {
     setSelectedCategory("All");
@@ -997,7 +1005,7 @@ export default function Forum() {
                 type="button"
                 onClick={() => setMobileTab("feed")}
                 className={`relative flex-1 flex min-h-11 items-center justify-center text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer ${
-                  mobileTab === "feed" ? "text-foreground font-extrabold" : "text-slate-350"
+                  mobileTab === "feed" ? "text-foreground font-extrabold" : "text-slate-400"
                 }`}
               >
                 Discussions
@@ -1013,7 +1021,7 @@ export default function Forum() {
                 type="button"
                 onClick={() => setMobileTab("tools")}
                 className={`relative flex-1 flex min-h-11 items-center justify-center text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer ${
-                  mobileTab === "tools" ? "text-foreground font-extrabold" : "text-slate-350"
+                  mobileTab === "tools" ? "text-foreground font-extrabold" : "text-slate-400"
                 }`}
               >
                 Fan Tools
@@ -1137,7 +1145,7 @@ export default function Forum() {
                         type="button"
                         onClick={() => setUserFilter("all")}
                         className={`px-2.5 py-1 transition-all border cursor-pointer ${
-                          userFilter === "all" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-350 hover:text-white"
+                          userFilter === "all" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-400 hover:text-white"
                         }`}
                       >
                         All Posts
@@ -1146,7 +1154,7 @@ export default function Forum() {
                         type="button"
                         onClick={() => setUserFilter("my_threads")}
                         className={`px-2.5 py-1 transition-all border cursor-pointer ${
-                          userFilter === "my_threads" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-350 hover:text-white"
+                          userFilter === "my_threads" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-400 hover:text-white"
                         }`}
                       >
                         My Threads
@@ -1155,7 +1163,7 @@ export default function Forum() {
                         type="button"
                         onClick={() => setUserFilter("mentions")}
                         className={`px-2.5 py-1 transition-all border cursor-pointer ${
-                          userFilter === "mentions" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-350 hover:text-white"
+                          userFilter === "mentions" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-400 hover:text-white"
                         }`}
                       >
                         Mentions

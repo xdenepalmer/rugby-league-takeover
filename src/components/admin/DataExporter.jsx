@@ -77,8 +77,8 @@ const ORDER_COLUMNS = [
     key: "items",
     label: "Items Summary",
     accessor: (row) => {
-      if (!row.items || !Array.isArray(row.items)) return "";
-      return row.items
+      if (!row.line_items || !Array.isArray(row.line_items)) return "";
+      return row.line_items
         .map((item) => `${item.name || item.title || "Item"} x${item.quantity || 1}`)
         .join("; ");
     },

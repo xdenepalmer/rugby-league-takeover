@@ -46,7 +46,7 @@ function EventTickets({ event }) {
   if (event.ticket_url) {
     return (
       <a href={event.ticket_url} target="_blank" rel="noreferrer" className="mt-6 inline-flex w-fit items-center gap-2 border border-primary px-5 py-3 min-h-[44px] text-xs font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
-        <Ticket className="h-4 w-4" /> Tickets &amp; info <ArrowUpRight className="h-4 w-4" />
+        <Ticket className="h-4 w-4" /> Tickets & info <ArrowUpRight className="h-4 w-4" />
       </a>
     );
   }
@@ -132,6 +132,16 @@ export default function EventsSection({ events, event }) {
 
   const handleCalendarDownload = (item) => {
     if (!item) return;
+    const buildIcsDate = (dateStr, timeStr) => {
+      if (!dateStr) return null;
+      const d = new Date(timeStr ? `${dateStr}T${timeStr}` : dateStr);
+      if (Number.isNaN(d.getTime())) return null;
+      return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    };
+    const dtStart = buildIcsDate(item.event_date, item.start_time);
+    const dtEnd = dtStart
+      ? buildIcsDate(new Date(new Date(dtStart.length ? `${item.event_date}T${item.start_time || "00:00"}` : item.event_date).getTime() + 7200000).toISOString())
+      : null;
     const icsContent = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -139,17 +149,21 @@ export default function EventsSection({ events, event }) {
       `SUMMARY:${item.title} - NRL Vegas Takeover`,
       `DESCRIPTION:${item.blurb || ""}`,
       `LOCATION:${item.location || ""} - ${item.address || ""}`,
+      ...(dtStart ? [`DTSTART:${dtStart}`] : []),
+      ...(dtEnd ? [`DTEND:${dtEnd}`] : []),
       "END:VEVENT",
       "END:VCALENDAR"
     ].join("\n");
     
     const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `${item.title.replace(/\s+/g, "_")}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const getTimezoneConversionText = (item) => {

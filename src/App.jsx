@@ -1,5 +1,4 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
@@ -10,8 +9,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
-import InstallAppPrompt from '@/components/InstallAppPrompt';
-import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
 
 // Lazy-loaded pages
 const Home = lazy(() => import("./pages/Home"));
@@ -23,6 +20,9 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const DeferredToaster = lazy(() => import("@/components/ui/toaster").then((module) => ({ default: module.Toaster })));
+const InstallAppPrompt = lazy(() => import("@/components/InstallAppPrompt"));
+const PwaUpdatePrompt = lazy(() => import("@/components/PwaUpdatePrompt"));
 
 // Sleek, theme-responsive loading spinner for route chunk loading
 const LoadingFallback = () => (
@@ -89,7 +89,7 @@ const themeConfigs = {
 };
 
 function App() {
-  const [showPwaPrompts, setShowPwaPrompts] = useState(false);
+  const [showDeferredUi, setShowDeferredUi] = useState(false);
 
   useEffect(() => {
     const applyTheme = (themeKey) => {
@@ -111,13 +111,14 @@ function App() {
 
     window.addEventListener("rlt_theme_change", handleThemeChange);
 
-    // Defer loading/rendering PWA helper dialogs until after page is fully loaded and idle
+    // Defer non-critical helpers until after page load/idle so the route can
+    // paint before toast/PWA dialog code is requested.
     const handleDefer = () => {
       if (typeof window !== "undefined") {
         if ("requestIdleCallback" in window) {
-          window.requestIdleCallback(() => setShowPwaPrompts(true));
+          window.requestIdleCallback(() => setShowDeferredUi(true), { timeout: 2500 });
         } else {
-          setTimeout(() => setShowPwaPrompts(true), 2000);
+          setTimeout(() => setShowDeferredUi(true), 2000);
         }
       }
     };
@@ -140,14 +141,14 @@ function App() {
         <Router>
           <ScrollToTop />
           <AuthenticatedApp />
-          {showPwaPrompts && (
-            <>
+          {showDeferredUi && (
+            <Suspense fallback={null}>
               <InstallAppPrompt />
               <PwaUpdatePrompt />
-            </>
+              <DeferredToaster />
+            </Suspense>
           )}
         </Router>
-        <Toaster />
       </QueryClientProvider>
     </AuthProvider>
   )

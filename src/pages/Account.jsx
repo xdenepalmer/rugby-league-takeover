@@ -30,6 +30,21 @@ import SecurityTab from "@/components/account/SecurityTab";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
+const ProfileTab = lazy(() => import("@/components/account/ProfileTab"));
+const OrdersTab = lazy(() => import("@/components/account/OrdersTab"));
+const PostsTab = lazy(() => import("@/components/account/PostsTab"));
+const InterestTab = lazy(() => import("@/components/account/InterestTab"));
+const SecurityTab = lazy(() => import("@/components/account/SecurityTab"));
+
+function AccountTabFallback() {
+  return (
+    <div className="grid gap-3">
+      <div className="h-10 animate-pulse border border-border/40 bg-muted/10" />
+      <div className="h-28 animate-pulse border border-border/40 bg-muted/10" />
+    </div>
+  );
+}
+
 /* ── Count Up Number Component ── */
 function AnimatedNumber({ value }) {
   const [displayValue, setDisplayValue] = useState(0);
@@ -153,6 +168,8 @@ export default function Account() {
                   <img
                     src={user.avatar_url}
                     alt={displayName}
+                    loading="lazy"
+                    decoding="async"
                     className="h-20 w-20 rounded-none border border-white/20 object-cover shadow-[0_0_20px_rgba(249,115,22,0.3)]"
                   />
                 ) : (

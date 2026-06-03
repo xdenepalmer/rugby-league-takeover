@@ -44,10 +44,12 @@
     },
     "start_date": {
       "type": "string",
+      "format": "date",
       "description": "Optional start date in YYYY-MM-DD format"
     },
     "end_date": {
       "type": "string",
+      "format": "date",
       "description": "Optional end date in YYYY-MM-DD format"
     },
     "sponsor_id": {

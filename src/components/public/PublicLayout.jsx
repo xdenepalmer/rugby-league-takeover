@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { NavLink, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
@@ -8,7 +8,8 @@ import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import SiteNav from "./SiteNav";
 import AdSlot from "@/components/ads/AdSlot";
-import MobileCommandSheet from "./MobileCommandSheet";
+
+const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
 export default function PublicLayout() {
   const { isAdmin, user } = useAuth();
@@ -244,12 +245,16 @@ export default function PublicLayout() {
         </div>
       </nav>
 
-      <MobileCommandSheet
-        isOpen={isPlanOpen}
-        onClose={() => setIsPlanOpen(false)}
-        onNavigate={handleNavigate}
-        context={pathname.startsWith("/store") ? "store" : pathname.startsWith("/forum") ? "forum" : pathname.startsWith("/account") ? "account" : "home"}
-      />
+      {isPlanOpen && (
+        <Suspense fallback={null}>
+          <MobileCommandSheet
+            isOpen={isPlanOpen}
+            onClose={() => setIsPlanOpen(false)}
+            onNavigate={handleNavigate}
+            context={pathname.startsWith("/store") ? "store" : pathname.startsWith("/forum") ? "forum" : pathname.startsWith("/account") ? "account" : "home"}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

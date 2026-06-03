@@ -70,6 +70,7 @@ export default function ProfileTab() {
   const saveMutation = useMutation({
     mutationFn: () => updateProfile(draft),
     onSuccess: () => toast({ title: "Profile saved", description: "Your details have been updated." }),
+    onError: (error) => toast({ title: "Save failed", description: error.message, variant: "destructive" }),
   });
 
   const update = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
@@ -87,31 +88,32 @@ export default function ProfileTab() {
     <div className="grid gap-6">
       <div className="grid gap-5 border border-border bg-card p-6 md:grid-cols-2">
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Full name</Label>
-          <Input value={draft.full_name} onChange={(e) => update("full_name", e.target.value)} className="h-12 rounded-none border-border bg-background" />
+          <Label htmlFor="profile-full-name" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Full name</Label>
+          <Input id="profile-full-name" value={draft.full_name} onChange={(e) => update("full_name", e.target.value)} className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Email</Label>
-          <Input value={user?.email || ""} disabled className="h-12 rounded-none opacity-70" />
+          <Label htmlFor="profile-email" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Email</Label>
+          <Input id="profile-email" value={user?.email || ""} disabled className="h-12 rounded-none opacity-70" />
+          <p className="text-[10px] text-muted-foreground mt-1">Contact support to change your email</p>
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Phone</Label>
-          <Input value={draft.phone} onChange={(e) => update("phone", e.target.value)} className="h-12 rounded-none border-border bg-background" />
+          <Label htmlFor="profile-phone" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Phone</Label>
+          <Input id="profile-phone" value={draft.phone} onChange={(e) => update("phone", e.target.value)} className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Postcode</Label>
-          <Input value={draft.postcode} onChange={(e) => update("postcode", e.target.value)} className="h-12 rounded-none border-border bg-background" />
+          <Label htmlFor="profile-postcode" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Postcode</Label>
+          <Input id="profile-postcode" value={draft.postcode} onChange={(e) => update("postcode", e.target.value)} className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">City / town</Label>
-          <Input value={draft.city} onChange={(e) => update("city", e.target.value)} placeholder="e.g. Sydney" className="h-12 rounded-none border-border bg-background" />
+          <Label htmlFor="profile-city" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">City / town</Label>
+          <Input id="profile-city" value={draft.city} onChange={(e) => update("city", e.target.value)} placeholder="e.g. Sydney" className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Country</Label>
-          <Input value={draft.country} onChange={(e) => update("country", e.target.value)} placeholder="e.g. Australia" className="h-12 rounded-none border-border bg-background" />
+          <Label htmlFor="profile-country" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Country</Label>
+          <Input id="profile-country" value={draft.country} onChange={(e) => update("country", e.target.value)} placeholder="e.g. Australia" className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Team you support</Label>
+          <Label htmlFor="profile-team" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Team you support</Label>
           <Select value={draft.favourite_team} onValueChange={(value) => update("favourite_team", value)}>
             <SelectTrigger className="rounded-none">
               <SelectValue placeholder="Select a team">
@@ -146,15 +148,15 @@ export default function ProfileTab() {
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Avatar</Label>
+          <Label htmlFor="profile-avatar" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Avatar</Label>
           <div className="flex items-center gap-3">
             {draft.avatar_url && <img src={draft.avatar_url} alt="Avatar" className="h-12 w-12 rounded-none border border-border object-cover" />}
             <div className="flex-1"><MediaUploader label="Upload avatar" accept="image/*" onUploaded={(url) => update("avatar_url", url)} /></div>
           </div>
         </div>
         <div className="grid gap-2 md:col-span-2">
-          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Bio</Label>
-          <Textarea value={draft.bio} onChange={(e) => update("bio", e.target.value)} placeholder="A line or two about you (optional)" className="min-h-20 rounded-none" />
+          <Label htmlFor="profile-bio" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Bio</Label>
+          <Textarea id="profile-bio" value={draft.bio} onChange={(e) => update("bio", e.target.value)} placeholder="A line or two about you (optional)" className="min-h-20 rounded-none" />
         </div>
       </div>
 

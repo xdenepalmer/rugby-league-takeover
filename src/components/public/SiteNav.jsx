@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { lazy, Suspense, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User as UserIcon, ShieldCheck, LogOut, ShoppingBag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import NotificationBell from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
 
 const logoUrl = "/icons/icon-192.png";
+const NotificationBell = lazy(() => import("@/components/NotificationBell"));
 
 const links = [
   { label: "Home", href: "/" },
@@ -52,35 +52,59 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   };
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll();
-    window.addEventListener("scroll", onScroll);
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      setScrolled(window.scrollY > 20);
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
+    if (location.pathname !== "/") {
+      setActiveHash("");
+      return undefined;
+    }
+
+    const homeLinkAnchors = links
+      .filter((link) => link.href.startsWith("/#"))
+      .map((link) => ({ ...link, hash: link.href.substring(1) }));
+    let ticking = false;
+
     const handleScrollSpy = () => {
+      ticking = false;
       const scrollPos = window.scrollY + 200; // offset
-      const homeLinkAnchors = links.filter(l => l.href.startsWith("/#"));
       let active = "";
       for (const link of homeLinkAnchors) {
-        const hash = link.href.substring(1); // #travel, #events etc.
-        const el = document.querySelector(hash);
+        const el = document.querySelector(link.hash);
         if (el) {
           const top = el.offsetTop;
           const height = el.offsetHeight;
           if (scrollPos >= top && scrollPos < top + height) {
-            active = hash;
+            active = link.hash;
           }
         }
       }
       setActiveHash(active);
     };
 
-    window.addEventListener("scroll", handleScrollSpy);
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(handleScrollSpy);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
     handleScrollSpy();
-    return () => window.removeEventListener("scroll", handleScrollSpy);
-  }, []);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [location.pathname]);
 
   // Sync cart count reactively
   useEffect(() => {
@@ -151,7 +175,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
             >
               <div className="h-7 w-7 rounded-none border border-border/60 overflow-hidden flex items-center justify-center bg-muted transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105 shrink-0">
                 {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name || user.email} className="h-full w-full object-cover" />
+                  <img src={user.avatar_url} alt={user.full_name || user.email} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 ) : (
                   <span className="text-[10px] font-mono font-bold text-primary">{initials(user)}</span>
                 )}
@@ -230,6 +254,8 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
             <img
               src={logo}
               alt="Rugby League Takeover Las Vegas"
+              decoding="async"
+              fetchPriority="high"
               className="h-12 w-12 shrink-0 object-contain md:h-14 md:w-14"
             />
           ) : (
@@ -286,7 +312,11 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
             </Button>
           )}
           
-          <NotificationBell />
+          {isAuthenticated && (
+            <Suspense fallback={<div className="h-11 w-11 border border-border bg-secondary/30" aria-hidden="true" />}>
+              <NotificationBell />
+            </Suspense>
+          )}
  
           {/* Cart Status Badge */}
           <Link 
@@ -323,7 +353,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               aria-label="Go to my account"
             >
               {user?.avatar_url ? (
-                <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                <img src={user.avatar_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 <span className="text-[10px] font-mono font-bold text-primary">{initials(user)}</span>
               )}
@@ -435,7 +465,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                           <div className="h-10 w-10 rounded-none border border-border/80 overflow-hidden flex items-center justify-center bg-neutral-900 text-[11px] font-mono font-bold text-primary shrink-0 relative shadow-[0_0_12px_rgba(249,115,22,0.1)] group-hover:border-primary transition-all">
                             {user?.avatar_url ? (
-                              <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                              <img src={user.avatar_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                             ) : (
                               initials(user)
                             )}

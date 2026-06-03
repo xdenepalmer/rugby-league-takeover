@@ -127,6 +127,7 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
             src={product.image_url} 
             alt={product.name} 
             loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-hover:rotate-1" 
           />
         ) : (
@@ -278,7 +279,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
           
           <div className="flex items-center justify-between border-b border-border/30 px-5 py-4">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Quick View</span>
-            <button onClick={onClose} className="text-xs uppercase tracking-wider font-bold text-slate-350 hover:text-foreground cursor-pointer">Close</button>
+            <button onClick={onClose} className="text-xs uppercase tracking-wider font-bold text-slate-400 hover:text-foreground cursor-pointer">Close</button>
           </div>
 
           <div className="ios-scroll flex-1 overflow-y-auto cmd-scrollbar p-6 space-y-6">
@@ -286,7 +287,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
               {/* Product Image */}
               <div className="aspect-square bg-muted/10 border border-border/40 overflow-hidden relative">
                 {product.image_url ? (
-                  <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                  <img src={product.image_url} alt={product.name} decoding="async" className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-slate-400">
                     <ShoppingBag className="h-12 w-12 stroke-1" />
@@ -791,9 +792,9 @@ export default function Store() {
                 <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-300 border-b border-border/10 pb-3 pt-4 mb-1">
                   <span className="text-primary flex items-center gap-1 font-extrabold">1. Cart</span>
                   <span className="text-muted-foreground/30">➔</span>
-                  <span className={checkoutEmail ? "text-primary flex items-center gap-1 font-extrabold" : "text-slate-350"}>2. Details</span>
+                  <span className={checkoutEmail ? "text-primary flex items-center gap-1 font-extrabold" : "text-slate-400"}>2. Details</span>
                   <span className="text-muted-foreground/30">➔</span>
-                  <span className="text-slate-350">3. Pay</span>
+                  <span className="text-slate-400">3. Pay</span>
                 </div>
               )}
 
@@ -827,7 +828,7 @@ export default function Store() {
                       >
                         <div className="h-16 w-16 flex-shrink-0 bg-muted/10 border border-border/50 overflow-hidden">
                           {item.image_url && (
-                            <img src={item.image_url} alt={item.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover/item:scale-105" />
+                            <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-300 group-hover/item:scale-105" />
                           )}
                         </div>
                         <div className="flex flex-1 flex-col justify-between">
