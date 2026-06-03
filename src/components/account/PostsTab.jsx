@@ -32,9 +32,11 @@ export default function PostsTab() {
     }
   }, []);
 
+  const [unsavedIds, setUnsavedIds] = useState([]);
+
   const savedPosts = useMemo(() => {
-    return allPosts.filter(p => savedIds.includes(p.id));
-  }, [allPosts, savedIds]);
+    return allPosts.filter(p => savedIds.includes(p.id) && !unsavedIds.includes(p.id));
+  }, [allPosts, savedIds, unsavedIds]);
 
   const isLoading = myPostsLoading || allPostsLoading;
 
@@ -48,7 +50,7 @@ export default function PostsTab() {
           type="button"
           onClick={() => setSubTab("my_posts")}
           className={`flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-            subTab === "my_posts" ? "bg-primary text-white" : "text-slate-350 hover:text-white"
+            subTab === "my_posts" ? "bg-primary text-white" : "text-slate-400 hover:text-white"
           }`}
         >
           My Threads ({myPosts.length})
@@ -57,7 +59,7 @@ export default function PostsTab() {
           type="button"
           onClick={() => setSubTab("saved")}
           className={`flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-            subTab === "saved" ? "bg-primary text-white" : "text-slate-350 hover:text-white"
+            subTab === "saved" ? "bg-primary text-white" : "text-slate-400 hover:text-white"
           }`}
         >
           Saved ({savedPosts.length})
@@ -121,9 +123,8 @@ export default function PostsTab() {
                         const saved = JSON.parse(localStorage.getItem(key) || "[]");
                         const next = saved.filter(x => x !== post.id);
                         localStorage.setItem(key, JSON.stringify(next));
-                        // Trigger soft reload of local storage query data by modifying state
-                        window.location.reload();
-                      } catch(e) {}
+                        setUnsavedIds(prev => [...prev, post.id]);
+                      } catch {}
                     }}
                     className="text-destructive hover:underline cursor-pointer font-bold bg-transparent border-0 p-0"
                   >

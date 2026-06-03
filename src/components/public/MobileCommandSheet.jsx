@@ -299,65 +299,65 @@ const CONTEXT_HEADERS = {
 };
 
 export default function MobileCommandSheet({ isOpen, onClose, onNavigate, context = "home" }) {
-  if (!isOpen) return null;
-
   const header = CONTEXT_HEADERS[context] || CONTEXT_HEADERS.home;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 lg:hidden pointer-events-none">
-        {/* Semi-transparent backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25, ease: "linear" }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/75 backdrop-blur-sm pointer-events-auto"
-        />
+      {isOpen && (
+        <div key="sheet" className="fixed inset-0 z-50 lg:hidden pointer-events-none">
+          {/* Semi-transparent backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "linear" }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm pointer-events-auto"
+          />
 
-        {/* Sliding drawer */}
-        <motion.div
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 220 }}
-          className="absolute inset-x-0 bottom-0 max-h-[85vh] border-t border-border bg-card/95 pb-safe cmd-glass pointer-events-auto flex flex-col overflow-hidden"
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Neon accent line */}
-          <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-primary" />
+          {/* Sliding drawer */}
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] border-t border-border bg-card/95 pb-safe cmd-glass pointer-events-auto flex flex-col overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Neon accent line */}
+            <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-primary" />
 
-          {/* Drag indicator handle */}
-          <div className="flex justify-center py-2 shrink-0">
-            <div className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
-          </div>
-
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 pb-4 border-b border-border/40 shrink-0">
-            <div>
-              <p className="text-[9px] font-mono font-bold tracking-widest text-primary uppercase">{header.label}</p>
-              <h2 className="font-display text-xl uppercase tracking-wide text-foreground mt-0.5">{header.title}</h2>
+            {/* Drag indicator handle */}
+            <div className="flex justify-center py-2 shrink-0">
+              <div className="h-1.5 w-12 rounded-full bg-muted-foreground/30" />
             </div>
-            <button
-              onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center border border-border text-slate-300 hover:border-primary hover:text-foreground transition-colors cursor-pointer"
-              aria-label="Close sheet"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          {/* Scrollable Content — context-aware */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 cmd-scrollbar">
-            {context === "store" && <StoreContent onClose={onClose} />}
-            {context === "forum" && <ForumContent onClose={onClose} />}
-            {context === "account" && <AccountContent onClose={onClose} />}
-            {context === "home" && <HomeContent onNavigate={onNavigate} onClose={onClose} />}
-          </div>
-        </motion.div>
-      </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pb-4 border-b border-border/40 shrink-0">
+              <div>
+                <p className="text-[9px] font-mono font-bold tracking-widest text-primary uppercase">{header.label}</p>
+                <h2 className="font-display text-xl uppercase tracking-wide text-foreground mt-0.5">{header.title}</h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="flex h-10 w-10 items-center justify-center border border-border text-slate-300 hover:border-primary hover:text-foreground transition-colors cursor-pointer"
+                aria-label="Close sheet"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content — context-aware */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 cmd-scrollbar">
+              {context === "store" && <StoreContent onClose={onClose} />}
+              {context === "forum" && <ForumContent onClose={onClose} />}
+              {context === "account" && <AccountContent onClose={onClose} />}
+              {context === "home" && <HomeContent onNavigate={onNavigate} onClose={onClose} />}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

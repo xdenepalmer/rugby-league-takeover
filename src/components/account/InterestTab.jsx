@@ -88,12 +88,12 @@ export default function InterestTab() {
 
             {/* Action buttons */}
             <div className="flex flex-wrap gap-2 mt-4 border-t border-border/30 pt-4">
-              <a
-                href="/#travel"
+              <Link
+                to="/#travel"
                 className="inline-flex items-center gap-1.5 border border-primary/25 bg-primary/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors"
               >
                 <Plane className="h-3 w-3" /> View Packages <ArrowRight className="h-2.5 w-2.5" />
-              </a>
+              </Link>
               <a
                 href={`mailto:support@rugbyleaguetakeover.com?subject=Update%20Travel%20Preferences%20-%20${encodeURIComponent(registration.name)}`}
                 className="inline-flex items-center gap-1.5 border border-border/50 bg-muted/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-foreground hover:border-primary/30 transition-colors"

@@ -109,10 +109,15 @@ export default function EventsSection({ events, event }) {
   const [selectedCat, setSelectedCat] = useState("All");
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  const source = events?.length ? events : (event ? [event] : fallbackEvents);
-  const list = source.filter((item) => item && item.is_published !== false);
+  const source = useMemo(() => {
+    return events?.length ? events : (event ? [event] : fallbackEvents);
+  }, [events, event]);
 
   const categories = ["All", "Official Events", "Supporter Meetups", "Pool Parties"];
+
+  const list = useMemo(() => {
+    return source.filter((item) => item && item.is_published !== false);
+  }, [source]);
 
   const filteredEvents = useMemo(() => {
     return list.filter((item) => {

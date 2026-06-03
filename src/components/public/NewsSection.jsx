@@ -1,5 +1,10 @@
 import React, { useRef, useCallback, useState } from "react";
 import { format } from "date-fns";
+
+const safeFormatDate = (dateStr, fmt = "dd MMM yyyy") => {
+  if (!dateStr) return null;
+  try { const d = new Date(dateStr); return isNaN(d.getTime()) ? null : format(d, fmt); } catch { return null; }
+};
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import { Calendar, ArrowRight, Clock, Newspaper } from "lucide-react";
 import SectionHeader from "./SectionHeader";
@@ -86,9 +91,7 @@ function NewsCard({ article, index, onClick }) {
           <span className="inline-flex items-center gap-1 px-3 py-1 bg-card/85 backdrop-blur-sm border border-border/60 text-[10px] font-bold uppercase tracking-wider text-accent">
             <Calendar className="w-3.5 h-3.5 text-primary" />
             <span>
-              {article.published_date
-                ? format(new Date(article.published_date), "dd MMM yyyy")
-                : "Announced"}
+              {safeFormatDate(article.published_date) || "Announced"}
             </span>
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-card/85 backdrop-blur-sm border border-border/60 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -130,7 +133,7 @@ function NewsCard({ article, index, onClick }) {
   );
 }
 
-export default function NewsSection({ articles, settings = {} }) {
+export default function NewsSection({ articles = [], settings = {} }) {
   const containerRef = useRef(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
 
@@ -173,16 +176,23 @@ export default function NewsSection({ articles, settings = {} }) {
           </motion.div>
         )}
 
-        <div ref={containerRef} className="grid gap-6 md:grid-cols-3">
-          {articles.map((article, index) => (
-            <NewsCard
-              key={article.id || index}
-              article={article}
-              index={index}
-              onClick={setSelectedArticle}
-            />
-          ))}
-        </div>
+        {articles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Newspaper className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <p className="text-sm text-muted-foreground">No articles published yet. Check back soon!</p>
+          </div>
+        ) : (
+          <div ref={containerRef} className="grid gap-6 md:grid-cols-3">
+            {articles.map((article, index) => (
+              <NewsCard
+                key={article.id || index}
+                article={article}
+                index={index}
+                onClick={setSelectedArticle}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <PublicDetailSheet
@@ -190,7 +200,7 @@ export default function NewsSection({ articles, settings = {} }) {
         onClose={() => setSelectedArticle(null)}
         title={selectedArticle?.title}
         category={selectedArticle?.category || "News"}
-        date={selectedArticle?.published_date ? format(new Date(selectedArticle.published_date), "dd MMM yyyy") : undefined}
+        date={safeFormatDate(selectedArticle?.published_date) || undefined}
         author={selectedArticle?.author || "RLT Staff"}
         image={selectedArticle?.image_url}
         body={selectedArticle?.body}

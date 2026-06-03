@@ -337,7 +337,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0, y: -4 }}
                   transition={{ type: "spring", stiffness: 450, damping: 15 }}
-                  className="absolute -right-1 -top-1.5 flex h-4.5 min-w-[18px] items-center justify-center bg-primary px-1 text-[10px] font-bold text-white rounded-none shadow-[0_0_10px_hsl(var(--primary))]"
+                  className="absolute -right-1 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center bg-primary px-1 text-[10px] font-bold text-white rounded-none shadow-[0_0_10px_hsl(var(--primary))]"
                 >
                   {cartCount}
                 </motion.span>

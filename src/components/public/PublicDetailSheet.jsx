@@ -1,11 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Share2, Calendar, Clock, User, Check } from "lucide-react";
 
 export default function PublicDetailSheet({ isOpen, onClose, title, category, date, author, image, body, readingTime, shareUrl, ctaLabel, onCtaClick }) {
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const handleShare = async (e) => {
     e.preventDefault();
@@ -18,19 +28,20 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-      } catch (err) { /* noop */ }
+      } catch { /* noop */ }
     } else {
       try {
         await navigator.clipboard.writeText(shareData.url);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      } catch (err) { /* noop */ }
+      } catch { /* noop */ }
     }
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 pointer-events-none">
+      {isOpen && (
+      <div key="detail-sheet" className="fixed inset-0 z-50 pointer-events-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -164,6 +175,7 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }

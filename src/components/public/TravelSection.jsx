@@ -50,7 +50,7 @@ export default function TravelSection({ packages, settings = {} }) {
     budget_range: ""
   };
   const [form, setForm] = useState(emptyForm);
-  const [submitted, setSubmitted] = useState(false);
+  const [_submitted, setSubmitted] = useState(false);
   const [step, setStep] = useState(1);
   const queryClient = useQueryClient();
 
@@ -456,7 +456,7 @@ export default function TravelSection({ packages, settings = {} }) {
                       type="checkbox"
                       checked={form.consent_to_contact}
                       onChange={(e) => setForm({ ...form, consent_to_contact: e.target.checked })}
-                      className="mt-0.5 h-4.5 w-4.5 rounded-none border-border bg-background/40 checked:bg-primary accent-primary focus:ring-2 focus:ring-primary"
+                      className="mt-0.5 h-[18px] w-[18px] rounded-none border-border bg-background/40 checked:bg-primary accent-primary focus:ring-2 focus:ring-primary"
                     />
                     <span>I agree to be contacted via email/phone regarding travel bookings, tickets updates, and supporter event releases.</span>
                   </label>
@@ -504,7 +504,7 @@ export default function TravelSection({ packages, settings = {} }) {
 
                   {/* Helpful info box */}
                   <div className="border border-border/50 bg-secondary/10 p-4 text-[10px] text-muted-foreground font-mono leading-relaxed max-w-sm mx-auto flex items-start gap-2.5 text-left">
-                    <Info className="h-4.5 w-4.5 text-primary shrink-0" />
+                    <Info className="h-[18px] w-[18px] text-primary shrink-0" />
                     <div>
                       <span className="font-bold text-foreground">WHAT'S NEXT:</span> Keep tabs on your travel status directly in the <Link to="/account" className="text-primary underline">My Account Dashboard</Link>, and check out active flight/hotel coordination inside the community forum.
                     </div>
