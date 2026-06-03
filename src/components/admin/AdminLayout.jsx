@@ -5,7 +5,8 @@ import {
   LayoutDashboard, FileText, CalendarDays, ShoppingBag,
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
   Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
-  Shield, Zap, Download, Keyboard, MoreHorizontal, Megaphone
+  Shield, Zap, Download, Keyboard, MoreHorizontal, Megaphone,
+  PackageCheck, ShieldAlert, Gauge
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -29,6 +30,54 @@ const navItems = [
   { to: "/admin/ads",       label: "Ads",        icon: Megaphone,       shortcut: "⌘8", key: "8" },
 ];
 
+const sectionMeta = {
+  Overview: {
+    eyebrow: "Operations",
+    title: "Mission Control",
+    description: "A live owner view of orders, moderation, signups, publishing and revenue.",
+  },
+  Content: {
+    eyebrow: "Publishing",
+    title: "Content Desk",
+    description: "Update news, travel packages, partners and testimonials before they go public.",
+  },
+  Events: {
+    eyebrow: "Schedule",
+    title: "Event Control",
+    description: "Keep matchups, teams and fan events accurate for the Vegas trip.",
+  },
+  Store: {
+    eyebrow: "Merchandise",
+    title: "Store Fulfilment",
+    description: "Manage products, payments, shipping status, tracking and customer order history.",
+  },
+  Community: {
+    eyebrow: "Moderation",
+    title: "Community Watch",
+    description: "Review posts, pin useful threads, handle bans and keep the forum moving.",
+  },
+  People: {
+    eyebrow: "Access",
+    title: "People Directory",
+    description: "Manage users, registrations, invites, handover notes and access controls.",
+  },
+  Settings: {
+    eyebrow: "System",
+    title: "Site Settings",
+    description: "Tune public copy, brand assets, homepage controls and operational defaults.",
+  },
+  Ads: {
+    eyebrow: "Sponsors",
+    title: "Ad Revenue",
+    description: "Manage campaigns, sponsors, placements, reports and ad performance.",
+  },
+  Dashboard: {
+    eyebrow: "Admin",
+    title: "Command Centre",
+    description: "Pick a section from the admin navigation to manage the site.",
+  },
+};
+
 const mobileIconMap = {
   LayoutDashboard,
   FileText,
@@ -41,6 +90,9 @@ const mobileIconMap = {
   Download,
   MoreHorizontal,
   Megaphone,
+  PackageCheck,
+  ShieldAlert,
+  Gauge,
 };
 
 /* ── Live clock hook ─────────────────────────────────────────── */
@@ -129,6 +181,45 @@ function NavBadge({ count }) {
   );
 }
 
+function AttentionCard({ to, icon: Icon, label, count, clearLabel, tone = "primary" }) {
+  const toneClass = tone === "accent"
+    ? "border-accent/30 bg-accent/10 text-accent"
+    : tone === "emerald"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : "border-primary/30 bg-primary/10 text-primary";
+  const hasWork = Number(count || 0) > 0;
+
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `group flex min-h-[54px] items-center gap-3 border px-3 text-left transition-all ${
+          isActive
+            ? "border-primary/50 bg-primary/15 text-foreground"
+            : "border-border/50 bg-card/30 text-muted-foreground hover:border-primary/30 hover:bg-card/60 hover:text-foreground"
+        }`
+      }
+    >
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center border ${hasWork ? toneClass : "border-border/50 bg-muted/15 text-muted-foreground"}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
+          {label}
+        </span>
+        <span className={`mt-0.5 block text-sm font-bold ${hasWork ? "text-foreground" : "text-muted-foreground"}`}>
+          {hasWork ? `${count} needs review` : clearLabel}
+        </span>
+      </span>
+      {hasWork && (
+        <span className={`flex h-7 min-w-7 items-center justify-center border px-2 text-xs font-bold tabular-nums ${toneClass}`}>
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </NavLink>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════════
    AdminLayout
    ════════════════════════════════════════════════════════════════ */
@@ -160,8 +251,30 @@ export default function AdminLayout({ children }) {
   /* Get current section name */
   const currentSection = getAdminSectionLabel(location.pathname);
   const activeMobileTab = getActiveMobileAdminTab(location.pathname);
+  const activeNavItem = navItems.find((item) => location.pathname.startsWith(item.to)) || navItems[0];
+  const activeMeta = sectionMeta[currentSection] || sectionMeta.Dashboard;
+  const ActiveIcon = activeNavItem?.icon || LayoutDashboard;
+  const totalAttention = Number(badgeCounts.store || 0) + Number(badgeCounts.community || 0);
+  const attentionItems = [
+    {
+      to: "/admin/store",
+      icon: PackageCheck,
+      label: "Orders",
+      count: badgeCounts.store,
+      clearLabel: "Fulfilment clear",
+      tone: "accent",
+    },
+    {
+      to: "/admin/community",
+      icon: ShieldAlert,
+      label: "Moderation",
+      count: badgeCounts.community,
+      clearLabel: "Queue clear",
+      tone: "primary",
+    },
+  ];
 
-  /* ── Keyboard shortcuts (Ctrl+1-7) ─────────────────────────── */
+  /* ── Keyboard shortcuts (Ctrl+1-8) ─────────────────────────── */
   const handleKeyboard = useCallback(
     (e) => {
       if (!e.ctrlKey && !e.metaKey) return;
@@ -314,13 +427,19 @@ export default function AdminLayout({ children }) {
           {/* Sidebar Header */}
           <div className="flex items-center justify-between px-3 py-3 border-b border-border/50">
             {!collapsed && (
-              <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-                Navigation
-              </span>
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                  Navigation
+                </span>
+                <p className="mt-0.5 text-[9px] font-mono uppercase tracking-wider text-primary/80">
+                  {totalAttention > 0 ? `${totalAttention} priority` : "All clear"}
+                </p>
+              </div>
             )}
             <button
               onClick={() => setCollapsed((v) => !v)}
-              className="p-1 rounded-sm hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="flex h-8 w-8 items-center justify-center border border-border/50 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted hover:text-foreground"
+              aria-label={collapsed ? "Expand admin navigation" : "Collapse admin navigation"}
             >
               {collapsed ? (
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -330,17 +449,56 @@ export default function AdminLayout({ children }) {
             </button>
           </div>
 
+          {!collapsed ? (
+            <div className="mx-2 mt-2 border border-border/50 bg-background/30 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-primary">Ops Pulse</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">Fastest routes to live work.</p>
+                </div>
+                <Gauge className="h-4 w-4 text-accent" />
+              </div>
+              <div className="grid gap-2">
+                {attentionItems.map((item) => (
+                  <AttentionCard key={item.label} {...item} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mx-2 mt-2 grid gap-2">
+              {attentionItems.map(({ to, icon: Icon, count, label, tone }) => (
+                <NavLink
+                  key={label}
+                  to={to}
+                  className={({ isActive }) =>
+                    `relative flex h-11 items-center justify-center border transition-colors ${
+                      isActive ? "border-primary/50 bg-primary/15 text-primary" : "border-border/50 bg-background/30 text-muted-foreground hover:text-foreground"
+                    }`
+                  }
+                  title={label}
+                >
+                  <Icon className="h-4 w-4" />
+                  {count > 0 && (
+                    <span className={`absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center px-1 text-[9px] font-bold text-white ${tone === "accent" ? "bg-accent text-black" : "bg-primary"}`}>
+                      {count > 9 ? "9+" : count}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          )}
+
           {/* Nav Items */}
-          <nav className="flex-1 py-2 px-2 space-y-0.5 cmd-scrollbar overflow-y-auto">
+          <nav className="flex-1 py-2 px-2 space-y-1 cmd-scrollbar overflow-y-auto">
             {navItems.map(({ to, label, icon: Icon, shortcut, badgeKey }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={({ isActive }) => {
-                  const base = `group relative flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200`;
+                  const base = `group relative flex min-h-11 items-center gap-3 overflow-hidden border px-3 text-xs font-bold uppercase tracking-wider transition-all duration-200`;
                   const active = isActive
-                    ? "bg-primary/10 text-foreground border-l-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border-l-2 border-transparent";
+                    ? "border-primary/40 bg-primary/[0.12] text-foreground shadow-[inset_3px_0_0_hsl(var(--primary))]"
+                    : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/30 hover:text-foreground";
                   return `${base} ${active}`;
                 }}
                 onMouseEnter={() => setHoveredNav(to)}
@@ -372,8 +530,8 @@ export default function AdminLayout({ children }) {
                     {isActive && (
                       <motion.div
                         layoutId="nav-glow"
-                        className="absolute inset-0 -z-10 border-l-2 border-primary bg-primary/5"
-                        style={{ boxShadow: "inset 3px 0 12px -4px hsl(var(--primary) / 0.3)" }}
+                        className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/[0.16] via-primary/5 to-transparent"
+                        style={{ boxShadow: "inset 3px 0 18px -5px hsl(var(--primary) / 0.55)" }}
                         transition={{ type: "spring", stiffness: 350, damping: 30 }}
                       />
                     )}
@@ -439,7 +597,7 @@ export default function AdminLayout({ children }) {
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/40">
                   <Keyboard className="h-3 w-3" />
-                  <span>Ctrl+1‑7 to navigate</span>
+                  <span>Ctrl+1-8 to navigate</span>
                 </div>
               </div>
             ) : (
@@ -564,6 +722,41 @@ export default function AdminLayout({ children }) {
             </div>
           </div>
 
+          <div className="px-4 pt-4 md:px-8">
+            <section className="relative overflow-hidden border border-border/70 bg-card/40 cmd-glass">
+              <div className="h-[2px] w-full cmd-accent-bar" />
+              <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-primary/30 bg-primary/10 text-primary shadow-[0_0_24px_hsl(var(--primary)/0.08)]">
+                    <ActiveIcon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-primary">
+                        {activeMeta.eyebrow}
+                      </p>
+                      <span className="border border-border/60 bg-background/30 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                        {location.pathname.replace("/admin/", "") || "overview"}
+                      </span>
+                    </div>
+                    <h2 className="mt-1 font-display text-2xl uppercase leading-none tracking-wide md:text-3xl">
+                      {activeMeta.title}
+                    </h2>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+                      {activeMeta.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 md:w-[360px]">
+                  {attentionItems.map((item) => (
+                    <AttentionCard key={item.label} {...item} />
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+
           {/* Page Content with Framer Motion transitions */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -572,7 +765,7 @@ export default function AdminLayout({ children }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="px-4 pb-[calc(7.75rem+var(--safe-bottom))] pt-5 md:px-8 md:py-8"
+              className="px-4 pb-[calc(7.75rem+var(--safe-bottom))] pt-4 md:px-8 md:pb-8 md:pt-6"
             >
               {children}
             </motion.div>
@@ -615,10 +808,16 @@ export default function AdminLayout({ children }) {
                 </button>
               </div>
 
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {attentionItems.map((item) => (
+                  <AttentionCard key={item.label} {...item} />
+                ))}
+              </div>
+
               <div className="mt-4 grid gap-2">
                 {mobileMoreAdminItems.map((item) => {
                   const Icon = mobileIconMap[item.icon] || MoreHorizontal;
-                  const itemClass = "ios-pressable flex min-h-[58px] items-center gap-3 border border-border/60 bg-card/45 px-4 text-left text-sm font-bold text-foreground";
+                  const itemClass = "ios-pressable flex min-h-[58px] items-center gap-3 border border-border/60 bg-card/40 px-4 text-left text-sm font-bold text-foreground";
 
                   if (item.kind === "link") {
                     return (
@@ -669,6 +868,9 @@ export default function AdminLayout({ children }) {
               <>
                 <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
                 <span className="max-w-full truncate">{item.label}</span>
+                {isActive && (
+                  <span className="absolute left-1/2 top-1 -translate-x-1/2 h-[3px] w-6 bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.7)]" />
+                )}
                 {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
                   <span className="absolute right-3 top-1 flex h-4 min-w-[16px] items-center justify-center bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                     {badgeCounts[item.badgeKey] > 9 ? "9+" : badgeCounts[item.badgeKey]}
@@ -684,7 +886,7 @@ export default function AdminLayout({ children }) {
                   type="button"
                   onClick={() => setMobileMoreOpen((open) => !open)}
                   className={`ios-tabbar-item relative flex flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold uppercase tracking-wide ${
-                    isActive ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+                    isActive ? "border border-primary/25 bg-primary/10 text-foreground" : "text-muted-foreground"
                   }`}
                   aria-expanded={mobileMoreOpen}
                   aria-label="Open admin controls"
@@ -699,7 +901,7 @@ export default function AdminLayout({ children }) {
                 key={item.label}
                 to={item.to}
                 className={`ios-tabbar-item relative flex flex-col items-center justify-center gap-1 px-1 text-[9px] font-bold uppercase tracking-wide ${
-                  isActive ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+                  isActive ? "border border-primary/25 bg-primary/10 text-foreground" : "text-muted-foreground"
                 }`}
               >
                 {content}

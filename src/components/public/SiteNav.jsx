@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User as UserIcon, ShieldCheck, LogOut, ShoppingBag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -29,9 +29,27 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
+  const navigateTo = useNavigate();
   const logo = settings.site_logo_url || (!settingsLoading ? logoUrl : "");
 
   const [activeHash, setActiveHash] = useState("");
+
+  /* Scroll-to-hash helper — handles both same-page and cross-page anchor links */
+  const scrollToHash = (href, e) => {
+    if (!href.startsWith("/#")) return; // not a hash link
+    e.preventDefault();
+    const hash = href.substring(1); // e.g. "#events"
+    if (location.pathname === "/") {
+      const el = document.querySelector(hash);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigateTo("/");
+      setTimeout(() => {
+        const el = document.querySelector(hash);
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 400);
+    }
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -229,6 +247,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               <Link 
                 key={link.href} 
                 to={link.href} 
+                onClick={(e) => scrollToHash(link.href, e)}
                 onMouseEnter={() => prefetchRoute(link.href)}
                 onTouchStart={() => prefetchRoute(link.href)}
                 className={`group relative py-2 font-display text-[10px] xl:text-[10px] 2xl:text-[10.5px] font-bold uppercase tracking-[0.12em] xl:tracking-[0.2em] whitespace-nowrap transition-all duration-300 ${
@@ -388,7 +407,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                       <motion.div key={link.href} variants={itemVariants}>
                         <Link 
                           to={link.href} 
-                          onClick={() => setOpen(false)} 
+                          onClick={(e) => { scrollToHash(link.href, e); setOpen(false); }} 
                           onMouseEnter={() => prefetchRoute(link.href)}
                           onTouchStart={() => prefetchRoute(link.href)}
                           className={`group relative flex items-center py-3 min-h-[44px] font-display text-xl uppercase tracking-wider cursor-pointer transition-all ${
