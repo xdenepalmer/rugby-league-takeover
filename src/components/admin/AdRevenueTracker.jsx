@@ -4,7 +4,7 @@ import {
   DollarSign, TrendingUp, Download, Trophy, BarChart3,
   MousePointerClick, ChevronDown, ChevronUp, FileText,
   Loader2, CheckCircle2, PieChart as PieChartIcon,
-  Users, Monitor, Smartphone, Layers,
+  Users, Layers,
   ArrowUpRight, ArrowDownRight, Minus,
 } from "lucide-react";
 import {

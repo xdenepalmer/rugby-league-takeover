@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Plus, Trash2, Pencil, X, Save, Search,
   Star, Heart, ChevronDown, ChevronUp, Copy, ExternalLink,
-  Calendar, AlertTriangle, CheckCircle2, Mail, Phone,
+  Calendar, AlertTriangle, Mail, Phone,
   Globe, StickyNote, DollarSign, Shield, Eye, EyeOff,
   ArrowUpDown, Users,
 } from "lucide-react";
