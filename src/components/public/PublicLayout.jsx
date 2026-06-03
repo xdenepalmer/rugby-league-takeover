@@ -34,18 +34,13 @@ export default function PublicLayout() {
 
       {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
-        {/* Banner Top Ad Slot — not on Home (has hero) */}
-        {!isHome && (
-          <div className="w-full flex justify-center px-4 py-3 bg-background/50">
-            <AdSlot position="banner-top" size="leaderboard" className="w-full max-w-5xl" />
-          </div>
-        )}
-
         <Outlet />
+      </div>
 
-        {/* Banner Bottom Ad Slot */}
-        <div className="w-full flex justify-center px-4 py-4">
-          <AdSlot position="banner-bottom" size="leaderboard" className="w-full max-w-5xl" />
+      {/* Sponsored Ad Slot — above footer, proper placement */}
+      <div className="w-full border-t border-border/30">
+        <div className="mx-auto max-w-5xl px-4 py-6">
+          <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
         </div>
       </div>
 

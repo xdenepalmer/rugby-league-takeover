@@ -609,21 +609,18 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
             />
           </div>
 
-          {/* "Sponsored" label — hidden by default, fades in on hover */}
-          <motion.span
-            initial={false}
-            animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : -4 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.2em] font-mono backdrop-blur-sm pointer-events-none"
+          {/* "Sponsored" label — always visible for transparency */}
+          <span
+            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.2em] font-mono pointer-events-none"
             style={{
-              background: "hsl(var(--background) / 0.6)",
-              color: "hsl(var(--muted-foreground) / 0.7)",
+              background: "hsl(var(--background) / 0.7)",
+              color: "hsl(var(--muted-foreground) / 0.6)",
               borderLeft: "1px solid hsl(var(--border) / 0.3)",
               borderBottom: "1px solid hsl(var(--border) / 0.3)",
             }}
           >
             Sponsored
-          </motion.span>
+          </span>
 
           {/* Close/minimize button — appears on hover */}
           <motion.button
@@ -703,7 +700,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
               <img
                 src={imgSrc}
                 alt={currentAd.title || "Advertisement"}
-                className="block w-full object-cover"
+                className="block w-full object-contain"
                 style={{
                   aspectRatio: preset ? `${preset.w}/${preset.h}` : undefined,
                   opacity: imgLoaded ? 1 : 0,
