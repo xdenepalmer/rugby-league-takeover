@@ -1,3 +1,15 @@
+/**
+ * PWA Environment Configuration
+ * 
+ * Strategy:
+ * - Public routes: Full PWA with service worker caching, offline support,
+ *   and install prompts. Cached assets serve instantly on repeat visits.
+ * - Admin routes (/admin/*): Always network-fresh. Service worker is disabled
+ *   to ensure admin always sees real-time data. The web app manifest still
+ *   includes an Admin shortcut for quick-launch from the home screen, but
+ *   this does NOT imply offline support — it's a convenience shortcut only.
+ * - Preview/development: PWA disabled to avoid stale cache issues during dev.
+ */
 const PREVIEW_HOST_PATTERNS = [
   /(^|\.)base44\.app$/i,
   /preview/i,

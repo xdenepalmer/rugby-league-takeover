@@ -116,6 +116,32 @@
       "type": "number",
       "default": 0,
       "description": "Number of views on the post"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Soft-delete timestamp, null means not deleted"
+    },
+    "deleted_by": {
+      "type": "string",
+      "description": "Admin email who soft-deleted"
+    },
+    "moderation_reason": {
+      "type": "string",
+      "description": "Reason for moderation action"
+    },
+    "reported_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of user reports"
+    },
+    "reported_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Emails of users who reported this post"
     }
   },
   "required": [

@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, addBusinessDays, formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Download, DollarSign, ShoppingCart, Clock, PackageCheck, BadgeCheck,
   ChevronDown, Package, CreditCard, Truck, XCircle, CheckCircle2, RotateCcw,
-  User, Copy, ExternalLink, MapPin,
+  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { downloadCsv } from "@/lib/csv";
+import { useAuth } from "@/lib/AuthContext";
+import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +33,13 @@ const statusConfig = {
 
 const getStatusConfig = (s) => statusConfig[s] || statusConfig.pending;
 
+/* Shipping method config */
+const SHIPPING_METHODS = {
+  standard: { label: "Standard (7–10 business days)", days: 10 },
+  express:  { label: "Express (3–5 business days)",   days: 5 },
+  priority: { label: "Priority (1–2 business days)",  days: 2 },
+};
+
 /* Pipeline tabs */
 const PIPELINE_TABS = [
   { key: "all",       label: "All" },
@@ -43,6 +52,18 @@ const PIPELINE_TABS = [
 
 /* Carrier presets */
 const CARRIERS = ["Australia Post", "DHL", "FedEx", "UPS", "USPS", "StarTrack", "Aramex", "Other"];
+
+/* Helper: build a timeline entry */
+function makeTimelineEntry(action, actor, note) {
+  return { action, timestamp: new Date().toISOString(), actor: actor || "system", ...(note ? { note } : {}) };
+}
+
+/* Helper: calculate estimated delivery */
+function calcEstimatedDelivery(shippedAt, shippingMethod) {
+  if (!shippedAt) return null;
+  const method = SHIPPING_METHODS[shippingMethod] || SHIPPING_METHODS.standard;
+  return format(addBusinessDays(new Date(shippedAt), method.days), "yyyy-MM-dd");
+}
 
 /* ── Stat Card ── */
 function StatCard({ icon: Icon, label, value, accent }) {
@@ -97,19 +118,66 @@ function FulfillmentStepper({ currentStatus }) {
   );
 }
 
+/* ── Order Timeline ── */
+function OrderTimeline({ timeline }) {
+  if (!timeline || timeline.length === 0) return null;
+  const sorted = [...timeline].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  return (
+    <div className="space-y-1">
+      <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 mb-2">Order Timeline</p>
+      <div className="relative pl-4 space-y-3">
+        {/* Vertical line */}
+        <div className="absolute left-[5px] top-1 bottom-1 w-px bg-border/20" />
+        {sorted.map((entry, i) => (
+          <div key={i} className="relative flex gap-3">
+            {/* Dot */}
+            <div className={`absolute left-[-11px] top-1.5 h-2.5 w-2.5 rounded-full border-2 ${
+              i === 0 ? "bg-primary border-primary/50" : "bg-muted-foreground/20 border-muted-foreground/10"
+            }`} />
+            <div className="min-w-0 flex-1">
+              <p className={`text-xs font-semibold ${i === 0 ? "text-foreground" : "text-muted-foreground/60"}`}>
+                {entry.action}
+              </p>
+              {entry.note && (
+                <p className="text-[10px] text-muted-foreground/50 mt-0.5">{entry.note}</p>
+              )}
+              <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground/30">
+                {entry.timestamp && (
+                  <span>{formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true })}</span>
+                )}
+                {entry.actor && (
+                  <span className="flex items-center gap-0.5">
+                    <User className="h-2 w-2" /> {entry.actor}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Order Card ── */
-function OrderCard({ order, onUpdate, index }) {
+function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [expanded, setExpanded] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || "");
   const [trackingUrl, setTrackingUrl] = useState(order.tracking_url || "");
   const [carrier, setCarrier] = useState(order.carrier || "");
   const [notes, setNotes] = useState(order.shipping_notes || "");
+  const [customerNote, setCustomerNote] = useState(order.customer_status_note || "");
   const [confirmAction, setConfirmAction] = useState(null);
+  const [showRefundForm, setShowRefundForm] = useState(false);
+  const [refundAmount, setRefundAmount] = useState(Number(order.total_aud || 0));
+  const [refundReason, setRefundReason] = useState("");
 
   const status = getStatusConfig(order.status || "pending");
   const StatusIcon = status.icon;
   const lineItems = order.line_items || [];
   const isFulfillable = paidLike.includes(order.status) && order.status !== "completed";
+  const timeline = order.timeline || [];
 
   const handleQuickAction = (newStatus) => {
     if (newStatus === "shipped" && !trackingNumber) {
@@ -124,17 +192,82 @@ function OrderCard({ order, onUpdate, index }) {
 
   const executeAction = () => {
     const data = { status: confirmAction.status };
+    const existingTimeline = [...timeline];
+
     if (confirmAction.status === "shipped") {
       data.tracking_number = trackingNumber;
       data.tracking_url = trackingUrl;
       data.carrier = carrier;
       data.shipped_at = new Date().toISOString();
+      // Auto-calculate estimated delivery
+      const method = order.shipping_method || "standard";
+      if (!order.estimated_delivery) {
+        data.estimated_delivery = calcEstimatedDelivery(data.shipped_at, method);
+      }
     }
     if (confirmAction.status === "completed") {
       data.delivered_at = new Date().toISOString();
     }
+
+    // Auto-timeline entry
+    existingTimeline.push(makeTimelineEntry(
+      `Status changed to ${getStatusConfig(confirmAction.status).label}`,
+      actorEmail
+    ));
+    data.timeline = existingTimeline;
+
     onUpdate(order.id, data);
     setConfirmAction(null);
+  };
+
+  const handleStatusChange = (value) => {
+    const existingTimeline = [...timeline];
+    const data = { status: value };
+
+    if (value === "shipped" && !order.shipped_at) {
+      data.shipped_at = new Date().toISOString();
+      const method = order.shipping_method || "standard";
+      if (!order.estimated_delivery) {
+        data.estimated_delivery = calcEstimatedDelivery(data.shipped_at, method);
+      }
+    }
+    if (value === "completed" && !order.delivered_at) {
+      data.delivered_at = new Date().toISOString();
+    }
+
+    existingTimeline.push(makeTimelineEntry(
+      `Status changed to ${getStatusConfig(value).label}`,
+      actorEmail
+    ));
+    data.timeline = existingTimeline;
+
+    onUpdate(order.id, data);
+  };
+
+  const handleShippingMethodChange = (value) => {
+    const data = { shipping_method: value };
+    // If already shipped and no manual estimated_delivery override, recalculate
+    if (order.shipped_at) {
+      data.estimated_delivery = calcEstimatedDelivery(order.shipped_at, value);
+    }
+    onUpdate(order.id, data);
+  };
+
+  const handleRefundConfirm = () => {
+    const existingTimeline = [...timeline];
+    existingTimeline.push(makeTimelineEntry(
+      "Status changed to Refunded",
+      actorEmail,
+      `Refund $${Number(refundAmount).toFixed(2)} AUD — ${refundReason || "No reason provided"}`
+    ));
+    onUpdate(order.id, {
+      status: "refunded",
+      refund_amount: Number(refundAmount),
+      refund_reason: refundReason,
+      refunded_at: new Date().toISOString(),
+      timeline: existingTimeline,
+    });
+    setShowRefundForm(false);
   };
 
   const copyOrderSummary = () => {
@@ -293,14 +426,14 @@ function OrderCard({ order, onUpdate, index }) {
                   </div>
                 )}
 
-                {/* Status + Tracking + Notes */}
+                {/* Status + Carrier + Shipping Method */}
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Status</label>
                       <Select
                         value={order.status || "pending"}
-                        onValueChange={(value) => onUpdate(order.id, { status: value })}
+                        onValueChange={handleStatusChange}
                       >
                         <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -325,6 +458,22 @@ function OrderCard({ order, onUpdate, index }) {
                         <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue placeholder="Select carrier" /></SelectTrigger>
                         <SelectContent>
                           {CARRIERS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Shipping Method Selector */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping Method</label>
+                      <Select
+                        value={order.shipping_method || "standard"}
+                        onValueChange={handleShippingMethodChange}
+                      >
+                        <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(SHIPPING_METHODS).map(([key, { label }]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -358,6 +507,19 @@ function OrderCard({ order, onUpdate, index }) {
                         )}
                       </div>
                     </div>
+
+                    {/* Estimated Delivery (read-only) */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Estimated Delivery</label>
+                      <div className="h-11 flex items-center gap-2 px-3 border border-border/40 bg-muted/5 text-sm text-muted-foreground">
+                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                        {order.estimated_delivery
+                          ? format(new Date(order.estimated_delivery), "EEE dd MMM yyyy")
+                          : order.shipped_at
+                            ? format(new Date(calcEstimatedDelivery(order.shipped_at, order.shipping_method || "standard")), "EEE dd MMM yyyy")
+                            : "Set when shipped"}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -372,6 +534,80 @@ function OrderCard({ order, onUpdate, index }) {
                     className="min-h-20 resize-none rounded-none border-border/40 text-sm"
                   />
                 </div>
+
+                {/* Customer-Visible Note */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
+                    <Info className="h-3 w-3 text-blue-400" />
+                    Customer-Visible Note
+                  </label>
+                  <Textarea
+                    placeholder="e.g. Your order is being packed with care!"
+                    value={customerNote}
+                    onChange={(e) => setCustomerNote(e.target.value)}
+                    onBlur={() => customerNote !== (order.customer_status_note || "") && onUpdate(order.id, { customer_status_note: customerNote })}
+                    className="min-h-16 resize-none rounded-none border-blue-500/30 bg-blue-500/[0.04] text-sm focus-visible:ring-blue-500/30"
+                  />
+                </div>
+
+                {/* Refund Action */}
+                {order.status !== "refunded" && (
+                  <div>
+                    {!showRefundForm ? (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowRefundForm(true)}
+                        className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
+                      >
+                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Issue Refund
+                      </Button>
+                    ) : (
+                      <div className="border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
+                          <AlertTriangle className="h-3.5 w-3.5" /> Issue Refund
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Refund Amount (AUD)</label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={refundAmount}
+                              onChange={(e) => setRefundAmount(e.target.value)}
+                              className="h-11 rounded-none border-border/40 text-sm font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Reason</label>
+                            <Textarea
+                              placeholder="Reason for refund…"
+                              value={refundReason}
+                              onChange={(e) => setRefundReason(e.target.value)}
+                              className="min-h-11 resize-none rounded-none border-border/40 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="destructive"
+                            onClick={handleRefundConfirm}
+                            className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
+                          >
+                            Confirm Refund
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(Number(order.total_aud || 0)); }}
+                            className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px] border-border/30"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Mobile quick actions */}
                 {isFulfillable && (
@@ -401,10 +637,14 @@ function OrderCard({ order, onUpdate, index }) {
                   </Button>
                 </div>
 
+                {/* Order Timeline */}
+                <OrderTimeline timeline={timeline} />
+
                 {/* Timestamps */}
                 <div className="border-t border-border/10 pt-3 flex flex-wrap gap-4 text-[9px] text-muted-foreground/30">
                   {order.shipped_at && <span>Shipped: {format(new Date(order.shipped_at), "dd MMM yyyy HH:mm")}</span>}
                   {order.delivered_at && <span>Delivered: {format(new Date(order.delivered_at), "dd MMM yyyy HH:mm")}</span>}
+                  {order.refunded_at && <span>Refunded: {format(new Date(order.refunded_at), "dd MMM yyyy HH:mm")}</span>}
                   {order.created_date && <span>Created: {format(new Date(order.created_date), "dd MMM yyyy HH:mm")}</span>}
                 </div>
               </div>
@@ -429,12 +669,16 @@ function OrderCard({ order, onUpdate, index }) {
 /* ── Main Component ── */
 export default function OrdersManager({ orders }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [pipelineTab, setPipelineTab] = useState("all");
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.StoreOrder.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Order updated", description: "Changes saved successfully." });
+    },
   });
 
   const handleUpdate = (id, data) => updateMutation.mutate({ id, data });
@@ -560,6 +804,7 @@ export default function OrdersManager({ orders }) {
               order={order}
               index={index}
               onUpdate={handleUpdate}
+              actorEmail={user?.email}
             />
           ))}
         </div>

@@ -10,7 +10,12 @@ import {
   Heart, 
   Shield, 
   Sparkles,
-  Calendar
+  Calendar,
+  Plane,
+  Trophy,
+  ArrowRight,
+  Package,
+  Clock
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -158,7 +163,8 @@ export default function Account() {
               
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-3xl uppercase tracking-wide leading-none">{displayName}</h1>
+                  <h1 className="font-display text-3xl uppercase tracking-wide leading-none">My Takeover</h1>
+                  <span className="text-xs font-mono text-muted-foreground hidden md:inline">{displayName}</span>
                   {isAdmin && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-accent/10 border border-accent/30 text-accent shadow-[0_0_8px_rgba(217,119,6,0.3)]">
                       <ShieldCheck className="h-3 w-3" /> Admin
@@ -195,7 +201,133 @@ export default function Account() {
           </div>
         </motion.div>
 
-        {/* ── SECTION 2: STATS BAR ── */}
+        {/* ── SECTION 2: MY JOURNEY ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.5 }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+        >
+          {/* Travel registration CTA */}
+          {registrations.length === 0 ? (
+            <Link to="/" className="group border border-primary/20 bg-primary/[0.03] p-4 hover:bg-primary/[0.08] transition-all block">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-primary/30 bg-background/50 text-primary">
+                  <Plane className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-primary">Next Step</p>
+                  <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">Register for Vegas</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-[9px] text-muted-foreground">
+                <span>Travel interest registration</span>
+                <ArrowRight className="h-3 w-3 text-primary" />
+              </div>
+            </Link>
+          ) : (
+            <div className="border border-emerald-500/20 bg-emerald-500/[0.03] p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-emerald-500/30 bg-background/50 text-emerald-400">
+                  <Plane className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-emerald-400">Registered</p>
+                  <p className="text-xs font-bold text-foreground truncate">Vegas trip interest logged</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Latest order status */}
+          {orders.length > 0 ? (
+            <button onClick={() => setActiveTab("orders")} className="group border border-accent/20 bg-accent/[0.03] p-4 hover:bg-accent/[0.08] transition-all text-left cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-accent/30 bg-background/50 text-accent">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-accent">Latest Order</p>
+                  <p className="text-xs font-bold text-foreground truncate capitalize">{orders[0]?.status || "pending"}</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-[9px] text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Track your order</span>
+                <ArrowRight className="h-3 w-3 text-accent" />
+              </div>
+            </button>
+          ) : (
+            <Link to="/store" className="group border border-border/60 bg-muted/5 p-4 hover:border-primary/30 hover:bg-muted/10 transition-all block">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-border bg-background/50 text-muted-foreground">
+                  <ShoppingBag className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Next Step</p>
+                  <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">Browse merch store</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-[9px] text-muted-foreground">
+                <span>Exclusive 2026 collection</span>
+                <ArrowRight className="h-3 w-3 text-primary" />
+              </div>
+            </Link>
+          )}
+
+          {/* Forum activity */}
+          {posts.length > 0 ? (
+            <button onClick={() => setActiveTab("posts")} className="group border border-border/60 bg-muted/5 p-4 hover:border-primary/30 hover:bg-muted/10 transition-all text-left cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-border bg-background/50 text-primary">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Forum</p>
+                  <p className="text-xs font-bold text-foreground truncate">{posts.length} post{posts.length !== 1 ? "s" : ""}</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-[9px] text-muted-foreground">
+                <span>View your threads</span>
+                <ArrowRight className="h-3 w-3 text-primary" />
+              </div>
+            </button>
+          ) : (
+            <Link to="/forum" className="group border border-border/60 bg-muted/5 p-4 hover:border-primary/30 hover:bg-muted/10 transition-all block">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-border bg-background/50 text-muted-foreground">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Next Step</p>
+                  <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">Join the conversation</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-[9px] text-muted-foreground">
+                <span>Fan forum community</span>
+                <ArrowRight className="h-3 w-3 text-primary" />
+              </div>
+            </Link>
+          )}
+
+          {/* Badges / gamification summary */}
+          <div className="border border-border/60 bg-muted/5 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 border border-border bg-background/50 text-amber-400">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Member</p>
+                <p className="text-xs font-bold text-foreground truncate">{memberDays} day{memberDays !== 1 ? "s" : ""}</p>
+              </div>
+            </div>
+            <div className="mt-2 text-[9px] text-muted-foreground">
+              {user?.badges?.length > 0 ? `${user.badges.length} badge${user.badges.length !== 1 ? "s" : ""} earned` : "Keep engaging to earn badges"}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── SECTION 3: STATS BAR ── */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}

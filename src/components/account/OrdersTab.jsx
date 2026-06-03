@@ -1,11 +1,11 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow, differenceInCalendarDays } from "date-fns";
 import { Link } from "react-router-dom";
 import {
   Package, CreditCard, Truck, CheckCircle2, Clock, ExternalLink,
-  HelpCircle, ShoppingBag,
+  ShoppingBag, Info, Mail, Store,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -22,6 +22,13 @@ const statusConfig = {
 };
 
 const getStatus = (s) => statusConfig[s] || statusConfig.pending;
+
+/* Shipping method badge config */
+const shippingMethodConfig = {
+  standard: { label: "Standard", badgeClass: "border-border/30 bg-muted/10 text-muted-foreground" },
+  express:  { label: "Express",  badgeClass: "border-amber-500/30 bg-amber-500/5 text-amber-400" },
+  priority: { label: "Priority", badgeClass: "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" },
+};
 
 /* ── Fulfillment Progress Steps ── */
 const STEPS = [
@@ -118,6 +125,20 @@ export default function OrdersTab() {
         const status = getStatus(order.status);
         const lineItems = order.line_items || [];
         const isPaidFlow = ["paid", "packing", "shipped", "completed"].includes(order.status);
+        const timeline = order.timeline || [];
+        const latestTimelineEntry = timeline.length > 0
+          ? [...timeline].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]
+          : null;
+        const orderIdShort = String(order.id || "").slice(-6).toUpperCase();
+
+        // Estimated delivery info
+        const showEstimatedDelivery = order.estimated_delivery && order.status !== "completed";
+        const daysUntilDelivery = showEstimatedDelivery
+          ? differenceInCalendarDays(new Date(order.estimated_delivery), new Date())
+          : null;
+
+        // Shipping method badge
+        const methodConf = shippingMethodConfig[order.shipping_method] || null;
 
         return (
           <motion.article
@@ -138,23 +159,56 @@ export default function OrdersTab() {
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-                    Order #{String(order.id || "").slice(-6).toUpperCase()}
+                    Order #{orderIdShort}
                   </p>
                   <span className="text-[9px] font-mono text-muted-foreground/40">
                     {order.created_date ? format(new Date(order.created_date), "dd MMM yyyy") : "Recent"}
                   </span>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
-                  isPaidFlow
-                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
-                    : order.status === "cancelled" || order.status === "refunded"
-                      ? "border-destructive/30 bg-destructive/5 text-destructive"
-                      : "border-amber-500/30 bg-amber-500/5 text-amber-400"
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${status.bg}`} />
-                  {status.label}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
+                    isPaidFlow
+                      ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
+                      : order.status === "cancelled" || order.status === "refunded"
+                        ? "border-destructive/30 bg-destructive/5 text-destructive"
+                        : "border-amber-500/30 bg-amber-500/5 text-amber-400"
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${status.bg}`} />
+                    {status.label}
+                  </span>
+                  {/* Shipping method badge */}
+                  {methodConf && (
+                    <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${methodConf.badgeClass}`}>
+                      {methodConf.label}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Estimated Delivery Banner */}
+              {showEstimatedDelivery && (
+                <div className="flex items-center gap-2 mb-4 border border-sky-500/20 bg-sky-500/[0.04] p-3 text-sm">
+                  <Truck className="h-4 w-4 text-sky-400 shrink-0" />
+                  <div>
+                    <p className="text-foreground font-semibold text-xs">
+                      Expected delivery: {format(new Date(order.estimated_delivery), "EEE dd MMM yyyy")}
+                    </p>
+                    {order.shipped_at && daysUntilDelivery !== null && daysUntilDelivery > 0 && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Arrives in ~{daysUntilDelivery} day{daysUntilDelivery !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Status Note Banner */}
+              {order.customer_status_note && (
+                <div className="flex items-start gap-2 mb-4 border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
+                  <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                  <p className="text-sm text-foreground">{order.customer_status_note}</p>
+                </div>
+              )}
 
               {/* Fulfillment progress stepper */}
               {isPaidFlow && (
@@ -218,7 +272,7 @@ export default function OrdersTab() {
                 </div>
               )}
 
-              {/* Timestamps */}
+              {/* Timestamps + Last Updated */}
               <div className="flex flex-wrap gap-3 text-[9px] text-muted-foreground/40">
                 {order.shipped_at && (
                   <span className="flex items-center gap-1">
@@ -238,17 +292,29 @@ export default function OrdersTab() {
                     Payment verified
                   </span>
                 )}
+                {latestTimelineEntry && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5" />
+                    Last updated: {formatDistanceToNow(new Date(latestTimelineEntry.timestamp), { addSuffix: true })}
+                  </span>
+                )}
               </div>
 
-              {/* Help */}
-              <div className="mt-3 pt-3 border-t border-border/10 flex justify-end">
+              {/* Action Buttons */}
+              <div className="mt-3 pt-3 border-t border-border/10 flex flex-wrap items-center justify-between gap-2">
                 <a
-                  href="mailto:support@rugbyleaguetakeover.com?subject=Order%20Help"
-                  className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
+                  href={`mailto:support@rugbyleaguetakeover.com?subject=Order%20%23${orderIdShort}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 border border-border/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors min-h-[40px]"
                 >
-                  <HelpCircle className="h-3 w-3" />
-                  Need Help?
+                  <Mail className="h-3 w-3" />
+                  Contact Support
                 </a>
+                <Button asChild variant="outline" className="rounded-none border-border/30 text-[10px] font-bold uppercase tracking-wider min-h-[40px]">
+                  <Link to="/store">
+                    <Store className="mr-1.5 h-3 w-3" />
+                    Shop Again
+                  </Link>
+                </Button>
               </div>
             </div>
           </motion.article>

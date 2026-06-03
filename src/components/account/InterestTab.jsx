@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Ticket } from "lucide-react";
+import { Plane, ArrowRight, Mail } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -18,8 +18,14 @@ export default function InterestTab() {
   if (registrations.length === 0) {
     return (
       <div className="border border-border bg-card p-10 text-center">
-        <Ticket className="mx-auto h-8 w-8 text-muted-foreground" />
+        <Plane className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-4 text-muted-foreground">You haven't registered interest in a travel package yet.</p>
+        <a
+          href="/#travel"
+          className="mt-4 inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors"
+        >
+          Register Interest <ArrowRight className="h-3 w-3" />
+        </a>
       </div>
     );
   }
@@ -78,6 +84,22 @@ export default function InterestTab() {
             </div>
 
             <p className="text-[10px] text-muted-foreground mt-2">We'll be in touch as soon as allocations for {registration.team_supported || "your team"} open.</p>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 mt-4 border-t border-border/30 pt-4">
+              <a
+                href="/#travel"
+                className="inline-flex items-center gap-1.5 border border-primary/25 bg-primary/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Plane className="h-3 w-3" /> View Packages <ArrowRight className="h-2.5 w-2.5" />
+              </a>
+              <a
+                href={`mailto:support@rugbyleaguetakeover.com?subject=Update%20Travel%20Preferences%20-%20${encodeURIComponent(registration.name)}`}
+                className="inline-flex items-center gap-1.5 border border-border/50 bg-muted/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-foreground hover:border-primary/30 transition-colors"
+              >
+                <Mail className="h-3 w-3" /> Update Preferences
+              </a>
+            </div>
           </article>
         );
       })}

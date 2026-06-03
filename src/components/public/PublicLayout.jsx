@@ -248,6 +248,7 @@ export default function PublicLayout() {
         isOpen={isPlanOpen}
         onClose={() => setIsPlanOpen(false)}
         onNavigate={handleNavigate}
+        context={pathname.startsWith("/store") ? "store" : pathname.startsWith("/forum") ? "forum" : pathname.startsWith("/account") ? "account" : "home"}
       />
     </div>
   );
