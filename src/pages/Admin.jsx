@@ -2,14 +2,39 @@ import React, { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 
-const OverviewPanel = lazy(() => import("@/components/admin/panels/OverviewPanel"));
-const ContentPanel = lazy(() => import("@/components/admin/panels/ContentPanel"));
-const EventsPanel = lazy(() => import("@/components/admin/panels/EventsPanel"));
-const StorePanel = lazy(() => import("@/components/admin/panels/StorePanel"));
-const CommunityPanel = lazy(() => import("@/components/admin/panels/CommunityPanel"));
-const PeoplePanel = lazy(() => import("@/components/admin/panels/PeoplePanel"));
-const SettingsPanel = lazy(() => import("@/components/admin/panels/SettingsPanel"));
-const AdsPanel = lazy(() => import("@/components/admin/panels/AdsPanel"));
+const lazyWithRetry = (factory, key) => lazy(async () => {
+  try {
+    const module = await factory();
+    try { sessionStorage.removeItem(`rlt_lazy_reload_${key}`); } catch { /* noop */ }
+    return module;
+  } catch (error) {
+    const message = String(error?.message || error || "");
+    const isChunkLoadError = message.includes("Failed to fetch dynamically imported module") || message.includes("Importing a module script failed");
+    const storageKey = `rlt_lazy_reload_${key}`;
+    let alreadyRetried = false;
+
+    try {
+      alreadyRetried = sessionStorage.getItem(storageKey) === "1";
+      if (isChunkLoadError && !alreadyRetried) sessionStorage.setItem(storageKey, "1");
+    } catch { /* noop */ }
+
+    if (isChunkLoadError && !alreadyRetried) {
+      window.location.reload();
+      return new Promise(() => {});
+    }
+
+    throw error;
+  }
+});
+
+const OverviewPanel = lazyWithRetry(() => import("@/components/admin/panels/OverviewPanel"), "overview");
+const ContentPanel = lazyWithRetry(() => import("@/components/admin/panels/ContentPanel"), "content");
+const EventsPanel = lazyWithRetry(() => import("@/components/admin/panels/EventsPanel"), "events");
+const StorePanel = lazyWithRetry(() => import("@/components/admin/panels/StorePanel"), "store");
+const CommunityPanel = lazyWithRetry(() => import("@/components/admin/panels/CommunityPanel"), "community");
+const PeoplePanel = lazyWithRetry(() => import("@/components/admin/panels/PeoplePanel"), "people");
+const SettingsPanel = lazyWithRetry(() => import("@/components/admin/panels/SettingsPanel"), "settings");
+const AdsPanel = lazyWithRetry(() => import("@/components/admin/panels/AdsPanel"), "ads");
 
 const PanelLoading = () => (
   <div className="flex h-48 w-full items-center justify-center">
