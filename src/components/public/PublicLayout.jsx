@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, NavLink, useLocation, useOutlet } from "react-router-dom";
+import { NavLink, useLocation, useOutlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";

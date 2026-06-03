@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Shield, Pencil, Check, Trash2, Plus, Upload, ChevronDown } from "lucide-react";
 import { base44 } from "@/api/base44Client";

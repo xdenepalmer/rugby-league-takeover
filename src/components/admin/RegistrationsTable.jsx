@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
+import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 import { format, isToday } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,6 +40,7 @@ export default function RegistrationsTable({ registrations }) {
   const [teamFilter, setTeamFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [copied, setCopied] = useState(false);
+  const [emailConfirmOpen, setEmailConfirmOpen] = useState(false);
 
   /* Filter logic (unchanged) */
   const filtered = useMemo(() => {
@@ -113,11 +115,15 @@ export default function RegistrationsTable({ registrations }) {
     const emails = emailTargets.map((r) => r.email);
     if (emails.length === 0) return;
     if (emails.length > 50) {
-      const ok = window.confirm(
-        `You're about to BCC ${emails.length} addresses. Some email clients limit mailto: links to ~50 addresses or ~2 000 characters. Continue?`
-      );
-      if (!ok) return;
+      setEmailConfirmOpen(true);
+      return;
     }
+    openMailto();
+  }, [emailTargets]);
+
+  const openMailto = useCallback(() => {
+    const emails = emailTargets.map((r) => r.email);
+    setEmailConfirmOpen(false);
     const subject = encodeURIComponent("Rugby League Takeover Las Vegas — Update");
     const bcc = emails.map(encodeURIComponent).join(",");
     window.location.href = `mailto:?bcc=${bcc}&subject=${subject}`;
@@ -145,6 +151,7 @@ export default function RegistrationsTable({ registrations }) {
   }, [emailTargets]);
 
   return (
+    <>
     <section id="registrations-admin" className="scroll-mt-28">
       {/* ── Glassmorphic wrapper ── */}
       <div className="cmd-glass border border-border overflow-hidden">
@@ -453,5 +460,15 @@ export default function RegistrationsTable({ registrations }) {
         )}
       </div>
     </section>
+
+    <AdminConfirmSheet
+      open={emailConfirmOpen}
+      title={`Email ${emailTargets.length} addresses?`}
+      description={`Some email clients limit mailto: links to ~50 addresses or ~2,000 characters. You're about to BCC ${emailTargets.length} addresses.`}
+      confirmLabel="Continue"
+      onConfirm={openMailto}
+      onCancel={() => setEmailConfirmOpen(false)}
+    />
+    </>
   );
 }

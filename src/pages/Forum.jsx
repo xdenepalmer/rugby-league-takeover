@@ -43,6 +43,7 @@ import EmptyState from "@/components/forum/feed/EmptyState";
 import ScrollToTopButton from "@/components/forum/feed/ScrollToTopButton";
 import ThreadDetailModal from "@/components/forum/feed/ThreadDetailModal";
 import ComposeSidebar from "@/components/forum/feed/ComposeSidebar";
+import AdminConfirmSheet from "@/components/admin/shared/AdminConfirmSheet";
 
 
 
@@ -157,17 +158,19 @@ const ForumPostCard = memo(function ForumPostCard({
   // Recency progress bar
   const recency = getRecencyScore(post.created_date);
 
-  // 3D hover tilt
+  // 3D hover tilt — disabled on touch devices
+  const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [2, -2]), { stiffness: 300, damping: 30 });
   const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-2, 2]), { stiffness: 300, damping: 30 });
 
   const handleMouseMove = useCallback((e) => {
+    if (isTouch) return;
     const rect = e.currentTarget.getBoundingClientRect();
     mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
     mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
-  }, [mouseX, mouseY]);
+  }, [mouseX, mouseY, isTouch]);
 
   const handleMouseLeave = useCallback(() => {
     mouseX.set(0);
@@ -180,15 +183,15 @@ const ForumPostCard = memo(function ForumPostCard({
       initial={{ opacity: 0, y: 24 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
       transition={{ delay: Math.min(index * 0.07, 0.35), duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-      style={{ rotateX, rotateY, transformPerspective: 1200 }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      style={isTouch ? {} : { rotateX, rotateY, transformPerspective: 1200 }}
+      onMouseMove={isTouch ? undefined : handleMouseMove}
+      onMouseLeave={isTouch ? undefined : handleMouseLeave}
       className={`forum-post-card group relative overflow-hidden border transition-all duration-300 ${
         post.is_pinned
           ? "border-primary/30 bg-gradient-to-br from-primary/[0.06] via-card/80 to-card/50 shadow-[0_0_30px_hsl(var(--primary)/0.06)]"
           : "border-border/60 bg-card/30 hover:border-primary/20"
       }`}
-      whileHover={{
+      whileHover={isTouch ? {} : {
         boxShadow: `0 12px 40px ${meta.glow}, 0 0 0 1px ${meta.glow}`,
         y: -3,
       }}
@@ -723,11 +726,17 @@ export default function Forum() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); toast({ title: "Removed" }); },
   });
 
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
   const handleDelete = useCallback((node) => {
     if (!node?.id) return;
-    if (typeof window !== "undefined" && !window.confirm("Remove this and any replies under it?")) return;
-    deleteMutation.mutate(node.id);
-  }, [deleteMutation]);
+    setDeleteTarget(node);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (deleteTarget?.id) deleteMutation.mutate(deleteTarget.id);
+    setDeleteTarget(null);
+  }, [deleteTarget, deleteMutation]);
 
   const handleToggleReply = useCallback((postId) => {
     setActiveReplyId((curr) => (curr === postId ? null : postId));
@@ -1310,6 +1319,17 @@ export default function Forum() {
 
       {/* ━━━ SCROLL TO TOP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <ScrollToTopButton />
+
+      {/* ━━━ DELETE CONFIRMATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <AdminConfirmSheet
+        open={!!deleteTarget}
+        title="Delete this post?"
+        description="This will remove the post and any replies under it. This cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }
