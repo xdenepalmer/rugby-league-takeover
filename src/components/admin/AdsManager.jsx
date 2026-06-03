@@ -5,7 +5,7 @@ import {
   BarChart3, MousePointerClick, MonitorSmartphone,
   LayoutTemplate, X, Save, ChevronDown, Copy, ExternalLink,
   Calendar, AlertTriangle, CheckCircle2, RefreshCw, Link2,
-  ImageIcon, Zap, Clock,
+  ImageIcon, Zap, Clock, Monitor, Smartphone,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,11 @@ const emptyAd = () => ({
   is_active: true,
   start_date: "",
   end_date: "",
+  sponsor_id: "",
+  price_per_month: 0,
+  cpm_rate: 0,
+  device_target: "all",
+  ab_variants: [],
   created_at: new Date().toISOString(),
 });
 
@@ -86,6 +91,7 @@ export default function AdsManager() {
   const [view, setView] = useState("slots");
   const [errors, setErrors] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [sponsors] = useState(() => readLS('rlt_sponsors', []));
 
   /* Persist on change */
   useEffect(() => {
@@ -453,6 +459,13 @@ export default function AdsManager() {
                           <span>·</span>
                           <span>{adStats.impressions} imp</span>
                           <span>{adStats.clicks} clk</span>
+                          {ad.sponsor_id && (() => { const sp = sponsors.find(s => s.id === ad.sponsor_id); return sp ? <span>· <span className="text-primary">{sp.company_name}</span></span> : null; })()}
+                          {ad.price_per_month > 0 && <span>· <span className="text-emerald-400">${ad.price_per_month}/mo</span></span>}
+                          <span className="inline-flex items-center gap-0.5">
+                            {(!ad.device_target || ad.device_target === 'all') && <><Monitor className="h-3 w-3" /><Smartphone className="h-3 w-3" /></>}
+                            {ad.device_target === 'desktop' && <Monitor className="h-3 w-3" />}
+                            {ad.device_target === 'mobile' && <Smartphone className="h-3 w-3" />}
+                          </span>
                           {ad.start_date && <span>· from {ad.start_date}</span>}
                           {ad.end_date && <span>to {ad.end_date}</span>}
                         </div>
@@ -571,6 +584,21 @@ export default function AdsManager() {
                 </div>
               </div>
 
+              <div className="grid gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Sponsor</label>
+                <div className="relative">
+                  <select
+                    value={editing.sponsor_id}
+                    onChange={(e) => setEditing({ ...editing, sponsor_id: e.target.value })}
+                    className="h-11 w-full appearance-none border border-border bg-background px-3 pr-8 text-sm font-mono rounded-none focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  >
+                    <option value="">No sponsor</option>
+                    {sponsors.map((s) => <option key={s.id} value={s.id}>{s.company_name}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
               <ImageField
                 label="Ad Creative *"
                 value={editing.image_url}
@@ -629,6 +657,28 @@ export default function AdsManager() {
                 </div>
               </div>
 
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Monthly Rate (AUD)</label>
+                  <Input type="number" min="0" step="0.01" placeholder="0.00" value={editing.price_per_month || ''} onChange={(e) => setEditing({ ...editing, price_per_month: parseFloat(e.target.value) || 0 })} className="h-11 rounded-none font-mono" />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">CPM Rate (AUD)</label>
+                  <Input type="number" min="0" step="0.01" placeholder="0.00" value={editing.cpm_rate || ''} onChange={(e) => setEditing({ ...editing, cpm_rate: parseFloat(e.target.value) || 0 })} className="h-11 rounded-none font-mono" />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Device Target</label>
+                  <div className="relative">
+                    <select value={editing.device_target || 'all'} onChange={(e) => setEditing({ ...editing, device_target: e.target.value })} className="h-11 w-full appearance-none border border-border bg-background px-3 pr-8 text-sm font-mono rounded-none focus:outline-none focus:ring-1 focus:ring-primary/40">
+                      <option value="all">All Devices</option>
+                      <option value="desktop">Desktop Only</option>
+                      <option value="mobile">Mobile Only</option>
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -656,6 +706,76 @@ export default function AdsManager() {
                   {editing.start_date && editing.end_date && editing.start_date > editing.end_date && (
                     <p className="text-[9px] text-red-400">End date must be after start date</p>
                   )}
+                </div>
+              </div>
+
+              {/* ── A/B Testing Variants ── */}
+              <div className="border border-border/40 bg-muted/5 p-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('ab-variants-section');
+                    if (el) el.classList.toggle('hidden');
+                  }}
+                  className="flex items-center gap-2 w-full text-left"
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">A/B Testing (Optional)</span>
+                  {(editing.ab_variants?.length > 0) && (
+                    <span className="text-[8px] font-mono text-primary ml-1">{editing.ab_variants.length} variant{editing.ab_variants.length > 1 ? 's' : ''}</span>
+                  )}
+                </button>
+                <div id="ab-variants-section" className={editing.ab_variants?.length > 0 ? '' : 'hidden'}>
+                  <div className="mt-3 grid gap-3">
+                    {(editing.ab_variants || []).map((variant, idx) => (
+                      <div key={variant.id} className="flex items-start gap-3 border border-border/30 bg-background/50 p-3">
+                        <div className="shrink-0 w-20 h-14 border border-border/30 bg-muted/10 overflow-hidden flex items-center justify-center">
+                          {variant.image_url ? (
+                            <img src={variant.image_url} alt={`Variant ${idx + 1}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-muted-foreground/30" />
+                          )}
+                        </div>
+                        <div className="flex-1 grid gap-1.5">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Variant {String.fromCharCode(65 + idx)} Image URL</label>
+                          <Input
+                            placeholder="https://cdn.example.com/variant.jpg"
+                            value={variant.image_url}
+                            onChange={(e) => {
+                              const updated = [...(editing.ab_variants || [])];
+                              updated[idx] = { ...updated[idx], image_url: e.target.value };
+                              setEditing({ ...editing, ab_variants: updated });
+                            }}
+                            className="h-9 rounded-none font-mono text-xs"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-8 w-8 p-0 text-red-400 hover:text-red-300 shrink-0 mt-5"
+                          onClick={() => {
+                            const updated = (editing.ab_variants || []).filter((_, i) => i !== idx);
+                            setEditing({ ...editing, ab_variants: updated });
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    {(editing.ab_variants?.length || 0) < 2 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-none text-[10px] uppercase tracking-wider border-dashed border-primary/20 text-primary hover:bg-primary/5 w-fit"
+                        onClick={() => {
+                          const newVariant = { id: crypto.randomUUID(), image_url: '', impressions: 0, clicks: 0 };
+                          setEditing({ ...editing, ab_variants: [...(editing.ab_variants || []), newVariant] });
+                        }}
+                      >
+                        <Plus className="mr-1.5 h-3 w-3" /> Add Variant
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
 
