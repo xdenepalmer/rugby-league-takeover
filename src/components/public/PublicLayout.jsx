@@ -31,6 +31,16 @@ export default function PublicLayout() {
       {/* Top Site Navigation */}
       <SiteNav settings={settingsRecords[0] || {}} settingsLoading={isLoadingSettings} />
 
+      {/* Sponsored Ad Slot — banner top, above content, all pages. The wrapper
+          collapses (empty:hidden) when there's no ad so it never leaves a gap;
+          nav clearance lives on the ad itself so it sits below the fixed header. */}
+      <div className="empty:hidden w-full border-b border-border/30">
+        <AdSlot
+          position="banner-top"
+          size="leaderboard"
+          className="mx-auto block w-full max-w-5xl px-4 pt-[calc(4.5rem+env(safe-area-inset-top,0px))] pb-4"
+        />
+      </div>
 
       {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
