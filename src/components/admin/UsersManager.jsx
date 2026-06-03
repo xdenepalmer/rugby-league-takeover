@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ShieldCheck, ShieldOff, BadgeCheck, Ban as BanIcon, RotateCcw,
-  Users, Crown, UserX, CheckCircle2, Calendar, ChevronDown,
+  Users, Crown, Shield, UserX, CheckCircle2, Calendar, ChevronDown,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -56,10 +56,12 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
       layout
       className="group relative overflow-hidden border border-border bg-card/60 cmd-glass hover:border-indigo-500/20 transition-all duration-300"
     >
-      {/* Top accent — indigo for admin, subtle for user */}
+      {/* Top accent — indigo for admin, violet for moderator, subtle for user */}
       <div className={`h-[2px] w-full ${role === "admin"
         ? "bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500"
-        : "bg-gradient-to-r from-border/60 via-muted-foreground/20 to-border/60"
+        : role === "moderator"
+          ? "bg-gradient-to-r from-violet-500 via-purple-500 to-violet-500"
+          : "bg-gradient-to-r from-border/60 via-muted-foreground/20 to-border/60"
       }`} />
 
       {/* Hover scan line */}
@@ -104,9 +106,11 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border ${
                 role === "admin"
                   ? "text-indigo-400 bg-indigo-500/10 border-indigo-500/20"
-                  : "text-muted-foreground bg-muted/20 border-border/40"
+                  : role === "moderator"
+                    ? "text-violet-400 bg-violet-500/10 border-violet-500/30"
+                    : "text-muted-foreground bg-muted/20 border-border/40"
               }`}>
-                {role === "admin" ? <Crown className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
+                {role === "admin" ? <Crown className="h-2.5 w-2.5" /> : role === "moderator" ? <Shield className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
                 {role}
               </span>
 
@@ -135,6 +139,7 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="moderator">Moderator</SelectItem>
               <SelectItem value="user">User</SelectItem>
             </SelectContent>
           </Select>
@@ -248,6 +253,7 @@ export default function UsersManager() {
   /* Stats */
   const totalUsers = users.length;
   const adminCount = users.filter((u) => u.role === "admin").length;
+  const moderatorCount = users.filter((u) => u.role === "moderator").length;
   const disabledCount = users.filter((u) => u.disabled).length;
   const verifiedCount = users.filter((u) => u.is_verified).length;
 
@@ -317,6 +323,7 @@ export default function UsersManager() {
             <div className="flex flex-wrap items-center gap-2">
               <StatBadge icon={Users} label="Total" value={totalUsers} color="text-indigo-400" bg="bg-indigo-500/5" border="border-indigo-500/10" />
               <StatBadge icon={Crown} label="Admins" value={adminCount} color="text-violet-400" bg="bg-violet-500/5" border="border-violet-500/10" />
+              <StatBadge icon={Shield} label="Mods" value={moderatorCount} color="text-purple-400" bg="bg-purple-500/5" border="border-purple-500/10" />
               <StatBadge icon={CheckCircle2} label="Verified" value={verifiedCount} color="text-emerald-400" bg="bg-emerald-500/5" border="border-emerald-500/10" />
               {disabledCount > 0 && (
                 <StatBadge icon={UserX} label="Disabled" value={disabledCount} color="text-destructive" bg="bg-destructive/5" border="border-destructive/10" />
@@ -379,6 +386,7 @@ export default function UsersManager() {
                   <SelectContent>
                     <SelectItem value="all">All roles</SelectItem>
                     <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="moderator">Moderators</SelectItem>
                     <SelectItem value="user">Users</SelectItem>
                   </SelectContent>
                 </Select>

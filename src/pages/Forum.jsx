@@ -7,7 +7,7 @@ import {
   MessageSquare, Send, Pin, Search, MessageCircle, Heart,
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Radio, ChevronDown, ChevronUp, Trash2,
-  Trophy, Activity, Reply
+  Trophy, Activity, Reply, Shield
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -121,7 +121,7 @@ function SortTabs({ active, onChange }) {
 
 /* ━━━ Post Card (Premium with 3D tilt) ━━━━━━━━━━━━━━━━━━━ */
 const ForumPostCard = memo(function ForumPostCard({
-  post, isAuthenticated, user, appReady, isSubmitting,
+  post, isAuthenticated, user, isModerator, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
   onOpenThread, onDeletePost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles,
 }) {
@@ -235,6 +235,11 @@ const ForumPostCard = memo(function ForumPostCard({
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="min-w-0 truncate text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
               <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
+              {(post.author_role === 'moderator' || (user?.role === 'moderator' && user?.id && String(post.user_id) === String(user.id))) && (
+                <span className="inline-flex items-center gap-0.5 border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400">
+                  <Shield className="h-2 w-2" /> Mod
+                </span>
+              )}
               <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
               <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
               <span className="text-[10px] text-slate-300 font-bold">•</span>
@@ -349,7 +354,7 @@ const ForumPostCard = memo(function ForumPostCard({
           <ShareButton post={post} />
           <SaveButton post={post} />
 
-          {isAuthenticated && ((user?.id && String(post.user_id) === String(user.id)) || user?.role === "admin") && (
+          {isAuthenticated && ((user?.id && String(post.user_id) === String(user.id)) || isModerator) && (
             <button
               type="button"
               onClick={() => onDeletePost(post)}
@@ -361,6 +366,26 @@ const ForumPostCard = memo(function ForumPostCard({
           )}
 
           <div className="hidden flex-1 sm:block" />
+
+          {/* Pin/Unpin button for moderators */}
+          {isModerator && (
+            <button
+              type="button"
+              onClick={() => {
+                base44.entities.ForumPost.update(post.id, { is_pinned: !post.is_pinned });
+                queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+              }}
+              className={`flex min-h-11 items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                post.is_pinned
+                  ? 'text-primary bg-primary/5 border-primary/20'
+                  : 'text-slate-300 hover:text-primary border-transparent hover:border-primary/20'
+              }`}
+              title={post.is_pinned ? 'Unpin this thread' : 'Pin this thread'}
+            >
+              <Pin className="h-3 w-3" />
+              <span className="hidden sm:inline">{post.is_pinned ? 'Unpin' : 'Pin'}</span>
+            </button>
+          )}
 
           {/* View Thread button */}
           <button
@@ -543,7 +568,7 @@ function MobileFAB({ onClick }) {
 
 /* ━━━ MAIN FORUM COMPONENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function Forum() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isAdmin, isModerator } = useAuth();
   const [draft, setDraft] = useState(emptyPost);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -716,6 +741,7 @@ export default function Forum() {
   const replyApi = useMemo(() => ({
     isAuthenticated,
     user,
+    isModerator,
     isSubmitting: createMutation.isPending,
     activeReplyId,
     onToggleReply: handleToggleReply,
@@ -728,6 +754,7 @@ export default function Forum() {
   }), [
     isAuthenticated,
     user,
+    isModerator,
     createMutation.isPending,
     activeReplyId,
     handleToggleReply,
@@ -1084,7 +1111,7 @@ export default function Forum() {
                 return (
                   <ForumPostCard
                     key={post.id} post={post} index={index}
-                    isAuthenticated={isAuthenticated} user={user}
+                    isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
                     appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
                     replyOpen={activeReplyId === post.id}
                     replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}

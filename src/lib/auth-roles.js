@@ -13,3 +13,17 @@ export function hasAdminRole(user) {
 
   return roleValues.some((role) => normalizeRole(role) === "admin");
 }
+
+export function hasModeratorRole(user) {
+  if (!user) return false;
+  if (hasAdminRole(user)) return true; // admins inherit moderator powers
+
+  const roleValues = [
+    user.role,
+    user.app_role,
+    ...(Array.isArray(user.roles) ? user.roles : []),
+    ...(Array.isArray(user.permissions) ? user.permissions : []),
+  ];
+
+  return roleValues.some((role) => normalizeRole(role) === "moderator");
+}

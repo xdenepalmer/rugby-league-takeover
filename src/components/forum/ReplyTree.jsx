@@ -30,6 +30,7 @@ const ReplyTree = memo(function ReplyTree({
   depth = 0,
   isAuthenticated,
   user,
+  isModerator,
   isSubmitting,
   activeReplyId,
   activeReplyDraft,
@@ -50,7 +51,7 @@ const ReplyTree = memo(function ReplyTree({
       {replies.map((reply) => {
         const draft = activeReplyId === reply.id ? (activeReplyDraft || emptyReply) : emptyReply;
         const open = activeReplyId === reply.id;
-        const canDelete = isAuthenticated && ((user?.id && String(reply.user_id) === String(user.id)) || user?.role === "admin");
+        const canDelete = isAuthenticated && ((user?.id && String(reply.user_id) === String(user.id)) || isModerator);
 
         return (
           <div key={reply.id} className="grid gap-2">
@@ -116,6 +117,7 @@ const ReplyTree = memo(function ReplyTree({
                 depth={depth + 1}
                 isAuthenticated={isAuthenticated}
                 user={user}
+                isModerator={isModerator}
                 isSubmitting={isSubmitting}
                 activeReplyId={activeReplyId}
                 activeReplyDraft={activeReplyDraft}
