@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import AdSlot from "@/components/ads/AdSlot";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { 
@@ -523,6 +524,10 @@ export default function Store() {
               ))}
             </div>
           )}
+          {/* Sponsored */}
+          <div className="py-8">
+            <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
+          </div>
           <StoreFaq />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
+import AdSlot from "@/components/ads/AdSlot";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useInView, useMotionValue, useTransform, useSpring } from "framer-motion";
@@ -857,6 +858,11 @@ export default function Forum() {
             </div>
           </motion.div>
         )}
+
+        {/* Sponsored */}
+        <div className="mb-6">
+          <AdSlot position="in-feed" size="leaderboard" className="w-full" />
+        </div>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,_1fr)_320px]">
           {/* ━━━ LEFT: Feed ━━━ */}

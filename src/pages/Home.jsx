@@ -1,4 +1,5 @@
 import React from "react";
+import AdSlot from "@/components/ads/AdSlot";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
@@ -141,10 +142,18 @@ export default function Home() {
         </div>
         <CountdownTimer settings={settings} />
         <MatchupsSection />
+        {/* Sponsored — mid content */}
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <AdSlot position="in-feed" size="leaderboard" className="w-full" />
+        </div>
         <NewsSection articles={visibleNews} settings={settings} />
         <AboutSection settings={settings} />
         <TravelSection packages={visiblePackages} settings={settings} />
         <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
+        {/* Sponsored — mid content */}
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
+        </div>
         <MerchSection settings={settings} />
         <PartnersSection settings={settings} />
         <TestimonialsSection settings={settings} />
