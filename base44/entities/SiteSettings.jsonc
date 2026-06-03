@@ -141,7 +141,7 @@
     },
     "ads_enabled": {
       "type": "boolean",
-      "default": false,
+      "default": true,
       "description": "Enable site-wide advertising slots"
     }
   },

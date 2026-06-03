@@ -16,11 +16,11 @@ import { Switch } from "@/components/ui/switch";
 import ImageField from "./ImageField";
 
 /* ── Constants ── */
+// Only positions that are actually rendered on the public site are offered here.
+// (sidebar / in-feed have no mount point yet — re-add when those slots exist.)
 const POSITIONS = [
   { key: "banner-top",    label: "Banner Top",    desc: "Full-width above main content", icon: "↕" },
   { key: "banner-bottom", label: "Banner Bottom", desc: "Full-width below main content", icon: "↕" },
-  { key: "sidebar",       label: "Sidebar",       desc: "Right column on desktop", icon: "▮" },
-  { key: "in-feed",       label: "In-Feed",       desc: "Between content cards", icon: "☰" },
   { key: "footer",        label: "Footer",        desc: "Above site footer", icon: "▬" },
 ];
 

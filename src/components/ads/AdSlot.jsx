@@ -50,6 +50,15 @@ function isAdScheduleActive(ad) {
   return true;
 }
 
+/* ── Device targeting: show only on the targeted viewport ── */
+function matchesDevice(ad) {
+  const target = ad?.device_target || "all";
+  if (target === "all") return true;
+  if (typeof window === "undefined" || !window.matchMedia) return true;
+  const isMobile = window.matchMedia("(max-width: 767px)").matches;
+  return target === (isMobile ? "mobile" : "desktop");
+}
+
 /* ── Frequency capping (session-scoped) ── */
 const FREQUENCY_CAP = 10; // max impressions per ad per session
 
@@ -133,9 +142,17 @@ function trackStat(position, adId, type) {
   const key = `${position}__${adId}`;
   if (!pendingStats[key]) pendingStats[key] = { impressions: 0, clicks: 0 };
   pendingStats[key][type] += 1;
-  // Debounce writes to avoid hammering localStorage
+  // Debounce writes to avoid hammering localStorage (session-scoped UX cache)
   clearTimeout(flushTimer);
   flushTimer = setTimeout(flushStats, 500);
+
+  // Durable, server-aggregated count on the SiteAd record — real analytics across
+  // all visitors/devices. Fire-and-forget; viewability + caps already gated upstream.
+  if (appParams.hasBase44Config) {
+    try {
+      base44.functions.invoke("recordAdEvent", { adId, type }).catch(() => {});
+    } catch { /* noop */ }
+  }
 
   try {
     window.dispatchEvent(
@@ -294,7 +311,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     if (!mountedRef.current) return;
     setEnabled(globalEnabled);
     const candidates = allAds.filter(
-      (a) => a.position === position && isAdScheduleActive(a)
+      (a) => a.position === position && isAdScheduleActive(a) && matchesDevice(a)
     );
     setAds(candidates);
 
