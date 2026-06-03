@@ -59,9 +59,9 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
               >
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                  <p className="text-xs font-bold text-emerald-400">Post submitted!</p>
+                  <p className="text-xs font-bold text-emerald-400">Posted — you're live!</p>
                 </div>
-                <p className="text-[10px] text-emerald-400/60 mt-1">Your post is being reviewed and will appear shortly.</p>
+                <p className="text-[10px] text-emerald-400/60 mt-1">Your post is now visible to the community.</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -123,9 +123,9 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
               className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] transition-all hover:bg-primary/95 hover:shadow-[0_0_18px_rgba(249,115,22,0.45)] group"
             >
               <Send className="mr-2 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-              {isPending ? "Submitting…" : "Submit for Review"}
+              {isPending ? "Posting…" : "Post to Community"}
             </Button>
-            <p className="text-[8px] text-center text-slate-400 font-bold">Posts are reviewed before publishing</p>
+            <p className="text-[8px] text-center text-slate-400 font-bold">Posts appear instantly &amp; are public — please keep it civil</p>
           </form>
         </div>
       </div>
