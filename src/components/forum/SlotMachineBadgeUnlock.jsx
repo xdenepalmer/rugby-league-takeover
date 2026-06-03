@@ -725,7 +725,7 @@ export default function SlotMachineBadgeUnlock() {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 sm:gap-2">
             {TIER_ORDER.map((tierName) => {
               const group = badgesByTier[tierName];
               if (!group) return null;
