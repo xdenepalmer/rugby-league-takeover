@@ -21,6 +21,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FanHubTab from "@/components/account/FanHubTab";
 import ProfileTab from "@/components/account/ProfileTab";
 import OrdersTab from "@/components/account/OrdersTab";
 import PostsTab from "@/components/account/PostsTab";
@@ -81,7 +82,7 @@ function StatCard({ label, value, icon: Icon, color }) {
 
 export default function Account() {
   const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("fanhub");
   const displayName = user?.full_name || user?.email?.split("@")[0] || "User";
   const avatarLetter = displayName.slice(0, 1).toUpperCase();
 
@@ -115,6 +116,7 @@ export default function Account() {
 
   // Tab definitions
   const tabsList = [
+    { value: "fanhub", label: "Fan Hub", icon: Sparkles, count: null },
     { value: "profile", label: "Profile", icon: User, count: null },
     { value: "orders", label: "My Orders", icon: ShoppingBag, count: orders.length },
     { value: "posts", label: "My Posts", icon: MessageSquare, count: posts.length },
@@ -346,7 +348,7 @@ export default function Account() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <Tabs defaultValue="profile" className="w-full" onValueChange={setActiveTab}>
+          <Tabs defaultValue="fanhub" className="w-full" onValueChange={setActiveTab}>
             
             {/* Pill Trigger list with custom motion underlines */}
             <TabsList className="w-full flex h-auto md:flex-wrap flex-nowrap justify-start gap-2 bg-transparent p-0 rounded-none select-none overflow-x-auto cmd-scrollbar pb-2">
@@ -393,6 +395,7 @@ export default function Account() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.25 }}
                 >
+                  <TabsContent value="fanhub" className="m-0 focus-visible:outline-none"><FanHubTab /></TabsContent>
                   <TabsContent value="profile" className="m-0 focus-visible:outline-none"><ProfileTab /></TabsContent>
                   <TabsContent value="orders" className="m-0 focus-visible:outline-none"><OrdersTab /></TabsContent>
                   <TabsContent value="posts" className="m-0 focus-visible:outline-none"><PostsTab /></TabsContent>
