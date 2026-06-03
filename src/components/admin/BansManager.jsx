@@ -74,7 +74,7 @@ function BanCard({ ban, index, liftBan }) {
       initial={{ opacity: 0, y: 16, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.97 }}
-      transition={{ delay: index * 0.05, duration: 0.35, ease: "easeOut" }}
+      transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.35, ease: "easeOut" }}
       layout
       className={`group relative overflow-hidden border bg-card/60 cmd-glass transition-all duration-300 ${
         active ? "border-destructive/20 hover:border-destructive/30" : "border-border hover:border-border/80"

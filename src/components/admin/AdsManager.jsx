@@ -120,6 +120,7 @@ export default function AdsManager() {
   const [errors, setErrors] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [sponsors] = useState(() => readLS('rlt_sponsors', []));
+  const [showAbVariants, setShowAbVariants] = useState(false);
 
   /* ── Mutations ── */
   const toggleAdsMutation = useMutation({
@@ -812,10 +813,7 @@ export default function AdsManager() {
               <div className="border border-border/40 bg-muted/5 p-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    const el = document.getElementById('ab-variants-section');
-                    if (el) el.classList.toggle('hidden');
-                  }}
+                  onClick={() => setShowAbVariants(prev => !prev)}
                   className="flex items-center gap-2 w-full text-left"
                 >
                   <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform" />
@@ -824,7 +822,7 @@ export default function AdsManager() {
                     <span className="text-[8px] font-mono text-primary ml-1">{editing.ab_variants.length} variant{editing.ab_variants.length > 1 ? 's' : ''}</span>
                   )}
                 </button>
-                <div id="ab-variants-section" className={editing.ab_variants?.length > 0 ? '' : 'hidden'}>
+                {(showAbVariants || editing.ab_variants?.length > 0) && (<div>
                   <div className="mt-3 grid gap-3">
                     {(editing.ab_variants || []).map((variant, idx) => (
                       <div key={variant.id} className="flex items-start gap-3 border border-border/30 bg-background/50 p-3">
@@ -875,7 +873,8 @@ export default function AdsManager() {
                       </Button>
                     )}
                   </div>
-                </div>
+                </div>)}
+
               </div>
 
               <div className="flex items-center gap-4 border-t border-border pt-4">

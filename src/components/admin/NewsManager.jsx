@@ -26,6 +26,81 @@ function FieldLabel({ label, children, className = "" }) {
   );
 }
 
+/* ─── Batched Edit Form ─────────────────────────────────── */
+function EditForm({ article, updateMutation, onClose }) {
+  const [editDraft, setEditDraft] = useState({
+    title: article.title || "",
+    published_date: article.published_date || "",
+    author: article.author || "",
+    is_published: article.is_published !== false,
+    image_url: article.image_url || "",
+    body: article.body || "",
+  });
+
+  const handleSave = () => {
+    updateMutation.mutate({ id: article.id, data: editDraft }, {
+      onSuccess: () => onClose(),
+    });
+  };
+
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Pencil className="h-3.5 w-3.5 text-primary" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary font-mono">
+            Editing Article
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-primary/30 hover:text-primary transition-colors"
+          title="Close editor"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FieldLabel label="Title">
+          <Input value={editDraft.title} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} className="h-11 rounded-none" />
+        </FieldLabel>
+        <FieldLabel label="Published Date">
+          <Input type="date" value={editDraft.published_date} onChange={(e) => setEditDraft({ ...editDraft, published_date: e.target.value })} className="h-11 rounded-none" />
+        </FieldLabel>
+        <FieldLabel label="Author">
+          <Input value={editDraft.author} onChange={(e) => setEditDraft({ ...editDraft, author: e.target.value })} className="h-11 rounded-none" />
+        </FieldLabel>
+        <div className="flex items-end gap-3 pb-1">
+          <FieldLabel label="Published">
+            <div className="flex items-center gap-2 h-10">
+              <Switch checked={editDraft.is_published} onCheckedChange={(value) => setEditDraft({ ...editDraft, is_published: value })} />
+              <span className="text-xs text-muted-foreground">
+                {editDraft.is_published ? "Live" : "Draft"}
+              </span>
+            </div>
+          </FieldLabel>
+        </div>
+        <ImageField label="Article image" value={editDraft.image_url} onChange={(url) => setEditDraft({ ...editDraft, image_url: url })} className="md:col-span-2" />
+        <FieldLabel label="Article Body" className="md:col-span-2">
+          <Textarea value={editDraft.body} onChange={(e) => setEditDraft({ ...editDraft, body: e.target.value })} className="min-h-24 rounded-none" />
+        </FieldLabel>
+        <div className="md:col-span-2 flex justify-end">
+          <Button
+            size="mobile"
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            className="rounded-none bg-primary hover:bg-primary/90"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {updateMutation.isPending ? "Saving…" : "Save Changes"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Article Preview Card ──────────────────────────────── */
 function ArticleCard({ article, index, updateMutation, deleteMutation }) {
   const [editing, setEditing] = useState(false);
@@ -58,50 +133,11 @@ function ArticleCard({ article, index, updateMutation, deleteMutation }) {
       </div>
 
       {editing ? (
-        /* ── Edit Mode ── */
-        <div className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Pencil className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary font-mono">
-                Editing Article
-              </span>
-            </div>
-            <button
-              onClick={() => setEditing(false)}
-              className="flex h-11 w-11 items-center justify-center border border-border/50 hover:border-primary/30 hover:text-primary transition-colors"
-              title="Close editor"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <FieldLabel label="Title">
-              <Input defaultValue={article.title || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { title: e.target.value } })} className="h-11 rounded-none" />
-            </FieldLabel>
-            <FieldLabel label="Published Date">
-              <Input type="date" defaultValue={article.published_date || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { published_date: e.target.value } })} className="h-11 rounded-none" />
-            </FieldLabel>
-            <FieldLabel label="Author">
-              <Input defaultValue={article.author || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { author: e.target.value } })} className="h-11 rounded-none" />
-            </FieldLabel>
-            <div className="flex items-end gap-3 pb-1">
-              <FieldLabel label="Published">
-                <div className="flex items-center gap-2 h-10">
-                  <Switch checked={article.is_published !== false} onCheckedChange={(value) => updateMutation.mutate({ id: article.id, data: { is_published: value } })} />
-                  <span className="text-xs text-muted-foreground">
-                    {article.is_published !== false ? "Live" : "Draft"}
-                  </span>
-                </div>
-              </FieldLabel>
-            </div>
-            <ImageField label="Article image" value={article.image_url} onChange={(url) => updateMutation.mutate({ id: article.id, data: { image_url: url } })} className="md:col-span-2" />
-            <FieldLabel label="Article Body" className="md:col-span-2">
-              <Textarea defaultValue={article.body || ""} onBlur={(e) => updateMutation.mutate({ id: article.id, data: { body: e.target.value } })} className="min-h-24 rounded-none" />
-            </FieldLabel>
-          </div>
-        </div>
+        <EditForm
+          article={article}
+          updateMutation={updateMutation}
+          onClose={() => setEditing(false)}
+        />
       ) : (
         /* ── Preview Mode ── */
         <div className="flex flex-col md:flex-row">

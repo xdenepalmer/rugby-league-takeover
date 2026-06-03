@@ -52,7 +52,7 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
       initial={{ opacity: 0, y: 16, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.97 }}
-      transition={{ delay: index * 0.06, duration: 0.35, ease: "easeOut" }}
+      transition={{ delay: Math.min(index * 0.06, 0.3), duration: 0.35, ease: "easeOut" }}
       layout
       className="group relative overflow-hidden border border-border bg-card/60 cmd-glass hover:border-indigo-500/20 transition-all duration-300"
     >
@@ -237,7 +237,7 @@ export default function UsersManager() {
     mutationFn: async (targetUser) => {
       await base44.functions.invoke("adminUsers", { action: "update", userId: targetUser.id, data: { disabled: false } });
       const related = bans.filter((b) => b.is_active && ((b.ban_type === "email" && b.value === String(targetUser.email || "").toLowerCase()) || (b.ban_type === "user" && b.value === String(targetUser.id).toLowerCase())));
-      for (const ban of related) await base44.entities.Ban.update(ban.id, { is_active: false });
+      await Promise.allSettled(related.map(ban => base44.entities.Ban.update(ban.id, { is_active: false })));
     },
     onSuccess: () => { refresh(); toast({ title: "User reinstated", description: "Login restored and email/account bans lifted." }); },
   });

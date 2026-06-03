@@ -367,7 +367,9 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
       const link = document.createElement("a");
       link.href = url;
       link.download = `rlt-sponsor-report-${companyName}-${today}.csv`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
       setGenerating(false);
