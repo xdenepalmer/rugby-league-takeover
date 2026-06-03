@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useInView, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
-  MessageSquare, Send, Pin, Search, MessageCircle,
+  MessageSquare, Send, Pin, Search, MessageCircle, Heart,
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Radio, ChevronDown, ChevronUp, Trash2,
   Trophy, Activity, Reply
@@ -144,6 +144,7 @@ const ForumPostCard = memo(function ForumPostCard({
     sessionStorage.setItem(key, "1");
     base44.functions.invoke("forumAction", { action: "view", postId: post.id }).catch(() => {});
   }, [isInView, post.id]);
+  const [cardOpen, setCardOpen] = useState(!!post.is_pinned);
   const [expanded, setExpanded] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
 
@@ -259,28 +260,72 @@ const ForumPostCard = memo(function ForumPostCard({
           </div>
         </div>
 
-        {/* Title - clickable to open thread modal */}
-        <h3
-          className="mt-4 font-display text-xl md:text-2xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 cursor-pointer break-words"
-          onClick={() => onOpenThread(post)}
+        {/* Title + compact stats row — always visible, clickable to expand */}
+        <div
+          className="mt-3 cursor-pointer select-none"
+          onClick={(e) => { if (e.target.closest('button, a')) return; setCardOpen(!cardOpen); }}
         >
-          {post.title || "Discussion Thread"}
-        </h3>
-
-        {/* Body */}
-        <div className="mt-3">
-          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-200">{displayBody}</p>
-          <ForumMedia url={post.media_url} type={post.media_type} />
-          {shouldTruncate && (
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              className="mt-2 flex items-center gap-1 py-2 min-h-[44px] text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary transition-colors"
+          <div className="flex items-start gap-2">
+            <h3 className="flex-1 font-display text-lg md:text-xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 break-words">
+              {post.title || "Discussion Thread"}
+            </h3>
+            <motion.div
+              animate={{ rotate: cardOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="mt-1 shrink-0 text-muted-foreground"
             >
-              {expanded ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> Read more</>}
-            </button>
+              <ChevronDown className="h-4 w-4" />
+            </motion.div>
+          </div>
+          {/* Compact stats — visible when collapsed */}
+          {!cardOpen && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-300">
+              {engagement.likes > 0 && (
+                <span className="inline-flex items-center gap-1 border border-border/30 bg-muted/10 px-2 py-0.5">
+                  <Heart className="h-2.5 w-2.5 text-red-400" /> {engagement.likes}
+                </span>
+              )}
+              {replies.length > 0 && (
+                <span className="inline-flex items-center gap-1 border border-border/30 bg-muted/10 px-2 py-0.5">
+                  <MessageCircle className="h-2.5 w-2.5 text-accent" /> {replies.length}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 border border-border/30 bg-muted/10 px-2 py-0.5">
+                <Eye className="h-2.5 w-2.5 text-primary" /> {engagement.views}
+              </span>
+              {(post.body || "").length > 0 && (
+                <span className="text-muted-foreground/50 truncate max-w-[200px] sm:max-w-xs">
+                  {(post.body || "").slice(0, 80)}{(post.body || "").length > 80 ? "…" : ""}
+                </span>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Expandable content — body, engagement, replies */}
+        <AnimatePresence>
+          {cardOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              {/* Body */}
+              <div className="mt-3">
+                <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-200">{displayBody}</p>
+                <ForumMedia url={post.media_url} type={post.media_type} />
+                {shouldTruncate && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                    className="mt-2 flex items-center gap-1 py-2 min-h-[44px] text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary transition-colors"
+                  >
+                    {expanded ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> Read more</>}
+                  </button>
+                )}
+              </div>
 
         {/* Engagement Bar */}
         <div className="forum-engagement-bar mt-5 flex flex-wrap items-center gap-0.5 border-t border-border/20 pt-3">
@@ -428,6 +473,9 @@ const ForumPostCard = memo(function ForumPostCard({
                 </div>
               </div>
             </motion.form>
+          )}
+        </AnimatePresence>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
