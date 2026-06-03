@@ -4,6 +4,10 @@ import { Users as UsersIcon, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import AdminOverview from "../AdminOverview";
+import ActivityFeed from "../ActivityFeed";
+import RevenueBreakdown from "../RevenueBreakdown";
+import AdminNotepad from "../AdminNotepad";
+import DataExporter from "../DataExporter";
 
 export default function OverviewPanel() {
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200) });
@@ -28,9 +32,10 @@ export default function OverviewPanel() {
 
   return (
     <div className="grid gap-5">
+      {/* ── Core Dashboard ── */}
       <AdminOverview counts={counts} registrations={registrations} orders={orders} />
 
-      {/* Additional stats row */}
+      {/* ── Additional Stats Row ── */}
       <div className="grid gap-4 sm:grid-cols-2">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -76,6 +81,18 @@ export default function OverviewPanel() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── Revenue Analytics ── */}
+      <RevenueBreakdown orders={orders} />
+
+      {/* ── Activity Feed + Owner Notepad ── */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <ActivityFeed orders={orders} registrations={registrations} forumPosts={forumPosts} />
+        <AdminNotepad />
+      </div>
+
+      {/* ── Data Export Centre ── */}
+      <DataExporter registrations={registrations} orders={orders} forumPosts={forumPosts} />
     </div>
   );
 }
