@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -21,15 +21,10 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import FanHubTab from "@/components/account/FanHubTab";
-import ProfileTab from "@/components/account/ProfileTab";
-import OrdersTab from "@/components/account/OrdersTab";
-import PostsTab from "@/components/account/PostsTab";
-import InterestTab from "@/components/account/InterestTab";
-import SecurityTab from "@/components/account/SecurityTab";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
+const FanHubTab = lazy(() => import("@/components/account/FanHubTab"));
 const ProfileTab = lazy(() => import("@/components/account/ProfileTab"));
 const OrdersTab = lazy(() => import("@/components/account/OrdersTab"));
 const PostsTab = lazy(() => import("@/components/account/PostsTab"));
@@ -365,7 +360,7 @@ export default function Account() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <Tabs defaultValue="fanhub" className="w-full" onValueChange={setActiveTab}>
+          <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
             
             {/* Pill Trigger list with custom motion underlines */}
             <TabsList className="w-full flex h-auto md:flex-wrap flex-nowrap justify-start gap-2 bg-transparent p-0 rounded-none select-none overflow-x-auto cmd-scrollbar pb-2">
@@ -412,12 +407,14 @@ export default function Account() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.25 }}
                 >
-                  <TabsContent value="fanhub" className="m-0 focus-visible:outline-none"><FanHubTab /></TabsContent>
-                  <TabsContent value="profile" className="m-0 focus-visible:outline-none"><ProfileTab /></TabsContent>
-                  <TabsContent value="orders" className="m-0 focus-visible:outline-none"><OrdersTab /></TabsContent>
-                  <TabsContent value="posts" className="m-0 focus-visible:outline-none"><PostsTab /></TabsContent>
-                  <TabsContent value="interest" className="m-0 focus-visible:outline-none"><InterestTab /></TabsContent>
-                  <TabsContent value="security" className="m-0 focus-visible:outline-none"><SecurityTab /></TabsContent>
+                  <Suspense fallback={<AccountTabFallback />}>
+                    <TabsContent value="fanhub" className="m-0 focus-visible:outline-none"><FanHubTab /></TabsContent>
+                    <TabsContent value="profile" className="m-0 focus-visible:outline-none"><ProfileTab /></TabsContent>
+                    <TabsContent value="orders" className="m-0 focus-visible:outline-none"><OrdersTab /></TabsContent>
+                    <TabsContent value="posts" className="m-0 focus-visible:outline-none"><PostsTab /></TabsContent>
+                    <TabsContent value="interest" className="m-0 focus-visible:outline-none"><InterestTab /></TabsContent>
+                    <TabsContent value="security" className="m-0 focus-visible:outline-none"><SecurityTab /></TabsContent>
+                  </Suspense>
                 </motion.div>
               </AnimatePresence>
             </div>
