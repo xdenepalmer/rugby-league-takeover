@@ -1,6 +1,8 @@
 # PROGRESS — Rugby League Takeover
 
-_Last updated: 2026-06-03 (RLT-001C-1b)_
+_Last updated: 2026-06-04 (RLT-HOTFIX-001)_
+
+> **RLT-HOTFIX-001 — main build gate + background-video autoplay restored (code complete, awaiting merge).** Branch `bmad/story-rlt-hotfix-001` off `origin/main` (`a95e767`). (1) **Account.jsx build break already fixed on main** by commit `a95e767` ("restore lazy/Suspense imports") — verified green, NOT touched. (2) **Background video autoplay regression fixed** in `BackgroundVideo.jsx`: a Base44 auto-sync had stripped the `FORMAT_RANK` source sort (so the `.mov`/`video/quicktime` source rendered first → unplayable in Chrome/Edge/Firefox → only poster shown) and re-added a blanket `max-width:767px` mobile disable. Restored mp4-first ordering; gating now respects **only** save-data + prefers-reduced-motion (muted+playsInline autoplay allowed on mobile by design); `preload` none→metadata; kept muted/loop/playsInline/poster. New `tests/background-video-policy.test.mjs` (5 source guards incl. mp4-before-mov) so regen can't silently re-strip it. Validation: **tests 50/50, lint 0, typecheck 0, build 0.** Frontend-only — no entity/function changes; manual Publish only.
 
 > **Forum policy = Option D** (auto-publish + safety). RLT-001C-1 (truthful compose copy) merged → `main` `876de8c`. ⚠️ A Base44 auto-sync commit (`29080c8`) then re-added the remote logo to `index.html`, breaking `app-shell-metadata` + `local-brand-assets` (main 40/42). **RLT-001C-1b** (this branch, off `876de8c`) restores `/icons/icon-192.png` → tests back to **42/42**; awaiting merge. **Manual Base44 Publish blocked until RLT-001C-1b merges + main is green.** Next: RLT-001C-2 (report/flag + auto-hide + rate-limit, backend).
 

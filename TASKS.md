@@ -13,6 +13,7 @@ BMAD story board. One story = one bounded change. No code without a story.
 
 | ID | Title | Status | Notes |
 |----|-------|--------|-------|
+| RLT-HOTFIX-001 | Restore main build gate + background video autoplay | completed (await merge) | Branch `bmad/story-rlt-hotfix-001` off `origin/main` (`a95e767`). Account.jsx **already fixed** on main (no change). `BackgroundVideo.jsx`: restored `FORMAT_RANK` mp4-first source sort (auto-sync stripped it → `.mov`/quicktime first = no autoplay), dropped mobile-viewport disable (kept save-data + reduced-motion), `preload` none→metadata. New `tests/background-video-policy.test.mjs` (5 guards). 50/50 tests, lint/typecheck/build green. Frontend-only; Publish-only |
 | RLT-001A | Preserve dirty validated pre-BMAD state | completed | Safety branch `bmad/baseline-preserve-current-state` @ `14d17a1` |
 | RLT-001B | Reconcile origin-canonical forum mobile layer | completed | In-scope (`index.css` + `Forum.jsx` + `forum-mobile-layout` test) on `bmad/baseline-integration` @ `ec63822` |
 | RLT-001C | Decide forum publish policy (moderate vs auto-publish) | decided → Option D | Audit complete; **Option D chosen** (keep auto-publish + add safety + truthful copy). Reactive admin moderation already exists; gaps = report/flag, auto-hide, rate-limit |
