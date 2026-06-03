@@ -32,6 +32,12 @@
   ],
   "shortcuts": [
     {
+      "name": "Admin Dashboard",
+      "short_name": "Admin",
+      "url": "/admin",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
       "name": "Forum",
       "short_name": "Forum",
       "url": "/forum",
@@ -41,12 +47,6 @@
       "name": "Shop Merch",
       "short_name": "Store",
       "url": "/store",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Admin Dashboard",
-      "short_name": "Admin",
-      "url": "/admin",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

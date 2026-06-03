@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { hasAdminRole, hasModeratorRole } from '@/lib/auth-roles';
@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     checkAppState();
   }, []);
 
-  const checkAppState = async () => {
+  const checkAppState = useCallback(async () => {
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
@@ -100,14 +100,14 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
     }
-  };
+  }, []);
 
   const normalizeUser = (currentUser) => ({
     ...currentUser,
     ...(currentUser?.data || {}),
   });
 
-  const checkUserAuth = async () => {
+  const checkUserAuth = useCallback(async () => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
@@ -130,9 +130,9 @@ export const AuthProvider = ({ children }) => {
         });
       }
     }
-  };
+  }, []);
 
-  const logout = (shouldRedirect = true) => {
+  const logout = useCallback((shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
     
@@ -143,48 +143,52 @@ export const AuthProvider = ({ children }) => {
       // Just remove the token without redirect
       base44.auth.logout();
     }
-  };
+  }, []);
 
-  const navigateToLogin = () => {
+  const navigateToLogin = useCallback(() => {
     // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
-  };
+  }, []);
 
   // Re-fetch the current user (e.g. after a profile or password change).
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     const currentUser = normalizeUser(await base44.auth.me());
     setUser(currentUser);
     setIsAuthenticated(true);
     return currentUser;
-  };
+  }, []);
 
   // Persist profile / custom user fields, then refresh local state.
-  const updateProfile = async (data) => {
+  const updateProfile = useCallback(async (data) => {
     await base44.auth.updateMe(data);
     return refreshUser();
-  };
+  }, [refreshUser]);
 
-  const isAdmin = hasAdminRole(user);
-  const isModerator = hasModeratorRole(user);
+  const isAdmin = useMemo(() => hasAdminRole(user), [user]);
+  const isModerator = useMemo(() => hasModeratorRole(user), [user]);
+
+  const contextValue = useMemo(() => ({
+    user,
+    isAuthenticated,
+    isAdmin,
+    isModerator,
+    isLoadingAuth,
+    isLoadingPublicSettings,
+    authError,
+    appPublicSettings,
+    authChecked,
+    logout,
+    navigateToLogin,
+    checkUserAuth,
+    checkAppState,
+    refreshUser,
+    updateProfile
+  }), [user, isAuthenticated, isAdmin, isModerator, isLoadingAuth,
+       isLoadingPublicSettings, authError, appPublicSettings, authChecked,
+       logout, navigateToLogin, checkUserAuth, checkAppState, refreshUser, updateProfile]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      isAdmin,
-      isModerator,
-      isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
-      authChecked,
-      logout,
-      navigateToLogin,
-      checkUserAuth,
-      checkAppState,
-      refreshUser,
-      updateProfile
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

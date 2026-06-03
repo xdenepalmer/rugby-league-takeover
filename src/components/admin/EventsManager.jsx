@@ -189,7 +189,7 @@ function EventFields({ draft, setDraft }) {
 function EventCard({ event, onSave, onDelete, saving, index = 0 }) {
   const [draft, setDraft] = useState(event);
   const [isOpen, setIsOpen] = useState(false);
-  useEffect(() => { setDraft(event); }, [event.id]);
+  useEffect(() => { setDraft(event); }, [event]);
 
   const hasPhotos = (event.photo_urls || []).length > 0;
   const ticketCount = (event.tickets || []).length;
@@ -298,9 +298,10 @@ export default function EventsManager({ events = [] }) {
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.EventContent.create(data),
     onSuccess: () => { refresh(); setDraft(emptyEvent); setShowCreate(false); toast({ title: "Event added" }); },
+    onError: () => toast({ title: "Failed to create event", description: "Something went wrong. Please try again.", variant: "destructive" }),
   });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.EventContent.update(id, data), onSuccess: () => { refresh(); toast({ title: "Event saved" }); } });
-  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.EventContent.delete(id), onSuccess: () => { refresh(); toast({ title: "Event removed" }); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.EventContent.update(id, data), onSuccess: () => { refresh(); toast({ title: "Event saved" }); }, onError: () => toast({ title: "Failed to save event", description: "Something went wrong. Please try again.", variant: "destructive" }) });
+  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.EventContent.delete(id), onSuccess: () => { refresh(); toast({ title: "Event removed" }); }, onError: () => toast({ title: "Failed to delete event", description: "Something went wrong. Please try again.", variant: "destructive" }) });
 
   const sorted = [...events].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
@@ -368,7 +369,11 @@ export default function EventsManager({ events = [] }) {
               index={index}
               saving={updateMutation.isPending}
               onSave={(data) => updateMutation.mutate({ id: event.id, data })}
-              onDelete={(id) => deleteMutation.mutate(id)}
+              onDelete={(id) => {
+                if (window.confirm("Are you sure you want to delete this event? This cannot be undone.")) {
+                  deleteMutation.mutate(id);
+                }
+              }}
             />
           ))}
         </div>

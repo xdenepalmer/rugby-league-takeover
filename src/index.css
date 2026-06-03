@@ -535,15 +535,6 @@
     transition-duration: 0.001ms !important;
     will-change: auto !important;
   }
-
-  @media (min-width: 769px) {
-    .animate-marquee {
-      animation: marquee 30s linear infinite !important;
-      animation-duration: 30s !important;
-      animation-iteration-count: infinite !important;
-      will-change: transform !important;
-    }
-  }
 }
 
 /* ─── Las Vegas Casino Marquee & LED Bulb Animations ─────────────────────── */

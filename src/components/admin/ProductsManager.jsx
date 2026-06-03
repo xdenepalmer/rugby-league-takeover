@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Save, Trash2, Plus, X, ShoppingBag, Package, DollarSign, Eye, EyeOff, Edit3, BarChart3, AlertTriangle } from "lucide-react";
 import ImageField from "./ImageField";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
+import { toast } from "@/components/ui/use-toast";
 
 const LOW_STOCK = 5;
 const stockBadge = (qty) => {
@@ -21,9 +22,10 @@ const stockBadge = (qty) => {
 const emptyProduct = { name: "", description: "", image_url: "", price_aud: 0, stock_quantity: 0, is_active: true, sort_order: 1 };
 
 /* ── Product Card ── */
-function ProductCard({ product, onUpdate, onDelete, index }) {
+function ProductCard({ product, onUpdate, onDelete, index, saving }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(product);
+  useEffect(() => { setDraft(product); }, [product]);
   const stock = stockBadge(product.stock_quantity);
 
   const handleSave = () => {
@@ -146,7 +148,7 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
               <Switch checked={draft.is_active !== false} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} />
             </label>
             <div className="flex-1" />
-            <Button onClick={handleSave} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
+            <Button onClick={handleSave} disabled={saving} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
               <Save className="mr-1.5 h-3 w-3" /> Save
             </Button>
           </div>
@@ -164,9 +166,9 @@ export default function ProductsManager({ products }) {
   const queryClient = useQueryClient();
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["products"] });
-  const createMutation = useMutation({ mutationFn: (data) => base44.entities.Product.create(data), onSuccess: () => { refresh(); setDraft(emptyProduct); setShowCreate(false); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Product.update(id, data), onSuccess: refresh });
-  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Product.delete(id), onSuccess: refresh });
+  const createMutation = useMutation({ mutationFn: (data) => base44.entities.Product.create(data), onSuccess: () => { refresh(); setDraft(emptyProduct); setShowCreate(false); toast({ title: "Product added" }); }, onError: () => toast({ title: "Failed to create product", description: "Something went wrong. Please try again.", variant: "destructive" }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Product.update(id, data), onSuccess: () => { refresh(); toast({ title: "Product saved" }); }, onError: () => toast({ title: "Failed to save product", description: "Something went wrong. Please try again.", variant: "destructive" }) });
+  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Product.delete(id), onSuccess: () => { refresh(); toast({ title: "Product removed" }); }, onError: () => toast({ title: "Failed to delete product", description: "Something went wrong. Please try again.", variant: "destructive" }) });
 
   const activeCount = products.filter((p) => p.is_active !== false).length;
   const lowStockCount = products.filter((p) => Number(p.stock_quantity) > 0 && Number(p.stock_quantity) <= LOW_STOCK).length;
@@ -279,6 +281,7 @@ export default function ProductsManager({ products }) {
               key={product.id}
               product={product}
               index={index}
+              saving={updateMutation.isPending}
               onUpdate={(data) => updateMutation.mutate({ id: product.id, data })}
               onDelete={(id) => setConfirmProductId(id)}
             />
