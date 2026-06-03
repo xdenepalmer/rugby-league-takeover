@@ -80,8 +80,14 @@ function ctrBg(ctr) {
 }
 
 function getAdStats(stats, ad) {
+  // Prefer durable server-aggregated counts (SiteAd.impression_count / click_count);
+  // fall back to the per-browser localStorage cache only when they're absent.
   const key = `${ad.position}__${ad.id}`;
-  return stats?.[key] || { impressions: 0, clicks: 0 };
+  const cached = stats?.[key] || {};
+  return {
+    impressions: Number(ad?.impression_count ?? cached.impressions ?? 0),
+    clicks: Number(ad?.click_count ?? cached.clicks ?? 0),
+  };
 }
 
 function calcCtr(impressions, clicks) {

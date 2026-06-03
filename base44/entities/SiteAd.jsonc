@@ -80,6 +80,16 @@
         "type": "object"
       },
       "description": "Optional A/B creative variants"
+    },
+    "impression_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Server-aggregated total viewable impressions"
+    },
+    "click_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Server-aggregated total clicks"
     }
   },
   "required": [
