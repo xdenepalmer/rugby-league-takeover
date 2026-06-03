@@ -176,6 +176,32 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
         </div>
       </div>
 
+      {/* Facebook Community */}
+      <a
+        href="https://www.facebook.com/groups/663237792349090"
+        target="_blank"
+        rel="noreferrer"
+        className="block border border-border/50 bg-card/20 overflow-hidden group hover:border-[#1877F2]/30 transition-all duration-300"
+      >
+        <div className="h-[2px] w-full bg-[#1877F2]" />
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#1877F2]/10 border border-[#1877F2]/20 shrink-0">
+              <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#1877F2]" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground group-hover:text-[#1877F2] transition-colors">NRL Las Vegas</p>
+              <p className="text-[9px] text-muted-foreground font-mono mt-0.5">16.8k members · Facebook Group</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-300 leading-relaxed mt-3">Join the conversation on Facebook — match day meetups, ticket alerts, travel tips and more from the community.</p>
+          <div className="mt-3 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#1877F2] group-hover:translate-x-0.5 transition-transform">
+            <span>Join Group</span>
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+          </div>
+        </div>
+      </a>
+
       {/* Collapsible Guidelines */}
       <CollapsibleGuidelines />
     </aside>

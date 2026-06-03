@@ -267,6 +267,19 @@ export default function Home() {
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Connect</p>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Join the movement. Rugby League's biggest fan invasion of Las Vegas.</p>
+                  <a
+                    href="https://www.facebook.com/groups/663237792349090"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 flex items-center gap-2.5 border border-border/40 bg-card/20 px-3 py-2.5 group hover:border-[#1877F2]/40 hover:bg-[#1877F2]/5 transition-all duration-300"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#1877F2] shrink-0" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-foreground group-hover:text-[#1877F2] transition-colors truncate">NRL Las Vegas</p>
+                      <p className="text-[9px] text-muted-foreground font-mono">16.8k members</p>
+                    </div>
+                    <svg viewBox="0 0 24 24" className="h-3 w-3 ml-auto text-muted-foreground group-hover:text-[#1877F2] group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+                  </a>
                   <div className="mt-3 flex items-center gap-1">
                     <span className="inline-block h-1 w-6 bg-primary" />
                     <span className="inline-block h-1 w-4 bg-accent" />
