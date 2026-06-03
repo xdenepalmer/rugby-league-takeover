@@ -107,8 +107,11 @@ export function normalizeInterestRegistration(input, timestamp = new Date().toIS
   assertPresent(email, "Email");
   assertEmail(email);
 
+  // Teams are admin-managed (Team entity) and dynamic, so we no longer gate on a
+  // hardcoded list — just require a non-empty, length-capped value. SUPPORTED_TEAMS
+  // remains exported as a fallback/admin-filter default.
   const team = trimToLength(input?.team_supported, 40);
-  if (!SUPPORTED_TEAMS.includes(team)) {
+  if (!team) {
     throw new Error("Team supported is required");
   }
 
