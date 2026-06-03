@@ -88,7 +88,7 @@ export default function AboutSection({ settings = {} }) {
 
   const textInView = useInView(textRef, { amount: 0.3, once: true });
   const statsInView = useInView(statsRef, { amount: 0.5, once: true });
-  const imageInView = useInView(imageContainerRef, { amount: 0.35, once: false });
+  const imageInView = useInView(imageContainerRef, { amount: 0.3, once: true });
 
   /* Parallax scroll for image */
   const { scrollYProgress } = useScroll({
@@ -182,9 +182,9 @@ export default function AboutSection({ settings = {} }) {
         {/* ── Right: Image column with parallax ───────────── */}
         <div
           ref={imageContainerRef}
-          className="relative min-h-[520px] overflow-hidden lg:min-h-0"
+          className="group/img relative min-h-[520px] overflow-hidden lg:min-h-0 cursor-pointer"
         >
-          {/* Parallax-moving image */}
+          {/* Parallax-moving image — grayscale by default, colour on hover */}
           <motion.div
             style={{ y: imageY, scale: imageScale }}
             className="absolute inset-0 will-change-transform"
@@ -196,9 +196,7 @@ export default function AboutSection({ settings = {} }) {
               }
               alt="Supporters celebrating"
               loading="lazy"
-              className={`h-full w-full object-cover transition-[filter] duration-1000 ${
-                imageInView ? "grayscale-0" : "grayscale"
-              }`}
+              className="h-full w-full object-cover grayscale transition-[filter] duration-700 ease-out group-hover/img:grayscale-0"
             />
           </motion.div>
 
