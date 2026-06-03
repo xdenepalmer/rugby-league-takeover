@@ -736,7 +736,7 @@ export default function Store() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setCartOpen(true)}
-            className="fixed bottom-[calc(1.5rem+var(--safe-bottom))] right-6 z-45 flex items-center justify-center rounded-none border border-primary-foreground/15 bg-primary p-4 text-white shadow-[0_0_25px_rgba(249,115,22,0.5)] pointer-events-auto hover:bg-primary/95 group"
+            className="fixed bottom-[calc(5.5rem+var(--safe-bottom))] right-6 z-[45] flex items-center justify-center rounded-none border border-primary-foreground/15 bg-primary p-4 text-white shadow-[0_0_25px_rgba(249,115,22,0.5)] pointer-events-auto hover:bg-primary/95 active:scale-95 group lg:bottom-[calc(1.5rem+var(--safe-bottom))]"
           >
             <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
             <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center bg-accent text-[11px] font-bold text-accent-foreground rounded-none shadow-md border border-accent-foreground/10 animate-bounce">

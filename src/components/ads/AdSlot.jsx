@@ -595,8 +595,8 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
       className={`relative ${className}`}
       style={{
         contain: "layout style",
-        maxWidth: preset ? preset.w : "100%",
         width: "100%",
+        margin: "0 auto",
       }}
     >
       <AnimatePresence mode="wait">
@@ -609,7 +609,6 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="group/ad relative overflow-hidden border border-border/40 cmd-glass"
           style={{
-            maxWidth: preset ? preset.w : "100%",
             width: "100%",
             transition: "box-shadow 0.4s ease, border-color 0.4s ease",
             boxShadow: isHovered ? "0 0 20px -4px hsl(var(--primary) / 0.15)" : "none",
@@ -646,20 +645,15 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
             Sponsored
           </span>
 
-          {/* Close/minimize button — appears on hover */}
-          <motion.button
-            initial={false}
-            animate={{ opacity: isHovered ? 0.7 : 0, scale: isHovered ? 1 : 0.8 }}
-            transition={{ duration: 0.2 }}
-            whileHover={{ opacity: 1, scale: 1.1 }}
+          {/* Close/minimize button — always tappable on mobile, hover on desktop */}
+          <button
             onClick={handleMinimize}
-            className="absolute top-0.5 left-0.5 z-30 flex h-5 w-5 items-center justify-center bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors cursor-pointer"
-            style={{ pointerEvents: isHovered ? "auto" : "none" }}
+            className="absolute top-1 left-1 z-30 flex h-7 w-7 items-center justify-center bg-black/50 backdrop-blur-sm hover:bg-black/70 active:bg-black/80 transition-colors cursor-pointer opacity-60 hover:opacity-100 sm:opacity-0 sm:group-hover/ad:opacity-80"
             aria-label="Minimize advertisement"
             title="Minimize ad"
           >
-            <X className="h-2.5 w-2.5 text-white/70" />
-          </motion.button>
+            <X className="h-3 w-3 text-white/80" />
+          </button>
 
           {/* Multi-ad rotation indicator */}
           {hasMultiple && (
@@ -703,7 +697,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
             <div
               className="absolute inset-0"
               style={{
-                aspectRatio: preset ? `${preset.w}/${preset.h}` : undefined,
+                height: 90,
                 background: "linear-gradient(90deg, hsl(var(--muted) / 0.08) 25%, hsl(var(--muted) / 0.18) 50%, hsl(var(--muted) / 0.08) 75%)",
                 backgroundSize: "400% 100%",
                 animation: "ad-shimmer-placeholder 1.8s ease-in-out infinite",
@@ -724,9 +718,12 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
               <img
                 src={imgSrc}
                 alt={currentAd.title || "Advertisement"}
-                className="block w-full object-contain"
+                className="block mx-auto object-contain"
                 style={{
-                  aspectRatio: preset ? `${preset.w}/${preset.h}` : undefined,
+                  maxWidth: "100%",
+                  maxHeight: 280,
+                  width: "auto",
+                  height: "auto",
                   opacity: imgLoaded ? 1 : 0,
                   transform: isHovered ? "scale(1.01)" : "scale(1)",
                   transition: "opacity 0.5s ease, transform 0.4s ease",
@@ -741,7 +738,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
               <div
                 className="w-full"
                 style={{
-                  aspectRatio: preset ? `${preset.w}/${preset.h}` : "728/90",
+                  height: 90,
                   background: "hsl(var(--muted) / 0.1)",
                 }}
               />
