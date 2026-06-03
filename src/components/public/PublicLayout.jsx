@@ -1,20 +1,40 @@
-import React from "react";
-import { NavLink, useLocation, useOutlet } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Home, ShoppingBag, MessageSquare, User, ShieldCheck } from "lucide-react";
+import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import SiteNav from "./SiteNav";
 import AdSlot from "@/components/ads/AdSlot";
+import MobileCommandSheet from "./MobileCommandSheet";
 
 export default function PublicLayout() {
   const { isAdmin, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { pathname } = location;
   const isHome = pathname === "/";
   const outlet = useOutlet();
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
+
+  const handleNavigate = (hash) => {
+    if (location.pathname !== "/") {
+      navigate("/");
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 300);
+    } else {
+      const element = document.querySelector(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
   
   const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({
     queryKey: ["siteSettings"],
@@ -111,6 +131,16 @@ export default function PublicLayout() {
               </>
             )}
           </NavLink>
+
+          <button
+            type="button"
+            onClick={() => setIsPlanOpen(true)}
+            aria-label="Plan Trip"
+            className="ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer text-muted-foreground/80 hover:text-foreground"
+          >
+            <Compass className="h-5 w-5" />
+            <span>Plan</span>
+          </button>
 
           <NavLink
             to="/store"
@@ -213,6 +243,12 @@ export default function PublicLayout() {
           )}
         </div>
       </nav>
+
+      <MobileCommandSheet
+        isOpen={isPlanOpen}
+        onClose={() => setIsPlanOpen(false)}
+        onNavigate={handleNavigate}
+      />
     </div>
   );
 }

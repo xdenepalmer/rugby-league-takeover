@@ -607,6 +607,8 @@ export default function Forum() {
     });
   }, []);
   const [sortBy, setSortBy] = useState("latest");
+  const [mobileTab, setMobileTab] = useState("feed");
+  const [userFilter, setUserFilter] = useState("all");
   useEffect(() => {
     setVisibleCount(15);
   }, [sortBy]);
@@ -845,6 +847,26 @@ export default function Forum() {
         return `${p.title || ""} ${p.body || ""} ${p.author_name || ""} ${replyText}`.toLowerCase().includes(searchQuery.toLowerCase());
       });
 
+    if (isAuthenticated && user) {
+      if (userFilter === "my_threads") {
+        result = result.filter((p) => String(p.user_id) === String(user.id));
+      } else if (userFilter === "mentions") {
+        const myName = (user.full_name || "").toLowerCase();
+        const myEmail = (user.email || "").toLowerCase();
+        result = result.filter((p) => {
+          const bodyLower = (p.body || "").toLowerCase();
+          const titleLower = (p.title || "").toLowerCase();
+          const hasMention = (myName && (bodyLower.includes(`@${myName}`) || titleLower.includes(`@${myName}`))) ||
+                            (myEmail && (bodyLower.includes(`@${myEmail}`) || titleLower.includes(`@${myEmail}`)));
+          const hasReplyMention = (p.replies || []).some((r) => {
+            const rBodyLower = (r.body || "").toLowerCase();
+            return (myName && rBodyLower.includes(`@${myName}`)) || (myEmail && rBodyLower.includes(`@${myEmail}`));
+          });
+          return hasMention || hasReplyMention;
+        });
+      }
+    }
+
     if (sortBy === "hot") {
       result = [...result].sort((a, b) => getEngagement(b).likes - getEngagement(a).likes);
     } else if (sortBy === "top") {
@@ -852,7 +874,7 @@ export default function Forum() {
     }
     // "latest" is default order
     return result;
-  }, [allThreads, selectedCategory, searchQuery, sortBy]);
+  }, [allThreads, selectedCategory, searchQuery, sortBy, isAuthenticated, user, userFilter]);
 
   const threadsToRender = useMemo(() => {
     return filteredThreads.slice(0, visibleCount);
@@ -865,6 +887,7 @@ export default function Forum() {
     setSelectedCategory("All");
     setSearchQuery("");
     setSortBy("latest");
+    setUserFilter("all");
   };
 
   return (
@@ -968,241 +991,293 @@ export default function Forum() {
             {/* Live Activity Ticker */}
             <LiveActivityTicker threads={allThreads} />
 
-            {/* Slot Machine — TOP position when spin is available (mobile only) */}
-            {slotSpinAvailable && (
-              <div className="lg:hidden">
+            {/* Mobile Tab Selector Segmented Control */}
+            <div className="flex border border-border bg-card/30 p-1 mb-4 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileTab("feed")}
+                className={`relative flex-1 flex min-h-11 items-center justify-center text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer ${
+                  mobileTab === "feed" ? "text-foreground font-extrabold" : "text-slate-350"
+                }`}
+              >
+                Discussions
+                {mobileTab === "feed" && (
+                  <motion.div
+                    layoutId="forum-mobile-active-tab-glow"
+                    className="absolute inset-0 bg-muted/30 border border-border/50"
+                    style={{ boxShadow: "0 0 10px hsl(var(--primary)/0.3)" }}
+                  />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab("tools")}
+                className={`relative flex-1 flex min-h-11 items-center justify-center text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer ${
+                  mobileTab === "tools" ? "text-foreground font-extrabold" : "text-slate-350"
+                }`}
+              >
+                Fan Tools
+                {mobileTab === "tools" && (
+                  <motion.div
+                    layoutId="forum-mobile-active-tab-glow"
+                    className="absolute inset-0 bg-muted/30 border border-border/50"
+                    style={{ boxShadow: "0 0 10px hsl(var(--primary)/0.3)" }}
+                  />
+                )}
+              </button>
+            </div>
+
+            {/* Mobile Tab Content: Tools */}
+            {mobileTab === "tools" ? (
+              <div className="space-y-4 lg:hidden">
+                <Suspense fallback={<div className="h-64 bg-card/10 animate-pulse border border-border/10" />}>
+                  <ScorePredictor
+                    onSharePrediction={(matchup, homeScore, awayScore) => {
+                      const home = matchup.home_team;
+                      const away = matchup.away_team;
+                      const label = matchup.label || "NRL Fixture";
+                      setDraft((d) => ({
+                        ...d,
+                        title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
+                        body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
+                        category: "MatchDay",
+                      }));
+                      setShowMobileCompose(true);
+                    }}
+                  />
+                </Suspense>
+                <Suspense fallback={<div className="h-64 bg-card/10 animate-pulse border border-border/10" />}>
+                  <StadiumSeatPlanner
+                    onFilterSearch={(q) => { setSearchQuery(q); setMobileTab("feed"); }}
+                    onClaimSeat={(q) => {
+                      setDraft((d) => ({
+                        ...d,
+                        title: `[${q}] Supporter Meetup!`,
+                        body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
+                        category: "MatchDay",
+                      }));
+                      setShowMobileCompose(true);
+                      try {
+                        localStorage.setItem("rlt_seat_claimed", q);
+                        window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
+                      } catch (err) {}
+                    }}
+                    currentSearch={searchQuery}
+                  />
+                </Suspense>
                 <Suspense fallback={<div className="h-28 bg-card/10 animate-pulse border border-border/10" />}>
                   <SlotMachineBadgeUnlock />
                 </Suspense>
+                <TopContributors allThreads={allThreads} />
+                <OnlineUsersWidget threads={allThreads} />
+                <a
+                  href="https://www.facebook.com/groups/663237792349090"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 border border-[#1877F2]/20 bg-[#1877F2]/[0.04] px-4 py-3.5 group hover:bg-[#1877F2]/[0.08] transition-all"
+                >
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#1877F2] shrink-0" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground">Join NRL Las Vegas on Facebook</p>
+                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">16.8k members · Meetups, tickets, travel tips</p>
+                  </div>
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#1877F2] shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+                </a>
+                <CollapsibleGuidelines />
               </div>
-            )}
+            ) : null}
 
-            {/* Mobile Footy Tipping — Collapsible */}
-            <div className="lg:hidden">
-              <button
-                onClick={toggleTipping}
-                className="flex w-full items-center justify-between border border-border/50 bg-card/30 cmd-glass px-4 py-3 text-left transition-colors hover:bg-card/50 active:scale-[0.99]"
-                aria-expanded={tippingExpanded}
-                aria-controls="mobile-tipping-panel"
+            {/* Mobile Tab Content: Feed */}
+            <div className={mobileTab === "feed" ? "space-y-4" : "hidden lg:block lg:space-y-4"}>
+              {/* Search + Filter Bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="border border-border/40 bg-card/20 cmd-glass overflow-hidden"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Trophy className="h-4 w-4 text-primary shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">Footy Tipping</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">Tap to {tippingExpanded ? "collapse" : "expand"} tips</p>
+                <div className="space-y-3 p-3 sm:p-4">
+                  {/* Search + Sort row */}
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/30" />
+                      <Input
+                        placeholder="Search discussions, topics, or users…"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-11 rounded-none border-border/50 bg-background/60 pl-9 text-sm"
+                      />
+                      {searchQuery && (
+                        <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <SortTabs active={sortBy} onChange={setSortBy} />
+                  </div>
+
+                  {/* Categories collapsed into a sticky horizontal rail on mobile, flex on desktop */}
+                  <div className="forum-filter-rail gap-2 pb-2 scroll-smooth md:flex md:flex-wrap md:mx-0 md:px-0">
+                    {categories.map((cat) => (
+                      <CategoryPill
+                        key={cat.value}
+                        value={cat.value}
+                        isActive={selectedCategory === cat.value}
+                        onClick={() => setSelectedCategory(cat.value)}
+                        count={categoryCounts[cat.value] || 0}
+                      />
+                    ))}
+                  </div>
+
+                  {/* My Threads & Mentions for signed in users */}
+                  {isAuthenticated && (
+                    <div className="flex flex-wrap items-center gap-2 border-t border-border/10 pt-2 text-[10px] font-bold uppercase tracking-wider">
+                      <span className="text-muted-foreground/50">Show:</span>
+                      <button
+                        type="button"
+                        onClick={() => setUserFilter("all")}
+                        className={`px-2.5 py-1 transition-all border cursor-pointer ${
+                          userFilter === "all" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-350 hover:text-white"
+                        }`}
+                      >
+                        All Posts
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUserFilter("my_threads")}
+                        className={`px-2.5 py-1 transition-all border cursor-pointer ${
+                          userFilter === "my_threads" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-350 hover:text-white"
+                        }`}
+                      >
+                        My Threads
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUserFilter("mentions")}
+                        className={`px-2.5 py-1 transition-all border cursor-pointer ${
+                          userFilter === "mentions" ? "border-primary bg-primary/10 text-foreground" : "border-border/30 text-slate-350 hover:text-white"
+                        }`}
+                      >
+                        Mentions
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Summary */}
+                  <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border/20 pt-1">
+                    <p className="text-[9px] font-mono text-muted-foreground/30">
+                      {filteredThreads.length} {filteredThreads.length === 1 ? "thread" : "threads"}
+                      {selectedCategory !== "All" ? ` in ${getCategoryMeta(selectedCategory).label}` : ""}
+                      {searchQuery ? ` matching "${searchQuery}"` : ""}
+                      {sortBy !== "latest" ? ` · sorted by ${sortBy}` : ""}
+                      {userFilter !== "all" ? ` · filtered by ${userFilter}` : ""}
+                    </p>
+                    {(selectedCategory !== "All" || searchQuery || sortBy !== "latest" || userFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={clearAllFilters}
+                        className="text-[9px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+              </motion.div>
+
+              {/* Seating Planner & Score Predictor for MatchDay category on Desktop Only */}
+              <AnimatePresence>
+                {selectedCategory === "MatchDay" && (
                   <motion.div
-                    animate={{ rotate: tippingExpanded ? 180 : 0 }}
-                    transition={{ duration: 0.25 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden space-y-4 mb-4 hidden lg:block"
                   >
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </motion.div>
-                </div>
-              </button>
-              <AnimatePresence initial={false}>
-                {tippingExpanded && (
-                  <motion.div
-                    id="mobile-tipping-panel"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-2">
-                      <Suspense fallback={<div className="h-64 bg-card/10 animate-pulse border border-border/10" />}>
-                        <ScorePredictor
-                          onSharePrediction={(matchup, homeScore, awayScore) => {
-                            const home = matchup.home_team;
-                            const away = matchup.away_team;
-                            const label = matchup.label || "NRL Fixture";
+                    <div className="grid gap-4">
+                      <Suspense fallback={<div className="h-72 bg-card/10 animate-pulse border border-border/10" />}>
+                        <StadiumSeatPlanner
+                          onFilterSearch={(q) => setSearchQuery(q)}
+                          onClaimSeat={(q) => {
                             setDraft((d) => ({
                               ...d,
-                              title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
-                              body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
+                              title: `[${q}] Supporter Meetup!`,
+                              body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
                               category: "MatchDay",
                             }));
-                            setShowMobileCompose(true);
-                            window.scrollTo({ top: 300, behavior: "smooth" });
+                            try {
+                              localStorage.setItem("rlt_seat_claimed", q);
+                              window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
+                            } catch (err) {}
                           }}
+                          currentSearch={searchQuery}
                         />
                       </Suspense>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
 
-            {/* Search + Filter Bar */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="border border-border/40 bg-card/20 cmd-glass overflow-hidden"
-            >
-              <div className="space-y-3 p-3 sm:p-4">
-                {/* Search + Sort row */}
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/30" />
-                    <Input
-                      placeholder="Search discussions, topics, or users…"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-11 rounded-none border-border/50 bg-background/60 pl-9 text-sm"
+              {/* One obvious compose button (Mobile Only) */}
+              <button
+                type="button"
+                onClick={() => setShowMobileCompose(true)}
+                className="w-full flex items-center justify-center gap-2 border border-dashed border-primary/40 bg-primary/5 py-3.5 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 transition-colors lg:hidden mb-4 cursor-pointer"
+              >
+                <MessageSquare className="h-4 w-4" /> Start a New Discussion
+              </button>
+
+              {/* Thread Feed */}
+              <div className="space-y-3">
+                {threadsToRender.map((post, index) => {
+                  const isActiveThread = activeReplyId && (activeReplyId === post.id || containsActiveReply(post, activeReplyId));
+                  const activeReplyDraft = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
+
+                  return (
+                    <ForumPostCard
+                      key={post.id} post={post} index={index}
+                      isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
+                      appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
+                      replyOpen={activeReplyId === post.id}
+                      replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}
+                      onToggleReply={handleToggleReply}
+                      onUpdateReply={updateReplyDraft}
+                      onReply={handleReply}
+                      onOpenThread={handleOpenThread}
+                      onDeletePost={handleDelete}
+                      replyApi={replyApi}
+                      activeReplyDraft={activeReplyDraft}
+                      authorPostCounts={authorPostCounts}
+                      authorReplyCounts={authorReplyCounts}
+                      resolveAvatar={avatarFor}
+                      resolveMeta={forumMetaFor}
+                      reactionProfiles={profileById}
                     />
-                    {searchQuery && (
-                      <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors">
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                  <SortTabs active={sortBy} onChange={setSortBy} />
-                </div>
+                  );
+                })}
 
-                {/* Categories */}
-                <div className="forum-filter-rail grid grid-cols-2 gap-2 pb-1 sm:flex sm:flex-wrap">
-                  {categories.map((cat) => (
-                    <CategoryPill
-                      key={cat.value}
-                      value={cat.value}
-                      isActive={selectedCategory === cat.value}
-                      onClick={() => setSelectedCategory(cat.value)}
-                      count={categoryCounts[cat.value] || 0}
-                    />
-                  ))}
-                </div>
-
-                {/* Summary */}
-                <div className="flex min-w-0 items-center justify-between gap-3 border-t border-border/20 pt-1">
-                  <p className="text-[9px] font-mono text-muted-foreground/30">
-                    {filteredThreads.length} {filteredThreads.length === 1 ? "thread" : "threads"}
-                    {selectedCategory !== "All" ? ` in ${getCategoryMeta(selectedCategory).label}` : ""}
-                    {searchQuery ? ` matching "${searchQuery}"` : ""}
-                    {sortBy !== "latest" ? ` · sorted by ${sortBy}` : ""}
-                  </p>
-                  {(selectedCategory !== "All" || searchQuery || sortBy !== "latest") && (
-                    <button
+                {filteredThreads.length > visibleCount && (
+                  <div className="flex justify-center pt-4">
+                    <Button
                       type="button"
-                      onClick={clearAllFilters}
-                      className="text-[9px] font-bold uppercase tracking-wider text-primary/60 hover:text-primary transition-colors"
+                      onClick={() => setVisibleCount((prev) => prev + 15)}
+                      className="border border-primary px-8 py-3.5 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all duration-300 rounded-none relative overflow-hidden"
                     >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
+                      Load More Discussions
+                    </Button>
+                  </div>
+                )}
 
-            {/* Seating Planner & Score Predictor for MatchDay category */}
-            <AnimatePresence>
-              {selectedCategory === "MatchDay" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden space-y-4 mb-4"
-                >
-                  <div className="grid gap-4">
-                    <Suspense fallback={<div className="h-72 bg-card/10 animate-pulse border border-border/10" />}>
-                      <StadiumSeatPlanner
-                        onFilterSearch={(q) => setSearchQuery(q)}
-                        onClaimSeat={(q) => {
-                          setDraft((d) => ({
-                            ...d,
-                            title: `[${q}] Supporter Meetup!`,
-                            body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
-                            category: "MatchDay",
-                          }));
-                          setShowMobileCompose(true);
-                        window.scrollTo({ top: 300, behavior: "smooth" });
-                        try {
-                          localStorage.setItem("rlt_seat_claimed", q);
-                          window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
-                        } catch (err) {}
-                      }}
-                      currentSearch={searchQuery}
-                    />
-                  </Suspense>
-                </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Thread Feed */}
-            <div className="space-y-3">
-              {threadsToRender.map((post, index) => {
-                const isActiveThread = activeReplyId && (activeReplyId === post.id || containsActiveReply(post, activeReplyId));
-                const activeReplyDraft = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
-
-                return (
-                  <ForumPostCard
-                    key={post.id} post={post} index={index}
-                    isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
-                    appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
-                    replyOpen={activeReplyId === post.id}
-                    replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}
-                    onToggleReply={handleToggleReply}
-                    onUpdateReply={updateReplyDraft}
-                    onReply={handleReply}
-                    onOpenThread={handleOpenThread}
-                    onDeletePost={handleDelete}
-                    replyApi={replyApi}
-                    activeReplyDraft={activeReplyDraft}
-                    authorPostCounts={authorPostCounts}
-                    authorReplyCounts={authorReplyCounts}
-                    resolveAvatar={avatarFor}
-                    resolveMeta={forumMetaFor}
-                    reactionProfiles={profileById}
+                {filteredThreads.length === 0 && (
+                  <EmptyState
+                    onClearFilters={clearAllFilters}
+                    onSelectCategory={(cat) => { setSelectedCategory(cat); setSearchQuery(""); setSortBy("latest"); }}
+                    category={selectedCategory}
+                    searchQuery={searchQuery}
                   />
-                );
-              })}
-
-              {filteredThreads.length > visibleCount && (
-                <div className="flex justify-center pt-4">
-                  <Button
-                    type="button"
-                    onClick={() => setVisibleCount((prev) => prev + 15)}
-                    className="border border-primary px-8 py-3.5 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all duration-300 rounded-none relative overflow-hidden"
-                  >
-                    Load More Discussions
-                  </Button>
-                </div>
-              )}
-
-              {filteredThreads.length === 0 && (
-                <EmptyState
-                  onClearFilters={clearAllFilters}
-                  onSelectCategory={(cat) => { setSelectedCategory(cat); setSearchQuery(""); setSortBy("latest"); }}
-                />
-              )}
+                )}
+              </div>
             </div>
-
-            {/* Slot Machine — BOTTOM position when no spin available (mobile only) */}
-            {!slotSpinAvailable && (
-              <div className="lg:hidden">
-                <Suspense fallback={<div className="h-28 bg-card/10 animate-pulse border border-border/10" />}>
-                  <SlotMachineBadgeUnlock />
-                </Suspense>
-              </div>
-            )}
-
-            {/* Facebook Community — mobile only (sidebar covers desktop) */}
-            <a
-              href="https://www.facebook.com/groups/663237792349090"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 border border-[#1877F2]/20 bg-[#1877F2]/[0.04] px-4 py-3.5 lg:hidden group hover:bg-[#1877F2]/[0.08] transition-all"
-            >
-              <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#1877F2] shrink-0" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground">Join NRL Las Vegas on Facebook</p>
-                <p className="text-[10px] text-muted-foreground font-mono mt-0.5">16.8k members · Meetups, tickets, travel tips</p>
-              </div>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#1877F2] shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-            </a>
           </div>
 
           {/* ━━━ RIGHT: Sidebar ━━━ */}
@@ -1353,7 +1428,7 @@ export default function Forum() {
       </AnimatePresence>
 
       {/* ━━━ MOBILE FAB ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <MobileFAB onClick={() => setShowMobileCompose(true)} />
+      {mobileTab === "feed" && <MobileFAB onClick={() => setShowMobileCompose(true)} />}
 
       {/* ━━━ SCROLL TO TOP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <ScrollToTopButton />

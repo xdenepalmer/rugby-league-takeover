@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 
 /* ── 3D Product Card Component ── */
-const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease }) {
+const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease, onOpenQuickView }) {
   const stock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
@@ -87,8 +87,12 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
       transition={{ delay: Math.min(index * 0.08, 0.4), duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onClick={(e) => {
+        if (e.target.closest("button, form, input, a")) return;
+        onOpenQuickView(product);
+      }}
       style={{ rotateX, rotateY, transformPerspective: 1000 }}
-      className="group relative flex flex-col border border-border bg-card/40 cmd-glass transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_25px_rgba(249,115,22,0.15)] overflow-hidden"
+      className="group relative flex flex-col border border-border bg-card/40 cmd-glass transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_25px_rgba(249,115,22,0.15)] overflow-hidden cursor-pointer"
     >
       {/* Glow highlight inside */}
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -130,6 +134,9 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
             <ShoppingBag className="h-10 w-10 stroke-1" />
           </div>
         )}
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <span className="border border-white/20 bg-black/60 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-sm">Quick View</span>
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-60" />
       </div>
 
@@ -205,6 +212,188 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
   );
 });
 
+/* ── apparel sizing options and descriptions ── */
+function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user }) {
+  const [selectedSize, setSelectedSize] = useState("M");
+  const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedSize("M");
+      setQuantity(1);
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !product) return null;
+
+  const stock = Number(product.stock_quantity);
+  const comingSoon = product.coming_soon === true;
+  const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
+  const inCart = cart.find(item => item.id === product.id && item.size === (product.category === "Apparel" ? selectedSize : undefined));
+  
+  const isApparel = product.category === "Apparel" || 
+                    product.name.toLowerCase().includes("jersey") || 
+                    product.name.toLowerCase().includes("tee") || 
+                    product.name.toLowerCase().includes("hoodie");
+
+  const sizes = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+
+  const handleAdd = () => {
+    addToCart(product, isApparel ? selectedSize : undefined);
+    // Add additional quantities if selected
+    if (quantity > 1) {
+      for (let i = 1; i < quantity; i++) {
+        addToCart(product, isApparel ? selectedSize : undefined);
+      }
+    }
+    toast({
+      title: "Added to Cart",
+      description: `${product.name} ${isApparel ? `(Size ${selectedSize})` : ""} x${quantity} added to cart.`,
+    });
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/75 backdrop-blur-sm cursor-pointer"
+        />
+
+        {/* Sheet Content */}
+        <motion.div
+          initial={{ y: "100%", opacity: 0.5 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "100%", opacity: 0.5 }}
+          transition={{ type: "spring", damping: 25, stiffness: 220 }}
+          className="ios-sheet relative z-10 w-full max-h-[92dvh] overflow-hidden border-t border-border bg-card/95 pb-safe shadow-2xl flex flex-col md:max-w-2xl md:border md:h-auto md:max-h-[85dvh]"
+        >
+          {/* Top border glow */}
+          <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-primary" />
+          
+          <div className="flex items-center justify-between border-b border-border/30 px-5 py-4">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Quick View</span>
+            <button onClick={onClose} className="text-xs uppercase tracking-wider font-bold text-slate-350 hover:text-foreground cursor-pointer">Close</button>
+          </div>
+
+          <div className="ios-scroll flex-1 overflow-y-auto cmd-scrollbar p-6 space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Product Image */}
+              <div className="aspect-square bg-muted/10 border border-border/40 overflow-hidden relative">
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <ShoppingBag className="h-12 w-12 stroke-1" />
+                  </div>
+                )}
+              </div>
+
+              {/* Title & Info */}
+              <div className="flex flex-col justify-between">
+                <div>
+                  {product.category && (
+                    <span className="bg-muted border border-border text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 text-slate-200">
+                      {product.category}
+                    </span>
+                  )}
+                  <h2 className="font-display text-2xl uppercase tracking-wide text-foreground mt-2">{product.name}</h2>
+                  <p className="text-xl font-bold font-mono text-accent mt-1">${Number(product.price_aud || 0).toFixed(2)} AUD</p>
+                  <p className="text-xs text-slate-250 leading-relaxed mt-4">{product.description}</p>
+                </div>
+
+                <div className="mt-4">
+                  {/* Stock status indicator */}
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                    <span className={comingSoon ? "text-primary" : soldOut ? "text-destructive" : stock <= 5 ? "text-amber-400" : "text-emerald-400"}>
+                      {comingSoon ? "Coming Soon" : soldOut ? "Sold Out" : stock <= 5 ? `Only ${stock} left!` : "In Stock"}
+                    </span>
+                    <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : stock} left`}</span>
+                  </div>
+                  <div className="h-1 w-full bg-border overflow-hidden mt-1.5">
+                    <div className={`h-full ${comingSoon ? "bg-primary" : soldOut ? "bg-destructive" : stock <= 5 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${comingSoon ? 100 : Number.isFinite(stock) ? Math.min(100, Math.max(0, (stock / 15) * 100)) : 100}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sizing selection */}
+            {isApparel && !comingSoon && !soldOut && (
+              <div className="space-y-2 border-t border-border/20 pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Select Size</h3>
+                  <span className="text-[10px] text-primary hover:underline cursor-pointer">Size Guide</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map(size => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`h-11 w-11 text-xs font-bold border transition-all cursor-pointer ${
+                        selectedSize === size 
+                          ? "border-primary bg-primary text-primary-foreground font-extrabold" 
+                          : "border-border bg-background/50 text-slate-300 hover:border-primary/50"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sizing Details */}
+            {isApparel && (
+              <div className="border border-border/30 bg-muted/5 p-4 space-y-1.5 text-[11px] text-slate-300 font-medium">
+                <span className="font-bold uppercase text-slate-200 block mb-1">Standard Fit &amp; Care</span>
+                <p>• Heavyweight cotton fit. For an oversized fit, select one size up.</p>
+                <p>• Cold wash inside out. Hang dry. Do not tumble dry.</p>
+              </div>
+            )}
+
+            {/* Trust and Policy Bar */}
+            <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-4 text-xs">
+              <div className="space-y-1">
+                <span className="font-bold text-foreground">🚚 Free Shipping</span>
+                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Estimated delivery 4-7 business days.</p>
+              </div>
+              <div className="space-y-1">
+                <span className="font-bold text-foreground">🔄 30-Day Returns</span>
+                <p className="text-slate-300 text-[11px] leading-relaxed">Easy returns within 30 days for unworn items in original packaging.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-border/30 p-4 bg-background/90 shrink-0">
+            {!comingSoon && !soldOut && (
+              <div className="flex gap-4">
+                <div className="flex items-center border border-border h-12 bg-background">
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">-</button>
+                  <span className="w-8 text-center font-mono font-bold">{quantity}</span>
+                  <button onClick={() => setQuantity(q => q + 1)} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
+                </div>
+                <Button onClick={handleAdd} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs">
+                  Add to Cart • ${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD
+                </Button>
+              </div>
+            )}
+            {(comingSoon || soldOut) && (
+              <Button disabled className="w-full h-12 rounded-none bg-muted text-slate-400 font-bold uppercase tracking-widest text-xs">
+                {comingSoon ? "Coming Soon" : "Sold Out"}
+              </Button>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
 /* ── Skeleton Loading Grid ── */
 function SkeletonLoader() {
   return (
@@ -243,6 +432,7 @@ export default function Store() {
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutNotice, setCheckoutNotice] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
 
   const { data: products = [], isLoading } = useQuery({ 
     queryKey: ["products"], 
@@ -292,20 +482,22 @@ export default function Store() {
     }
   }, [user?.email, user?.full_name]);
 
-  const addToCart = useCallback((product) => {
+  const addToCart = useCallback((product, size) => {
     if (product.coming_soon === true) return;
     const stock = Number(product.stock_quantity);
     if (Number.isFinite(stock) && stock <= 0) return;
 
+    const cartItemId = product.id + (size ? "-" + size : "");
+
     setCart((curr) => {
-      const existing = curr.find((item) => item.id === product.id);
+      const existing = curr.find((item) => item.cartItemId === cartItemId);
       if (existing) {
         const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
         return curr.map((item) => 
-          item.id === product.id ? { ...item, quantity: Math.min(item.quantity + 1, maxQuantity) } : item
+          item.cartItemId === cartItemId ? { ...item, quantity: Math.min(item.quantity + 1, maxQuantity) } : item
         );
       }
-      return [...curr, { id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, quantity: 1 }];
+      return [...curr, { cartItemId, id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, quantity: 1, size }];
     });
     setCartOpen(true);
   }, []);
@@ -324,10 +516,10 @@ export default function Store() {
     return true;
   }, [user?.full_name]);
 
-  const updateQuantity = useCallback((id, change) => {
+  const updateQuantity = useCallback((cartItemId, change) => {
     setCart((curr) => 
       curr.map((item) => {
-        if (item.id === id) {
+        if (item.cartItemId === cartItemId) {
           const stock = Number(item.stock_quantity);
           const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
           const newQty = Math.max(1, Math.min(item.quantity + change, maxQuantity));
@@ -338,8 +530,8 @@ export default function Store() {
     );
   }, []);
 
-  const removeFromCart = useCallback((id) => {
-    setCart((curr) => curr.filter((item) => item.id !== id));
+  const removeFromCart = useCallback((cartItemId) => {
+    setCart((curr) => curr.filter((item) => item.cartItemId !== cartItemId));
   }, []);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -449,13 +641,29 @@ export default function Store() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mt-6 flex items-center justify-between border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-400 cmd-glass shadow-lg"
+              className="mt-6 border border-emerald-500/30 bg-emerald-500/10 p-6 cmd-glass shadow-lg text-emerald-400 space-y-4"
             >
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <p className="text-sm font-semibold">Payment successful! Your order has been placed. Check your email for details.</p>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-display text-xl uppercase tracking-wider text-foreground">Order Placed Successfully!</h3>
+                  <p className="text-sm text-slate-200 mt-1">Thank you for your purchase. We've sent a detailed receipt to your email address.</p>
+                </div>
               </div>
-              <button onClick={clearAlerts} className="min-h-[44px] min-w-[44px] p-3 text-xs uppercase tracking-wider font-bold hover:text-white transition-colors underline cursor-pointer">Dismiss</button>
+              <div className="grid gap-3 sm:grid-cols-3 pt-2">
+                <Link to="/account" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
+                  <span>Track in My Orders</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+                <Link to="/forum" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
+                  <span>Join the Forum</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+                <button onClick={clearAlerts} className="flex items-center justify-between border border-border bg-card/25 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-foreground hover:bg-card transition-colors cursor-pointer">
+                  <span>Continue Shopping</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </motion.div>
           )}
 
@@ -522,6 +730,7 @@ export default function Store() {
                   cart={cart}
                   user={user}
                   onSubscribeRelease={subscribeToRelease}
+                  onOpenQuickView={setQuickViewProduct}
                 />
               ))}
             </div>
@@ -577,6 +786,17 @@ export default function Store() {
                 </button>
               </div>
 
+              {/* Cart Stepper Indicator */}
+              {cart.length > 0 && (
+                <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-300 border-b border-border/10 pb-3 pt-4 mb-1">
+                  <span className="text-primary flex items-center gap-1 font-extrabold">1. Cart</span>
+                  <span className="text-muted-foreground/30">➔</span>
+                  <span className={checkoutEmail ? "text-primary flex items-center gap-1 font-extrabold" : "text-slate-350"}>2. Details</span>
+                  <span className="text-muted-foreground/30">➔</span>
+                  <span className="text-slate-350">3. Pay</span>
+                </div>
+              )}
+
               {/* Items Section */}
               <div className="flex-1 overflow-y-auto cmd-scrollbar py-4 pr-1">
                 {cart.length === 0 ? (
@@ -599,7 +819,7 @@ export default function Store() {
                   <div className="grid gap-4">
                     {cart.map((item) => (
                       <motion.div 
-                        key={item.id} 
+                        key={item.cartItemId} 
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -10 }}
@@ -613,27 +833,32 @@ export default function Store() {
                         <div className="flex flex-1 flex-col justify-between">
                           <div>
                             <h4 className="text-sm font-bold uppercase tracking-wide line-clamp-1 text-foreground">{item.name}</h4>
-                            <p className="text-xs text-accent mt-0.5 font-mono font-semibold">${Number(item.price_aud || 0).toFixed(2)} AUD</p>
+                            {item.size && (
+                              <span className="inline-block bg-primary/10 border border-primary/20 text-[9px] font-bold text-primary px-1.5 py-0.5 uppercase tracking-wider mt-1">
+                                Size: {item.size}
+                              </span>
+                            )}
+                            <p className="text-xs text-accent mt-1 font-mono font-semibold">${Number(item.price_aud || 0).toFixed(2)} AUD</p>
                           </div>
                           <div className="mt-2 flex items-center justify-between">
                             <div className="flex items-center border border-border">
                               <button 
-                                onClick={() => updateQuantity(item.id, -1)}
-                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white"
+                                onClick={() => updateQuantity(item.cartItemId, -1)}
+                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
                               >
                                 <Minus className="h-3 w-3" />
                               </button>
                               <span className="w-10 text-center text-xs font-mono font-bold text-foreground">{item.quantity}</span>
                               <button 
-                                onClick={() => updateQuantity(item.id, 1)}
-                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white"
+                                onClick={() => updateQuantity(item.cartItemId, 1)}
+                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
                               >
                                 <Plus className="h-3 w-3" />
                               </button>
                             </div>
                             <button 
-                              onClick={() => removeFromCart(item.id)}
-                              className="touch-target flex items-center justify-center text-slate-400 transition-colors hover:text-destructive"
+                              onClick={() => removeFromCart(item.cartItemId)}
+                              className="touch-target flex items-center justify-center text-slate-400 transition-colors hover:text-destructive cursor-pointer"
                               aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -714,7 +939,7 @@ export default function Store() {
                     <Button 
                       type="submit" 
                       disabled={checkingOut}
-                      className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2"
+                      className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CreditCard className="h-4 w-4" />
                       {checkingOut ? "Connecting to Stripe..." : `Checkout • $${cartSubtotal.toFixed(2)} AUD`}
@@ -738,7 +963,7 @@ export default function Store() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setCartOpen(true)}
-            className="fixed bottom-[calc(5.5rem+var(--safe-bottom))] right-6 z-[45] flex items-center justify-center rounded-none border border-primary-foreground/15 bg-primary p-4 text-white shadow-[0_0_25px_rgba(249,115,22,0.5)] pointer-events-auto hover:bg-primary/95 active:scale-95 group lg:bottom-[calc(1.5rem+var(--safe-bottom))]"
+            className="fixed bottom-[calc(5.5rem+var(--safe-bottom))] right-6 z-[45] flex items-center justify-center rounded-none border border-primary-foreground/15 bg-primary p-4 text-white shadow-[0_0_25px_rgba(249,115,22,0.5)] pointer-events-auto hover:bg-primary/95 active:scale-95 group lg:bottom-[calc(1.5rem+var(--safe-bottom))] cursor-pointer"
           >
             <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
             <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center bg-accent text-[11px] font-bold text-accent-foreground rounded-none shadow-md border border-accent-foreground/10 animate-bounce">
@@ -747,6 +972,16 @@ export default function Store() {
           </motion.button>
         )}
       </AnimatePresence>
+
+      {/* Product Quick View Modal */}
+      <ProductQuickViewModal
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+        addToCart={addToCart}
+        cart={cart}
+        user={user}
+      />
     </main>
   );
 }

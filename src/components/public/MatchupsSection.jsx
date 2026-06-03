@@ -1,18 +1,57 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Swords, CalendarDays, MapPin, ArrowUpRight } from "lucide-react";
+import { Swords, MapPin, ArrowUpRight, Calendar } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import TeamCrest from "./TeamCrest";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
 
-const formatKickoff = (value) => {
+const formatTimezone = (value, timeZone) => {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("en-AU", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  try {
+    return d.toLocaleString("en-AU", {
+      timeZone,
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZoneName: "short"
+    });
+  } catch (e) {
+    return d.toLocaleString("en-AU");
+  }
 };
+
+const handleCalendarDownload = (m) => {
+  if (!m) return;
+  const summary = `${m.home_team} vs ${m.away_team} - NRL Las Vegas`;
+  const description = `Watch ${m.home_team} take on ${m.away_team} at ${m.venue || "Las Vegas"}.`;
+  const location = m.venue || "Las Vegas, NV";
+  const icsContent = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    `SUMMARY:${summary}`,
+    `DESCRIPTION:${description}`,
+    `LOCATION:${location}`,
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\n");
+  
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${m.home_team}_vs_${m.away_team}.ics`.replace(/\s+/g, "_");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 
 function TeamBadge({ name, logo, won }) {
   return (
@@ -76,9 +115,31 @@ export default function MatchupsSection() {
                   {m.venue && <span className="flex items-center gap-1.5 text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> {m.venue}</span>}
                 </div>
               ) : (m.kickoff || m.venue) && (
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border pt-4 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                  {m.kickoff && <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-primary" /> {formatKickoff(m.kickoff)}</span>}
-                  {m.venue && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {m.venue}</span>}
+                <div className="mt-5 border-t border-border pt-4 text-xs tracking-wider text-muted-foreground">
+                  {m.kickoff && (
+                    <div className="flex flex-col items-center justify-center gap-1 mb-3">
+                      <div className="flex items-center gap-1.5 font-bold uppercase text-accent">
+                        <span className="text-[10px]">🇺🇸 LV:</span>
+                        <span>{formatTimezone(m.kickoff, "America/Los_Angeles")}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 font-bold uppercase text-primary">
+                        <span className="text-[10px]">🇦🇺 SYD:</span>
+                        <span>{formatTimezone(m.kickoff, "Australia/Sydney")}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-center gap-4 text-[11px] font-bold uppercase tracking-[0.15em]">
+                    {m.venue && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {m.venue}</span>}
+                    {m.kickoff && (
+                      <button
+                        type="button"
+                        onClick={() => handleCalendarDownload(m)}
+                        className="flex items-center gap-1 text-primary hover:text-accent transition-colors duration-200 cursor-pointer bg-transparent border-0 p-0"
+                      >
+                        <Calendar className="h-3.5 w-3.5" /> Add to Cal
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
               {m.ticket_url && (

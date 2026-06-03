@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, Clock, MapPin, ArrowUpRight, ArrowRight, Ticket } from "lucide-react";
+import { CalendarDays, Clock, MapPin, ArrowUpRight, Ticket } from "lucide-react";
 import SectionHeader from "./SectionHeader";
+import PublicDetailSheet from "./PublicDetailSheet";
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -67,7 +68,7 @@ const fallbackEvents = [
   },
 ];
 
-function EventCard({ event, featured, index }) {
+function EventCard({ event, featured, index, onClick }) {
   const photo = event.photo_urls?.[0];
   return (
     <motion.article
@@ -75,7 +76,8 @@ function EventCard({ event, featured, index }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{ delay: index * 0.1, duration: 0.5 }}
-      className={`group flex flex-col overflow-hidden border border-border/40 bg-card/30 backdrop-blur-sm hover:border-primary/30 hover:-translate-y-1 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.1)] transition-all duration-300 ${featured ? "lg:col-span-2 lg:flex-row" : ""}`}
+      onClick={() => onClick(event)}
+      className={`group flex flex-col overflow-hidden border border-border/40 bg-card/30 backdrop-blur-sm hover:border-primary/30 hover:-translate-y-1 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.1)] transition-all duration-300 cursor-pointer ${featured ? "lg:col-span-2 lg:flex-row" : ""}`}
     >
       <div className="h-[2px] w-full origin-left scale-x-0 bg-gradient-to-r from-primary via-accent to-primary transition-transform duration-500 group-hover:scale-x-100" />
       <div className={`relative overflow-hidden bg-secondary ${featured ? "lg:w-1/2" : ""}`}>
@@ -103,10 +105,64 @@ function EventCard({ event, featured, index }) {
   );
 }
 
-// Accepts `events` (array, preferred) or a legacy single `event` prop.
 export default function EventsSection({ events, event }) {
+  const [selectedCat, setSelectedCat] = useState("All");
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
   const source = events?.length ? events : (event ? [event] : fallbackEvents);
   const list = source.filter((item) => item && item.is_published !== false);
+
+  const categories = ["All", "Official Events", "Supporter Meetups", "Pool Parties"];
+
+  const filteredEvents = useMemo(() => {
+    return list.filter((item) => {
+      if (selectedCat === "All") return true;
+      const title = (item.title || "").toLowerCase();
+      const desc = (item.blurb || "").toLowerCase();
+
+      const isPool = title.includes("swim") || title.includes("pool") || desc.includes("pool");
+      const isMeetup = title.includes("meetup") || title.includes("drinks") || title.includes("party") || desc.includes("meetup");
+
+      if (selectedCat === "Pool Parties") return isPool;
+      if (selectedCat === "Supporter Meetups") return isMeetup && !isPool;
+      if (selectedCat === "Official Events") return !isPool && !isMeetup;
+      return true;
+    });
+  }, [list, selectedCat]);
+
+  const handleCalendarDownload = (item) => {
+    if (!item) return;
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      `SUMMARY:${item.title} - NRL Vegas Takeover`,
+      `DESCRIPTION:${item.blurb || ""}`,
+      `LOCATION:${item.location || ""} - ${item.address || ""}`,
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\n");
+    
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${item.title.replace(/\s+/g, "_")}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getTimezoneConversionText = (item) => {
+    if (!item) return "";
+    return `📅 Las Vegas Local: ${item.event_date || "TBD"} @ ${item.start_time || "TBD"}
+🇦🇺 Australia (AEDT/Syd): 19 Hours Ahead
+(e.g., Thursday 7:00 PM in Las Vegas is Friday 2:00 PM in Sydney/AEST)
+
+📍 Venue Address: ${item.address || item.location || "Vegas Strip"}
+
+${item.blurb || ""}`;
+  };
+
   if (list.length === 0) return null;
 
   return (
@@ -116,17 +172,65 @@ export default function EventsSection({ events, event }) {
         <SectionHeader eyebrow="Events" title="What's on in Vegas">
           From Stadium Swim to supporter meetups and match-week parties, here's where the takeover comes together.
         </SectionHeader>
+
+        {/* Categories Tabs */}
+        <div className="flex border-b border-border/60 overflow-x-auto cmd-scrollbar bg-neutral-900/60 p-1 mb-8 max-w-xl">
+          {categories.map((cat) => {
+            const isActive = selectedCat === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCat(cat)}
+                className={`relative flex items-center justify-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 select-none cursor-pointer ${
+                  isActive ? "text-foreground font-extrabold" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>{cat}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="events-active-tab-glow"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+                    style={{ boxShadow: "0 0 10px hsl(var(--primary)/0.6)" }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Events Grid */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {list.map((item, index) => (
-            <EventCard key={item.id || index} event={item} featured={list.length > 1 && index === 0} index={index} />
+          {filteredEvents.map((item, index) => (
+            <EventCard 
+              key={item.id || index} 
+              event={item} 
+              featured={filteredEvents.length > 1 && index === 0} 
+              index={index} 
+              onClick={setSelectedEvent}
+            />
           ))}
         </div>
-        <div className="mt-12 text-center">
-          <a href="/#events" className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-6 py-3 text-sm font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/10 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
-            View All Events <ArrowRight className="h-4 w-4" />
-          </a>
-        </div>
+
+        {filteredEvents.length === 0 && (
+          <div className="border border-dashed border-border/50 py-16 text-center">
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">No events listed in this category yet.</p>
+          </div>
+        )}
       </div>
+
+      <PublicDetailSheet
+        isOpen={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        title={selectedEvent?.title}
+        category="Match Event"
+        date={selectedEvent ? formatDate(selectedEvent.event_date) : undefined}
+        author="Vegas Coordinator"
+        image={selectedEvent?.photo_urls?.[0]}
+        body={selectedEvent ? getTimezoneConversionText(selectedEvent) : undefined}
+        ctaLabel="Add to Calendar (ICS)"
+        onCtaClick={() => handleCalendarDownload(selectedEvent)}
+      />
     </section>
   );
 }

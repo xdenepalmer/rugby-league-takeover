@@ -1,8 +1,9 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import { format } from "date-fns";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import { Calendar, ArrowRight, Clock, Newspaper } from "lucide-react";
 import SectionHeader from "./SectionHeader";
+import PublicDetailSheet from "./PublicDetailSheet";
 
 /* ── Reading time estimator ── */
 const readingTime = (text) => {
@@ -29,7 +30,7 @@ const cardVariants = {
 };
 
 /* ── NewsCard with cursor-follow spotlight ── */
-function NewsCard({ article, index }) {
+function NewsCard({ article, index, onClick }) {
   const cardRef = useRef(null);
   const spotlightX = useMotionValue(0);
   const spotlightY = useMotionValue(0);
@@ -56,7 +57,8 @@ function NewsCard({ article, index }) {
       viewport={{ once: true, margin: "-60px" }}
       custom={index}
       onMouseMove={handleMouseMove}
-      className="group relative flex flex-col border border-border bg-card/40 cmd-glass transition-all duration-500 hover:-translate-y-2 hover:border-primary/50 hover:shadow-[0_0_30px_rgba(249,115,22,0.12)] overflow-hidden"
+      onClick={() => onClick(article)}
+      className="group relative flex flex-col border border-border bg-card/40 cmd-glass transition-all duration-500 hover:-translate-y-2 hover:border-primary/50 hover:shadow-[0_0_30px_rgba(249,115,22,0.12)] overflow-hidden cursor-pointer"
     >
       {/* Cursor-following spotlight gradient */}
       <motion.div
@@ -130,6 +132,14 @@ function NewsCard({ article, index }) {
 
 export default function NewsSection({ articles, settings = {} }) {
   const containerRef = useRef(null);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+
+  const handleCtaClick = () => {
+    const element = document.querySelector("#travel");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
     <section
@@ -169,10 +179,25 @@ export default function NewsSection({ articles, settings = {} }) {
               key={article.id || index}
               article={article}
               index={index}
+              onClick={setSelectedArticle}
             />
           ))}
         </div>
       </div>
+
+      <PublicDetailSheet
+        isOpen={!!selectedArticle}
+        onClose={() => setSelectedArticle(null)}
+        title={selectedArticle?.title}
+        category={selectedArticle?.category || "News"}
+        date={selectedArticle?.published_date ? format(new Date(selectedArticle.published_date), "dd MMM yyyy") : undefined}
+        author={selectedArticle?.author || "RLT Staff"}
+        image={selectedArticle?.image_url}
+        body={selectedArticle?.body}
+        readingTime={selectedArticle ? readingTime(selectedArticle.body) : undefined}
+        ctaLabel="Register Vegas Travel Interest"
+        onCtaClick={handleCtaClick}
+      />
     </section>
   );
 }

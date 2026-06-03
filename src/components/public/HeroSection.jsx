@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowDown, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const logoUrl = "/icons/icon-192.png";
 
@@ -134,20 +135,37 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
           </motion.p>
         </div>
 
-        {/* Pulsing CTA Action Button */}
+        {/* PublicHeroActions Button Grid */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1, duration: 0.5 }}
-          className="mt-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 0.6 }}
+          className="mt-12 w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 px-4"
         >
-          <a 
-            href="#news" 
-            className="group inline-flex items-center gap-3 border border-primary px-8 py-4 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all duration-300 rounded-none relative overflow-hidden cursor-pointer"
+          <a
+            href="#travel"
+            className="group flex items-center justify-center gap-2.5 border border-primary bg-primary/20 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-foreground hover:bg-primary hover:text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer text-center font-bold"
           >
-            <span>{settings.hero_button_label || "Enter the site"}</span> 
-            <ArrowDown aria-hidden="true" className="h-4 w-4 animate-bounce text-primary group-hover:text-primary-foreground" />
+            <span>Register Travel Interest</span>
           </a>
+          <a
+            href="#events"
+            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 cursor-pointer text-center font-bold"
+          >
+            <span>View Match Events</span>
+          </a>
+          <Link
+            to="/store"
+            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 text-center font-bold"
+          >
+            <span>Shop Supporter Merch</span>
+          </Link>
+          <Link
+            to="/forum"
+            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 text-center font-bold"
+          >
+            <span>Join Fan Forum</span>
+          </Link>
         </motion.div>
 
       </div>

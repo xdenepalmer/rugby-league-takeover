@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { FORUM_CATEGORIES } from "@/lib/public-forms";
 import { getCategoryMeta } from "./forumHelpers";
 
-export default function EmptyState({ onClearFilters, onSelectCategory }) {
+export default function EmptyState({ onClearFilters, onSelectCategory, category, searchQuery }) {
+  const isSearch = !!searchQuery;
+  const isSpecificCat = category && category !== "All";
+  const catMeta = isSpecificCat ? getCategoryMeta(category) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -30,10 +34,18 @@ export default function EmptyState({ onClearFilters, onSelectCategory }) {
         <Search className="h-10 w-10 text-primary" />
       </motion.div>
       <p className="font-display text-2xl uppercase text-slate-200 tracking-wide">
-        No discussions found
+        {isSearch 
+          ? `No matches for "${searchQuery}"` 
+          : isSpecificCat 
+            ? `No ${catMeta?.label} discussions yet` 
+            : "No discussions found"}
       </p>
       <p className="text-sm text-slate-300 mt-2 max-w-sm mx-auto leading-relaxed">
-        Try adjusting your filters, or be the first to spark a conversation in one of these categories:
+        {isSearch 
+          ? "Check your spelling, clear the search, or choose one of these categories to start a new discussion:"
+          : isSpecificCat 
+            ? `Be the first to start a conversation in the ${catMeta?.label} board! Share tips, plan events, or ask questions:` 
+            : "Try adjusting your filters, or be the first to spark a conversation in one of these categories:"}
       </p>
       <div className="flex flex-wrap justify-center gap-2 mt-6">
         {FORUM_CATEGORIES.slice(0, 3).map((cat) => {

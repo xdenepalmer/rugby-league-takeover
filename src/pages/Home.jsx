@@ -9,6 +9,77 @@ import BackgroundVideo from "@/components/public/BackgroundVideo";
 import CountdownTimer from "@/components/public/CountdownTimer";
 import MatchupsSection from "@/components/public/MatchupsSection";
 import LazySection from "@/components/public/LazySection";
+import { Users, MessageSquare, ShoppingBag, Radio } from "lucide-react";
+
+function LiveHudDashboard() {
+  return (
+    <div className="mx-auto max-w-7xl px-5 py-8 md:px-8 relative z-20">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Registration count HUD */}
+        <div className="relative border border-border/80 bg-card/40 p-4 cmd-glass overflow-hidden group hover:border-primary/40 transition-colors">
+          <div className="absolute top-0 right-0 p-1 bg-primary/10 border-l border-b border-border/40 text-[7px] font-mono tracking-widest text-primary uppercase font-bold">SYS // READY</div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 border border-border bg-background/50 text-primary">
+              <Users className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Supporter Travel</p>
+              <p className="text-xs font-bold text-foreground">Interest Registration Open</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Community activity HUD */}
+        <div className="relative border border-border/80 bg-card/40 p-4 cmd-glass overflow-hidden group hover:border-primary/40 transition-colors">
+          <div className="absolute top-0 right-0 p-1 bg-accent/10 border-l border-b border-border/40 text-[7px] font-mono tracking-widest text-accent uppercase font-bold">COMM // LIVE</div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 border border-border bg-background/50 text-accent">
+              <MessageSquare className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Vegas Fan Forum</p>
+              <p className="text-xs font-bold text-foreground">Join community debates</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Merch drop HUD */}
+        <div className="relative border border-border/80 bg-card/40 p-4 cmd-glass overflow-hidden group hover:border-primary/40 transition-colors">
+          <div className="absolute top-0 right-0 p-1 bg-emerald-500/10 border-l border-b border-border/40 text-[7px] font-mono tracking-widest text-emerald-400 uppercase font-bold">SHOP // LIVE</div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 border border-border bg-background/50 text-emerald-400">
+              <ShoppingBag className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Exclusive Merch</p>
+              <p className="text-xs font-bold text-foreground">2026 Collection Available</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Facebook group HUD */}
+        <a
+          href="https://www.facebook.com/groups/663237792349090"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative border border-[#1877F2]/20 bg-[#1877F2]/[0.02] p-4 hover:bg-[#1877F2]/[0.06] transition-colors overflow-hidden group block text-left cmd-glass"
+        >
+          <div className="absolute top-0 right-0 p-1 bg-[#1877F2]/10 border-l border-b border-[#1877F2]/20 text-[7px] font-mono tracking-widest text-[#1877F2] uppercase font-bold">FB // 16.8K FANS</div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 border border-[#1877F2]/30 bg-background/50 text-[#1877F2]">
+              <Radio className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Vegas Facebook Group</p>
+              <p className="text-xs font-bold text-foreground group-hover:text-[#1877F2] transition-colors">Join 16,800+ Members</p>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  );
+}
+
 
 // Lazy-loaded sections
 const NewsSection = lazy(() => import("@/components/public/NewsSection"));
@@ -144,6 +215,11 @@ export default function Home() {
 
           <BulbRow isTop={false} />
         </div>
+
+        {/* Live HUD Dashboard */}
+        <LiveHudDashboard />
+
+        {/* Countdown Timer */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -152,6 +228,8 @@ export default function Home() {
         >
           <CountdownTimer settings={settings} />
         </motion.div>
+
+        {/* Matchups HUD */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -160,41 +238,8 @@ export default function Home() {
         >
           <MatchupsSection />
         </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          {/* Sponsored — mid content */}
-          <div className="mx-auto max-w-5xl px-4 py-8">
-            <AdSlot position="in-feed" size="leaderboard" className="w-full" />
-          </div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          <LazySection height={450}>
-            <Suspense fallback={<div className="h-[450px]" />}>
-              <NewsSection articles={visibleNews} settings={settings} />
-            </Suspense>
-          </LazySection>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          <LazySection height={350}>
-            <Suspense fallback={<div className="h-[350px]" />}>
-              <AboutSection settings={settings} />
-            </Suspense>
-          </LazySection>
-        </motion.div>
+
+        {/* Travel Interest / Registration */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -207,6 +252,8 @@ export default function Home() {
             </Suspense>
           </LazySection>
         </motion.div>
+
+        {/* Match Day Events */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -219,17 +266,20 @@ export default function Home() {
             </Suspense>
           </LazySection>
         </motion.div>
+
+        {/* Sponsored — mid content ad */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          {/* Sponsored — mid content */}
           <div className="mx-auto max-w-5xl px-4 py-8">
-            <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
+            <AdSlot position="in-feed" size="leaderboard" className="w-full" />
           </div>
         </motion.div>
+
+        {/* Merch Store Highlight */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -242,6 +292,48 @@ export default function Home() {
             </Suspense>
           </LazySection>
         </motion.div>
+
+        {/* News Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <LazySection height={450}>
+            <Suspense fallback={<div className="h-[450px]" />}>
+              <NewsSection articles={visibleNews} settings={settings} />
+            </Suspense>
+          </LazySection>
+        </motion.div>
+
+        {/* About Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <LazySection height={350}>
+            <Suspense fallback={<div className="h-[350px]" />}>
+              <AboutSection settings={settings} />
+            </Suspense>
+          </LazySection>
+        </motion.div>
+
+        {/* Sponsored — bottom content ad */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <div className="mx-auto max-w-5xl px-4 py-8">
+            <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
+          </div>
+        </motion.div>
+
+        {/* Partners Section */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -254,6 +346,8 @@ export default function Home() {
             </Suspense>
           </LazySection>
         </motion.div>
+
+        {/* Testimonials Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}

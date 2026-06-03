@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -10,41 +10,131 @@ import { Button } from "@/components/ui/button";
 
 export default function PostsTab() {
   const { user } = useAuth();
-  const { data: posts = [], isLoading } = useQuery({
+  const [subTab, setSubTab] = useState("my_posts");
+
+  const { data: myPosts = [], isLoading: myPostsLoading } = useQuery({
     queryKey: ["myPosts", user?.email],
     queryFn: () => base44.entities.ForumPost.filter({ user_email: user.email }, "-created_date", 100),
     enabled: Boolean(user?.email),
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading your posts…</p>;
+  const { data: allPosts = [], isLoading: allPostsLoading } = useQuery({
+    queryKey: ["forumPosts"],
+    queryFn: () => base44.entities.ForumPost.list("-created_date", 200),
+    enabled: true,
+  });
 
-  if (posts.length === 0) {
-    return (
-      <div className="border border-border bg-card p-10 text-center">
-        <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
-        <p className="mt-4 text-muted-foreground">You haven't posted in the forum yet.</p>
-        <Button asChild className="mt-6 rounded-none bg-primary hover:bg-primary/90"><Link to="/forum">Go to forum</Link></Button>
-      </div>
-    );
-  }
+  const savedIds = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("rlt_saved_posts") || "[]");
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const savedPosts = useMemo(() => {
+    return allPosts.filter(p => savedIds.includes(p.id));
+  }, [allPosts, savedIds]);
+
+  const isLoading = myPostsLoading || allPostsLoading;
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading posts…</p>;
 
   return (
-    <div className="grid gap-4">
-      {posts.map((post) => (
-        <article key={post.id} className="grid gap-2 border border-border bg-card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs uppercase tracking-[0.2em] text-primary">{post.category || "General"}</span>
-            <Badge variant="outline" className={`rounded-none uppercase ${post.is_published ? "border-emerald-500/40 text-emerald-400" : "border-amber-500/40 text-amber-400"}`}>
-              {post.is_published ? "Published" : "Pending review"}
-            </Badge>
+    <div className="space-y-5">
+      {/* Sub-tabs selector */}
+      <div className="flex border border-border bg-card/10 p-0.5 max-w-xs">
+        <button
+          type="button"
+          onClick={() => setSubTab("my_posts")}
+          className={`flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            subTab === "my_posts" ? "bg-primary text-white" : "text-slate-350 hover:text-white"
+          }`}
+        >
+          My Threads ({myPosts.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("saved")}
+          className={`flex-1 text-center py-2 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            subTab === "saved" ? "bg-primary text-white" : "text-slate-350 hover:text-white"
+          }`}
+        >
+          Saved ({savedPosts.length})
+        </button>
+      </div>
+
+      {subTab === "my_posts" ? (
+        myPosts.length === 0 ? (
+          <div className="border border-border bg-card p-10 text-center">
+            <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">You haven't posted in the forum yet.</p>
+            <Button asChild className="mt-6 rounded-none bg-primary hover:bg-primary/90"><Link to="/forum">Go to forum</Link></Button>
           </div>
-          <h3 className="font-display text-2xl uppercase">{post.title || "Discussion thread"}</h3>
-          <p className="line-clamp-2 text-sm text-muted-foreground">{post.body}</p>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {post.created_date ? format(new Date(post.created_date), "dd MMM yyyy") : "Recently"}
-          </p>
-        </article>
-      ))}
+        ) : (
+          <div className="grid gap-4">
+            {myPosts.map((post) => (
+              <article key={post.id} className="grid gap-2 border border-border bg-card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs uppercase tracking-[0.2em] text-primary">{post.category || "General"}</span>
+                  <Badge variant="outline" className={`rounded-none uppercase ${post.is_published ? "border-emerald-500/40 text-emerald-400" : "border-amber-500/40 text-amber-400"}`}>
+                    {post.is_published ? "Published" : "Pending review"}
+                  </Badge>
+                </div>
+                <h3 className="font-display text-2xl uppercase">
+                  <Link to={`/forum?thread=${post.id}`} className="hover:text-primary transition-colors">{post.title || "Discussion thread"}</Link>
+                </h3>
+                <p className="line-clamp-2 text-sm text-slate-300">{post.body}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
+                  {post.created_date ? format(new Date(post.created_date), "dd MMM yyyy") : "Recently"}
+                </p>
+              </article>
+            ))}
+          </div>
+        )
+      ) : (
+        savedPosts.length === 0 ? (
+          <div className="border border-border bg-card p-10 text-center">
+            <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
+            <p className="mt-4 text-muted-foreground">You haven't saved any threads yet.</p>
+            <Button asChild className="mt-6 rounded-none bg-primary hover:bg-primary/90"><Link to="/forum">Browse forum</Link></Button>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {savedPosts.map((post) => (
+              <article key={post.id} className="grid gap-2 border border-border bg-card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs uppercase tracking-[0.2em] text-primary">{post.category || "General"}</span>
+                  <span className="text-[10px] text-muted-foreground">By {post.author_name || "Anonymous"}</span>
+                </div>
+                <h3 className="font-display text-2xl uppercase">
+                  <Link to={`/forum?thread=${post.id}`} className="hover:text-primary transition-colors">{post.title || "Discussion thread"}</Link>
+                </h3>
+                <p className="line-clamp-2 text-sm text-slate-300">{post.body}</p>
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground/50 pt-2 border-t border-border/10">
+                  <span>{post.created_date ? format(new Date(post.created_date), "dd MMM yyyy") : "Recently"}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const key = "rlt_saved_posts";
+                      try {
+                        const saved = JSON.parse(localStorage.getItem(key) || "[]");
+                        const next = saved.filter(x => x !== post.id);
+                        localStorage.setItem(key, JSON.stringify(next));
+                        // Trigger soft reload of local storage query data by modifying state
+                        window.location.reload();
+                      } catch(e) {}
+                    }}
+                    className="text-destructive hover:underline cursor-pointer font-bold bg-transparent border-0 p-0"
+                  >
+                    Unsave
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }

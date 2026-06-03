@@ -11,14 +11,11 @@ import { AnimatePresence, motion } from "framer-motion";
 const logoUrl = "/icons/icon-192.png";
 
 const links = [
-  { label: "Latest News", href: "/#news" },
-  { label: "About Us", href: "/#about" },
+  { label: "Home", href: "/" },
   { label: "Travel Packages", href: "/#travel" },
-  { label: "Events", href: "/#events" },
-  { label: "Partners", href: "/#partners" },
-  { label: "Testimonials", href: "/#testimonials" },
-  { label: "Merch", href: "/store" },
-  { label: "Forum", href: "/forum" }
+  { label: "Match Events", href: "/#events" },
+  { label: "Merch Shop", href: "/store" },
+  { label: "Fan Forum", href: "/forum" }
 ];
 
 const initials = (user) => {
@@ -34,11 +31,37 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   const location = useLocation();
   const logo = settings.site_logo_url || (!settingsLoading ? logoUrl : "");
 
+  const [activeHash, setActiveHash] = useState("");
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll();
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleScrollSpy = () => {
+      const scrollPos = window.scrollY + 200; // offset
+      const homeLinkAnchors = links.filter(l => l.href.startsWith("/#"));
+      let active = "";
+      for (const link of homeLinkAnchors) {
+        const hash = link.href.substring(1); // #travel, #events etc.
+        const el = document.querySelector(hash);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            active = hash;
+          }
+        }
+      }
+      setActiveHash(active);
+    };
+
+    window.addEventListener("scroll", handleScrollSpy);
+    handleScrollSpy();
+    return () => window.removeEventListener("scroll", handleScrollSpy);
   }, []);
 
   // Sync cart count reactively
@@ -81,8 +104,8 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
 
   const isLinkActive = (href) => {
     if (href.startsWith("/#")) {
-      const hash = href.substring(1);
-      return location.pathname === "/" && location.hash === hash;
+      const hash = href.substring(1); // e.g. "#travel"
+      return location.pathname === "/" && (activeHash === hash || (location.hash === hash && !activeHash));
     }
     return location.pathname === href;
   };
