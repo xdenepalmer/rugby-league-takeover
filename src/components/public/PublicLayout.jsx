@@ -1,7 +1,8 @@
 import React from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
@@ -10,8 +11,10 @@ import AdSlot from "@/components/ads/AdSlot";
 
 export default function PublicLayout() {
   const { isAdmin, user } = useAuth();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const isHome = pathname === "/";
+  const outlet = useOutlet();
   const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
@@ -42,9 +45,19 @@ export default function PublicLayout() {
         />
       </div>
 
-      {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
+      {/* Content wrapper with page transition animation */}
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {outlet}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Sponsored Ad Slot — above footer, all pages */}

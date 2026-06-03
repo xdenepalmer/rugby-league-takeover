@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import AdSlot from "@/components/ads/AdSlot";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -140,23 +141,100 @@ export default function Home() {
 
           <BulbRow isTop={false} />
         </div>
-        <CountdownTimer settings={settings} />
-        <MatchupsSection />
-        {/* Sponsored — mid content */}
-        <div className="mx-auto max-w-5xl px-4 py-8">
-          <AdSlot position="in-feed" size="leaderboard" className="w-full" />
-        </div>
-        <NewsSection articles={visibleNews} settings={settings} />
-        <AboutSection settings={settings} />
-        <TravelSection packages={visiblePackages} settings={settings} />
-        <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
-        {/* Sponsored — mid content */}
-        <div className="mx-auto max-w-5xl px-4 py-8">
-          <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
-        </div>
-        <MerchSection settings={settings} />
-        <PartnersSection settings={settings} />
-        <TestimonialsSection settings={settings} />
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <CountdownTimer settings={settings} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <MatchupsSection />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          {/* Sponsored — mid content */}
+          <div className="mx-auto max-w-5xl px-4 py-8">
+            <AdSlot position="in-feed" size="leaderboard" className="w-full" />
+          </div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <NewsSection articles={visibleNews} settings={settings} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <AboutSection settings={settings} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <TravelSection packages={visiblePackages} settings={settings} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          {/* Sponsored — mid content */}
+          <div className="mx-auto max-w-5xl px-4 py-8">
+            <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
+          </div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <MerchSection settings={settings} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <PartnersSection settings={settings} />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <TestimonialsSection settings={settings} />
+        </motion.div>
         <footer className="border-t border-border bg-secondary/90 backdrop-blur-sm">
           {/* Footer nav links */}
           <div className="px-5 py-8 md:py-12">
