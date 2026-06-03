@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -9,6 +9,8 @@ import SiteNav from "./SiteNav";
 
 export default function PublicLayout() {
   const { isAdmin, user } = useAuth();
+  const { pathname } = useLocation();
+  const isHome = pathname === "/";
   const { data: settingsRecords = [] } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
@@ -33,12 +35,14 @@ export default function PublicLayout() {
         <Outlet />
       </div>
 
-      {/* Site-wide footer (non-Home pages) */}
-      <footer className="border-t border-border/50 bg-secondary/80 px-5 py-4 text-center backdrop-blur-sm">
-        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-          Rugby League Takeover Las Vegas © 2026
-        </p>
-      </footer>
+      {/* Site-wide footer (non-Home pages — Home renders its own rich footer) */}
+      {!isHome && (
+        <footer className="border-t border-border/50 bg-secondary/80 px-5 py-4 text-center backdrop-blur-sm">
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            Rugby League Takeover Las Vegas © 2026
+          </p>
+        </footer>
+      )}
 
       {/* iOS-Style Public Mobile Bottom Tab Bar */}
       <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto" aria-label="Main navigation">
