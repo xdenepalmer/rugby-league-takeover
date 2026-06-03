@@ -164,7 +164,7 @@ export default function AboutSection({ settings = {} }) {
                 ref={statsRef}
                 className="cmd-accent-bar mt-14 border border-border bg-background/60 backdrop-blur-sm"
               >
-                <div className="grid grid-cols-3 divide-x divide-border">
+                <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
                   {STATS.map((stat, i) => (
                     <StatCard
                       key={stat.key}

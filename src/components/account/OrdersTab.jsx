@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -24,7 +25,20 @@ export default function OrdersTab() {
     enabled: Boolean(user?.email),
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading your orders…</p>;
+  if (isLoading) return (
+    <div className="space-y-3">
+      {[1,2,3].map(i => (
+        <div key={i} className="border border-border/30 bg-card/30 p-5 animate-pulse">
+          <div className="flex justify-between mb-3">
+            <div className="h-4 w-28 bg-muted/20 rounded" />
+            <div className="h-5 w-16 bg-muted/20 rounded" />
+          </div>
+          <div className="h-5 w-24 bg-muted/15 rounded mb-2" />
+          <div className="h-4 w-48 bg-muted/10 rounded" />
+        </div>
+      ))}
+    </div>
+  );
 
   if (orders.length === 0) {
     return (
@@ -38,8 +52,14 @@ export default function OrdersTab() {
 
   return (
     <div className="grid gap-4">
-      {orders.map((order) => (
-        <article key={order.id} className="grid gap-3 border border-border bg-card p-5">
+      {orders.map((order, index) => (
+        <motion.article
+          key={order.id}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.06, duration: 0.4 }}
+          className="grid gap-3 border border-border bg-card p-5 hover:border-primary/20 transition-colors duration-300"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.25em] text-primary">
               {order.created_date ? format(new Date(order.created_date), "dd MMM yyyy") : "Recent order"}
@@ -49,7 +69,7 @@ export default function OrdersTab() {
           <p className="text-lg font-semibold">${Number(order.total_aud || 0).toFixed(2)} AUD</p>
           <p className="text-sm text-muted-foreground">{(order.line_items || []).map((item) => `${item.quantity}× ${item.name}`).join(", ") || "—"}</p>
           {order.shipping_notes && <p className="border-t border-border pt-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">Shipping:</span> {order.shipping_notes}</p>}
-        </article>
+        </motion.article>
       ))}
     </div>
   );

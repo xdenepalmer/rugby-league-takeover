@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Handshake } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -124,7 +125,7 @@ function PartnerLogoPlaceholder({ name, id }) {
 
   return (
     <div className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/20 bg-primary/5 p-2 text-primary transition-all duration-300 group-hover:bg-primary/10 group-hover:border-primary/40 group-hover:shadow-[0_0_12px_rgba(249,115,22,0.25)]">
-      <Handshake className="h-6 w-6 text-primary animate-pulse" />
+      <Handshake className="h-6 w-6 text-primary" />
     </div>
   );
 }
@@ -141,11 +142,12 @@ export default function PartnersSection({ settings = {} }) {
   const visible = partners.filter((p) => p.is_published !== false);
   const displayPartners = visible.length > 0 ? visible : defaultPartners;
 
-  const Card = ({ partner }) => {
+  const Card = ({ partner, index }) => {
     const [imgError, setImgError] = React.useState(false);
 
     const inner = (
-      <div className="group flex h-full flex-col items-center justify-center gap-3 border border-border bg-card p-6 text-center transition-all duration-300 hover:border-primary/50 hover:bg-neutral-950/40 hover:shadow-[0_0_20px_rgba(249,115,22,0.05)]">
+      <div className="group flex h-full flex-col items-center justify-center gap-3 border border-border bg-card/30 backdrop-blur-sm p-6 text-center transition-all duration-300 hover:border-primary/50 hover:bg-card/40 hover:shadow-[0_0_20px_rgba(249,115,22,0.05)]">
+        <div className="h-[2px] w-full origin-left scale-x-0 bg-gradient-to-r from-primary via-accent to-primary transition-transform duration-500 group-hover:scale-x-100" />
         <div className="flex h-16 w-full items-center justify-center">
           {partner.logo_url && !imgError ? (
             <img
@@ -163,9 +165,17 @@ export default function PartnersSection({ settings = {} }) {
         {partner.description && <p className="text-xs leading-5 text-muted-foreground/75">{partner.description}</p>}
       </div>
     );
+
+    const motionProps = {
+      initial: { opacity: 0, y: 24 },
+      whileInView: { opacity: 1, y: 0 },
+      viewport: { once: true, margin: "-40px" },
+      transition: { delay: index * 0.1, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    };
+
     return partner.url
-      ? <a href={partner.url} target="_blank" rel="noreferrer" className="block h-full">{inner}</a>
-      : <div className="h-full">{inner}</div>;
+      ? <motion.a href={partner.url} target="_blank" rel="noreferrer" className="block h-full" {...motionProps}>{inner}</motion.a>
+      : <motion.div className="h-full" {...motionProps}>{inner}</motion.div>;
   };
 
   return (
@@ -175,7 +185,13 @@ export default function PartnersSection({ settings = {} }) {
           {settings.partners_description || "The venues, brands and partners powering the Rugby League Takeover."}
         </SectionHeader>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {displayPartners.map((partner, index) => <Card key={partner.id || index} partner={partner} />)}
+          {displayPartners.map((partner, index) => <Card key={partner.id || index} partner={partner} index={index} />)}
+        </div>
+        <div className="mt-12 text-center">
+          <p className="text-sm text-muted-foreground mb-4">Interested in partnering with us?</p>
+          <a href="mailto:info@rugbyleaguetakeover.com" className="inline-flex items-center gap-2 border border-accent/30 bg-accent/5 px-6 py-3 text-sm font-bold uppercase tracking-widest text-accent transition-all hover:bg-accent/10 hover:border-accent/50 hover:shadow-[0_0_20px_hsl(var(--accent)/0.15)]">
+            Become a Partner
+          </a>
         </div>
       </div>
     </section>

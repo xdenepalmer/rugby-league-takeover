@@ -1,5 +1,6 @@
 import React from "react";
-import { CalendarDays, Clock, MapPin, ArrowUpRight, Ticket } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarDays, Clock, MapPin, ArrowUpRight, ArrowRight, Ticket } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 
 const formatDate = (value) => {
@@ -66,13 +67,20 @@ const fallbackEvents = [
   },
 ];
 
-function EventCard({ event, featured }) {
+function EventCard({ event, featured, index }) {
   const photo = event.photo_urls?.[0];
   return (
-    <article className={`group flex flex-col overflow-hidden border border-border bg-card ${featured ? "lg:col-span-2 lg:flex-row" : ""}`}>
+    <motion.article
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      className={`group flex flex-col overflow-hidden border border-border/40 bg-card/30 backdrop-blur-sm hover:border-primary/30 hover:-translate-y-1 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.1)] transition-all duration-300 ${featured ? "lg:col-span-2 lg:flex-row" : ""}`}
+    >
+      <div className="h-[2px] w-full origin-left scale-x-0 bg-gradient-to-r from-primary via-accent to-primary transition-transform duration-500 group-hover:scale-x-100" />
       <div className={`relative overflow-hidden bg-secondary ${featured ? "lg:w-1/2" : ""}`}>
         {photo ? (
-          <img src={photo} alt={event.title} loading="lazy" className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${featured ? "h-64 lg:h-full" : "h-52"}`} />
+          <img src={photo} alt={event.title} loading="lazy" className={`w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105 ${featured ? "h-64 lg:h-full" : "h-52"}`} />
         ) : (
           <div className={`flex items-center justify-center ${featured ? "h-64 lg:h-full" : "h-52"}`}><CalendarDays className="h-10 w-10 text-muted-foreground" /></div>
         )}
@@ -91,7 +99,7 @@ function EventCard({ event, featured }) {
         {event.blurb && <p className="mt-4 flex-1 text-sm leading-6 text-muted-foreground">{event.blurb}</p>}
         <EventTickets event={event} />
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -102,15 +110,21 @@ export default function EventsSection({ events, event }) {
   if (list.length === 0) return null;
 
   return (
-    <section id="events" className="border-t border-border bg-secondary/80 px-5 py-24 md:px-8 md:py-32">
+    <section id="events" className="relative border-t border-border bg-secondary/80 px-5 py-24 md:px-8 md:py-32">
+      <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-[400px] w-[600px] bg-primary/[0.03] blur-[120px]" />
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Events" title="What's on in Vegas">
           From Stadium Swim to supporter meetups and match-week parties, here's where the takeover comes together.
         </SectionHeader>
         <div className="grid gap-6 lg:grid-cols-2">
           {list.map((item, index) => (
-            <EventCard key={item.id || index} event={item} featured={list.length > 1 && index === 0} />
+            <EventCard key={item.id || index} event={item} featured={list.length > 1 && index === 0} index={index} />
           ))}
+        </div>
+        <div className="mt-12 text-center">
+          <a href="/#events" className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-6 py-3 text-sm font-bold uppercase tracking-widest text-primary transition-all hover:bg-primary/10 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
+            View All Events <ArrowRight className="h-4 w-4" />
+          </a>
         </div>
       </div>
     </section>

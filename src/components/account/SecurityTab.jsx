@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { KeyRound, LogOut, Mail } from "lucide-react";
+import { KeyRound, LogOut, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -8,12 +8,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const getStrength = (pw) => {
+  if (!pw) return 0;
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[A-Z]/.test(pw)) s++;
+  if (/[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  return s;
+};
+
 export default function SecurityTab() {
   const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const strength = getStrength(newPassword);
+  const strengthColor = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500'][strength];
+  const strengthTextColor = ['', 'text-red-400', 'text-orange-400', 'text-yellow-400', 'text-emerald-400'][strength];
+  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][strength];
 
   const changeMutation = useMutation({
     mutationFn: () => base44.auth.changePassword({ userId: user.id, currentPassword, newPassword }),
@@ -42,21 +60,58 @@ export default function SecurityTab() {
         <h3 className="flex items-center gap-2 font-display text-2xl uppercase"><KeyRound className="h-5 w-5 text-primary" /> Change password</h3>
         {error && <p className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
         <div className="grid gap-2">
-          <Label>Current password</Label>
-          <Input type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="rounded-none" required />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Current password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input type={showCurrent ? 'text' : 'password'} autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="h-12 pl-10 pr-10 rounded-none border-border bg-background text-sm" required />
+            <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors" aria-label={showCurrent ? 'Hide password' : 'Show password'}>
+              {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
         <div className="grid gap-2 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label>New password</Label>
-            <Input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="rounded-none" required />
+            <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">New password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input type={showNew ? 'text' : 'password'} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-12 pl-10 pr-10 rounded-none border-border bg-background text-sm" required />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors" aria-label={showNew ? 'Hide password' : 'Show password'}>
+                {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {newPassword && (
+              <div className="space-y-1">
+                <div className="flex gap-1">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className={`h-1 flex-1 transition-all duration-300 ${
+                      i <= strength ? strengthColor : 'bg-muted/20'
+                    }`} />
+                  ))}
+                </div>
+                <p className={`text-[10px] font-bold uppercase tracking-wider ${strengthTextColor}`}>{strengthLabel}</p>
+              </div>
+            )}
           </div>
           <div className="grid gap-2">
-            <Label>Confirm new password</Label>
-            <Input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="rounded-none" required />
+            <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Confirm new password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input type={showConfirm ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 pl-10 pr-10 rounded-none border-border bg-background text-sm" required />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors" aria-label={showConfirm ? 'Hide password' : 'Show password'}>
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {confirmPassword && (
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                confirmPassword === newPassword ? 'text-emerald-400' : 'text-red-400'
+              }`}>
+                {confirmPassword === newPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex justify-end">
-          <Button type="submit" disabled={changeMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90">
+          <Button type="submit" disabled={changeMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.4)] transition-all duration-300">
             {changeMutation.isPending ? "Updating..." : "Update password"}
           </Button>
         </div>

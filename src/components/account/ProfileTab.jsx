@@ -85,31 +85,31 @@ export default function ProfileTab() {
     <div className="grid gap-6">
       <div className="grid gap-5 border border-border bg-card p-6 md:grid-cols-2">
         <div className="grid gap-2">
-          <Label>Full name</Label>
-          <Input value={draft.full_name} onChange={(e) => update("full_name", e.target.value)} className="rounded-none" />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Full name</Label>
+          <Input value={draft.full_name} onChange={(e) => update("full_name", e.target.value)} className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label>Email</Label>
-          <Input value={user?.email || ""} disabled className="rounded-none opacity-70" />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Email</Label>
+          <Input value={user?.email || ""} disabled className="h-12 rounded-none opacity-70" />
         </div>
         <div className="grid gap-2">
-          <Label>Phone</Label>
-          <Input value={draft.phone} onChange={(e) => update("phone", e.target.value)} className="rounded-none" />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Phone</Label>
+          <Input value={draft.phone} onChange={(e) => update("phone", e.target.value)} className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label>Postcode</Label>
-          <Input value={draft.postcode} onChange={(e) => update("postcode", e.target.value)} className="rounded-none" />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Postcode</Label>
+          <Input value={draft.postcode} onChange={(e) => update("postcode", e.target.value)} className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label>City / town</Label>
-          <Input value={draft.city} onChange={(e) => update("city", e.target.value)} placeholder="e.g. Sydney" className="rounded-none" />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">City / town</Label>
+          <Input value={draft.city} onChange={(e) => update("city", e.target.value)} placeholder="e.g. Sydney" className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label>Country</Label>
-          <Input value={draft.country} onChange={(e) => update("country", e.target.value)} placeholder="e.g. Australia" className="rounded-none" />
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Country</Label>
+          <Input value={draft.country} onChange={(e) => update("country", e.target.value)} placeholder="e.g. Australia" className="h-12 rounded-none border-border bg-background" />
         </div>
         <div className="grid gap-2">
-          <Label>Team you support</Label>
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Team you support</Label>
           <Select value={draft.favourite_team} onValueChange={(value) => update("favourite_team", value)}>
             <SelectTrigger className="rounded-none">
               <SelectValue placeholder="Select a team">
@@ -144,14 +144,14 @@ export default function ProfileTab() {
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label>Avatar</Label>
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Avatar</Label>
           <div className="flex items-center gap-3">
-            {draft.avatar_url && <img src={draft.avatar_url} alt="Avatar" className="h-12 w-12 rounded-full border border-border object-cover" />}
+            {draft.avatar_url && <img src={draft.avatar_url} alt="Avatar" className="h-12 w-12 rounded-none border border-border object-cover" />}
             <div className="flex-1"><MediaUploader label="Upload avatar" accept="image/*" onUploaded={(url) => update("avatar_url", url)} /></div>
           </div>
         </div>
         <div className="grid gap-2 md:col-span-2">
-          <Label>Bio</Label>
+          <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Bio</Label>
           <Textarea value={draft.bio} onChange={(e) => update("bio", e.target.value)} placeholder="A line or two about you (optional)" className="min-h-20 rounded-none" />
         </div>
       </div>
@@ -175,7 +175,7 @@ export default function ProfileTab() {
       </label>
 
       <div className="flex justify-end">
-        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90">
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90 shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.4)] transition-all duration-300">
           <Save className="mr-2 h-4 w-4" /> {saveMutation.isPending ? "Saving..." : "Save profile"}
         </Button>
       </div>
