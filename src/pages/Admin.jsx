@@ -1,7 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-import AdsPanel from "@/components/admin/panels/AdsPanel";
 
 const lazyWithRetry = (factory, key) => lazy(async () => {
   try {
@@ -35,6 +34,7 @@ const StorePanel = lazyWithRetry(() => import("@/components/admin/panels/StorePa
 const CommunityPanel = lazyWithRetry(() => import("@/components/admin/panels/CommunityPanel"), "community");
 const PeoplePanel = lazyWithRetry(() => import("@/components/admin/panels/PeoplePanel"), "people");
 const SettingsPanel = lazyWithRetry(() => import("@/components/admin/panels/SettingsPanel"), "settings");
+const AdsPanel = lazyWithRetry(() => import("@/components/admin/panels/AdsPanel"), "ads");
 
 
 const PanelLoading = () => (

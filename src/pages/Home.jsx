@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import AdSlot from "@/components/ads/AdSlot";
 import { useQuery } from "@tanstack/react-query";
@@ -8,13 +8,16 @@ import HeroSection from "@/components/public/HeroSection";
 import BackgroundVideo from "@/components/public/BackgroundVideo";
 import CountdownTimer from "@/components/public/CountdownTimer";
 import MatchupsSection from "@/components/public/MatchupsSection";
-import NewsSection from "@/components/public/NewsSection";
-import AboutSection from "@/components/public/AboutSection";
-import TravelSection from "@/components/public/TravelSection";
-import EventsSection from "@/components/public/EventsSection";
-import MerchSection from "@/components/public/MerchSection";
-import PartnersSection from "@/components/public/PartnersSection";
-import TestimonialsSection from "@/components/public/TestimonialsSection";
+import LazySection from "@/components/public/LazySection";
+
+// Lazy-loaded sections
+const NewsSection = lazy(() => import("@/components/public/NewsSection"));
+const AboutSection = lazy(() => import("@/components/public/AboutSection"));
+const TravelSection = lazy(() => import("@/components/public/TravelSection"));
+const EventsSection = lazy(() => import("@/components/public/EventsSection"));
+const MerchSection = lazy(() => import("@/components/public/MerchSection"));
+const PartnersSection = lazy(() => import("@/components/public/PartnersSection"));
+const TestimonialsSection = lazy(() => import("@/components/public/TestimonialsSection"));
 
 const stadiumVideoUrls = [
   "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
@@ -174,7 +177,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <NewsSection articles={visibleNews} settings={settings} />
+          <LazySection height={450}>
+            <Suspense fallback={<div className="h-[450px]" />}>
+              <NewsSection articles={visibleNews} settings={settings} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -182,7 +189,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <AboutSection settings={settings} />
+          <LazySection height={350}>
+            <Suspense fallback={<div className="h-[350px]" />}>
+              <AboutSection settings={settings} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -190,7 +201,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <TravelSection packages={visiblePackages} settings={settings} />
+          <LazySection height={500}>
+            <Suspense fallback={<div className="h-[500px]" />}>
+              <TravelSection packages={visiblePackages} settings={settings} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -198,7 +213,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
+          <LazySection height={500}>
+            <Suspense fallback={<div className="h-[500px]" />}>
+              <EventsSection events={events.length ? events : [defaultEvent]} event={event} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -217,7 +236,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <MerchSection settings={settings} />
+          <LazySection height={450}>
+            <Suspense fallback={<div className="h-[450px]" />}>
+              <MerchSection settings={settings} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -225,7 +248,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <PartnersSection settings={settings} />
+          <LazySection height={250}>
+            <Suspense fallback={<div className="h-[250px]" />}>
+              <PartnersSection settings={settings} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -233,7 +260,11 @@ export default function Home() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <TestimonialsSection settings={settings} />
+          <LazySection height={350}>
+            <Suspense fallback={<div className="h-[350px]" />}>
+              <TestimonialsSection settings={settings} />
+            </Suspense>
+          </LazySection>
         </motion.div>
         <footer className="border-t border-border bg-secondary/90 backdrop-blur-sm">
           {/* Footer nav links */}

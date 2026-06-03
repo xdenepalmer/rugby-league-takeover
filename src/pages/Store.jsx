@@ -247,7 +247,9 @@ export default function Store() {
   const { data: products = [], isLoading } = useQuery({ 
     queryKey: ["products"], 
     queryFn: () => base44.entities.Product.list("sort_order", 50),
-    enabled: appParams.hasBase44Config
+    enabled: appParams.hasBase44Config,
+    staleTime: 60000, // Cache products list for 1 minute
+    gcTime: 300000,   // Keep in cache garbage collection for 5 minutes
   });
 
   const visibleProducts = useMemo(() => {

@@ -15,11 +15,22 @@ export default function PublicLayout() {
   const { pathname } = location;
   const isHome = pathname === "/";
   const outlet = useOutlet();
+  
   const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
     enabled: appParams.hasBase44Config,
   });
+
+  const prefetchRoute = (href) => {
+    try {
+      if (href === "/") import("@/pages/Home");
+      else if (href === "/store") import("@/pages/Store");
+      else if (href === "/forum") import("@/pages/Forum");
+      else if (href === "/admin") import("@/pages/Admin");
+      else if (href === "/account") import("@/pages/Account");
+    } catch {}
+  };
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
@@ -82,6 +93,8 @@ export default function PublicLayout() {
           <NavLink
             to="/"
             aria-label="Home"
+            onMouseEnter={() => prefetchRoute("/")}
+            onTouchStart={() => prefetchRoute("/")}
             className={({ isActive }) =>
               `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
@@ -102,6 +115,8 @@ export default function PublicLayout() {
           <NavLink
             to="/store"
             aria-label="Shop"
+            onMouseEnter={() => prefetchRoute("/store")}
+            onTouchStart={() => prefetchRoute("/store")}
             className={({ isActive }) =>
               `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
@@ -122,6 +137,8 @@ export default function PublicLayout() {
           <NavLink
             to="/forum"
             aria-label="Forum"
+            onMouseEnter={() => prefetchRoute("/forum")}
+            onTouchStart={() => prefetchRoute("/forum")}
             className={({ isActive }) =>
               `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
@@ -142,6 +159,8 @@ export default function PublicLayout() {
           <NavLink
             to="/account"
             aria-label="Account"
+            onMouseEnter={() => prefetchRoute("/account")}
+            onTouchStart={() => prefetchRoute("/account")}
             className={({ isActive }) =>
               `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                 isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
@@ -173,6 +192,8 @@ export default function PublicLayout() {
             <NavLink
               to="/admin"
               aria-label="Admin dashboard"
+              onMouseEnter={() => prefetchRoute("/admin")}
+              onTouchStart={() => prefetchRoute("/admin")}
               className={({ isActive }) =>
                 `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
                   isActive ? "text-emerald-400" : "text-muted-foreground/80 hover:text-foreground"

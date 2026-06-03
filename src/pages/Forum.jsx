@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback, memo, lazy, Suspense } from "react";
 import AdSlot from "@/components/ads/AdSlot";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -22,9 +22,6 @@ import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea from "@/components/forum/MentionTextarea";
 import MediaAttach from "@/components/forum/MediaAttach";
-import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
-import ScorePredictor from "@/components/forum/ScorePredictor";
-import SlotMachineBadgeUnlock from "@/components/forum/SlotMachineBadgeUnlock";
 import { topBadge, parseBadgeIds, SPIN_COOLDOWN_MS, SLOT_LAST_SPIN_KEY } from "@/lib/slot-badges";
 
 import { getCategoryMeta, timeAgo, getRecencyScore } from "@/components/forum/feed/forumHelpers";
@@ -41,9 +38,14 @@ import TrendingCard from "@/components/forum/feed/TrendingCard";
 import CategoryPill from "@/components/forum/feed/CategoryPill";
 import EmptyState from "@/components/forum/feed/EmptyState";
 import ScrollToTopButton from "@/components/forum/feed/ScrollToTopButton";
-import ThreadDetailModal from "@/components/forum/feed/ThreadDetailModal";
-import ComposeSidebar from "@/components/forum/feed/ComposeSidebar";
 import AdminConfirmSheet from "@/components/admin/shared/AdminConfirmSheet";
+
+// Lazy-loaded feature islands to trim the initial bundle footprint
+const StadiumSeatPlanner = lazy(() => import("@/components/forum/StadiumSeatPlanner"));
+const ScorePredictor = lazy(() => import("@/components/forum/ScorePredictor"));
+const SlotMachineBadgeUnlock = lazy(() => import("@/components/forum/SlotMachineBadgeUnlock"));
+const ThreadDetailModal = lazy(() => import("@/components/forum/feed/ThreadDetailModal"));
+const ComposeSidebar = lazy(() => import("@/components/forum/feed/ComposeSidebar"));
 
 
 
@@ -575,6 +577,11 @@ export default function Forum() {
   const [draft, setDraft] = useState(emptyPost);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(15);
+
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [selectedCategory, searchQuery]);
 
   /* ── Collapsible tipping + slot machine position ── */
   const [tippingExpanded, setTippingExpanded] = useState(() => {
@@ -600,6 +607,9 @@ export default function Forum() {
     });
   }, []);
   const [sortBy, setSortBy] = useState("latest");
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [sortBy]);
   const [submittedForReview, setSubmittedForReview] = useState(false);
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState({});
@@ -844,6 +854,10 @@ export default function Forum() {
     return result;
   }, [allThreads, selectedCategory, searchQuery, sortBy]);
 
+  const threadsToRender = useMemo(() => {
+    return filteredThreads.slice(0, visibleCount);
+  }, [filteredThreads, visibleCount]);
+
   const totalReplies = allThreads.reduce((s, t) => s + (t.replies || []).length, 0);
   const uniqueMembers = new Set(allThreads.map((t) => t.author_name)).size;
 
@@ -957,7 +971,9 @@ export default function Forum() {
             {/* Slot Machine — TOP position when spin is available (mobile only) */}
             {slotSpinAvailable && (
               <div className="lg:hidden">
-                <SlotMachineBadgeUnlock />
+                <Suspense fallback={<div className="h-28 bg-card/10 animate-pulse border border-border/10" />}>
+                  <SlotMachineBadgeUnlock />
+                </Suspense>
               </div>
             )}
 
@@ -996,21 +1012,23 @@ export default function Forum() {
                     className="overflow-hidden"
                   >
                     <div className="pt-2">
-                      <ScorePredictor
-                        onSharePrediction={(matchup, homeScore, awayScore) => {
-                          const home = matchup.home_team;
-                          const away = matchup.away_team;
-                          const label = matchup.label || "NRL Fixture";
-                          setDraft((d) => ({
-                            ...d,
-                            title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
-                            body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
-                            category: "MatchDay",
-                          }));
-                          setShowMobileCompose(true);
-                          window.scrollTo({ top: 300, behavior: "smooth" });
-                        }}
-                      />
+                      <Suspense fallback={<div className="h-64 bg-card/10 animate-pulse border border-border/10" />}>
+                        <ScorePredictor
+                          onSharePrediction={(matchup, homeScore, awayScore) => {
+                            const home = matchup.home_team;
+                            const away = matchup.away_team;
+                            const label = matchup.label || "NRL Fixture";
+                            setDraft((d) => ({
+                              ...d,
+                              title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
+                              body: `My footy tip for ${label}: ${home} ${homeScore} - ${awayScore} ${away}. Who are you backing?`,
+                              category: "MatchDay",
+                            }));
+                            setShowMobileCompose(true);
+                            window.scrollTo({ top: 300, behavior: "smooth" });
+                          }}
+                        />
+                      </Suspense>
                     </div>
                   </motion.div>
                 )}
@@ -1088,16 +1106,17 @@ export default function Forum() {
                   className="overflow-hidden space-y-4 mb-4"
                 >
                   <div className="grid gap-4">
-                    <StadiumSeatPlanner
-                      onFilterSearch={(q) => setSearchQuery(q)}
-                      onClaimSeat={(q) => {
-                        setDraft((d) => ({
-                          ...d,
-                          title: `[${q}] Supporter Meetup!`,
-                          body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
-                          category: "MatchDay",
-                        }));
-                        setShowMobileCompose(true);
+                    <Suspense fallback={<div className="h-72 bg-card/10 animate-pulse border border-border/10" />}>
+                      <StadiumSeatPlanner
+                        onFilterSearch={(q) => setSearchQuery(q)}
+                        onClaimSeat={(q) => {
+                          setDraft((d) => ({
+                            ...d,
+                            title: `[${q}] Supporter Meetup!`,
+                            body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
+                            category: "MatchDay",
+                          }));
+                          setShowMobileCompose(true);
                         window.scrollTo({ top: 300, behavior: "smooth" });
                         try {
                           localStorage.setItem("rlt_seat_claimed", q);
@@ -1106,14 +1125,15 @@ export default function Forum() {
                       }}
                       currentSearch={searchQuery}
                     />
-                  </div>
+                  </Suspense>
+                </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Thread Feed */}
             <div className="space-y-3">
-              {filteredThreads.map((post, index) => {
+              {threadsToRender.map((post, index) => {
                 const isActiveThread = activeReplyId && (activeReplyId === post.id || containsActiveReply(post, activeReplyId));
                 const activeReplyDraft = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
 
@@ -1140,6 +1160,18 @@ export default function Forum() {
                 );
               })}
 
+              {filteredThreads.length > visibleCount && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => prev + 15)}
+                    className="border border-primary px-8 py-3.5 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all duration-300 rounded-none relative overflow-hidden"
+                  >
+                    Load More Discussions
+                  </Button>
+                </div>
+              )}
+
               {filteredThreads.length === 0 && (
                 <EmptyState
                   onClearFilters={clearAllFilters}
@@ -1151,7 +1183,9 @@ export default function Forum() {
             {/* Slot Machine — BOTTOM position when no spin available (mobile only) */}
             {!slotSpinAvailable && (
               <div className="lg:hidden">
-                <SlotMachineBadgeUnlock />
+                <Suspense fallback={<div className="h-28 bg-card/10 animate-pulse border border-border/10" />}>
+                  <SlotMachineBadgeUnlock />
+                </Suspense>
               </div>
             )}
 
@@ -1174,41 +1208,43 @@ export default function Forum() {
           {/* ━━━ RIGHT: Sidebar ━━━ */}
           <div className="hidden lg:block">
             <AdSlot position="sidebar" size="medium-rectangle" className="mb-6 w-full" />
-            <ComposeSidebar
-              draft={draft} setDraft={setDraft}
-              isAuthenticated={isAuthenticated} user={user}
-              submittedForReview={submittedForReview}
-              onSubmit={handlePost} isPending={createMutation.isPending}
-              allThreads={allThreads}
-              people={mentionPeople}
-              onFilterSearch={(q) => setSearchQuery(q)}
-              onClaimSeat={(q) => {
-                setDraft((d) => ({
-                  ...d,
-                  title: `[${q}] Supporter Meetup!`,
-                  body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
-                  category: "MatchDay",
-                }));
-                window.scrollTo({ top: 300, behavior: "smooth" });
-                try {
-                  localStorage.setItem("rlt_seat_claimed", q);
-                  window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
-                } catch (err) {}
-              }}
-              searchQuery={searchQuery}
-              onSharePrediction={(matchup, homeScore, awayScore) => {
-                const home = matchup.home_team;
-                const away = matchup.away_team;
-                const label = matchup.label || "Opening Showdown";
-                setDraft((d) => ({
-                  ...d,
-                  title: `[Prediction] ${home} ${homeScore} - ${awayScore} ${away}`,
-                  body: `Here is my match prediction for ${label}: ${home} ${homeScore} - ${awayScore} ${away}! Let's go! What are your score predictions?`,
-                  category: "MatchDay",
-                }));
-                window.scrollTo({ top: 300, behavior: "smooth" });
-              }}
-            />
+            <Suspense fallback={<div className="h-96 bg-card/10 animate-pulse border border-border/10" />}>
+              <ComposeSidebar
+                draft={draft} setDraft={setDraft}
+                isAuthenticated={isAuthenticated} user={user}
+                submittedForReview={submittedForReview}
+                onSubmit={handlePost} isPending={createMutation.isPending}
+                allThreads={allThreads}
+                people={mentionPeople}
+                onFilterSearch={(q) => setSearchQuery(q)}
+                onClaimSeat={(q) => {
+                  setDraft((d) => ({
+                    ...d,
+                    title: `[${q}] Supporter Meetup!`,
+                    body: `Hey fellow fans! I am sitting in ${q}. Let's coordinate and sync up at the game!`,
+                    category: "MatchDay",
+                  }));
+                  window.scrollTo({ top: 300, behavior: "smooth" });
+                  try {
+                    localStorage.setItem("rlt_seat_claimed", q);
+                    window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
+                  } catch (err) {}
+                }}
+                searchQuery={searchQuery}
+                onSharePrediction={(matchup, homeScore, awayScore) => {
+                  const home = matchup.home_team;
+                  const away = matchup.away_team;
+                  const label = matchup.label || "Opening Showdown";
+                  setDraft((d) => ({
+                    ...d,
+                    title: `[Prediction] ${home} ${homeScore} - ${awayScore} ${away}`,
+                    body: `Here is my match prediction for ${label}: ${home} ${homeScore} - ${awayScore} ${away}! Let's go! What are your score predictions?`,
+                    category: "MatchDay",
+                  }));
+                  window.scrollTo({ top: 300, behavior: "smooth" });
+                }}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -1216,24 +1252,26 @@ export default function Forum() {
       {/* ━━━ THREAD DETAIL MODAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <AnimatePresence>
         {threadModalPost && (
-          <ThreadDetailModal
-            post={threadModalPost}
-            onClose={() => setThreadModalPost(null)}
-            isAuthenticated={isAuthenticated}
-            user={user}
-            appReady={appParams.hasBase44Config}
-            isSubmitting={createMutation.isPending}
-            replyDraft={replyDrafts[threadModalPost.id] || emptyReply}
-            onUpdateReply={updateReplyDraft}
-            onReply={handleReply}
-            replyApi={replyApi}
-            activeReplyDraft={replyDrafts[activeReplyId] || emptyReply}
-            authorPostCounts={authorPostCounts}
-            authorReplyCounts={authorReplyCounts}
-            resolveAvatar={avatarFor}
-            resolveMeta={forumMetaFor}
-            reactionProfiles={profileById}
-          />
+          <Suspense fallback={null}>
+            <ThreadDetailModal
+              post={threadModalPost}
+              onClose={() => setThreadModalPost(null)}
+              isAuthenticated={isAuthenticated}
+              user={user}
+              appReady={appParams.hasBase44Config}
+              isSubmitting={createMutation.isPending}
+              replyDraft={replyDrafts[threadModalPost.id] || emptyReply}
+              onUpdateReply={updateReplyDraft}
+              onReply={handleReply}
+              replyApi={replyApi}
+              activeReplyDraft={replyDrafts[activeReplyId] || emptyReply}
+              authorPostCounts={authorPostCounts}
+              authorReplyCounts={authorReplyCounts}
+              resolveAvatar={avatarFor}
+              resolveMeta={forumMetaFor}
+              reactionProfiles={profileById}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 

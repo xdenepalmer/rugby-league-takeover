@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client';
@@ -12,9 +12,9 @@ import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import InstallAppPrompt from '@/components/InstallAppPrompt';
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
-import Home from "./pages/Home";
 
 // Lazy-loaded pages
+const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Account = lazy(() => import("./pages/Account"));
 const Store = lazy(() => import("./pages/Store"));
@@ -89,6 +89,8 @@ const themeConfigs = {
 };
 
 function App() {
+  const [showPwaPrompts, setShowPwaPrompts] = useState(false);
+
   useEffect(() => {
     const applyTheme = (themeKey) => {
       const config = themeConfigs[themeKey] || themeConfigs.sincity;
@@ -108,7 +110,28 @@ function App() {
     };
 
     window.addEventListener("rlt_theme_change", handleThemeChange);
-    return () => window.removeEventListener("rlt_theme_change", handleThemeChange);
+
+    // Defer loading/rendering PWA helper dialogs until after page is fully loaded and idle
+    const handleDefer = () => {
+      if (typeof window !== "undefined") {
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(() => setShowPwaPrompts(true));
+        } else {
+          setTimeout(() => setShowPwaPrompts(true), 2000);
+        }
+      }
+    };
+
+    if (document.readyState === "complete") {
+      handleDefer();
+    } else {
+      window.addEventListener("load", handleDefer, { once: true });
+    }
+
+    return () => {
+      window.removeEventListener("rlt_theme_change", handleThemeChange);
+      window.removeEventListener("load", handleDefer);
+    };
   }, []);
 
   return (
@@ -117,8 +140,12 @@ function App() {
         <Router>
           <ScrollToTop />
           <AuthenticatedApp />
-          <InstallAppPrompt />
-          <PwaUpdatePrompt />
+          {showPwaPrompts && (
+            <>
+              <InstallAppPrompt />
+              <PwaUpdatePrompt />
+            </>
+          )}
         </Router>
         <Toaster />
       </QueryClientProvider>

@@ -81,15 +81,14 @@ function useBadgeCounts() {
     let cancelled = false;
     async function fetchCounts() {
       try {
+        // Optimised: filter by pending status and only fetch the 'id' field to avoid pulling down full entities
         const [posts, orders] = await Promise.allSettled([
-          base44.entities?.ForumPost?.list?.() || Promise.resolve([]),
-          base44.entities?.StoreOrder?.list?.() || Promise.resolve([]),
+          base44.entities?.ForumPost?.filter?.({ is_published: false }, undefined, 100, 0, ["id"]) || Promise.resolve([]),
+          base44.entities?.StoreOrder?.filter?.({ status: ["pending", "new"] }, undefined, 100, 0, ["id"]) || Promise.resolve([]),
         ]);
         if (cancelled) return;
-        const pendingPosts = (posts.status === "fulfilled" ? posts.value : [])
-          .filter((p) => p && p.is_published === false).length;
-        const pendingOrders = (orders.status === "fulfilled" ? orders.value : [])
-          .filter((o) => o && (o.status === "pending" || o.status === "new")).length;
+        const pendingPosts = (posts.status === "fulfilled" ? posts.value : []).length;
+        const pendingOrders = (orders.status === "fulfilled" ? orders.value : []).length;
         setCounts({ community: pendingPosts, store: pendingOrders });
       } catch {
         // Silently fail — badges simply won't show

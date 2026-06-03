@@ -166,15 +166,38 @@ export default function AdsManager() {
 
   /* Refresh stats periodically (session metrics — stays in localStorage) */
   useEffect(() => {
-    const refresh = () => setStats(readLS("rlt_ad_stats", {}));
+    const refresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        setStats(readLS("rlt_ad_stats", {}));
+      }
+    };
     const id = setInterval(refresh, 10000);
-    const handleImpression = () => setTimeout(refresh, 600);
+    
+    const handleImpression = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        setTimeout(refresh, 600);
+      }
+    };
+    
+    const handleVisibility = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        setStats(readLS("rlt_ad_stats", {}));
+      }
+    };
+
     window.addEventListener("rlt_ad_impression", handleImpression);
     window.addEventListener("rlt_ad_click", handleImpression);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibility);
+    }
+
     return () => {
       clearInterval(id);
       window.removeEventListener("rlt_ad_impression", handleImpression);
       window.removeEventListener("rlt_ad_click", handleImpression);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibility);
+      }
     };
   }, []);
 

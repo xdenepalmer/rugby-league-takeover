@@ -161,6 +161,17 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     show: { x: 0, opacity: 1, transition: { type: "tween", ease: "easeOut", duration: 0.18 } }
   };
 
+  const prefetchRoute = (href) => {
+    try {
+      if (href === "/store") import("@/pages/Store");
+      else if (href === "/forum") import("@/pages/Forum");
+      else if (href === "/admin") import("@/pages/Admin");
+      else if (href === "/account") import("@/pages/Account");
+      else if (href === "/login") import("@/pages/Login");
+      else if (href === "/register") import("@/pages/Register");
+    } catch {}
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)]">
       <div 
@@ -195,6 +206,8 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               <Link 
                 key={link.href} 
                 to={link.href} 
+                onMouseEnter={() => prefetchRoute(link.href)}
+                onTouchStart={() => prefetchRoute(link.href)}
                 className={`group relative py-2 font-display text-[10px] xl:text-[10px] 2xl:text-[10.5px] font-bold uppercase tracking-[0.12em] xl:tracking-[0.2em] whitespace-nowrap transition-all duration-300 ${
                   active ? "text-primary" : "text-slate-300 hover:text-foreground"
                 }`}
@@ -353,6 +366,8 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                         <Link 
                           to={link.href} 
                           onClick={() => setOpen(false)} 
+                          onMouseEnter={() => prefetchRoute(link.href)}
+                          onTouchStart={() => prefetchRoute(link.href)}
                           className={`group relative flex items-center py-3 min-h-[44px] font-display text-xl uppercase tracking-wider cursor-pointer transition-all ${
                             active ? "text-primary font-bold" : "text-foreground hover:text-primary"
                           }`}

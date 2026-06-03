@@ -75,6 +75,8 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
           <motion.img
             src={logo}
             alt="Rugby League Takeover Las Vegas"
+            fetchPriority="high"
+            decoding="async"
             initial={{ opacity: 0, y: -80, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}

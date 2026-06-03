@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import {
   TrendingUp, DollarSign, Users, ShoppingCart, MessageSquare,
   ArrowUpRight, ArrowDownRight, Newspaper, Package,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SystemStatusPanel from "./SystemStatusPanel";
+
+// Lazy-loaded charts to exclude heavy Recharts package from initial admin panel paint
+const AdminOverviewCharts = lazy(() => import("./AdminOverviewCharts"));
 
 /* ─── Animated Counter Hook ─────────────────────────────── */
 function useAnimatedCount(target, duration = 800) {
@@ -269,149 +268,17 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
         />
       </div>
 
-      {/* ── Charts Grid ── */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* Registrations Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.4 }}
-          className="border border-border bg-card/60 cmd-glass overflow-hidden"
-        >
-          <div className="h-[2px] w-full bg-gradient-to-r from-primary via-primary/60 to-primary" />
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-200">
-                  Registration Signups
-                </h3>
-                <p className="text-[9px] font-mono text-slate-300 mt-0.5">
-                  Last 7 data points
-                </p>
-              </div>
-            </div>
-
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={regData}>
-                  <defs>
-                    <linearGradient id="cmdRegGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(15, 95%, 55%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(15, 95%, 55%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 12%)" />
-                  <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="Signups"
-                    stroke="hsl(15, 95%, 55%)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#cmdRegGrad)"
-                    dot={{ r: 3, fill: "hsl(15, 95%, 55%)", strokeWidth: 0 }}
-                    activeDot={{ r: 5, fill: "hsl(15, 95%, 55%)", stroke: "#fff", strokeWidth: 2 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Revenue Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.4 }}
-          className="border border-border bg-card/60 cmd-glass overflow-hidden"
-        >
-          <div className="h-[2px] w-full bg-gradient-to-r from-accent via-accent/60 to-accent" />
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-200">
-                  Revenue Stream (AUD)
-                </h3>
-                <p className="text-[9px] font-mono text-slate-300 mt-0.5">
-                  Last 7 data points
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-accent/5 border border-accent/10">
-                <DollarSign className="h-3 w-3 text-accent" />
-                <span className="text-[8px] font-bold uppercase tracking-wider text-accent">Stripe</span>
-              </div>
-            </div>
-
-            <div className="h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revData}>
-                  <defs>
-                    <linearGradient id="cmdRevGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(45, 93%, 47%)" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="hsl(45, 93%, 47%)" stopOpacity={0.3} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 12%)" />
-                  <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="Sales" fill="url(#cmdRevGrad)" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── Order Status Pie + Recent Orders ── */}
-      {orders.length > 0 && (
-        <div className="grid gap-5 lg:grid-cols-2">
-          {/* Pie Chart */}
-          {pieData.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45, duration: 0.4 }}
-              className="border border-border bg-card/60 cmd-glass overflow-hidden"
-            >
-              <div className="h-[2px] w-full bg-gradient-to-r from-blue-500 via-violet-500 to-blue-500" />
-              <div className="p-5">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground mb-4">
-                  Order Status Distribution
-                </h3>
-                <div className="h-[220px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={85}
-                        paddingAngle={3}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {pieData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Legend
-                        formatter={(value) => (
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                            {value}
-                          </span>
-                        )}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </motion.div>
-          )}
+      <Suspense fallback={
+        <div className="h-[300px] flex items-center justify-center bg-card/20 animate-pulse border border-border/50 text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+          Loading Analytics Charts...
+        </div>
+      }>
+        <AdminOverviewCharts
+          regData={regData}
+          revData={revData}
+          pieData={pieData}
+        />
+      </Suspense>
 
           {/* Recent Orders Feed */}
           <motion.div
@@ -461,8 +328,6 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
               </div>
             </div>
           </motion.div>
-        </div>
-      )}
     </div>
   );
 }

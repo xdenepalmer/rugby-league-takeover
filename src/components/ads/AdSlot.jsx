@@ -1,9 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Megaphone, AlertTriangle, X, ChevronRight, Eye } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { appParams } from "@/lib/app-params";
+import React, { useEffect, useState, useRef, lazy, Suspense } from "react";
 
 /* ── Size presets with responsive fallback chain ── */
 const SIZE_MAP = {
@@ -13,7 +8,6 @@ const SIZE_MAP = {
   "mobile-banner":    { w: 320, h: 50,  label: "320 × 50" },
 };
 
-// Responsive downgrade: if container is too narrow, pick a smaller size
 const RESPONSIVE_FALLBACKS = {
   leaderboard:        [{ minW: 728, key: "leaderboard" }, { minW: 300, key: "medium-rectangle" }, { minW: 0, key: "mobile-banner" }],
   "medium-rectangle": [{ minW: 300, key: "medium-rectangle" }, { minW: 0, key: "mobile-banner" }],
@@ -21,733 +15,108 @@ const RESPONSIVE_FALLBACKS = {
   "mobile-banner":    [{ minW: 0, key: "mobile-banner" }],
 };
 
-/* ── Session ID (per browser session, survives SPA navigations) ── */
-let _sessionId = null;
-function getSessionId() {
-  if (_sessionId) return _sessionId;
-  try {
-    _sessionId = sessionStorage.getItem("rlt_ad_session_id");
-    if (!_sessionId) {
-      _sessionId = crypto.randomUUID();
-      sessionStorage.setItem("rlt_ad_session_id", _sessionId);
-    }
-  } catch {
-    // Fallback when sessionStorage unavailable (private browsing, etc.)
-    _sessionId = crypto.randomUUID();
-  }
-  return _sessionId;
-}
+// Lazy load the runtime so it's not part of the initial app bundle
+const AdSlotRuntime = lazy(() => import("./AdSlotRuntime"));
 
-/* ── Date-range validation ── */
-function isAdScheduleActive(ad) {
-  if (!ad) return false;
-  // Base44 may store booleans as strings
-  if (ad.is_active === false || ad.is_active === "false") return false;
-  const now = new Date();
-  const today = now.toISOString().split("T")[0]; // YYYY-MM-DD
-  if (ad.start_date && today < ad.start_date) return false;
-  if (ad.end_date && today > ad.end_date) return false;
-  return true;
-}
-
-/* ── Device targeting: show only on the targeted viewport ── */
-function matchesDevice(ad) {
-  const target = ad?.device_target || "all";
-  if (target === "all") return true;
-  if (typeof window === "undefined" || !window.matchMedia) return true;
-  const isMobile = window.matchMedia("(max-width: 767px)").matches;
-  return target === (isMobile ? "mobile" : "desktop");
-}
-
-/* ── Frequency capping (session-scoped) ── */
-const FREQUENCY_CAP = 10; // max impressions per ad per session
-
-function getSessionImpressions() {
-  try {
-    const raw = sessionStorage.getItem("rlt_ad_freq");
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? parsed : {};
-  } catch { return {}; }
-}
-
-function recordSessionImpression(adId) {
-  try {
-    const freq = getSessionImpressions();
-    freq[adId] = (freq[adId] || 0) + 1;
-    sessionStorage.setItem("rlt_ad_freq", JSON.stringify(freq));
-    return freq[adId];
-  } catch { return 0; }
-}
-
-function getAdSessionCount(adId) {
-  const freq = getSessionImpressions();
-  return freq[adId] || 0;
-}
-
-/* ── Click fraud prevention (3 clicks per ad per hour) ── */
-const CLICK_CAP_PER_HOUR = 3;
-
-function getClickLog() {
-  try {
-    const raw = sessionStorage.getItem("rlt_ad_clicks");
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? parsed : {};
-  } catch { return {}; }
-}
-
-function canCountClick(adId) {
-  try {
-    const log = getClickLog();
-    const now = Date.now();
-    const hourAgo = now - 3600000;
-    // Clean up old entries and count recent
-    const recent = (log[adId] || []).filter((t) => t > hourAgo);
-    return recent.length < CLICK_CAP_PER_HOUR;
-  } catch { return true; }
-}
-
-function recordClick(adId) {
-  try {
-    const log = getClickLog();
-    const now = Date.now();
-    const hourAgo = now - 3600000;
-    // Prune old entries for all ads, keep only last hour
-    const recent = (log[adId] || []).filter((t) => t > hourAgo);
-    recent.push(now);
-    log[adId] = recent;
-    sessionStorage.setItem("rlt_ad_clicks", JSON.stringify(log));
-  } catch { /* noop */ }
-}
-
-/* ── Stat tracking with batched writes ── */
-const pendingStats = {};
-let flushTimer = null;
-
-function flushStats() {
-  try {
-    const existing = JSON.parse(localStorage.getItem("rlt_ad_stats") || "{}");
-    for (const [key, delta] of Object.entries(pendingStats)) {
-      if (!existing[key]) existing[key] = { impressions: 0, clicks: 0 };
-      existing[key].impressions += delta.impressions || 0;
-      existing[key].clicks += delta.clicks || 0;
-    }
-    localStorage.setItem("rlt_ad_stats", JSON.stringify(existing));
-    Object.keys(pendingStats).forEach((k) => delete pendingStats[k]);
-  } catch { /* noop */ }
-}
-
-function trackStat(position, adId, type) {
-  const key = `${position}__${adId}`;
-  if (!pendingStats[key]) pendingStats[key] = { impressions: 0, clicks: 0 };
-  pendingStats[key][type] += 1;
-  // Debounce writes to avoid hammering localStorage (session-scoped UX cache)
-  clearTimeout(flushTimer);
-  flushTimer = setTimeout(flushStats, 500);
-
-  // Durable, server-aggregated count on the SiteAd record — real analytics across
-  // all visitors/devices. Fire-and-forget; viewability + caps already gated upstream.
-  if (appParams.hasBase44Config) {
-    try {
-      base44.functions.invoke("recordAdEvent", { adId, type }).catch(() => {});
-    } catch { /* noop */ }
-  }
-
-  try {
-    window.dispatchEvent(
-      new CustomEvent(type === "impressions" ? "rlt_ad_impression" : "rlt_ad_click", {
-        detail: { position, ad_id: adId, session_id: getSessionId() },
-      })
-    );
-  } catch { /* noop */ }
-}
-
-// Flush on page unload
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeunload", flushStats);
-}
-
-/* ── URL validation ── */
-function isValidUrl(url) {
-  if (!url) return false;
-  try { new URL(url); return true; } catch { return false; }
-}
-
-/* ── Weighted ad selection (less-seen ads shown more) ── */
-function selectAdWeighted(candidates) {
-  if (!candidates || candidates.length === 0) return null;
-  if (candidates.length === 1) return candidates[0];
-
-  // Get session impression counts for weighting
-  const freq = getSessionImpressions();
-  const counts = candidates.map((ad) => freq[ad.id] || 0);
-  const maxCount = Math.max(...counts, 1);
-
-  // Weight: inverse of impression count → less-seen = higher weight
-  // Add 1 to avoid division by zero and ensure even new ads get shown
-  const weights = counts.map((c) => Math.max(1, maxCount + 1 - c));
-
-  // Ads that hit the frequency cap get drastically reduced weight
-  const adjusted = weights.map((w, i) =>
-    counts[i] >= FREQUENCY_CAP ? 0.01 : w
-  );
-
-  const totalWeight = adjusted.reduce((sum, w) => sum + w, 0);
-  let random = Math.random() * totalWeight;
-
-  for (let i = 0; i < candidates.length; i++) {
-    random -= adjusted[i];
-    if (random <= 0) return candidates[i];
-  }
-
-  return candidates[candidates.length - 1]; // fallback
-}
-
-/* ── Minimize preference helpers (sessionStorage per position) ── */
-function getMinimized(position) {
-  try { return sessionStorage.getItem(`rlt_ad_min_${position}`) === "1"; } catch { return false; }
-}
-function setMinimized(position, val) {
-  try { sessionStorage.setItem(`rlt_ad_min_${position}`, val ? "1" : "0"); } catch { /* noop */ }
-}
-
-/* ── Rotation interval (ms) ── */
-const ROTATION_INTERVAL = 12000; // 12s per ad
-
-/* ── Shimmer keyframe style (injected once) ── */
-const SHIMMER_STYLE_ID = "rlt-ad-shimmer-css";
-if (typeof document !== "undefined" && !document.getElementById(SHIMMER_STYLE_ID)) {
-  const style = document.createElement("style");
-  style.id = SHIMMER_STYLE_ID;
-  style.textContent = `
-    @keyframes ad-shimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-    @keyframes ad-shimmer-placeholder {
-      0%   { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-/* ── Component ── */
 export default function AdSlot({ position, size, isAdmin = false, className = "" }) {
-  const [ads, setAds] = useState([]);
-  const [currentAd, setCurrentAd] = useState(null);
-  const [enabled, setEnabled] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const [imgRetried, setImgRetried] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgSrc, setImgSrc] = useState(null); // lazy-loaded src
-  const [effectiveSize, setEffectiveSize] = useState(size);
-  const [minimized, setMinimizedState] = useState(() => getMinimized(position));
-  const [isHovered, setIsHovered] = useState(false);
-  const [viewable, setViewable] = useState(false);
-  const tracked = useRef(false);
-  const containerRef = useRef(null);
+  const [effectiveSize, setEffectiveSize] = useState(size || "leaderboard");
+  const [isNearViewport, setIsNearViewport] = useState(false);
+  const [adsLoadState, setAdsLoadState] = useState({ enabled: true, hasAd: true });
   const wrapperRef = useRef(null);
-  const rotationTimer = useRef(null);
-  const mountedRef = useRef(true);
-  const viewabilityTimerRef = useRef(null);
-
-  /* ── Fetch all ads from database ── */
-  const { data: allAds = [] } = useQuery({
-    queryKey: ["siteAds"],
-    queryFn: () => base44.entities.SiteAd.list("-created_date", 200),
-    staleTime: 30000,
-    refetchInterval: 60000,
-    retry: 1,
-    enabled: appParams.hasBase44Config,
-    meta: { silent: true },
-  });
-
-  /* ── Fetch ads_enabled from SiteSettings ── */
-  const { data: settingsRecords = [] } = useQuery({
-    queryKey: ["siteSettings"],
-    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
-    staleTime: 30000,
-    retry: 1,
-    enabled: appParams.hasBase44Config,
-    meta: { silent: true },
-  });
-  const globalEnabled = settingsRecords[0]?.ads_enabled !== false && settingsRecords[0]?.ads_enabled !== "false";
-
-  /* ── Cleanup on unmount ── */
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
 
   /* ── Responsive size detection ── */
   useEffect(() => {
     if (!wrapperRef.current) return;
 
     const detectSize = () => {
-      if (!wrapperRef.current || !mountedRef.current) return;
+      if (!wrapperRef.current) return;
       const containerWidth = wrapperRef.current.offsetWidth;
       const sizeKey = size || "leaderboard";
       const chain = RESPONSIVE_FALLBACKS[sizeKey] || RESPONSIVE_FALLBACKS.leaderboard;
       const match = chain.find((step) => containerWidth >= step.minW);
-      setEffectiveSize(match ? match.key : sizeKey);
+      if (match) {
+        setEffectiveSize(match.key);
+      }
     };
 
     detectSize();
 
-    const ro = new ResizeObserver(detectSize);
-    ro.observe(wrapperRef.current);
-    return () => ro.disconnect();
+    if (typeof window !== "undefined" && "ResizeObserver" in window) {
+      const ro = new ResizeObserver(detectSize);
+      ro.observe(wrapperRef.current);
+      return () => ro.disconnect();
+    }
   }, [size]);
 
-  const preset = useMemo(
-    () => SIZE_MAP[effectiveSize] || SIZE_MAP[currentAd?.size] || null,
-    [effectiveSize, currentAd?.size]
-  );
-
-  /* ── Resolve ads when data changes ── */
-  const resolve = useCallback(() => {
-    if (!mountedRef.current) return;
-    setEnabled(globalEnabled);
-    // Match ads to this slot's position
-    const candidates = allAds.filter(
-      (a) => a.position === position && isAdScheduleActive(a) && matchesDevice(a)
-    );
-    setAds(candidates);
-
-    // Pick ad via weighted selection — only change if current ad is no longer valid
-    setCurrentAd((prev) => {
-      const prevStillValid = prev && candidates.some((c) => c.id === prev.id);
-      if (prevStillValid) return prev; // Don't flicker on React Query refetch
-      const picked = selectAdWeighted(candidates);
-      // Reset image state only when ad actually changes
-      if (picked?.id !== prev?.id) {
-        setImgError(false);
-        setImgRetried(false);
-        setImgLoaded(false);
-        setImgSrc(null);
-        setViewable(false);
-        tracked.current = false;
-      }
-      return picked || null;
-    });
-  }, [position, globalEnabled, allAds]);
-
-  /* ── React to data changes (React Query handles reactivity) ── */
+  /* ── Intersection check to trigger lazy-loading of runtime ── */
   useEffect(() => {
-    resolve();
-  }, [resolve]);
+    if (!wrapperRef.current) return;
 
-  /* ── Ad rotation for multi-ad positions ── */
-  useEffect(() => {
-    clearTimeout(rotationTimer.current);
-
-    if (ads.length <= 1 || !enabled) return;
-
-    rotationTimer.current = setTimeout(() => {
-      if (!mountedRef.current) return;
-      const next = selectAdWeighted(ads);
-      if (next && next.id !== currentAd?.id) {
-        setCurrentAd(next);
-        setImgError(false);
-        setImgRetried(false);
-        setImgLoaded(false);
-        setImgSrc(null);
-        setViewable(false);
-        tracked.current = false;
-      }
-    }, ROTATION_INTERVAL);
-
-    return () => clearTimeout(rotationTimer.current);
-  }, [ads, currentAd, enabled]);
-
-  /* ── Lazy loading: load image when slot nears viewport ── */
-  useEffect(() => {
-    if (!currentAd?.image_url || !wrapperRef.current) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && mountedRef.current) {
-          setImgSrc(currentAd.image_url);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px 0px" } // start loading 200px before entering viewport
-    );
-
-    observer.observe(wrapperRef.current);
-    return () => observer.disconnect();
-  }, [currentAd?.image_url]);
-
-  /* ── Viewability tracking: Only count impression when >50% visible for 1s ── */
-  useEffect(() => {
-    if (!currentAd || !enabled || tracked.current || !containerRef.current) return;
-
-    let viewTimer = null;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          viewTimer = setTimeout(() => {
-            if (!tracked.current && mountedRef.current) {
-              tracked.current = true;
-              recordSessionImpression(currentAd.id);
-              trackStat(position, currentAd.id, "impressions");
-            }
-          }, 1000);
-        } else {
-          clearTimeout(viewTimer);
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    observer.observe(containerRef.current);
-    return () => {
-      observer.disconnect();
-      clearTimeout(viewTimer);
-    };
-  }, [currentAd, enabled, position]);
-
-  /* ── Viewability badge: show "100% viewable" after 2s visible (admin only) ── */
-  useEffect(() => {
-    if (!isAdmin || !currentAd || !containerRef.current) return;
-    clearTimeout(viewabilityTimerRef.current);
-    setViewable(false);
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          viewabilityTimerRef.current = setTimeout(() => {
-            if (mountedRef.current) setViewable(true);
-          }, 2000);
-        } else {
-          clearTimeout(viewabilityTimerRef.current);
-          if (mountedRef.current) setViewable(false);
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    observer.observe(containerRef.current);
-    return () => {
-      observer.disconnect();
-      clearTimeout(viewabilityTimerRef.current);
-    };
-  }, [isAdmin, currentAd]);
-
-  /* ── Minimize / restore handlers ── */
-  const handleMinimize = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setMinimizedState(true);
-    setMinimized(position, true);
-  }, [position]);
-
-  const handleRestore = useCallback(() => {
-    setMinimizedState(false);
-    setMinimized(position, false);
-  }, [position]);
-
-  /* ── Image error with retry-once ── */
-  const handleImgError = useCallback(() => {
-    if (!mountedRef.current) return;
-    if (!imgRetried && currentAd?.image_url) {
-      // Retry once with cache-bust
-      setImgRetried(true);
-      setImgSrc(currentAd.image_url + (currentAd.image_url.includes("?") ? "&" : "?") + "_retry=1");
+    if (typeof window !== "undefined" && "IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsNearViewport(true);
+            observer.disconnect();
+          }
+        },
+        { rootMargin: "300px 0px" } // load 300px before it enters the viewport
+      );
+      observer.observe(wrapperRef.current);
+      return () => observer.disconnect();
     } else {
-      setImgError(true);
+      // Fallback if IntersectionObserver not supported
+      setIsNearViewport(true);
     }
-  }, [imgRetried, currentAd?.image_url]);
+  }, []);
 
-  /* ── Disabled globally ── */
-  if (!enabled) return null;
+  const preset = SIZE_MAP[effectiveSize] || SIZE_MAP.leaderboard;
 
-  /* ── No ad configured for this slot ── */
-  if (!currentAd) {
-    if (!isAdmin) return null;
-    return (
-      <div
-        ref={wrapperRef}
-        className={`relative flex items-center justify-center border border-dashed border-primary/20 bg-primary/[0.03] ${className}`}
-        style={{
-          contain: "layout style",
-          maxWidth: preset ? preset.w : "100%",
-          aspectRatio: preset ? `${preset.w}/${preset.h}` : "auto",
-          minHeight: preset ? undefined : 90,
-          width: "100%",
-        }}
-      >
-        <div className="flex flex-col items-center gap-1 opacity-50">
-          <Megaphone className="h-5 w-5 text-primary/40" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary/50 font-mono">
-            Ad Space Available
-          </span>
-          <span className="text-[8px] text-muted-foreground/40 font-mono">
-            {position} {preset ? `· ${preset.label}` : ""}
-          </span>
-        </div>
-      </div>
-    );
+  // If ads are disabled globally or there are no ads for this slot, collapse the container
+  // to avoid rendering empty whitespace (preserving layout styling)
+  if (!adsLoadState.enabled || (!adsLoadState.hasAd && !isAdmin)) {
+    return null;
   }
 
-  /* ── Broken image fallback (after retry) ── */
-  if (imgError) {
-    return (
-      <div
-        ref={wrapperRef}
-        className={`relative overflow-hidden border border-border/30 cmd-glass ${className}`}
-        style={{
-          contain: "layout style",
-          maxWidth: preset ? preset.w : "100%",
-          aspectRatio: preset ? `${preset.w}/${preset.h}` : "auto",
-          minHeight: preset ? undefined : 90,
-          width: "100%",
-        }}
-      >
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-          <div className="flex items-center gap-2 opacity-50">
-            <AlertTriangle className="h-4 w-4 text-amber-400/60" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 font-mono">
-              Ad Unavailable
-            </span>
-          </div>
-          {currentAd.title && (
-            <span className="text-[8px] text-muted-foreground/30 font-mono truncate max-w-[200px]">
-              {currentAd.title}
-            </span>
-          )}
-          {/* Fallback: clicking still works if there's a target URL */}
-          {currentAd.target_url && isValidUrl(currentAd.target_url) && (
-            <a
-              href={currentAd.target_url}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              className="mt-1 text-[8px] font-mono text-primary/50 hover:text-primary/80 underline underline-offset-2 transition-colors"
-            >
-              Visit sponsor →
-            </a>
-          )}
-        </div>
-        {/* Subtle scan-line effect */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, currentColor 2px, currentColor 3px)",
-          }}
-        />
-      </div>
-    );
-  }
-
-  /* ── Click handler with fraud prevention ── */
-  const handleClick = (e) => {
-    if (canCountClick(currentAd.id)) {
-      recordClick(currentAd.id);
-      trackStat(position, currentAd.id, "clicks");
-    }
-    // Always allow navigation — just don't count fraudulent clicks
-    if (!currentAd.target_url || !isValidUrl(currentAd.target_url)) {
-      e.preventDefault();
-    }
-  };
-
-  /* ── Multi-ad indicator ── */
-  const hasMultiple = ads.length > 1;
-
-  /* ── Minimized state: thin "Show Ad" bar ── */
-  if (minimized) {
-    return (
-      <div
-        ref={wrapperRef}
-        className={`relative ${className}`}
-        style={{ contain: "layout style", maxWidth: preset ? preset.w : "100%", width: "100%" }}
-      >
-        <motion.button
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          onClick={handleRestore}
-          className="flex w-full items-center justify-center gap-2 py-1 border border-border/30 bg-card/30 backdrop-blur-sm hover:bg-card/50 transition-colors cursor-pointer group"
-          aria-label="Show advertisement"
-        >
-          <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/40 font-mono group-hover:text-muted-foreground/60 transition-colors">
-            Show Ad
-          </span>
-        </motion.button>
-      </div>
-    );
-  }
-
-  /* ── Active ad with crossfade ── */
   return (
     <div
       ref={wrapperRef}
-      className={`relative ${className}`}
+      className={`ad-slot-shell relative transition-all duration-300 ${className}`}
       style={{
         contain: "layout style",
         width: "100%",
+        maxWidth: preset.w,
+        aspectRatio: `${preset.w}/${preset.h}`,
+        minHeight: preset.h,
         margin: "0 auto",
       }}
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          ref={containerRef}
-          key={currentAd.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-          className="group/ad relative overflow-hidden border border-border/40 cmd-glass"
-          style={{
-            width: "100%",
-            transition: "box-shadow 0.4s ease, border-color 0.4s ease",
-            boxShadow: isHovered ? "0 0 20px -4px hsl(var(--primary) / 0.15)" : "none",
-            borderColor: isHovered ? "hsl(var(--primary) / 0.3)" : undefined,
-          }}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          role="complementary"
-          aria-label={`Sponsored: ${currentAd.title || "Advertisement"}`}
+      {isNearViewport ? (
+        <Suspense
+          fallback={
+            <div
+              className="absolute inset-0 bg-neutral-900/30 animate-pulse border border-border/20"
+              style={{ width: "100%", height: "100%" }}
+            />
+          }
         >
-          {/* Shimmer overlay on hover */}
-          <div className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-500 group-hover/ad:opacity-100">
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 55%, transparent 60%)",
-                backgroundSize: "250% 100%",
-                animation: "ad-shimmer 2.4s ease-in-out infinite",
-              }}
-            />
-          </div>
-
-          {/* "Sponsored" label — always visible for transparency */}
-          <span
-            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] font-mono pointer-events-none"
-            style={{
-              background: "hsl(var(--background) / 0.7)",
-              color: "hsl(var(--muted-foreground) / 0.6)",
-              borderLeft: "1px solid hsl(var(--border) / 0.3)",
-              borderBottom: "1px solid hsl(var(--border) / 0.3)",
-            }}
-          >
-            Sponsored
-          </span>
-
-          {/* Close/minimize button — always tappable on mobile, hover on desktop */}
-          <button
-            onClick={handleMinimize}
-            className="absolute top-1 left-1 z-30 flex h-7 w-7 items-center justify-center bg-black/50 backdrop-blur-sm hover:bg-black/70 active:bg-black/80 transition-colors cursor-pointer opacity-60 hover:opacity-100 sm:opacity-0 sm:group-hover/ad:opacity-80"
-            aria-label="Minimize advertisement"
-            title="Minimize ad"
-          >
-            <X className="h-3 w-3 text-white/80" />
-          </button>
-
-          {/* Multi-ad rotation indicator */}
-          {hasMultiple && (
-            <div className="absolute top-0 left-7 z-20 flex gap-[3px] px-2 py-1.5">
-              {ads.map((a) => (
-                <span
-                  key={a.id}
-                  className="block h-[3px] w-3 transition-colors duration-300"
-                  style={{
-                    background: a.id === currentAd.id
-                      ? "hsl(var(--primary))"
-                      : "hsl(var(--foreground) / 0.15)",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Viewability badge — admin only, after 2s visible */}
-          {isAdmin && (
-            <AnimatePresence>
-              {viewable && (
-                <motion.span
-                  initial={{ opacity: 0, scale: 0.8, x: 8 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, x: 8 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-sm"
-                >
-                  <Eye className="h-2.5 w-2.5 text-emerald-400" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
-                    100% Viewable
-                  </span>
-                </motion.span>
-              )}
-            </AnimatePresence>
-          )}
-
-          {/* Shimmer placeholder while image loads */}
-          {!imgLoaded && (
-            <div
-              className="absolute inset-0"
-              style={{
-                height: 90,
-                background: "linear-gradient(90deg, hsl(var(--muted) / 0.08) 25%, hsl(var(--muted) / 0.18) 50%, hsl(var(--muted) / 0.08) 75%)",
-                backgroundSize: "400% 100%",
-                animation: "ad-shimmer-placeholder 1.8s ease-in-out infinite",
-              }}
-            />
-          )}
-
-          {/* Ad creative */}
-          <a
-            href={currentAd.target_url && isValidUrl(currentAd.target_url) ? currentAd.target_url : "#"}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            onClick={handleClick}
-            className="block"
-            aria-label={`Visit ${currentAd.title || "sponsor"}`}
-          >
-            {imgSrc ? (
-              <img
-                src={imgSrc}
-                alt={currentAd.title || "Advertisement"}
-                className="block mx-auto object-contain"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: position?.startsWith("banner") ? 120 : 250,
-                  width: "auto",
-                  height: "auto",
-                  opacity: imgLoaded ? 1 : 0,
-                  transform: isHovered ? "scale(1.01)" : "scale(1)",
-                  transition: "opacity 0.5s ease, transform 0.4s ease",
-                }}
-                loading="lazy"
-                decoding="async"
-                onLoad={() => { if (mountedRef.current) setImgLoaded(true); }}
-                onError={handleImgError}
-              />
-            ) : (
-              /* Placeholder before lazy load triggers */
-              <div
-                className="w-full"
-                style={{
-                  height: 90,
-                  background: "hsl(var(--muted) / 0.1)",
-                }}
-              />
-            )}
-          </a>
-
-          {/* Glassmorphic bottom border glow */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[1px]"
-            style={{
-              background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.3), transparent)",
-            }}
+          <AdSlotRuntime
+            position={position}
+            size={size}
+            isAdmin={isAdmin}
+            className={className}
+            effectiveSize={effectiveSize}
+            preset={preset}
+            onAdsLoadState={setAdsLoadState}
           />
-        </motion.div>
-      </AnimatePresence>
+        </Suspense>
+      ) : (
+        /* Reserved space shimmer to avoid layout shift (CLS) */
+        <div
+          className="absolute inset-0 bg-neutral-900/10 border border-border/10"
+          style={{ width: "100%", height: "100%" }}
+        />
+      )}
     </div>
   );
 }

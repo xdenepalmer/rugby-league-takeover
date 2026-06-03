@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // Stamp the built service worker with a unique id per build. This makes sw.js
 // byte-different on every publish, so the browser's update check reliably detects
@@ -41,5 +42,13 @@ export default defineConfig({
     }),
     react(),
     stampServiceWorker(),
+    visualizer({
+      filename: 'dist/stats.html',
+      title: 'Rugby League Takeover Bundle Visualizer',
+      template: 'treemap',
+      gzipSize: true,
+      brotliSize: true,
+      open: false,
+    }),
   ]
 });

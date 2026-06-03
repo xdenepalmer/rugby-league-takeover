@@ -80,6 +80,8 @@ export default function OrdersTab() {
     queryKey: ["myOrders", user?.email],
     queryFn: () => base44.entities.StoreOrder.filter({ user_email: user.email }, "-created_date", 100),
     enabled: Boolean(user?.email),
+    staleTime: 30000, // Cache order history for 30 seconds
+    gcTime: 300000,   // Keep cached for 5 minutes
   });
 
   if (isLoading) return (
