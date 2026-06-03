@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Save, Trash2, Plus, X, ShoppingBag, Package, DollarSign, Eye, EyeOff, Edit3, BarChart3, AlertTriangle } from "lucide-react";
 import ImageField from "./ImageField";
+import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 
 const LOW_STOCK = 5;
 const stockBadge = (qty) => {
@@ -159,6 +160,7 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
 export default function ProductsManager({ products }) {
   const [draft, setDraft] = useState(emptyProduct);
   const [showCreate, setShowCreate] = useState(false);
+  const [confirmProductId, setConfirmProductId] = useState(null);
   const queryClient = useQueryClient();
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -278,11 +280,22 @@ export default function ProductsManager({ products }) {
               product={product}
               index={index}
               onUpdate={(data) => updateMutation.mutate({ id: product.id, data })}
-              onDelete={(id) => deleteMutation.mutate(id)}
+              onDelete={(id) => setConfirmProductId(id)}
             />
           ))}
         </div>
       </div>
+
+      <AdminConfirmSheet
+        open={!!confirmProductId}
+        variant="destructive"
+        title="Delete this product?"
+        description="This permanently removes the product from the store. This can't be undone."
+        confirmLabel="Delete"
+        loading={deleteMutation.isPending}
+        onConfirm={() => confirmProductId && deleteMutation.mutate(confirmProductId, { onSuccess: () => setConfirmProductId(null) })}
+        onCancel={() => setConfirmProductId(null)}
+      />
     </div>
   );
 }
