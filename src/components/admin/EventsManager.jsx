@@ -186,7 +186,7 @@ function EventFields({ draft, setDraft }) {
 }
 
 /* ── Event Card (Existing Item) ── */
-function EventCard({ event, onSave, onDelete, saving }) {
+function EventCard({ event, onSave, onDelete, saving, index = 0 }) {
   const [draft, setDraft] = useState(event);
   const [isOpen, setIsOpen] = useState(false);
   useEffect(() => { setDraft(event); }, [event.id]);
@@ -198,8 +198,10 @@ function EventCard({ event, onSave, onDelete, saving }) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border border-border/60 bg-card/30 overflow-hidden"
+      transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.3 }}
+      className="group relative border border-border/60 bg-card/30 overflow-hidden"
     >
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
       {/* Preview header (collapsed) */}
       <button
         type="button"
@@ -359,10 +361,11 @@ export default function EventsManager({ events = [] }) {
               <p className="text-sm text-muted-foreground/30">No events yet. Add your first one above.</p>
             </div>
           )}
-          {sorted.map((event) => (
+          {sorted.map((event, index) => (
             <EventCard
               key={event.id}
               event={event}
+              index={index}
               saving={updateMutation.isPending}
               onSave={(data) => updateMutation.mutate({ id: event.id, data })}
               onDelete={(id) => deleteMutation.mutate(id)}

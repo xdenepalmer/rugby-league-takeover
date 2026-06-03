@@ -32,7 +32,7 @@ function StatCard({ icon: Icon, label, value, accent }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border border-border/40 bg-card/30 p-4"
+      className="border border-border/40 bg-card/30 cmd-glass p-4"
     >
       <div className="flex items-center justify-between">
         <div>
@@ -59,8 +59,9 @@ function OrderCard({ order, onStatusChange, onNotesChange, index }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.25), duration: 0.3 }}
-      className="border border-border/60 bg-card/30 overflow-hidden"
+      className="group relative border border-border/60 bg-card/30 overflow-hidden"
     >
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
       {/* Top accent */}
       <div className={`h-[2px] w-full ${
         paidLike.includes(order.status) ? "bg-gradient-to-r from-emerald-500/60 to-emerald-500/20"

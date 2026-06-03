@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Shield, Pencil, Check, Trash2, Plus, Upload, ChevronDown } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -69,48 +70,73 @@ export default function TeamsManager({ teams = [] }) {
     onSuccess: (count) => { refresh(); setBulkText(""); setBulkOpen(false); toast({ title: `${count} logo${count === 1 ? "" : "s"} applied` }); },
   });
 
-  const Tile = ({ team }) => {
+  const Tile = ({ team, index = 0 }) => {
     const dbTeam = byName.get(norm(team.name));
     const logo = dbTeam?.logo_url || "";
     const open = editing === team.name;
     return (
-      <div className="border border-border bg-background/40 p-3">
-        <div className="flex items-center gap-3">
-          <TeamCrest name={team.name} short={team.short_name} logo={logo} className="h-10 w-10 text-xs" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-foreground">{team.short_name || team.name}</p>
-            <p className="truncate text-[10px] text-muted-foreground">{team.name}</p>
-          </div>
-          <button type="button" onClick={() => setEditing(open ? null : team.name)} className="touch-target shrink-0 border border-border p-1.5 text-muted-foreground hover:border-primary hover:text-foreground" title="Set logo">
-            {open ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-          </button>
-          {team.custom && dbTeam && (
-            <button type="button" onClick={() => removeTeam.mutate(dbTeam.id)} className="touch-target shrink-0 border border-border p-1.5 text-muted-foreground hover:text-destructive" title="Remove team">
-              <Trash2 className="h-3.5 w-3.5" />
+      <motion.div
+        key={team.name}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05, duration: 0.3 }}
+      >
+        <div className="border border-border bg-background/40 p-3 hover:border-primary/20 transition-all duration-300 group relative">
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
+          <div className="flex items-center gap-3">
+            <TeamCrest name={team.name} short={team.short_name} logo={logo} className="h-10 w-10 text-xs" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-foreground">{team.short_name || team.name}</p>
+              <p className="truncate text-[10px] text-muted-foreground">{team.name}</p>
+            </div>
+            <button type="button" onClick={() => setEditing(open ? null : team.name)} className="touch-target shrink-0 border border-border p-1.5 text-muted-foreground hover:border-primary hover:text-foreground" title="Set logo">
+              {open ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
             </button>
+            {team.custom && dbTeam && (
+              <button type="button" onClick={() => removeTeam.mutate(dbTeam.id)} className="touch-target shrink-0 border border-border p-1.5 text-muted-foreground hover:text-destructive" title="Remove team">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {open && (
+            <div className="mt-3 border-t border-border pt-3">
+              <ImageField label="Team logo (transparent PNG works best)" value={logo} onChange={(url) => setLogo.mutate({ team, logo_url: url })} />
+            </div>
           )}
         </div>
-        {open && (
-          <div className="mt-3 border-t border-border pt-3">
-            <ImageField label="Team logo (transparent PNG works best)" value={logo} onChange={(url) => setLogo.mutate({ team, logo_url: url })} />
-          </div>
-        )}
-      </div>
+      </motion.div>
     );
   };
 
   const Group = ({ title, list }) => (
     <div>
       <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">{title} - {list.length}</p>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {list.map((team) => <Tile key={team.name} team={team} />)}
-      </div>
+      {list.length === 0 ? (
+        <div className="flex flex-col items-center justify-center border border-border/30 bg-muted/5 p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center border border-border/40 bg-muted/10 mb-3">
+            <Shield className="h-5 w-5 text-muted-foreground/40" />
+          </div>
+          <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground/60">No teams yet</p>
+          <p className="mt-1 text-xs text-muted-foreground/40">Add your first team above</p>
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((team, index) => <Tile key={team.name} team={team} index={index} />)}
+        </div>
+      )}
     </div>
   );
 
   return (
-    <section id="teams-admin" className="scroll-mt-28 border border-border bg-card p-6">
-      <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Shield className="h-6 w-6 text-primary" /> Teams &amp; Crests</h2>
+    <section id="teams-admin" className="scroll-mt-28 border border-border/60 bg-card/30 cmd-glass overflow-hidden p-6">
+      <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
+      <h2 className="mt-4 flex items-center gap-3 font-display text-2xl uppercase tracking-wide">
+        <div className="flex h-9 w-9 items-center justify-center border border-amber-500/20 bg-amber-500/10">
+          <Shield className="h-4 w-4 text-amber-400" />
+        </div>
+        Teams &amp; Crests
+        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-amber-500/30 bg-amber-500/10 text-amber-400">{teams.length}</span>
+      </h2>
       <p className="mt-2 text-sm text-muted-foreground">Every NRL &amp; Super League club is built in and always available in the match-up picker. Click the pencil to set a club's crest (until then a colour monogram is used). You don't need to add teams - just pick fixtures in Match-ups.</p>
 
       <div className="mt-4 border border-border bg-background/40">

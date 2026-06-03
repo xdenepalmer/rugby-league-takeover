@@ -35,12 +35,13 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.3 }}
-      className={`group relative overflow-hidden border transition-all ${
+      className={`group relative overflow-hidden border hover:border-primary/20 transition-all duration-300 ${
         product.is_active !== false
           ? "border-border/60 bg-card/30"
           : "border-border/30 bg-card/10 opacity-60"
       }`}
     >
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
       {!editing ? (
         /* ── Preview Mode ── */
         <div className="flex flex-col gap-4 p-4 sm:flex-row">
@@ -75,7 +76,7 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
             </div>
 
             {product.description && (
-              <p className="text-[10px] text-muted-foreground/40 line-clamp-1">{product.description}</p>
+              <p className="text-[10px] text-muted-foreground/60 line-clamp-1">{product.description}</p>
             )}
           </div>
 

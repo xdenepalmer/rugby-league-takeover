@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Swords, Pencil, Check, X, Trophy } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -102,8 +103,16 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
   const sorted = [...matchups].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
   return (
-    <section id="matchups-admin" className="scroll-mt-28 border border-border bg-card p-6">
-      <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><Swords className="h-6 w-6 text-primary" /> Match-ups</h2>
+    <section id="matchups-admin" className="scroll-mt-28 border border-border/60 bg-card/30 cmd-glass overflow-hidden">
+      <div className="h-[2px] w-full bg-gradient-to-r from-sky-500 via-sky-400 to-sky-500" />
+      <div className="p-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center border border-sky-500/20 bg-sky-500/10">
+          <Swords className="h-4 w-4 text-sky-400" />
+        </div>
+        <h2 className="font-display text-2xl uppercase tracking-wide">Match-ups</h2>
+        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-sky-500/30 bg-sky-500/10 text-sky-400">{matchups.length}</span>
+      </div>
       <p className="mt-2 text-sm text-muted-foreground">Pick which teams are playing - every NRL &amp; Super League club is built in. These show on the homepage near the countdown. After a game, edit it and switch on &ldquo;Game finished?&rdquo; to publish the result.</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
@@ -118,10 +127,19 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
       </div>
 
       <div className="mt-6 grid gap-3">
-        {sorted.length === 0 && <p className="text-sm text-muted-foreground">No match-ups yet. Add one above.</p>}
-        {sorted.map((m) => (
+        {sorted.length === 0 && (
+          <div className="flex flex-col items-center justify-center border border-border/30 bg-muted/5 p-10 text-center">
+            <div className="flex h-12 w-12 items-center justify-center border border-border/40 bg-muted/10 mb-3">
+              <Trophy className="h-5 w-5 text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground/60">No matchups yet</p>
+            <p className="mt-1 text-xs text-muted-foreground/40">Add your first match result above</p>
+          </div>
+        )}
+        <AnimatePresence mode="popLayout">
+        {sorted.map((m, index) => (
           editId === m.id ? (
-            <div key={m.id} className="grid gap-3 border border-primary/50 bg-background/40 p-4">
+            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="grid gap-3 border border-primary/50 bg-background/40 p-4">
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary"><Pencil className="h-4 w-4" /> Editing match-up</p>
               <MatchupFields value={editDraft} onChange={setEditDraft} logoFor={logoFor} />
               <div className="flex items-center gap-4">
@@ -131,9 +149,10 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
                   <Button size="mobile" onClick={saveEdit} disabled={!editDraft.home_team || !editDraft.away_team || updateMutation.isPending} className="rounded-none bg-primary hover:bg-primary/90"><Check className="mr-2 h-4 w-4" /> Save changes</Button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div key={m.id} className="flex flex-wrap items-center gap-4 border border-border p-4">
+            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="relative flex flex-wrap items-center gap-4 border border-border p-4 hover:border-primary/20 transition-all duration-300 group">
+              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
               <div className="flex items-center gap-2">
                 {m.home_logo && <img src={m.home_logo} alt={m.home_team} className="h-8 w-8 object-contain" />}
                 <span className="font-bold">{m.home_team}</span>
@@ -154,9 +173,11 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
                 <Button variant="outline" size="mobileIcon" className="rounded-none" onClick={() => startEdit(m)} title="Edit / enter result"><Pencil className="h-4 w-4" /></Button>
                 <Button variant="destructive" size="mobileIcon" className="rounded-none" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
-            </div>
+            </motion.div>
           )
         ))}
+        </AnimatePresence>
+      </div>
       </div>
     </section>
   );
