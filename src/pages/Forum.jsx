@@ -275,7 +275,7 @@ const ForumPostCard = memo(function ForumPostCard({
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary transition-colors"
+              className="mt-2 flex items-center gap-1 py-2 min-h-[44px] text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary transition-colors"
             >
               {expanded ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> Read more</>}
             </button>
@@ -354,7 +354,7 @@ const ForumPostCard = memo(function ForumPostCard({
                     <button
                       type="button"
                       onClick={() => setShowAllReplies(true)}
-                      className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline transition-colors"
+                      className="py-2 min-h-[44px] text-[9px] font-bold uppercase tracking-wider text-primary hover:underline transition-colors"
                     >
                       Show {hiddenCount} more
                     </button>
@@ -365,7 +365,7 @@ const ForumPostCard = memo(function ForumPostCard({
                   <button
                     type="button"
                     onClick={() => setShowAllReplies(false)}
-                    className="text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-primary pt-1 transition-colors"
+                    className="py-2 min-h-[44px] text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-primary transition-colors"
                   >
                     Collapse replies
                   </button>

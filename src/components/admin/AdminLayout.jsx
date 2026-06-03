@@ -123,7 +123,7 @@ function NavBadge({ count }) {
     <motion.span
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
-      className="ml-auto flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-primary px-1 text-[8px] font-bold tabular-nums text-primary-foreground"
+      className="ml-auto flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-primary px-1 text-[10px] font-bold tabular-nums text-primary-foreground"
     >
       {count > 99 ? "99+" : count}
     </motion.span>
@@ -220,7 +220,7 @@ export default function AdminLayout({ children }) {
                     <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary font-mono">
                       Command Centre
                     </p>
-                    <span className="hidden md:inline-flex items-center gap-1 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-primary border border-primary/20">
+                    <span className="hidden md:inline-flex items-center gap-1 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20">
                       <Zap className="h-2.5 w-2.5" /> Live
                     </span>
                   </div>
@@ -271,7 +271,7 @@ export default function AdminLayout({ children }) {
                   <p className="text-[10px] font-mono text-slate-200 leading-none">
                     {user?.email}
                   </p>
-                  <p className="text-[8px] uppercase tracking-wider text-primary font-bold">
+                  <p className="text-[10px] uppercase tracking-wider text-primary font-bold">
                     Administrator
                   </p>
                 </div>
@@ -359,7 +359,7 @@ export default function AdminLayout({ children }) {
                         )}
                         {/* Shortcut (hide when badge is showing) */}
                         {!(badgeKey && badgeCounts[badgeKey] > 0) && (
-                          <span className="text-[8px] font-mono text-slate-400 group-hover:text-slate-200 transition-colors">
+                          <span className="text-[10px] font-mono text-slate-400 group-hover:text-slate-200 transition-colors">
                             {shortcut}
                           </span>
                         )}
@@ -385,7 +385,7 @@ export default function AdminLayout({ children }) {
                           {label}
                         </span>
                         {badgeKey && badgeCounts[badgeKey] > 0 && (
-                          <span className="ml-2 inline-flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-primary px-1 text-[8px] font-bold tabular-nums text-primary-foreground">
+                          <span className="ml-2 inline-flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-primary px-1 text-[10px] font-bold tabular-nums text-primary-foreground">
                             {badgeCounts[badgeKey]}
                           </span>
                         )}
@@ -400,7 +400,7 @@ export default function AdminLayout({ children }) {
           {/* ── Quick Actions ── */}
           {!collapsed && (
             <div className="border-t border-border/50 px-3 py-2.5">
-              <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 Quick Actions
               </p>
               <div className="flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export default function AdminLayout({ children }) {
                     Live Data Feed
                   </span>
                 </div>
-                <div className="mt-2 flex items-center gap-1.5 text-[8px] font-mono text-muted-foreground/40">
+                <div className="mt-2 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground/40">
                   <Keyboard className="h-3 w-3" />
                   <span>Ctrl+1‑7 to navigate</span>
                 </div>
@@ -460,7 +460,7 @@ export default function AdminLayout({ children }) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-30 bg-black/65 lg:hidden"
+                className="fixed inset-0 z-[45] bg-black/65 lg:hidden"
                 onClick={() => setMobileOpen(false)}
               />
               <motion.aside
@@ -468,7 +468,7 @@ export default function AdminLayout({ children }) {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="ios-scroll fixed left-0 top-0 z-40 h-dvh w-72 max-w-[86vw] border-r border-border bg-background cmd-scrollbar overflow-y-auto pb-safe pt-safe lg:hidden"
+                className="ios-scroll fixed left-0 top-0 z-[46] h-dvh w-72 max-w-[86vw] border-r border-border bg-background cmd-scrollbar overflow-y-auto pb-safe pt-safe lg:hidden"
               >
                 <div className="flex items-center justify-between px-4 py-4 border-b border-border">
                   <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary">
@@ -507,7 +507,7 @@ export default function AdminLayout({ children }) {
 
                 {/* Mobile quick actions */}
                 <div className="mx-2 mt-2 border-t border-border/50 px-3 py-3">
-                  <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                     Quick Actions
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -671,7 +671,7 @@ export default function AdminLayout({ children }) {
                 <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
                 <span className="max-w-full truncate">{item.label}</span>
                 {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
-                  <span className="absolute right-3 top-1 flex h-4 min-w-[16px] items-center justify-center bg-primary px-1 text-[8px] font-bold text-primary-foreground">
+                  <span className="absolute right-3 top-1 flex h-4 min-w-[16px] items-center justify-center bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                     {badgeCounts[item.badgeKey] > 9 ? "9+" : badgeCounts[item.badgeKey]}
                   </span>
                 )}

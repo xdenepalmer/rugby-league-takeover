@@ -249,7 +249,7 @@ export default function CampaignCalendar({ ads, sponsors }) {
         </div>
 
         {/* ── Summary stats row ── */}
-        <div className="grid grid-cols-3 border-b border-border divide-x divide-border">
+        <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-border sm:divide-x divide-y sm:divide-y-0 divide-border">
           {[
             { label: "Active This Month", value: stats.active, icon: Zap, color: "text-emerald-400" },
             { label: "Scheduled", value: stats.scheduled, icon: Clock, color: "text-amber-400" },
@@ -259,7 +259,7 @@ export default function CampaignCalendar({ ads, sponsors }) {
               <Icon className={`h-3.5 w-3.5 ${color} shrink-0`} />
               <div>
                 <p className={`font-display text-xl tabular-nums ${color}`}>{value}</p>
-                <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-mono">
+                <p className="text-[10px] sm:text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-mono">
                   {label}
                 </p>
               </div>
@@ -270,7 +270,7 @@ export default function CampaignCalendar({ ads, sponsors }) {
         {/* ── Calendar Grid ── */}
         <div className="p-5">
           {/* Day-of-week headers */}
-          <div className="grid grid-cols-7 mb-1">
+          <div className="grid grid-cols-7 mb-1 text-[9px] sm:text-xs">
             {DAY_LABELS.map((d) => (
               <div key={d} className="text-center text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/60 font-mono py-2">
                 {d}
@@ -343,7 +343,7 @@ export default function CampaignCalendar({ ads, sponsors }) {
                           />
                         ))}
                         {dayAds.length > 6 && (
-                          <span className="text-[7px] font-mono text-muted-foreground leading-none">
+                          <span className="text-[9px] font-mono text-muted-foreground leading-none">
                             +{dayAds.length - 6}
                           </span>
                         )}
@@ -402,7 +402,7 @@ export default function CampaignCalendar({ ads, sponsors }) {
                   </div>
                   <button
                     onClick={() => setSelectedDay(null)}
-                    className="flex h-8 w-8 items-center justify-center border border-border hover:border-primary/30 hover:text-primary transition-colors"
+                    className="flex h-10 w-10 items-center justify-center border border-border hover:border-primary/30 hover:text-primary transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>

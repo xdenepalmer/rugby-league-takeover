@@ -74,9 +74,9 @@ function PhotoGrid({ urls, onRemove }) {
           <button
             type="button"
             onClick={() => onRemove(url)}
-            className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
           >
-            <X className="h-4 w-4 text-white" />
+            <X className="h-5 w-5 text-white" />
           </button>
         </div>
       ))}
