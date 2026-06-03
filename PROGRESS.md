@@ -1,6 +1,8 @@
 # PROGRESS — Rugby League Takeover
 
-_Last updated: 2026-06-03 (RLT-001X)_
+_Last updated: 2026-06-03 (RLT-001C-1b)_
+
+> **Forum policy = Option D** (auto-publish + safety). RLT-001C-1 (truthful compose copy) merged → `main` `876de8c`. ⚠️ A Base44 auto-sync commit (`29080c8`) then re-added the remote logo to `index.html`, breaking `app-shell-metadata` + `local-brand-assets` (main 40/42). **RLT-001C-1b** (this branch, off `876de8c`) restores `/icons/icon-192.png` → tests back to **42/42**; awaiting merge. **Manual Base44 Publish blocked until RLT-001C-1b merges + main is green.** Next: RLT-001C-2 (report/flag + auto-hide + rate-limit, backend).
 
 > **`main` lint gate RESTORED** via **RLT-001W** (squash-merged → `main` `258c642`). `origin/main` has since advanced to `8fafdaf` ("UX polish pass 3", still lint-green).
 > - **RLT-001X** (`bmad/story-rlt-001x-engagement-clamp`, worktree from current `origin/main` `8fafdaf`): forum `getEngagement` likes/views clamped `Math.max(0,…)` + 5 tests. **tests 42/42, `npm run lint` green, typecheck/build green.** Awaiting push/PR + merge. **Replaces RLT-001S cleanly.**

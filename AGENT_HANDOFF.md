@@ -40,7 +40,9 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 13. NEXT ACTION ROUTER
 
 ## Current story
-- **RLT-001X** — Re-applied the forum `getEngagement` clamp from current lint-green `main` (`8fafdaf`) in an **isolated worktree** (`bmad/story-rlt-001x-engagement-clamp`): likes/views `Math.max(0,…)` + 5 tests; fallback preserved. **tests 42/42, `npm run lint` green, typecheck/build green.** No tipping/slot/ads/backend changes; explicit-path staging. Commit `fix: clamp forum engagement counters`. No push. **Replaces RLT-001S cleanly.**
+- **RLT-001C-1b** — Restore local PWA install assets in `index.html` (worktree off `main` `876de8c`, branch `bmad/story-rlt-001c-1b-index-assets`). A Base44 auto-sync commit (`29080c8`) re-added the remote logo to `index.html`, breaking `app-shell-metadata`+`local-brand-assets` (main 40/42). Reverted the 2 icon `href`s to `/icons/icon-192.png` → **tests 42/42**, lint/typecheck/build green. `index.html` only; no src/backend changes; explicit-path staging. Commit `fix: restore local PWA install assets`. No push. **Manual Base44 Publish blocked until merged + green.**
+- **RLT-001C / C-1** — Policy = Option D; truthful compose copy merged (PR #8 → `main` `876de8c`).
+- **RLT-001X** — forum `getEngagement` clamp; merged into main earlier. **Refactor wave (#5/#6/#7)** merged (Forum/Slot/ScorePredictor decomposed). **RLT-001W** lint gate merged.
 - **RLT-001W** — MERGED via PR #3 squash → `main` `258c642` (RLT-001W-MERGE; trial-merge verified conflict-free + green). Lint gate restored.
 - **RLT-001V** — BLOCKED (env instability); superseded by RLT-001W. **RLT-001P/Q/R/S/T/U** superseded.
 - Manual Base44 Publish still required to take merged work live.

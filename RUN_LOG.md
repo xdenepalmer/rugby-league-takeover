@@ -130,3 +130,15 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - Explicit-path staging (no `git add -A`; symlinked `node_modules` excluded).
 - Validation (in worktree): `npm test` **42/42** · `npm run lint` **exit 0** · `npm run typecheck` · `npm run build` green.
 - **RLT-001X replaces RLT-001S cleanly**; old **RLT-001P/Q/R/S** branches remain superseded. **Manual Base44 Publish required after merge.** Commit `fix: clamp forum engagement counters`. No push.
+
+## RLT-001C — Forum publish policy decision (audit) + Option D chosen
+- Audit: forum is **auto-publish** (`submitForumPost` sets `is_published:true`; anonymous allowed) gated by ban/profanity/honeypot; reactive admin moderation exists (`ForumManager`/`BanDialog`); no user report/flag/auto-hide; compose copy falsely said "Submit for Review". Architect chose **Option D** (keep auto-publish + add safety + truthful copy). See memory [[rlt-forum-publish-policy-state]].
+
+## RLT-001C-1 — Truthful forum compose copy (MERGED)
+- Worktree branch off main; `src/components/forum/feed/ComposeSidebar.jsx` copy only: "Submit for Review"→"Post to Community", "Posts are reviewed before publishing"→"Posts appear instantly & are public — please keep it civil", success→"now visible to the community". Validation 42/42. PR #8 squash-merged → main `876de8c`.
+
+## RLT-001C-1b — Restore local PWA install assets in index.html (Claude)
+- Regression cause: concurrent Base44 auto-sync commit `29080c8 "File changes"` re-introduced the remote Base44 logo (`media.base44.com/…24c67d277_LASVEGAS.png`) into `index.html` lines 5-6, reverting RLT-001E delocalization → `app-shell-metadata` + `local-brand-assets` tests went RED (main 40/42). Confirms the "Base44 regen demotes hand-coded improvements" pattern ([[Base44 builder-bot regen demotes hand-coded improvements]]).
+- Fix: fixed-SHA worktree from main (`876de8c`), branch `bmad/story-rlt-001c-1b-index-assets`. Changed `index.html` icon + apple-touch-icon `href` back to `/icons/icon-192.png` (2 lines). Verified index.html was the ONLY brand file still holding the remote logo (HeroSection/SiteNav/SiteSettingsManager/manifest already clean). OG/Twitter/description metadata untouched (intact).
+- Validation: `npm test` **42/42** (gate restored) · `npm run lint` · `npm run typecheck` · `npm run build` all green. No backend/src/logic changes. Explicit-path staging (no `git add -A`). Commit `fix: restore local PWA install assets`. No push.
+- **Manual Base44 Publish remains BLOCKED until this merges and main tests are green.** Recommend a CI lint+test gate on Base44 auto-sync commits to stop recurring regressions.
