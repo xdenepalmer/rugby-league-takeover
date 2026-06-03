@@ -31,24 +31,22 @@ export default function PublicLayout() {
       {/* Top Site Navigation */}
       <SiteNav settings={settingsRecords[0] || {}} settingsLoading={isLoadingSettings} />
 
-      {/* Banner Top Ad Slot */}
-      <div className="w-full flex justify-center">
-        <AdSlot position="banner-top" size="leaderboard" className="w-full max-w-5xl" />
-      </div>
 
       {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
+        {/* Banner Top Ad Slot — not on Home (has hero) */}
+        {!isHome && (
+          <div className="w-full flex justify-center px-4 py-3 bg-background/50">
+            <AdSlot position="banner-top" size="leaderboard" className="w-full max-w-5xl" />
+          </div>
+        )}
+
         <Outlet />
-      </div>
 
-      {/* Banner Bottom Ad Slot */}
-      <div className="w-full flex justify-center">
-        <AdSlot position="banner-bottom" size="leaderboard" className="w-full max-w-5xl" />
-      </div>
-
-      {/* Footer Ad Slot */}
-      <div className="w-full flex justify-center">
-        <AdSlot position="footer" size="leaderboard" className="w-full max-w-5xl" />
+        {/* Banner Bottom Ad Slot */}
+        <div className="w-full flex justify-center px-4 py-4">
+          <AdSlot position="banner-bottom" size="leaderboard" className="w-full max-w-5xl" />
+        </div>
       </div>
 
       {/* Site-wide footer (non-Home pages — Home renders its own rich footer) */}
