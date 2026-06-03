@@ -41,7 +41,7 @@ function ProductCard({ product, onUpdate, onDelete, index }) {
           : "border-border/30 bg-card/10 opacity-60"
       }`}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-primary/[0.02] via-white/[0.05] to-transparent" />
       {!editing ? (
         /* ── Preview Mode ── */
         <div className="flex flex-col gap-4 p-4 sm:flex-row">

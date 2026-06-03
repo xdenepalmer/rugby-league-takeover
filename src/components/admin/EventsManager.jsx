@@ -201,7 +201,7 @@ function EventCard({ event, onSave, onDelete, saving, index = 0 }) {
       transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.3 }}
       className="group relative border border-border/60 bg-card/30 overflow-hidden"
     >
-      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-primary/[0.02] via-white/[0.05] to-transparent" />
       {/* Preview header (collapsed) */}
       <button
         type="button"

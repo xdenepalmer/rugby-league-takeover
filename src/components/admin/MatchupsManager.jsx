@@ -103,15 +103,20 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
   const sorted = [...matchups].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
   return (
-    <section id="matchups-admin" className="scroll-mt-28 border border-border/60 bg-card/30 cmd-glass overflow-hidden">
-      <div className="h-[2px] w-full bg-gradient-to-r from-sky-500 via-sky-400 to-sky-500" />
-      <div className="p-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center border border-sky-500/20 bg-sky-500/10">
-          <Swords className="h-4 w-4 text-sky-400" />
+    <section id="matchups-admin" className="scroll-mt-28 border border-border/60 bg-card/30 cmd-glass overflow-hidden relative">
+      {/* Accent bar with glow */}
+      <div className="h-1 w-full bg-gradient-to-r from-sky-500 via-sky-400 to-sky-500" />
+      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-sky-500/5 to-transparent pointer-events-none" />
+      <div className="p-6 relative">
+      <div className="flex items-center gap-3 mb-1">
+        <div className="flex h-10 w-10 items-center justify-center border border-sky-500/30 bg-sky-500/10 shadow-[0_0_15px_rgba(14,165,233,0.15)]">
+          <Swords className="h-5 w-5 text-sky-400" />
         </div>
-        <h2 className="font-display text-2xl uppercase tracking-wide">Match-ups</h2>
-        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-sky-500/30 bg-sky-500/10 text-sky-400">{matchups.length}</span>
+        <div>
+          <h2 className="font-display text-2xl uppercase tracking-wide">Match-ups</h2>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-sky-400/60">Game Schedule &amp; Results</p>
+        </div>
+        <span className="ml-auto px-3 py-1 text-xs font-bold uppercase tracking-wider border border-sky-500/30 bg-sky-500/10 text-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.1)]">{matchups.length} {matchups.length === 1 ? 'match' : 'matches'}</span>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">Pick which teams are playing - every NRL &amp; Super League club is built in. These show on the homepage near the countdown. After a game, edit it and switch on &ldquo;Game finished?&rdquo; to publish the result.</p>
 
@@ -151,8 +156,8 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
               </div>
             </motion.div>
           ) : (
-            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="relative flex flex-wrap items-center gap-4 border border-border p-4 hover:border-primary/20 transition-all duration-300 group">
-              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
+            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="relative flex flex-wrap items-center gap-4 border border-border/50 p-4 hover:border-sky-500/30 hover:bg-sky-500/[0.03] transition-all duration-300 group" style={{ borderLeft: m.status === 'final' ? '3px solid rgb(16,185,129)' : '3px solid rgb(14,165,233)' }}>
+              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-sky-500/[0.03] via-white/[0.04] to-transparent" />
               <div className="flex items-center gap-2">
                 {m.home_logo && <img src={m.home_logo} alt={m.home_team} className="h-8 w-8 object-contain" />}
                 <span className="font-bold">{m.home_team}</span>

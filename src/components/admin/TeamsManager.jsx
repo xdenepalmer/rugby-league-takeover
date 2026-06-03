@@ -81,8 +81,8 @@ export default function TeamsManager({ teams = [] }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05, duration: 0.3 }}
       >
-        <div className="border border-border bg-background/40 p-3 hover:border-primary/20 transition-all duration-300 group relative">
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
+        <div className="border border-border/50 bg-background/40 p-3 hover:border-amber-500/30 hover:bg-amber-500/[0.03] transition-all duration-300 group relative" style={{ borderLeft: '3px solid rgb(245,158,11)' }}>
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-amber-500/[0.03] via-white/[0.04] to-transparent" />
           <div className="flex items-center gap-3">
             <TeamCrest name={team.name} short={team.short_name} logo={logo} className="h-10 w-10 text-xs" />
             <div className="min-w-0 flex-1">
@@ -128,15 +128,21 @@ export default function TeamsManager({ teams = [] }) {
   );
 
   return (
-    <section id="teams-admin" className="scroll-mt-28 border border-border/60 bg-card/30 cmd-glass overflow-hidden p-6">
-      <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
-      <h2 className="mt-4 flex items-center gap-3 font-display text-2xl uppercase tracking-wide">
-        <div className="flex h-9 w-9 items-center justify-center border border-amber-500/20 bg-amber-500/10">
-          <Shield className="h-4 w-4 text-amber-400" />
+    <section id="teams-admin" className="scroll-mt-28 border border-border/60 bg-card/30 cmd-glass overflow-hidden relative">
+      {/* Accent bar with glow */}
+      <div className="h-1 w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
+      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-amber-500/5 to-transparent pointer-events-none" />
+      <div className="p-6 relative">
+      <div className="flex items-center gap-3 mb-1">
+        <div className="flex h-10 w-10 items-center justify-center border border-amber-500/30 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+          <Shield className="h-5 w-5 text-amber-400" />
         </div>
-        Teams &amp; Crests
-        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-amber-500/30 bg-amber-500/10 text-amber-400">{teams.length}</span>
-      </h2>
+        <div>
+          <h2 className="font-display text-2xl uppercase tracking-wide">Teams &amp; Crests</h2>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-amber-400/60">Club Roster &amp; Branding</p>
+        </div>
+        <span className="ml-auto px-3 py-1 text-xs font-bold uppercase tracking-wider border border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]">{teams.length} {teams.length === 1 ? 'team' : 'teams'}</span>
+      </div>
       <p className="mt-2 text-sm text-muted-foreground">Every NRL &amp; Super League club is built in and always available in the match-up picker. Click the pencil to set a club's crest (until then a colour monogram is used). You don't need to add teams - just pick fixtures in Match-ups.</p>
 
       <div className="mt-4 border border-border bg-background/40">
@@ -171,6 +177,7 @@ export default function TeamsManager({ teams = [] }) {
         <Button variant="outline" size="mobile" className="rounded-none" disabled={!custom.trim() || addCustom.isPending} onClick={() => addCustom.mutate(custom.trim())}>
           <Plus className="mr-2 h-4 w-4" /> Add custom team
         </Button>
+      </div>
       </div>
     </section>
   );

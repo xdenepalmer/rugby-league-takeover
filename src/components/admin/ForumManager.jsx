@@ -28,7 +28,7 @@ function PostCard({ post, onTogglePublished, onTogglePin, onDelete, onBanEmail, 
             : "border-border/60 bg-card/30 hover:border-border"
       }`}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-primary/[0.02] via-white/[0.05] to-transparent" />
       {/* Top accent */}
       <div className={`h-[2px] w-full bg-gradient-to-r ${
         isPending ? "from-amber-500/60 to-amber-500/20" : isPinned ? "from-primary/60 to-primary/20" : "from-border to-border/30"
