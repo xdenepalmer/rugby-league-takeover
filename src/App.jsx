@@ -12,9 +12,9 @@ import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import InstallAppPrompt from '@/components/InstallAppPrompt';
 import PwaUpdatePrompt from '@/components/PwaUpdatePrompt';
+import Home from "./pages/Home";
 
 // Lazy-loaded pages
-const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Account = lazy(() => import("./pages/Account"));
 const Store = lazy(() => import("./pages/Store"));
