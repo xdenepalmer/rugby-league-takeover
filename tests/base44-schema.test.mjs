@@ -13,7 +13,7 @@ test("schemas keep metadata fields used by account and moderation flows", () => 
     assert.ok(forum.properties[field], `ForumPost is missing ${field}`);
   }
 
-  for (const field of ["user_email", "user_id", "ip_address"]) {
+  for (const field of ["user_email", "user_id", "ip_address", "trip_details"]) {
     assert.ok(registration.properties[field], `InterestRegistration is missing ${field}`);
   }
 

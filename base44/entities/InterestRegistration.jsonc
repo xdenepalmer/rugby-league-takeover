@@ -32,6 +32,10 @@
       ],
       "description": "Rugby league team supported"
     },
+    "trip_details": {
+      "type": "string",
+      "description": "Free-text trip requirements: what trip, how many days, hotel type, customisation"
+    },
     "consent_to_contact": {
       "type": "boolean",
       "default": false,

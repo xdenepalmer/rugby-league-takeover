@@ -122,6 +122,7 @@ export function normalizeInterestRegistration(input, timestamp = new Date().toIS
     email,
     postcode: trimToLength(input.postcode, 20),
     team_supported: team,
+    trip_details: trimToLength(input.trip_details, 1000),
     consent_to_contact: true,
     consent_timestamp: timestamp,
     source: "homepage_travel_form",
