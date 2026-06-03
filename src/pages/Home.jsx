@@ -9,74 +9,138 @@ import BackgroundVideo from "@/components/public/BackgroundVideo";
 import CountdownTimer from "@/components/public/CountdownTimer";
 import MatchupsSection from "@/components/public/MatchupsSection";
 import LazySection from "@/components/public/LazySection";
-import { Users, MessageSquare, ShoppingBag, Radio } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
+
+function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, tone = "primary" }) {
+  const toneClass = {
+    primary: "border-primary/25 bg-primary/[0.045] text-primary hover:border-primary/55 hover:bg-primary/[0.075]",
+    accent: "border-accent/25 bg-accent/[0.045] text-accent hover:border-accent/55 hover:bg-accent/[0.075]",
+    emerald: "border-emerald-400/25 bg-emerald-400/[0.045] text-emerald-400 hover:border-emerald-400/55 hover:bg-emerald-400/[0.075]",
+    blue: "border-sky-400/25 bg-sky-400/[0.045] text-sky-300 hover:border-sky-400/55 hover:bg-sky-400/[0.075]",
+  }[tone];
+
+  const content = (
+    <>
+      <div className="flex min-w-0 items-start gap-3">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center border bg-background/45 ${toneClass}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-muted-foreground/70">{eyebrow}</p>
+          <h3 className="mt-1 font-display text-xl uppercase leading-none tracking-wide text-foreground sm:text-2xl">{title}</h3>
+          <p className="mt-2 text-sm leading-5 text-muted-foreground">{body}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-3">
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-foreground">{action}</span>
+        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+      </div>
+    </>
+  );
+
+  const className = `group block min-w-0 border p-4 text-left transition-all duration-200 ${toneClass}`;
+
+  if (to) {
+    return (
+      <Link to={to} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <a href={href} className={className}>
+      {content}
+    </a>
+  );
+}
 
 function LiveHudDashboard() {
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 md:px-8 relative z-20">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Registration count HUD */}
-        <div className="relative border border-border/80 bg-card/40 p-4 cmd-glass overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="absolute top-0 right-0 p-1 bg-primary/10 border-l border-b border-border/40 text-[7px] font-mono tracking-widest text-primary uppercase font-bold">SYS // READY</div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 border border-border bg-background/50 text-primary">
-              <Users className="h-4 w-4" />
-            </div>
+    <section className="relative z-20 mx-auto max-w-7xl px-5 py-8 md:px-8" aria-labelledby="takeover-actions-heading">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+        <div className="border border-border/70 bg-card/45 p-4 cmd-glass sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Supporter Travel</p>
-              <p className="text-xs font-bold text-foreground">Interest Registration Open</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Takeover Command</p>
+              <h2 id="takeover-actions-heading" className="mt-2 font-display text-3xl uppercase leading-none tracking-wide text-foreground sm:text-4xl">
+                Plan your Vegas week
+              </h2>
             </div>
+            <div className="flex items-center gap-2 border border-border/50 bg-background/45 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+              <Users className="h-3.5 w-3.5 text-accent" />
+              Fan hub live
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PublicActionCard
+              icon={Plane}
+              eyebrow="Travel"
+              title="Register interest"
+              body="Get ready for flights, hotels, events, and supporter package drops."
+              action="View travel"
+              href="#travel"
+              tone="primary"
+            />
+            <PublicActionCard
+              icon={CalendarDays}
+              eyebrow="Events"
+              title="Map the meetups"
+              body="See what is coming for parties, stadium days, and fan gatherings."
+              action="See events"
+              href="#events"
+              tone="accent"
+            />
+            <PublicActionCard
+              icon={ShoppingBag}
+              eyebrow="Merch"
+              title="Shop the drop"
+              body="Browse official supporter gear and track orders from your profile."
+              action="Open store"
+              to="/store"
+              tone="emerald"
+            />
+            <PublicActionCard
+              icon={MessageSquare}
+              eyebrow="Community"
+              title="Join the forum"
+              body="Ask questions, find other fans, and plan your Vegas group chat."
+              action="Open forum"
+              to="/forum"
+              tone="blue"
+            />
           </div>
         </div>
 
-        {/* Community activity HUD */}
-        <div className="relative border border-border/80 bg-card/40 p-4 cmd-glass overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="absolute top-0 right-0 p-1 bg-accent/10 border-l border-b border-border/40 text-[7px] font-mono tracking-widest text-accent uppercase font-bold">COMM // LIVE</div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 border border-border bg-background/50 text-accent">
-              <MessageSquare className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Vegas Fan Forum</p>
-              <p className="text-xs font-bold text-foreground">Join community debates</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Merch drop HUD */}
-        <div className="relative border border-border/80 bg-card/40 p-4 cmd-glass overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="absolute top-0 right-0 p-1 bg-emerald-500/10 border-l border-b border-border/40 text-[7px] font-mono tracking-widest text-emerald-400 uppercase font-bold">SHOP // LIVE</div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 border border-border bg-background/50 text-emerald-400">
-              <ShoppingBag className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Exclusive Merch</p>
-              <p className="text-xs font-bold text-foreground">2026 Collection Available</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Facebook group HUD */}
         <a
           href="https://www.facebook.com/groups/663237792349090"
           target="_blank"
           rel="noopener noreferrer"
-          className="relative border border-[#1877F2]/20 bg-[#1877F2]/[0.02] p-4 hover:bg-[#1877F2]/[0.06] transition-colors overflow-hidden group block text-left cmd-glass"
+          className="group flex min-h-full flex-col justify-between border border-[#1877F2]/25 bg-[#1877F2]/[0.035] p-5 text-left transition-colors hover:bg-[#1877F2]/[0.07] cmd-glass"
         >
-          <div className="absolute top-0 right-0 p-1 bg-[#1877F2]/10 border-l border-b border-[#1877F2]/20 text-[7px] font-mono tracking-widest text-[#1877F2] uppercase font-bold">FB // 16.8K FANS</div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 border border-[#1877F2]/30 bg-background/50 text-[#1877F2]">
-              <Radio className="h-4 w-4" />
+          <div>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="flex h-12 w-12 items-center justify-center border border-[#1877F2]/35 bg-background/45 text-[#1877F2]">
+                <Radio className="h-5 w-5" />
+              </div>
+              <span className="border border-[#1877F2]/25 bg-[#1877F2]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#8dbbff]">
+                16.8k fans
+              </span>
             </div>
-            <div>
-              <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Vegas Facebook Group</p>
-              <p className="text-xs font-bold text-foreground group-hover:text-[#1877F2] transition-colors">Join 16,800+ Members</p>
-            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#8dbbff]">Facebook group</p>
+            <h3 className="mt-2 font-display text-3xl uppercase leading-none tracking-wide text-foreground">Meet the travelling crowd</h3>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              Jump into the bigger Las Vegas fan conversation for tickets, meetups, travel tips, and game-week chatter.
+            </p>
+          </div>
+          <div className="mt-5 flex items-center justify-between border-t border-[#1877F2]/20 pt-4">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-foreground">Join group</span>
+            <ArrowRight className="h-4 w-4 text-[#8dbbff] transition-transform duration-200 group-hover:translate-x-1" />
           </div>
         </a>
       </div>
-    </div>
+    </section>
   );
 }
 

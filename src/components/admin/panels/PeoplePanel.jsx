@@ -50,7 +50,7 @@ export default function PeoplePanel() {
       </motion.div>
 
       {/* Tabs navigation bar */}
-      <div className="flex border-b border-border/60 overflow-x-auto cmd-scrollbar bg-secondary/15 backdrop-blur-sm p-1">
+      <div className="flex border-b border-border/60 overflow-x-auto cmd-scrollbar bg-secondary/15 backdrop-blur-sm p-1" role="tablist" aria-label="People tabs">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -58,6 +58,8 @@ export default function PeoplePanel() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={isActive}
               className={`relative flex items-center gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 select-none ${
                 isActive ? "text-foreground font-extrabold" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -80,7 +82,7 @@ export default function PeoplePanel() {
       </div>
 
       {/* Active Tab Panel */}
-      <div className="min-h-[250px]">
+      <div className="min-h-[250px]" role="tabpanel">
         <AnimatePresence mode="wait">
           {activeTab === "users" && (
             <motion.div

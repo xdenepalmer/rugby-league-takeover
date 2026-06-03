@@ -53,6 +53,20 @@ export default function PublicLayout() {
     } catch {}
   };
 
+  const bottomTabBase = "ios-tabbar-item mx-0.5 flex flex-1 flex-col items-center justify-center gap-1 border px-1 py-1 text-[9px] font-extrabold uppercase tracking-wide transition-all cursor-pointer min-w-0";
+  const bottomTabClass = (isActive) =>
+    `${bottomTabBase} ${
+      isActive
+        ? "border-primary/25 bg-primary/10 text-foreground shadow-[0_0_18px_rgba(249,115,22,0.16)]"
+        : "border-transparent text-muted-foreground/80 hover:border-border/50 hover:bg-muted/20 hover:text-foreground"
+    }`;
+  const adminBottomTabClass = (isActive) =>
+    `${bottomTabBase} ${
+      isActive
+        ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.14)]"
+        : "border-transparent text-muted-foreground/80 hover:border-border/50 hover:bg-muted/20 hover:text-foreground"
+    }`;
+
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
       {/* Skip to content — visible only when focused (keyboard users) */}
@@ -110,22 +124,18 @@ export default function PublicLayout() {
 
       {/* iOS-Style Public Mobile Bottom Tab Bar */}
       <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto" aria-label="Main navigation">
-        <div className="flex items-center justify-around px-2 py-1.5 w-full">
+        <div className="mx-auto flex w-full max-w-md items-center justify-around px-1.5 pt-1.5">
           <NavLink
             to="/"
             aria-label="Home"
             onMouseEnter={() => prefetchRoute("/")}
             onTouchStart={() => prefetchRoute("/")}
-            className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
-                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
-              }`
-            }
+            className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
               <>
-                <Home className="h-5 w-5" />
-                <span>Home</span>
+                <Home className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                <span className="max-w-full truncate">Home</span>
                 {isActive && (
                   <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                 )}
@@ -137,10 +147,11 @@ export default function PublicLayout() {
             type="button"
             onClick={() => setIsPlanOpen(true)}
             aria-label="Plan Trip"
-            className="ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer text-muted-foreground/80 hover:text-foreground"
+            aria-haspopup="dialog"
+            className={`${bottomTabBase} border-accent/20 bg-accent/10 text-accent shadow-[0_0_16px_rgba(217,119,6,0.14)] hover:bg-accent/15`}
           >
             <Compass className="h-5 w-5" />
-            <span>Plan</span>
+            <span className="max-w-full truncate">Plan</span>
           </button>
 
           <NavLink
@@ -148,16 +159,12 @@ export default function PublicLayout() {
             aria-label="Shop"
             onMouseEnter={() => prefetchRoute("/store")}
             onTouchStart={() => prefetchRoute("/store")}
-            className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
-                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
-              }`
-            }
+            className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
               <>
-                <ShoppingBag className="h-5 w-5" />
-                <span>Shop</span>
+                <ShoppingBag className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                <span className="max-w-full truncate">Shop</span>
                 {isActive && (
                   <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                 )}
@@ -170,16 +177,12 @@ export default function PublicLayout() {
             aria-label="Forum"
             onMouseEnter={() => prefetchRoute("/forum")}
             onTouchStart={() => prefetchRoute("/forum")}
-            className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
-                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
-              }`
-            }
+            className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
               <>
-                <MessageSquare className="h-5 w-5" />
-                <span>Forum</span>
+                <MessageSquare className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                <span className="max-w-full truncate">Forum</span>
                 {isActive && (
                   <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                 )}
@@ -192,11 +195,7 @@ export default function PublicLayout() {
             aria-label="Account"
             onMouseEnter={() => prefetchRoute("/account")}
             onTouchStart={() => prefetchRoute("/account")}
-            className={({ isActive }) =>
-              `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
-                isActive ? "text-primary" : "text-muted-foreground/80 hover:text-foreground"
-              }`
-            }
+            className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
               <>
@@ -204,14 +203,15 @@ export default function PublicLayout() {
                   <img
                     src={user.avatar_url}
                     alt="Account"
+                    decoding="async"
                     className={`h-5 w-5 rounded-none object-cover border transition-all ${
                       isActive ? "border-primary" : "border-border/60"
                     }`}
                   />
                 ) : (
-                  <User className="h-5 w-5" />
+                  <User className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
                 )}
-                <span>Account</span>
+                <span className="max-w-full truncate">Account</span>
                 {isActive && (
                   <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                 )}
@@ -225,16 +225,12 @@ export default function PublicLayout() {
               aria-label="Admin dashboard"
               onMouseEnter={() => prefetchRoute("/admin")}
               onTouchStart={() => prefetchRoute("/admin")}
-              className={({ isActive }) =>
-                `ios-tabbar-item flex flex-col items-center justify-center flex-1 gap-1 py-1 text-[10px] font-bold uppercase tracking-wide transition-all cursor-pointer ${
-                  isActive ? "text-emerald-400" : "text-muted-foreground/80 hover:text-foreground"
-                }`
-              }
+              className={({ isActive }) => adminBottomTabClass(isActive)}
             >
               {({ isActive }) => (
                 <>
                   <ShieldCheck className="h-5 w-5" />
-                  <span>Admin</span>
+                  <span className="max-w-full truncate">Admin</span>
                   {isActive && (
                     <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
                   )}

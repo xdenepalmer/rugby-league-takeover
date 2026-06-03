@@ -361,9 +361,18 @@ export default function Account() {
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Account console</p>
+                <p className="mt-1 text-xs text-muted-foreground">Manage your orders, posts, profile, travel interest, and security.</p>
+              </div>
+              <span className="hidden border border-border/50 bg-background/45 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:inline-flex">
+                {tabsList.find((tab) => tab.value === activeTab)?.label}
+              </span>
+            </div>
             
             {/* Pill Trigger list with custom motion underlines */}
-            <TabsList className="w-full flex h-auto md:flex-wrap flex-nowrap justify-start gap-2 bg-transparent p-0 rounded-none select-none overflow-x-auto cmd-scrollbar pb-2">
+            <TabsList className="account-tab-rail -mx-5 flex h-auto w-[calc(100%+2.5rem)] flex-nowrap justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-5 pb-2 md:mx-0 md:w-full md:flex-wrap md:px-0">
               {tabsList.map((tab) => {
                 const IconComponent = tab.icon;
                 const isActive = activeTab === tab.value;
@@ -372,7 +381,7 @@ export default function Account() {
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="relative shrink-0 rounded-none border border-border bg-card/20 backdrop-blur-sm px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-300 transition-all duration-300 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground"
+                    className="relative min-h-11 shrink-0 rounded-none border border-border bg-card/20 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-300 backdrop-blur-sm transition-all duration-300 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground sm:px-5"
                   >
                     <div className="flex items-center gap-2 relative z-10">
                       <IconComponent className={`h-4 w-4 ${isActive ? "text-primary" : "text-slate-400"}`} />
@@ -398,7 +407,7 @@ export default function Account() {
             </TabsList>
 
             {/* Tab content inside glassmorphic panels */}
-            <div className="mt-6 border border-border bg-card/40 cmd-glass p-6 shadow-sm">
+            <div className="mt-6 border border-border bg-card/40 p-4 shadow-sm cmd-glass sm:p-6">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}

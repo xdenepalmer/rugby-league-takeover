@@ -30,7 +30,7 @@ function useAnimatedCount(target, duration = 800) {
 }
 
 /* ─── KPI Card Component ────────────────────────────────── */
-function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, delay = 0 }) {
+function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, trendBadge, color, delay = 0 }) {
   const displayVal = useAnimatedCount(typeof value === "number" ? value : 0);
   const isPositive = trend >= 0;
 
@@ -51,6 +51,11 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, color, 
             <p className="font-display text-3xl tabular-nums leading-none text-foreground">
               {typeof value === "string" ? value : displayVal.toLocaleString()}
             </p>
+            {trendBadge && (
+              <span className={`inline-block mt-1 text-[9px] font-bold tabular-nums ${trendBadge.color}`}>
+                {trendBadge.text}
+              </span>
+            )}
           </div>
           <div className={`p-2 border border-border/50 bg-muted/30 transition-colors group-hover:border-primary/30`}>
             <Icon className="h-5 w-5 text-primary" />
@@ -135,6 +140,41 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   }, []);
+
+  /* ── 7-day trend calculation ── */
+  const calcTrend = (items) => {
+    const now = Date.now();
+    const weekMs = 7 * 86400000;
+    const thisWeek = items.filter((i) => i.created_date && new Date(i.created_date).getTime() > now - weekMs).length;
+    const prevWeek = items.filter((i) => {
+      if (!i.created_date) return false;
+      const t = new Date(i.created_date).getTime();
+      return t > now - 2 * weekMs && t <= now - weekMs;
+    }).length;
+    const diff = thisWeek - prevWeek;
+    if (diff > 0) return { text: `\u2191 ${thisWeek} this week`, color: "text-emerald-400" };
+    if (diff < 0) return { text: `\u2193 ${thisWeek} this week`, color: "text-red-400" };
+    if (thisWeek > 0) return { text: `\u2192 ${thisWeek} this week`, color: "text-muted-foreground/50" };
+    return { text: `\u2192 Steady`, color: "text-muted-foreground/50" };
+  };
+  const calcRevenueTrend = () => {
+    const now = Date.now();
+    const weekMs = 7 * 86400000;
+    const thisWeekRev = paidOrders.filter((o) => o.created_date && new Date(o.created_date).getTime() > now - weekMs).reduce((s, o) => s + Number(o.total_aud || 0), 0);
+    const prevWeekRev = paidOrders.filter((o) => {
+      if (!o.created_date) return false;
+      const t = new Date(o.created_date).getTime();
+      return t > now - 2 * weekMs && t <= now - weekMs;
+    }).reduce((s, o) => s + Number(o.total_aud || 0), 0);
+    const diff = thisWeekRev - prevWeekRev;
+    if (diff > 0) return { text: `\u2191 +$${thisWeekRev.toFixed(0)} this week`, color: "text-emerald-400" };
+    if (diff < 0) return { text: `\u2193 $${thisWeekRev.toFixed(0)} this week`, color: "text-red-400" };
+    if (thisWeekRev > 0) return { text: `\u2192 $${thisWeekRev.toFixed(0)} this week`, color: "text-muted-foreground/50" };
+    return { text: `\u2192 Steady`, color: "text-muted-foreground/50" };
+  };
+  const regsTrend = useMemo(() => calcTrend(registrations), [registrations]);
+  const ordersTrend = useMemo(() => calcTrend(orders), [orders]);
+  const revenueTrend = useMemo(() => calcRevenueTrend(), [paidOrders]);
 
   // Registrations chart data (real data, 7-day default)
   const registrationsByDate = useMemo(() => registrations.reduce((acc, reg) => {
@@ -264,6 +304,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Total Revenue"
           value={`$${totalRevenue.toFixed(2)}`}
           subtext="AUD via Stripe"
+          trendBadge={revenueTrend}
           color="bg-gradient-to-r from-accent to-accent/60"
           delay={0.05}
         />
@@ -272,6 +313,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Interest Signups"
           value={counts.registrations}
           subtext="Ticket drop registrations"
+          trendBadge={regsTrend}
           color="bg-gradient-to-r from-primary to-primary/60"
           delay={0.1}
         />
@@ -280,6 +322,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           label="Merch Orders"
           value={counts.orders}
           subtext={`${paidOrders.length} paid`}
+          trendBadge={ordersTrend}
           color="bg-gradient-to-r from-emerald-500 to-emerald-500/60"
           delay={0.15}
         />

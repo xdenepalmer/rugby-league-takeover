@@ -86,30 +86,93 @@ function StatCard({ icon: Icon, label, value, accent }) {
   );
 }
 
-/* ── Fulfillment Status Stepper ── */
-function FulfillmentStepper({ currentStatus }) {
-  const steps = [
-    { key: "paid", label: "Paid" },
-    { key: "packing", label: "Packing" },
-    { key: "shipped", label: "Shipped" },
-    { key: "completed", label: "Delivered" },
-  ];
+/* ── Order Status Progress Stepper ── */
+const STEPPER_STEPS = [
+  { key: "pending",   label: "Pending",   icon: Clock,        matchStatuses: ["pending"] },
+  { key: "paid",      label: "Confirmed", icon: CheckCircle2, matchStatuses: ["paid", "packing"] },
+  { key: "shipped",   label: "Shipped",   icon: Truck,        matchStatuses: ["shipped"] },
+  { key: "completed", label: "Delivered", icon: PackageCheck,  matchStatuses: ["completed"] },
+];
 
-  const currentIdx = steps.findIndex((s) => s.key === currentStatus);
+function getStepperIndex(status) {
+  const idx = STEPPER_STEPS.findIndex((s) => s.matchStatuses.includes(status));
+  return idx >= 0 ? idx : -1;
+}
+
+function OrderStatusStepper({ order }) {
+  const currentStatus = order.status || "pending";
+  const isCancelled = currentStatus === "cancelled" || currentStatus === "refunded";
+  const currentIdx = getStepperIndex(currentStatus);
+
+  // Gather timestamps for each step
+  const stepTimestamps = {
+    pending:   order.created_date,
+    paid:      order.payment_verified_at || (["paid","packing","shipped","completed"].includes(currentStatus) ? order.created_date : null),
+    shipped:   order.shipped_at,
+    completed: order.delivered_at,
+  };
+
+  if (isCancelled) return null;
 
   return (
-    <div className="flex items-center gap-1 w-full">
-      {steps.map((step, i) => {
-        const isActive = i <= currentIdx;
+    <div className="flex items-start w-full gap-0">
+      {STEPPER_STEPS.map((step, i) => {
+        const StepIcon = step.icon;
+        const isCompleted = i < currentIdx;
         const isCurrent = i === currentIdx;
+        const isFuture = i > currentIdx;
+        const ts = stepTimestamps[step.key];
+
         return (
           <React.Fragment key={step.key}>
-            <div className={`flex items-center gap-1.5 ${isCurrent ? "text-primary" : isActive ? "text-emerald-400" : "text-muted-foreground/30"}`}>
-              <div className={`h-2 w-2 rounded-full ${isCurrent ? "bg-primary ring-2 ring-primary/30" : isActive ? "bg-emerald-400" : "bg-muted-foreground/20"}`} />
-              <span className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap">{step.label}</span>
+            <div className="flex flex-col items-center min-w-0 flex-1">
+              {/* Circle / icon */}
+              <div
+                className={`relative flex items-center justify-center h-7 w-7 rounded-full border-2 transition-all duration-500 ${
+                  isCompleted
+                    ? "bg-emerald-500 border-emerald-500 text-white"
+                    : isCurrent
+                      ? "bg-primary border-primary text-white ring-4 ring-primary/20"
+                      : "bg-muted/10 border-border/40 text-muted-foreground/30"
+                }`}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <StepIcon className="h-3.5 w-3.5" />
+                )}
+              </div>
+
+              {/* Label */}
+              <span
+                className={`mt-1.5 text-[8px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors duration-300 ${
+                  isCompleted
+                    ? "text-emerald-400"
+                    : isCurrent
+                      ? "text-primary"
+                      : "text-muted-foreground/30"
+                }`}
+              >
+                {step.label}
+              </span>
+
+              {/* Timestamp */}
+              {ts && !isFuture && (
+                <span className="mt-0.5 text-[7px] font-mono text-muted-foreground/30 whitespace-nowrap">
+                  {format(new Date(ts), "dd MMM HH:mm")}
+                </span>
+              )}
             </div>
-            {i < steps.length - 1 && (
-              <div className={`flex-1 h-px ${isActive && i < currentIdx ? "bg-emerald-400" : "bg-border/30"}`} />
+
+            {/* Connector line */}
+            {i < STEPPER_STEPS.length - 1 && (
+              <div className="flex items-center pt-3.5 flex-shrink-0" style={{ width: "24px" }}>
+                <div
+                  className={`h-[2px] w-full transition-colors duration-500 ${
+                    i < currentIdx ? "bg-emerald-500" : "bg-border/30"
+                  }`}
+                />
+              </div>
             )}
           </React.Fragment>
         );
@@ -117,6 +180,7 @@ function FulfillmentStepper({ currentStatus }) {
     </div>
   );
 }
+
 
 /* ── Order Timeline ── */
 function OrderTimeline({ timeline }) {
@@ -396,10 +460,10 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
               className="overflow-hidden"
             >
               <div className="border-t border-border/20 p-4 md:p-5 space-y-4">
-                {/* Fulfillment stepper */}
-                {paidLike.includes(order.status) && (
+                {/* Order Status Stepper */}
+                {order.status !== "cancelled" && order.status !== "refunded" && (
                   <div className="border border-border/20 bg-muted/5 p-3">
-                    <FulfillmentStepper currentStatus={order.status} />
+                    <OrderStatusStepper order={order} />
                   </div>
                 )}
 

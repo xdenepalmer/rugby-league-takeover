@@ -1,10 +1,10 @@
 /* ━━━ Thread Detail Modal ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  * Extracted verbatim from src/pages/Forum.jsx (behaviour-preserving).
  */
-import React, { useEffect, memo } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Send, MessageCircle, X, Eye } from "lucide-react";
+import { Send, MessageCircle, X, Eye, Pencil, Flag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import ReplyTree from "@/components/forum/ReplyTree";
 import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea from "@/components/forum/MentionTextarea";
+import { MarkdownBody } from "@/lib/markdown";
 import UserAvatar from "./UserAvatar";
 import UserProfileHoverCard from "./UserProfileHoverCard";
 import AuthorBadge from "./AuthorBadge";
@@ -21,7 +22,7 @@ import UserAchievements from "./UserAchievements";
 import { ShareButton, SaveButton } from "./ShareSaveButtons";
 import { getCategoryMeta, getEngagement, timeAgo } from "./forumHelpers";
 
-const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAuthenticated, user, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles }) {
+const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAuthenticated, user, isModerator, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, onEditPost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles }) {
   const meta = getCategoryMeta(post.category);
   const MetaIcon = meta.icon;
   const engagement = getEngagement(post);
@@ -32,6 +33,16 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
     onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] }); if (res?.data?.reward) toast({ title: `+${res.data.reward.xp} XP · +${res.data.reward.chips} chips`, description: res.data.reward.rank }); },
   });
   const onReact = (emoji) => { if (!reactMutation.isPending) reactMutation.mutate(emoji); };
+  const isOwner = isAuthenticated && user?.id && String(post.user_id) === String(user.id);
+  const isEdited = post.updated_date && post.updated_date !== post.created_date;
+  const [reportOpen, setReportOpen] = useState(false);
+  const reportRef = useRef(null);
+  useEffect(() => {
+    if (!reportOpen) return;
+    const handler = (e) => { if (reportRef.current && !reportRef.current.contains(e.target)) setReportOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [reportOpen]);
 
   // Lock body scroll
   useEffect(() => {
@@ -98,8 +109,9 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
                   <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
                   <span className="text-[10px] text-slate-300 font-bold">•</span>
                   <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+                  {isEdited && <span className="text-[10px] italic text-muted-foreground">(edited)</span>}
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-250 font-semibold">
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-300 font-semibold">
                   <span className="flex items-center gap-1"><Eye className="h-3 w-3 text-primary" /> {engagement.views} views</span>
                   <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3 text-accent" /> {replies.length} replies</span>
                 </div>
@@ -108,13 +120,54 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
 
             {/* Full body */}
             <div className="prose prose-invert max-w-none">
-              <p className="whitespace-pre-wrap break-words text-sm leading-8 text-slate-200">{post.body}</p>
+              <MarkdownBody text={post.body} className="break-words" />
               <ForumMedia url={post.media_url} type={post.media_type} />
             </div>
 
             {/* Engagement */}
             <div className="mt-6 flex flex-wrap items-center gap-1 border-t border-border/20 pt-4">
               <ReactionPicker reactions={post.reactions} legacyLikes={engagement.likes} currentUserId={user?.id} isAuthenticated={isAuthenticated} onReact={onReact} isPending={reactMutation.isPending} reactionProfiles={reactionProfiles} />
+
+              {isOwner && onEditPost && (
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onEditPost(post); }}
+                  className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-primary transition-colors border border-transparent"
+                  title="Edit this post"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline text-[10px] uppercase tracking-wider">Edit</span>
+                </button>
+              )}
+
+              <div className="relative" ref={reportRef}>
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(!reportOpen)}
+                  className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-amber-400 transition-colors border border-transparent"
+                  title="Report this post"
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                </button>
+                {reportOpen && (
+                  <div className="absolute bottom-full left-0 mb-1 z-20 w-40 border border-border/60 bg-card shadow-xl py-1">
+                    {["Spam", "Harassment", "Off-topic", "Other"].map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-muted/20 hover:text-foreground transition-colors"
+                        onClick={() => {
+                          setReportOpen(false);
+                          toast({ title: "Report submitted", description: `Reason: ${reason}` });
+                        }}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <ShareButton post={post} />
               <SaveButton post={post} />
             </div>

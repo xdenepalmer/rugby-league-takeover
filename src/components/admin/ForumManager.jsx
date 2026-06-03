@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import BanDialog from "./BanDialog";
+import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 
 /* ━━━ Filter Tabs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const TABS = [
@@ -448,6 +449,7 @@ export default function ForumManager({ posts }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   /* ── Fetch bans for author history ── */
   const { data: bans = [] } = useQuery({
@@ -720,12 +722,27 @@ export default function ForumManager({ posts }) {
       <BulkActionBar
         selectedCount={selectedIds.size}
         onApproveAll={handleBulkApprove}
-        onDeleteAll={handleBulkDelete}
+        onDeleteAll={() => setConfirmBulkDelete(true)}
         onCancel={() => {
           setSelectedIds(new Set());
           setSelectMode(false);
         }}
         loading={bulkLoading}
+      />
+
+      {/* Bulk delete confirmation */}
+      <AdminConfirmSheet
+        open={confirmBulkDelete}
+        title={`Delete ${selectedIds.size} post${selectedIds.size === 1 ? "" : "s"}?`}
+        description="All selected posts will be soft-deleted. They can be restored later from the Deleted tab."
+        confirmLabel="Delete All"
+        variant="destructive"
+        loading={bulkLoading}
+        onConfirm={() => {
+          setConfirmBulkDelete(false);
+          handleBulkDelete();
+        }}
+        onCancel={() => setConfirmBulkDelete(false)}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -6,8 +6,10 @@ import {
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
   Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
   Shield, Zap, Download, Keyboard, MoreHorizontal, Megaphone,
-  PackageCheck, ShieldAlert, Gauge
+  PackageCheck, ShieldAlert, Gauge, Search,
 } from "lucide-react";
+
+const AdminCommandPalette = lazy(() => import("./AdminCommandPalette"));
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -268,6 +270,7 @@ export default function AdminLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   /* Get current section name */
   const currentSection = getAdminSectionLabel(location.pathname);
@@ -299,6 +302,11 @@ export default function AdminLayout({ children }) {
   const handleKeyboard = useCallback(
     (e) => {
       if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        setCommandPaletteOpen((v) => !v);
+        return;
+      }
       const item = navItems.find((n) => n.key === e.key);
       if (item) {
         e.preventDefault();
@@ -402,6 +410,15 @@ export default function AdminLayout({ children }) {
                   </p>
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="mobileIcon"
+                className="rounded-none text-muted-foreground hover:text-foreground"
+                onClick={() => setCommandPaletteOpen(true)}
+                aria-label="Open command palette"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
               <Button
                 asChild
                 variant="outline"
@@ -922,6 +939,14 @@ export default function AdminLayout({ children }) {
           })}
         </div>
       </nav>
+
+      {/* ── Command Palette ── */}
+      <Suspense fallback={null}>
+        <AdminCommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
+      </Suspense>
     </div>
   );
 }

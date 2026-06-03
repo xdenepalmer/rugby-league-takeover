@@ -21,7 +21,8 @@ import {
   Star,
   Rocket,
   Info,
-  Lock
+  Lock,
+  Truck
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -414,6 +415,64 @@ function SkeletonLoader() {
   );
 }
 
+function StoreExperienceRail({ productCount, categoryCount, cartCount, onCartOpen }) {
+  const items = [
+    {
+      icon: Truck,
+      label: "Shipping",
+      value: "Free over $150 AUD",
+      detail: "Estimates at checkout",
+      tone: "text-primary",
+    },
+    {
+      icon: CheckCircle2,
+      label: "Orders",
+      value: "Track in profile",
+      detail: "Receipts and status",
+      tone: "text-emerald-400",
+    },
+    {
+      icon: Lock,
+      label: "Checkout",
+      value: "Stripe secured",
+      detail: "Card details protected",
+      tone: "text-sky-300",
+    },
+    {
+      icon: ShoppingBag,
+      label: "Store",
+      value: `${productCount} item${productCount === 1 ? "" : "s"}`,
+      detail: `${categoryCount} categor${categoryCount === 1 ? "y" : "ies"}`,
+      tone: "text-accent",
+    },
+  ];
+
+  return (
+    <section className="mt-6 grid gap-3 border border-border/60 bg-card/35 p-3 cmd-glass sm:grid-cols-2 lg:grid-cols-4" aria-label="Store shopping benefits">
+      {items.map(({ icon: Icon, label, value, detail, tone }) => (
+        <div key={label} className="flex min-w-0 items-center gap-3 border border-border/40 bg-background/35 p-3">
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center border border-border/60 bg-card/55 ${tone}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{label}</p>
+            <p className="truncate text-sm font-extrabold text-foreground">{value}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{detail}</p>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={onCartOpen}
+        className="flex min-h-11 items-center justify-between border border-primary/25 bg-primary/[0.055] px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.22em] text-primary transition-colors hover:bg-primary/10 sm:col-span-2 lg:hidden"
+      >
+        <span>{cartCount > 0 ? `${cartCount} item${cartCount === 1 ? "" : "s"} in cart` : "Open cart"}</span>
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </section>
+  );
+}
+
 /* ── Main Store Component ── */
 export default function Store() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -607,22 +666,25 @@ export default function Store() {
 
       <div className="relative z-10 mx-auto max-w-7xl">
         {/* Header Block */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between border-b border-border/60 pb-8">
-          <div>
+        <div className="flex flex-col gap-5 border-b border-border/60 pb-7 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.35em] text-primary flex items-center gap-1.5 mb-2">
               <Sparkles className="h-3 w-3 animate-pulse" /> Official Supporter Gear
             </p>
             <h1 className="font-display text-4xl uppercase tracking-tight sm:text-5xl md:text-6xl text-foreground">
               Vegas Takeover Store
             </h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+              Official supporter gear, clear checkout steps, and order tracking from your account after purchase.
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
             <button 
               onClick={() => setCartOpen(true)}
-              className="relative flex h-12 px-5 items-center justify-center gap-2 border border-border bg-card/60 cmd-glass transition-colors hover:border-primary hover:text-primary shadow-[0_0_15px_rgba(0,0,0,0.2)]"
+              className="relative flex h-12 items-center justify-center gap-2 border border-border bg-card/60 px-3 cmd-glass transition-colors hover:border-primary hover:text-primary shadow-[0_0_15px_rgba(0,0,0,0.2)] sm:px-5"
             >
               <ShoppingCart className="h-5 w-5 text-accent" />
-              <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">View Cart</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Cart</span>
               {cartCount > 0 && (
                 <span className="flex h-5 w-5 items-center justify-center bg-primary text-[10px] font-bold text-primary-foreground rounded-none shadow-[0_0_10px_rgba(249,115,22,0.4)]">
                   {cartCount}
@@ -684,23 +746,35 @@ export default function Store() {
           )}
         </AnimatePresence>
 
+        <StoreExperienceRail
+          productCount={visibleProducts.length}
+          categoryCount={Math.max(categories.length - 1, 0)}
+          cartCount={cartCount}
+          onCartOpen={() => setCartOpen(true)}
+        />
+
         {/* Category Pill Filters */}
         {categories.length > 1 && (
-          <div className="mt-8 flex flex-wrap gap-2 items-center border-b border-border/30 pb-4">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mr-2">Filter:</span>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2.5 min-h-[44px] text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                  selectedCategory === cat
-                    ? "border-primary bg-primary text-primary-foreground shadow-[0_0_12px_rgba(249,115,22,0.3)]"
-                    : "border-border bg-card/40 hover:border-primary/50 text-slate-300 hover:text-foreground"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="mt-8 border-b border-border/30 pb-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-300">Browse the drop</span>
+              <span className="text-[10px] font-mono text-muted-foreground">{filteredProducts.length} visible</span>
+            </div>
+            <div className="store-category-rail -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`min-h-[44px] shrink-0 border px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    selectedCategory === cat
+                      ? "border-primary bg-primary text-primary-foreground shadow-[0_0_12px_rgba(249,115,22,0.3)]"
+                      : "border-border bg-card/40 text-slate-300 hover:border-primary/50 hover:text-foreground"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

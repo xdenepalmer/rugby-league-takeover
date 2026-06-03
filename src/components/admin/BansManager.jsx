@@ -12,6 +12,8 @@ import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AdminSkeleton from "./shared/AdminSkeleton";
+import StatBadge from "./shared/StatBadge";
 
 const isExpired = (ban) => ban.expires_at && new Date(ban.expires_at).getTime() <= Date.now();
 
@@ -34,15 +36,7 @@ function FieldLabel({ label, children, className = "" }) {
   );
 }
 
-/* ─── Stat badge ──────────────────────────────────────────── */
-function StatBadge({ icon: Icon, label, value, color = "text-destructive", bg = "bg-destructive/5", border = "border-destructive/10", pulse }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${bg} border ${border} text-[10px] font-bold uppercase tracking-wider ${color}`}>
-      {pulse ? <span className={`h-1.5 w-1.5 rounded-full ${color === "text-destructive" ? "bg-destructive" : "bg-current"} cmd-blink`} /> : <Icon className="h-3 w-3" />}
-      {value} {label}
-    </span>
-  );
-}
+
 
 /* ─── Single ban card ─────────────────────────────────────── */
 function BanCard({ ban, index, liftBan }) {
@@ -395,9 +389,8 @@ export default function BansManager() {
       {isLoading ? (
         <div className="border border-border bg-card/60 cmd-glass overflow-hidden">
           <div className="h-[2px] w-full bg-gradient-to-r from-red-500 via-rose-500 to-red-500 bg-[length:200%_100%] animate-[cmd-data-stream_3s_linear_infinite]" />
-          <div className="p-6 flex items-center gap-3">
-            <div className="h-5 w-5 border-2 border-destructive/40 border-t-destructive rounded-full animate-spin" />
-            <p className="text-sm text-slate-300">Loading bans…</p>
+          <div className="p-6">
+            <AdminSkeleton variant="card" count={3} />
           </div>
         </div>
       ) : filtered.length === 0 ? (

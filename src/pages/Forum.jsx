@@ -7,7 +7,7 @@ import {
   MessageSquare, Send, Pin, Search, MessageCircle, Heart,
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Radio, ChevronDown, ChevronUp, Trash2,
-  Trophy, Activity, Reply, Shield
+  Trophy, Activity, Reply, Shield, Pencil, Flag, Plane, ShoppingBag, CalendarDays, ArrowRight
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import ReplyTree from "@/components/forum/ReplyTree";
 import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea from "@/components/forum/MentionTextarea";
+import { MarkdownBody } from "@/lib/markdown";
 import MediaAttach from "@/components/forum/MediaAttach";
 import { topBadge, parseBadgeIds, SPIN_COOLDOWN_MS, SLOT_LAST_SPIN_KEY } from "@/lib/slot-badges";
 
@@ -39,6 +40,10 @@ import CategoryPill from "@/components/forum/feed/CategoryPill";
 import EmptyState from "@/components/forum/feed/EmptyState";
 import ScrollToTopButton from "@/components/forum/feed/ScrollToTopButton";
 import AdminConfirmSheet from "@/components/admin/shared/AdminConfirmSheet";
+import TopContributors from "@/components/forum/feed/TopContributors";
+import OnlineUsersWidget from "@/components/forum/feed/OnlineUsersWidget";
+import CollapsibleGuidelines from "@/components/forum/feed/CollapsibleGuidelines";
+import { hasUnreadReplies, getUnreadReplyCount, getReadTimestamps, markThreadRead } from "@/lib/forum-read-tracker";
 
 // Lazy-loaded feature islands to trim the initial bundle footprint
 const StadiumSeatPlanner = lazy(() => import("@/components/forum/StadiumSeatPlanner"));
@@ -52,6 +57,9 @@ const ComposeSidebar = lazy(() => import("@/components/forum/feed/ComposeSidebar
 /* ━━━ Constants & Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const emptyPost = { author_name: "", title: "", body: "", category: "General", media_url: "" };
 const emptyReply = { author_name: "", body: "", media_url: "" };
+const DRAFT_STORAGE_KEY = "rlt_forum_draft";
+const SAVED_POSTS_KEY = "rlt_saved_posts";
+const getSavedPostIds = () => { try { return JSON.parse(localStorage.getItem(SAVED_POSTS_KEY) || "[]"); } catch { return []; } };
 
 const containsActiveReply = (post, activeId) => {
   if (!activeId) return false;
@@ -122,11 +130,86 @@ function SortTabs({ active, onChange }) {
   );
 }
 
+function ForumQuickActionRail({ onStartDiscussion, onOpenTools }) {
+  const quickActions = [
+    {
+      icon: MessageSquare,
+      label: "Ask the crowd",
+      body: "Start a thread for flights, hotels, tickets, meetups, or game-day plans.",
+      action: "New thread",
+      onClick: onStartDiscussion,
+      tone: "text-primary border-primary/25 bg-primary/[0.04]",
+    },
+    {
+      icon: CalendarDays,
+      label: "Fan tools",
+      body: "Use match tips, seating plans, badges, and community planning tools.",
+      action: "Open tools",
+      onClick: onOpenTools,
+      tone: "text-accent border-accent/25 bg-accent/[0.04]",
+    },
+    {
+      icon: Plane,
+      label: "Travel planning",
+      body: "Jump back to travel interest, packages, and Vegas week details.",
+      action: "View travel",
+      to: "/#travel",
+      tone: "text-sky-300 border-sky-400/25 bg-sky-400/[0.04]",
+    },
+    {
+      icon: ShoppingBag,
+      label: "Merch and orders",
+      body: "Shop supporter gear, then track orders from your profile.",
+      action: "Open store",
+      to: "/store",
+      tone: "text-emerald-400 border-emerald-400/25 bg-emerald-400/[0.04]",
+    },
+  ];
+
+  const renderContent = ({ icon: Icon, label, body, action, tone }) => (
+    <>
+      <div className="flex min-w-0 items-start gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center border ${tone}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-display text-lg uppercase leading-none tracking-wide text-foreground">{label}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between border-t border-border/30 pt-3">
+        <span className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-foreground">{action}</span>
+        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+      </div>
+    </>
+  );
+
+  return (
+    <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Forum quick actions">
+      {quickActions.map((item) => {
+        const className = `group min-w-0 border p-4 text-left transition-colors hover:border-primary/45 hover:bg-card/35 ${item.tone}`;
+        if (item.to) {
+          return (
+            <Link key={item.label} to={item.to} className={className}>
+              {renderContent(item)}
+            </Link>
+          );
+        }
+        return (
+          <button key={item.label} type="button" onClick={item.onClick} className={className}>
+            {renderContent(item)}
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
 /* ━━━ Post Card (Premium with 3D tilt) ━━━━━━━━━━━━━━━━━━━ */
 const ForumPostCard = memo(function ForumPostCard({
   post, isAuthenticated, user, isModerator, appReady, isSubmitting,
   replyOpen, replyDraft, onToggleReply, onUpdateReply, onReply, index,
-  onOpenThread, onDeletePost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles,
+  onOpenThread, onDeletePost, onEditPost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles,
 }) {
   const engagement = getEngagement(post);
   const replies = post.replies || [];
@@ -150,6 +233,19 @@ const ForumPostCard = memo(function ForumPostCard({
   const [cardOpen, setCardOpen] = useState(!!post.is_pinned);
   const [expanded, setExpanded] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const reportRef = useRef(null);
+
+  // Close report dropdown on outside click
+  useEffect(() => {
+    if (!reportOpen) return;
+    const handler = (e) => { if (reportRef.current && !reportRef.current.contains(e.target)) setReportOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [reportOpen]);
+
+  const isOwner = isAuthenticated && user?.id && String(post.user_id) === String(user.id);
+  const isEdited = post.updated_date && post.updated_date !== post.created_date;
 
   const shouldTruncate = (post.body || "").length > 220;
   const displayBody = shouldTruncate && !expanded ? post.body.slice(0, 220) + "…" : post.body;
@@ -249,6 +345,7 @@ const ForumPostCard = memo(function ForumPostCard({
               <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
               <span className="text-[10px] text-slate-300 font-bold">•</span>
               <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+              {isEdited && <span className="text-[10px] italic text-muted-foreground">(edited)</span>}
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {post.is_pinned && (
@@ -298,6 +395,9 @@ const ForumPostCard = memo(function ForumPostCard({
               {replies.length > 0 && (
                 <span className="inline-flex items-center gap-1 border border-border/30 bg-muted/10 px-2 py-0.5">
                   <MessageCircle className="h-2.5 w-2.5 text-accent" /> {replies.length}
+                  {hasUnreadReplies(post.id, replies) && (
+                    <span className="ml-0.5 text-primary font-bold">● {getUnreadReplyCount(post.id, replies, getReadTimestamps()[post.id])} new</span>
+                  )}
                 </span>
               )}
               <span className="inline-flex items-center gap-1 border border-border/30 bg-muted/10 px-2 py-0.5">
@@ -324,7 +424,7 @@ const ForumPostCard = memo(function ForumPostCard({
             >
               {/* Body */}
               <div className="mt-3">
-                <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-200">{displayBody}</p>
+                <MarkdownBody text={displayBody} className="break-words" />
                 <ForumMedia url={post.media_url} type={post.media_type} />
                 {shouldTruncate && (
                   <button
@@ -355,6 +455,46 @@ const ForumPostCard = memo(function ForumPostCard({
             <span className="text-[10px] uppercase tracking-wider">Reply</span>
             {replies.length > 0 && <span className="rounded-sm bg-muted/60 px-1.5 py-0.5 tabular-nums text-foreground font-bold">{replies.length}</span>}
           </button>
+
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => onEditPost(post)}
+              className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-primary transition-colors border border-transparent"
+              title="Edit this post"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline text-[10px] uppercase tracking-wider">Edit</span>
+            </button>
+          )}
+
+          <div className="relative" ref={reportRef}>
+            <button
+              type="button"
+              onClick={() => setReportOpen(!reportOpen)}
+              className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs text-slate-300 hover:text-amber-400 transition-colors border border-transparent"
+              title="Report this post"
+            >
+              <Flag className="h-3.5 w-3.5" />
+            </button>
+            {reportOpen && (
+              <div className="absolute bottom-full left-0 mb-1 z-20 w-40 border border-border/60 bg-card shadow-xl py-1">
+                {["Spam", "Harassment", "Off-topic", "Other"].map((reason) => (
+                  <button
+                    key={reason}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-muted/20 hover:text-foreground transition-colors"
+                    onClick={() => {
+                      setReportOpen(false);
+                      toast({ title: "Report submitted", description: `Reason: ${reason}` });
+                    }}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <ShareButton post={post} />
           <SaveButton post={post} />
@@ -574,11 +714,25 @@ function MobileFAB({ onClick }) {
 /* ━━━ MAIN FORUM COMPONENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function Forum() {
   const { isAuthenticated, user, isAdmin, isModerator } = useAuth();
-  const [draft, setDraft] = useState(emptyPost);
+  const [draft, setDraft] = useState(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) { const parsed = JSON.parse(saved); if (parsed.title || parsed.body) return parsed; }
+    } catch {}
+    return emptyPost;
+  });
+  const [draftRecovered, setDraftRecovered] = useState(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) { const parsed = JSON.parse(saved); return !!(parsed.title || parsed.body); }
+    } catch {}
+    return false;
+  });
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [visibleCount, setVisibleCount] = useState(15);
+  const [savedPostIds, setSavedPostIds] = useState(getSavedPostIds);
 
   useEffect(() => {
     setVisibleCount(15);
@@ -618,6 +772,29 @@ export default function Forum() {
   const [replyDrafts, setReplyDrafts] = useState({});
   const [showMobileCompose, setShowMobileCompose] = useState(false);
 
+  // Auto-save draft to localStorage (debounced)
+  useEffect(() => {
+    const hasDraftContent = draft.title || draft.body;
+    if (!hasDraftContent) {
+      try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
+      return;
+    }
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch {}
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [draft]);
+
+  // Re-sync saved post IDs when localStorage changes (e.g. from SaveButton)
+  useEffect(() => {
+    const onStorage = () => setSavedPostIds(getSavedPostIds());
+    window.addEventListener("storage", onStorage);
+    // Also listen for same-tab changes via custom event dispatched by SaveButton
+    const onSaveToggle = () => setSavedPostIds(getSavedPostIds());
+    window.addEventListener("rlt_saved_posts_changed", onSaveToggle);
+    return () => { window.removeEventListener("storage", onStorage); window.removeEventListener("rlt_saved_posts_changed", onSaveToggle); };
+  }, []);
+
   // Lock body scroll when mobile compose sheet is open
   useEffect(() => {
     if (showMobileCompose) {
@@ -635,6 +812,7 @@ export default function Forum() {
     queryKey: ["forumPosts"],
     queryFn: () => base44.entities.ForumPost.list("-created_date", 100),
     enabled: appParams.hasBase44Config,
+    refetchInterval: 30000,
   });
 
   // Current avatars by user id, so changing a profile photo updates that
@@ -703,15 +881,31 @@ export default function Forum() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] });
-      setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false);
+      setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false); setDraftRecovered(false);
+      try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
       if (data?.reward) toast({ title: `+${data.reward.xp} XP · +${data.reward.chips} chips`, description: `${data.reward.rank}${data.reward.streak ? ` · ${data.reward.streak} day streak` : ""}` });
+    },
+  });
+
+  const [editTarget, setEditTarget] = useState(null);
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.ForumPost.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+      setDraft(emptyPost); setEditTarget(null); setShowMobileCompose(false);
+      toast({ title: "Post updated" });
     },
   });
 
   const handlePost = (e) => {
     e.preventDefault();
     if ((!isAuthenticated && !draft.author_name) || !draft.title || !draft.body) return;
-    createMutation.mutate(draft);
+    if (editTarget) {
+      updateMutation.mutate({ id: editTarget.id, data: { title: draft.title, body: draft.body, category: draft.category, media_url: draft.media_url || "" } });
+    } else {
+      createMutation.mutate(draft);
+    }
   };
 
   const getReplyDraft = useCallback((postId) => replyDrafts[postId] || emptyReply, [replyDrafts]);
@@ -757,6 +951,13 @@ export default function Forum() {
 
   const handleOpenThread = useCallback((p) => {
     setThreadModalPost(p);
+    if (p?.id) markThreadRead(p.id);
+  }, []);
+
+  const handleEditPost = useCallback((post) => {
+    setDraft({ author_name: post.author_name || "", title: post.title || "", body: post.body || "", category: post.category || "General", media_url: post.media_url || "" });
+    setEditTarget(post);
+    setShowMobileCompose(true);
   }, []);
 
   // Shared API for the recursive ReplyTree (reply to / delete any comment at any depth).
@@ -963,6 +1164,11 @@ export default function Forum() {
 
       {/* ━━━ MAIN CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div className="forum-mobile-content mx-auto max-w-6xl px-2 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
+        <ForumQuickActionRail
+          onStartDiscussion={() => setShowMobileCompose(true)}
+          onOpenTools={() => setMobileTab("tools")}
+        />
+
         {/* Trending */}
         {allThreads.length >= 3 && (
           <motion.div
@@ -999,6 +1205,25 @@ export default function Forum() {
             {/* Live Activity Ticker */}
             <LiveActivityTicker threads={allThreads} />
 
+            {/* Draft Recovered Banner */}
+            <AnimatePresence>
+              {draftRecovered && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between gap-2 border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2">
+                    <p className="text-xs text-amber-300"><Sparkles className="inline h-3 w-3 mr-1" />Draft recovered from your previous session.</p>
+                    <button type="button" onClick={() => setDraftRecovered(false)} className="text-amber-300/60 hover:text-amber-300 transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Mobile Tab Selector Segmented Control */}
             <div className="flex border border-border bg-card/30 p-1 mb-4 lg:hidden">
               <button
@@ -1026,6 +1251,23 @@ export default function Forum() {
               >
                 Fan Tools
                 {mobileTab === "tools" && (
+                  <motion.div
+                    layoutId="forum-mobile-active-tab-glow"
+                    className="absolute inset-0 bg-muted/30 border border-border/50"
+                    style={{ boxShadow: "0 0 10px hsl(var(--primary)/0.3)" }}
+                  />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab("saved")}
+                className={`relative flex-1 flex min-h-11 items-center justify-center gap-1 text-xs font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer ${
+                  mobileTab === "saved" ? "text-foreground font-extrabold" : "text-slate-400"
+                }`}
+              >
+                <Bookmark className="h-3 w-3" />
+                Saved
+                {mobileTab === "saved" && (
                   <motion.div
                     layoutId="forum-mobile-active-tab-glow"
                     className="absolute inset-0 bg-muted/30 border border-border/50"
@@ -1093,6 +1335,46 @@ export default function Forum() {
                 </a>
                 <CollapsibleGuidelines />
               </div>
+            ) : mobileTab === "saved" ? (
+              <div className="space-y-4 lg:hidden">
+                {(() => {
+                  const savedThreads = allThreads.filter((t) => savedPostIds.includes(t.id));
+                  if (savedThreads.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-16 text-center border border-border/30 bg-card/20">
+                        <Bookmark className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                        <p className="text-sm font-bold text-foreground mb-1">No saved posts yet</p>
+                        <p className="text-xs text-muted-foreground/50 max-w-xs">Save threads from the forum to find them here.</p>
+                      </div>
+                    );
+                  }
+                  return savedThreads.map((post, index) => {
+                    const isActiveThread = activeReplyId && (activeReplyId === post.id || containsActiveReply(post, activeReplyId));
+                    const activeReplyDraftSaved = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
+                    return (
+                      <ForumPostCard
+                        key={post.id} post={post} index={index}
+                        isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
+                        appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
+                        replyOpen={activeReplyId === post.id}
+                        replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}
+                        onToggleReply={handleToggleReply}
+                        onUpdateReply={updateReplyDraft}
+                        onReply={handleReply}
+                        onOpenThread={handleOpenThread}
+                        onDeletePost={handleDelete}
+                        replyApi={replyApi}
+                        activeReplyDraft={activeReplyDraftSaved}
+                        authorPostCounts={authorPostCounts}
+                        authorReplyCounts={authorReplyCounts}
+                        resolveAvatar={avatarFor}
+                        resolveMeta={forumMetaFor}
+                        reactionProfiles={profileById}
+                      />
+                    );
+                  });
+                })()}
+              </div>
             ) : null}
 
             {/* Mobile Tab Content: Feed */}
@@ -1125,7 +1407,7 @@ export default function Forum() {
                   </div>
 
                   {/* Categories collapsed into a sticky horizontal rail on mobile, flex on desktop */}
-                  <div className="forum-filter-rail gap-2 pb-2 scroll-smooth md:flex md:flex-wrap md:mx-0 md:px-0">
+                  <div className="forum-filter-rail gap-2 pb-2 scroll-smooth md:flex md:flex-wrap md:mx-0 md:px-0" style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)', maskImage: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)' }}>
                     {categories.map((cat) => (
                       <CategoryPill
                         key={cat.value}
@@ -1245,7 +1527,7 @@ export default function Forum() {
                     <ForumPostCard
                       key={post.id} post={post} index={index}
                       isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
-                      appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
+                      appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending || updateMutation.isPending}
                       replyOpen={activeReplyId === post.id}
                       replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}
                       onToggleReply={handleToggleReply}
@@ -1253,6 +1535,7 @@ export default function Forum() {
                       onReply={handleReply}
                       onOpenThread={handleOpenThread}
                       onDeletePost={handleDelete}
+                      onEditPost={handleEditPost}
                       replyApi={replyApi}
                       activeReplyDraft={activeReplyDraft}
                       authorPostCounts={authorPostCounts}
@@ -1296,7 +1579,7 @@ export default function Forum() {
                 draft={draft} setDraft={setDraft}
                 isAuthenticated={isAuthenticated} user={user}
                 submittedForReview={submittedForReview}
-                onSubmit={handlePost} isPending={createMutation.isPending}
+                onSubmit={handlePost} isPending={createMutation.isPending || updateMutation.isPending}
                 allThreads={allThreads}
                 people={mentionPeople}
                 onFilterSearch={(q) => setSearchQuery(q)}
@@ -1341,8 +1624,10 @@ export default function Forum() {
               onClose={() => setThreadModalPost(null)}
               isAuthenticated={isAuthenticated}
               user={user}
+              isModerator={isModerator}
+              onEditPost={handleEditPost}
               appReady={appParams.hasBase44Config}
-              isSubmitting={createMutation.isPending}
+              isSubmitting={createMutation.isPending || updateMutation.isPending}
               replyDraft={replyDrafts[threadModalPost.id] || emptyReply}
               onUpdateReply={updateReplyDraft}
               onReply={handleReply}
@@ -1369,7 +1654,13 @@ export default function Forum() {
               transition={{ duration: 0.2, ease: "linear" }}
               style={{ willChange: "opacity" }}
               className="fixed inset-0 z-50 bg-black/65 lg:hidden" 
-              onClick={() => setShowMobileCompose(false)} 
+              onClick={() => {
+                setShowMobileCompose(false);
+                if (editTarget) {
+                  setEditTarget(null);
+                  setDraft(emptyPost);
+                }
+              }}
             />
             <motion.div
               initial={{ y: "100%" }} 
@@ -1388,14 +1679,27 @@ export default function Forum() {
               </div>
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 id="forum-mobile-compose-title" className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
-                  <button type="button" onClick={() => setShowMobileCompose(false)} className="touch-target flex items-center justify-center border border-border/30 text-slate-300 transition-colors hover:border-border hover:text-foreground" aria-label="Close composer">
+                  <h2 id="forum-mobile-compose-title" className="font-display text-lg uppercase tracking-wide">
+                    {editTarget ? "Edit Discussion" : "Start a Discussion"}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileCompose(false);
+                      if (editTarget) {
+                        setEditTarget(null);
+                        setDraft(emptyPost);
+                      }
+                    }}
+                    className="touch-target flex items-center justify-center border border-border/30 text-slate-300 transition-colors hover:border-border hover:text-foreground"
+                    aria-label="Close composer"
+                  >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
                 <AnimatePresence>
-                  {submittedForReview && (
+                  {submittedForReview && !editTarget && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4 border border-emerald-500/25 bg-emerald-500/[0.07] p-3 overflow-hidden">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
@@ -1425,8 +1729,11 @@ export default function Forum() {
                   <Input id="mobile-compose-title" required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
                   <MentionTextarea required people={mentionPeople} placeholder="What's on your mind? Use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
                   <MediaAttach value={draft.media_url} onChange={(url) => setDraft({ ...draft, media_url: url })} />
-                  <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending} size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
-                    <Send className="mr-2 h-3 w-3" /> {createMutation.isPending ? "Submitting…" : "Submit for Review"}
+                  <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending || updateMutation.isPending} size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
+                    <Send className="mr-2 h-3 w-3" />
+                    {editTarget
+                      ? updateMutation.isPending ? "Saving..." : "Save Changes"
+                      : createMutation.isPending ? "Submitting..." : "Submit for Review"}
                   </Button>
                 </form>
               </div>

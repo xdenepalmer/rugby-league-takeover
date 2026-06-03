@@ -1,10 +1,11 @@
-import React, { memo } from "react";
-import { Reply, Trash2, Send } from "lucide-react";
+import React, { useState, memo } from "react";
+import { Reply, Trash2, Send, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MentionTextarea from "./MentionTextarea";
 import MediaAttach from "./MediaAttach";
 import ForumMedia from "./ForumMedia";
+import { MarkdownBody } from "@/lib/markdown";
 import TeamCrest from "@/components/public/TeamCrest";
 
 const HUES = [15, 45, 160, 220, 280, 330, 190, 30, 120, 350];
@@ -43,12 +44,24 @@ const ReplyTree = memo(function ReplyTree({
   resolveAvatar,
   resolveMeta,
 }) {
+  // Auto-collapse deeply nested replies (depth >= 3)
+  const [collapsed, setCollapsed] = useState(depth >= 3);
+
   if (!replies.length) return null;
   const indent = depth > 0 ? "ml-3 border-l-2 border-primary/30 hover:border-primary/80 transition-all duration-300 pl-3 md:ml-5 md:pl-5" : "";
 
   return (
     <div className={`grid gap-3 ${indent}`}>
-      {replies.map((reply) => {
+      {depth >= 3 && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary/80 transition-colors text-left py-1"
+        >
+          {collapsed ? `▸ Show ${replies.length} nested ${replies.length === 1 ? 'reply' : 'replies'}` : '▾ Collapse replies'}
+        </button>
+      )}
+      {!collapsed && replies.map((reply) => {
         const draft = activeReplyId === reply.id ? (activeReplyDraft || emptyReply) : emptyReply;
         const open = activeReplyId === reply.id;
         const canDelete = isAuthenticated && ((user?.id && String(reply.user_id) === String(user.id)) || isModerator);
@@ -81,11 +94,23 @@ const ReplyTree = memo(function ReplyTree({
                 })()}
                 <span className="font-mono text-[9px] text-slate-300 font-bold">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
-              <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-slate-200">{reply.body}</p>
+              <MarkdownBody text={reply.body} className="mt-1.5 break-words" />
               <ForumMedia url={reply.media_url} type={reply.media_type} />
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => onToggleReply(reply.id)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-colors hover:text-accent">
                   <Reply className="h-3.5 w-3.5" /> Reply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const quoted = (reply.body || "").split("\n").map(l => `> ${l}`).join("\n");
+                    onToggleReply(reply.id);
+                    onUpdateReply(reply.id, { body: `${quoted}\n\n` });
+                  }}
+                  className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-colors hover:text-sky-400"
+                  title="Quote this reply"
+                >
+                  <Quote className="h-3.5 w-3.5" /> Quote
                 </button>
                 {canDelete && (
                   <button type="button" onClick={() => onDelete(reply)} className="flex min-h-11 items-center gap-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-colors hover:text-destructive">

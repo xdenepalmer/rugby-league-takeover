@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import DateTimePicker from "./DateTimePicker";
+import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 
 const emptyEvent = {
   title: "", event_date: "", start_time: "", location: "", address: "", blurb: "",
@@ -293,6 +294,7 @@ export default function EventsManager({ events = [] }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(emptyEvent);
   const [showCreate, setShowCreate] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["events"] });
 
   const createMutation = useMutation({
@@ -369,15 +371,26 @@ export default function EventsManager({ events = [] }) {
               index={index}
               saving={updateMutation.isPending}
               onSave={(data) => updateMutation.mutate({ id: event.id, data })}
-              onDelete={(id) => {
-                if (window.confirm("Are you sure you want to delete this event? This cannot be undone.")) {
-                  deleteMutation.mutate(id);
-                }
-              }}
+              onDelete={(id) => setConfirmDeleteId(id)}
             />
           ))}
         </div>
       </div>
+
+      {/* Delete confirmation */}
+      <AdminConfirmSheet
+        open={confirmDeleteId !== null}
+        title="Delete this event?"
+        description="This event will be permanently removed. This cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          deleteMutation.mutate(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

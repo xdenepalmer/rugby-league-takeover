@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BanDialog from "./BanDialog";
+import AdminSkeleton from "./shared/AdminSkeleton";
+import StatBadge from "./shared/StatBadge";
 
 /* ─── Avatar gradient palettes ────────────────────────────── */
 const avatarGradients = [
@@ -31,15 +33,7 @@ function getAvatarGradient(id) {
   return avatarGradients[hash % avatarGradients.length];
 }
 
-/* ─── Stat badge ──────────────────────────────────────────── */
-function StatBadge({ icon: Icon, label, value, color = "text-primary", bg = "bg-primary/5", border = "border-primary/10" }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${bg} border ${border} text-[10px] font-bold uppercase tracking-wider ${color}`}>
-      <Icon className="h-3 w-3" />
-      {value} {label}
-    </span>
-  );
-}
+
 
 /* ─── Single user card ────────────────────────────────────── */
 function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
@@ -261,9 +255,8 @@ export default function UsersManager() {
     return (
       <section className="border border-border bg-card/60 cmd-glass overflow-hidden">
         <div className="h-[2px] w-full bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 bg-[length:200%_100%] animate-[cmd-data-stream_3s_linear_infinite]" />
-        <div className="p-6 flex items-center gap-3">
-          <div className="h-5 w-5 border-2 border-indigo-500/40 border-t-indigo-400 rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading users…</p>
+        <div className="p-6">
+          <AdminSkeleton variant="card" count={4} />
         </div>
       </section>
     );

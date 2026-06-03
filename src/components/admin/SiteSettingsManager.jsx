@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Save, Timer, Film, Newspaper, Users, PanelBottom,
-  Image as ImageIcon, CheckCircle2, AlertCircle, Type, FileText,
+  Image as ImageIcon, Type, FileText,
   Plane, ShoppingBag, Quote, Captions, ChevronLeft, LayoutGrid, Settings,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -15,6 +15,7 @@ import MediaUploader from "./MediaUploader";
 import DateTimePicker from "./DateTimePicker";
 import ImageField from "./ImageField";
 import AdminStickyActionBar from "./AdminStickyActionBar";
+import LabeledField from "./shared/LabeledField";
 
 const defaults = {
   site_logo_url: "/icons/icon-192.png",
@@ -55,33 +56,7 @@ const defaults = {
   countdown_cta_url: ""
 };
 
-/* ─── Labeled Field Wrapper ────────────────────────────────── */
-function LabeledField({ label, help, children, fullWidth, indicator }) {
-  return (
-    <div className={`grid gap-1.5 ${fullWidth ? "md:col-span-2" : ""}`}>
-      <div className="flex items-center gap-2">
-        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-200 font-mono">
-          {label}
-        </label>
-        {indicator && (
-          <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.25 text-[7px] font-bold uppercase tracking-wider border ${
-            indicator === "custom"
-              ? "text-primary border-primary/20 bg-primary/5"
-              : "text-slate-300 border-border/40 bg-muted/10"
-          }`}>
-            {indicator === "custom" ? (
-              <><CheckCircle2 className="h-2 w-2" /> Custom</>
-            ) : (
-              <><AlertCircle className="h-2 w-2" /> Default</>
-            )}
-          </span>
-        )}
-      </div>
-      {children}
-      {help && <p className="text-[9px] text-slate-300 leading-4">{help}</p>}
-    </div>
-  );
-}
+
 
 /* ─── Image Preview Thumbnail ──────────────────────────────── */
 function ImagePreview({ url, alt }) {
@@ -133,14 +108,24 @@ export default function SiteSettingsManager({ settings }) {
   const [saveFlash, setSaveFlash] = useState(false);
   const queryClient = useQueryClient();
 
+  /* ── Dirty-state tracking ──────────────────────────────── */
+  const savedRef = useRef(JSON.stringify({ ...defaults, ...(settings || {}) }));
+  const isDirty = useMemo(
+    () => JSON.stringify(draft) !== savedRef.current,
+    [draft]
+  );
+
   useEffect(() => {
-    setDraft({ ...defaults, ...(settings || {}) });
-  }, [settings?.id]);
+    const merged = { ...defaults, ...(settings || {}) };
+    setDraft(merged);
+    savedRef.current = JSON.stringify(merged);
+  }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: (data) => data.id ? base44.entities.SiteSettings.update(data.id, data) : base44.entities.SiteSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["siteSettings"] });
+      savedRef.current = JSON.stringify(draft);
       setSaveFlash(true);
       setTimeout(() => setSaveFlash(false), 2000);
       
@@ -155,6 +140,14 @@ export default function SiteSettingsManager({ settings }) {
 
   const update = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
   const videoText = (draft.background_video_urls || []).join("\n");
+
+  /* ── Unsaved changes guard (browser close/reload) ────── */
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   /* Helper: detect if a field has been customised vs defaults */
   const isCustom = (field) => {
@@ -570,6 +563,12 @@ export default function SiteSettingsManager({ settings }) {
                   className="mt-8 border-t border-border/30 pt-4"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    {isDirty && (
+                      <div className="flex items-center gap-2 rounded-sm border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 sm:order-first">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Unsaved changes</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3">
                       <div className={`h-2 w-2 rounded-full ${saveMutation.isPending ? "bg-accent cmd-pulse" : saveFlash ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground/40"}`} />
                       <div>

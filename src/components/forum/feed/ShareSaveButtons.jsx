@@ -51,6 +51,7 @@ export function SaveButton({ post }) {
   const onToggle = () => {
     const now = toggleSavedPost(post?.id);
     setSaved(now);
+    window.dispatchEvent(new CustomEvent("rlt_saved_posts_changed"));
     toast({ title: now ? "Saved" : "Removed", description: now ? "Added to your saved threads." : "Removed from saved threads." });
   };
   return (
