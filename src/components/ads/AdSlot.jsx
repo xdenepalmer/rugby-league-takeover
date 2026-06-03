@@ -252,7 +252,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     retry: false,
     meta: { silent: true },
   });
-  const globalEnabled = settingsRecords[0]?.ads_enabled === true;
+  const globalEnabled = settingsRecords[0]?.ads_enabled !== false && settingsRecords[0]?.ads_enabled !== "false";
 
   /* ── Cleanup on unmount ── */
   useEffect(() => {
