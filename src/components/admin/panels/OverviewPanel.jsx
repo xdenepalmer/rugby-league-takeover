@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Users as UsersIcon, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
+import AdminActionQueue from "../AdminActionQueue";
 import AdminOverview from "../AdminOverview";
 import ActivityFeed from "../ActivityFeed";
 import RevenueBreakdown from "../RevenueBreakdown";
@@ -32,6 +33,16 @@ export default function OverviewPanel() {
 
   return (
     <div className="grid gap-5">
+      {/* ── Owner Command Center: what needs me now ── */}
+      <AdminActionQueue
+        orders={orders}
+        forumPosts={forumPosts}
+        registrations={registrations}
+        products={products}
+        news={news}
+        testimonials={testimonials}
+      />
+
       {/* ── Core Dashboard ── */}
       <AdminOverview counts={counts} registrations={registrations} orders={orders} />
 
