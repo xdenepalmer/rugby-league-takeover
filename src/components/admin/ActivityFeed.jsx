@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -7,6 +8,7 @@ import {
   MessageSquare,
   Hourglass,
   Filter,
+  ChevronRight,
 } from "lucide-react";
 
 /* ─── Relative Time Helper ──────────────────────────────── */
@@ -56,24 +58,28 @@ const TYPE_CONFIG = {
     dotClass: "bg-emerald-400",
     iconClass: "text-emerald-400",
     borderHover: "hover:border-emerald-500/30",
+    route: "/admin/store",
   },
   signup: {
     icon: UserPlus,
     dotClass: "bg-primary",
     iconClass: "text-primary",
     borderHover: "hover:border-primary/30",
+    route: "/admin/people",
   },
   post: {
     icon: MessageSquare,
     dotClass: "bg-blue-400",
     iconClass: "text-blue-400",
     borderHover: "hover:border-blue-500/30",
+    route: "/admin/community",
   },
 };
 
 /* ─── Main Component ────────────────────────────────────── */
 export default function ActivityFeed({ orders = [], registrations = [], forumPosts = [] }) {
   const [activeFilter, setActiveFilter] = useState("all");
+  const navigate = useNavigate();
 
   // Merge all data sources into a single timeline
   const allActivity = useMemo(() => {
@@ -205,11 +211,17 @@ export default function ActivityFeed({ orders = [], registrations = [], forumPos
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 16, height: 0 }}
                       transition={{ duration: 0.3, delay: i * 0.04, ease: "easeOut" }}
-                      className={`group flex items-center gap-3 border border-border/40 bg-muted/10 p-3 transition-colors ${config.borderHover}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(config.route)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(config.route); }}
+                      className={`group flex items-center gap-3 border border-border/40 bg-muted/10 p-3 cursor-pointer transition-colors hover:bg-muted/20 ${config.borderHover}`}
                     >
-                      {/* Color-coded dot */}
+                      {/* Color-coded dot — animate-ping only on the newest item */}
                       <span className="relative flex h-2 w-2 shrink-0">
-                        <span className={`absolute inset-0 rounded-full ${config.dotClass} opacity-30 animate-ping`} />
+                        {i === 0 && (
+                          <span className={`absolute inset-0 rounded-full ${config.dotClass} opacity-30 animate-ping`} />
+                        )}
                         <span className={`relative inline-flex h-2 w-2 rounded-full ${config.dotClass}`} />
                       </span>
 
@@ -227,6 +239,9 @@ export default function ActivityFeed({ orders = [], registrations = [], forumPos
                       <span className="shrink-0 text-[10px] font-mono text-muted-foreground/70 tabular-nums whitespace-nowrap">
                         {relativeTime(item.created_date)}
                       </span>
+
+                      {/* Navigate hint */}
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/60" />
                     </motion.div>
                   );
                 })}

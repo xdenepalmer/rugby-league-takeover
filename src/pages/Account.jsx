@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
   ArrowLeft, 
@@ -90,9 +90,13 @@ function StatCard({ label, value, icon: Icon, color }) {
   );
 }
 
+const VALID_TABS = ["fanhub", "profile", "orders", "posts", "interest", "security"];
+
 export default function Account() {
   const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("fanhub");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = VALID_TABS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "fanhub";
+  const setActiveTab = (tab) => setSearchParams({ tab }, { replace: true });
   const displayName = user?.full_name || user?.email?.split("@")[0] || "User";
   const avatarLetter = displayName.slice(0, 1).toUpperCase();
 

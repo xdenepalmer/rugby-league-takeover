@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
@@ -19,6 +19,7 @@ export default function PublicLayout() {
   const isHome = pathname === "/";
   const outlet = useOutlet();
   const [isPlanOpen, setIsPlanOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const handleNavigate = (hash) => {
     if (location.pathname !== "/") {
@@ -66,6 +67,25 @@ export default function PublicLayout() {
         ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.14)]"
         : "border-transparent text-muted-foreground/80 hover:border-border/50 hover:bg-muted/20 hover:text-foreground"
     }`;
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const items = JSON.parse(localStorage.getItem("rlt_cart") || "[]");
+        setCartCount(items.reduce((sum, item) => sum + Number(item.quantity || 0), 0));
+      } catch {
+        setCartCount(0);
+      }
+    };
+
+    updateCartCount();
+    window.addEventListener("rlt_cart_changed", updateCartCount);
+    window.addEventListener("storage", updateCartCount);
+    return () => {
+      window.removeEventListener("rlt_cart_changed", updateCartCount);
+      window.removeEventListener("storage", updateCartCount);
+    };
+  }, []);
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
@@ -165,6 +185,11 @@ export default function PublicLayout() {
               <>
                 <ShoppingBag className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
                 <span className="max-w-full truncate">Shop</span>
+                {cartCount > 0 && (
+                  <span className="absolute right-2 top-1 flex h-4 min-w-4 items-center justify-center border border-primary/40 bg-primary px-1 text-[9px] font-black leading-none text-primary-foreground shadow-[0_0_10px_rgba(249,115,22,0.35)]">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
                 {isActive && (
                   <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 h-[3px] w-5 rounded-full bg-primary shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                 )}
@@ -247,6 +272,7 @@ export default function PublicLayout() {
             isOpen={isPlanOpen}
             onClose={() => setIsPlanOpen(false)}
             onNavigate={handleNavigate}
+            cartCount={cartCount}
             context={pathname.startsWith("/store") ? "store" : pathname.startsWith("/forum") ? "forum" : pathname.startsWith("/account") ? "account" : "home"}
           />
         </Suspense>

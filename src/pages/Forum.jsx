@@ -945,6 +945,18 @@ export default function Forum() {
     setDeleteTarget(null);
   }, [deleteTarget, deleteMutation]);
 
+  const openDiscussionComposer = useCallback(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches) {
+      setMobileTab("feed");
+      requestAnimationFrame(() => {
+        const composer = document.getElementById("forum-compose-sidebar");
+        if (composer) composer.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+    setShowMobileCompose(true);
+  }, []);
+
   const handleToggleReply = useCallback((postId) => {
     setActiveReplyId((curr) => (curr === postId ? null : postId));
   }, []);
@@ -1165,7 +1177,7 @@ export default function Forum() {
       {/* ━━━ MAIN CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div className="forum-mobile-content mx-auto max-w-6xl px-2 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
         <ForumQuickActionRail
-          onStartDiscussion={() => setShowMobileCompose(true)}
+          onStartDiscussion={openDiscussionComposer}
           onOpenTools={() => setMobileTab("tools")}
         />
 
@@ -1355,7 +1367,7 @@ export default function Forum() {
                       <ForumPostCard
                         key={post.id} post={post} index={index}
                         isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
-                        appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending}
+                        appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending || updateMutation.isPending}
                         replyOpen={activeReplyId === post.id}
                         replyDraft={activeReplyId === post.id ? (replyDrafts[post.id] || emptyReply) : emptyReply}
                         onToggleReply={handleToggleReply}
@@ -1363,6 +1375,7 @@ export default function Forum() {
                         onReply={handleReply}
                         onOpenThread={handleOpenThread}
                         onDeletePost={handleDelete}
+                        onEditPost={handleEditPost}
                         replyApi={replyApi}
                         activeReplyDraft={activeReplyDraftSaved}
                         authorPostCounts={authorPostCounts}
@@ -1572,7 +1585,7 @@ export default function Forum() {
           </div>
 
           {/* ━━━ RIGHT: Sidebar ━━━ */}
-          <div className="hidden lg:block">
+          <div id="forum-compose-sidebar" className="hidden lg:block scroll-mt-28">
             <AdSlot position="sidebar" size="medium-rectangle" className="mb-6 w-full" />
             <Suspense fallback={<div className="h-96 bg-card/10 animate-pulse border border-border/10" />}>
               <ComposeSidebar

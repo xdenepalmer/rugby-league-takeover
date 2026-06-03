@@ -39,11 +39,13 @@ export default function SecurityTab() {
       toast({ title: "Password changed", description: "Use your new password next time you log in." });
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
     },
+    onError: (err) => toast({ title: "Password change failed", description: err?.message || "Please try again", variant: "destructive" }),
   });
 
   const resetMutation = useMutation({
     mutationFn: () => base44.auth.resetPasswordRequest(user.email),
     onSuccess: () => toast({ title: "Reset email sent", description: `Check ${user.email} for a reset link.` }),
+    onError: (err) => toast({ title: "Reset request failed", description: err?.message || "Please try again", variant: "destructive" }),
   });
 
   const submit = (e) => {

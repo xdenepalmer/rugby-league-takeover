@@ -108,7 +108,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
 
   // Sync cart count reactively
   useEffect(() => {
-    const updateCount = () => {
+    const readFromStorage = () => {
       try {
         const stored = localStorage.getItem("rlt_cart");
         const items = stored ? JSON.parse(stored) : [];
@@ -117,12 +117,20 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
         setCartCount(0);
       }
     };
-    updateCount();
-    window.addEventListener("rlt_cart_changed", updateCount);
-    window.addEventListener("storage", updateCount);
+    const onCartChanged = (e) => {
+      // Prefer event detail (written before localStorage in some race scenarios)
+      if (e?.detail && typeof e.detail.count === "number") {
+        setCartCount(e.detail.count);
+      } else {
+        setTimeout(readFromStorage, 0);
+      }
+    };
+    readFromStorage();
+    window.addEventListener("rlt_cart_changed", onCartChanged);
+    window.addEventListener("storage", readFromStorage);
     return () => {
-      window.removeEventListener("rlt_cart_changed", updateCount);
-      window.removeEventListener("storage", updateCount);
+      window.removeEventListener("rlt_cart_changed", onCartChanged);
+      window.removeEventListener("storage", readFromStorage);
     };
   }, []);
 

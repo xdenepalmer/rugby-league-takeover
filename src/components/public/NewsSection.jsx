@@ -37,6 +37,7 @@ const cardVariants = {
 /* ── NewsCard with cursor-follow spotlight ── */
 function NewsCard({ article, index, onClick }) {
   const cardRef = useRef(null);
+  const [imgError, setImgError] = useState(false);
   const spotlightX = useMotionValue(0);
   const spotlightY = useMotionValue(0);
   const springX = useSpring(spotlightX, { stiffness: 300, damping: 30 });
@@ -52,6 +53,7 @@ function NewsCard({ article, index, onClick }) {
   );
 
   const timeEst = readingTime(article.body);
+  const showFallback = !article.image_url || imgError;
 
   return (
     <motion.article
@@ -78,12 +80,19 @@ function NewsCard({ article, index, onClick }) {
 
       {/* Image container */}
       <div className="aspect-[4/3] overflow-hidden bg-muted/10 relative border-b border-border/50">
-        <img
-          src={article.image_url}
-          alt={article.title}
-          loading="lazy"
-          className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-100"
-        />
+        {showFallback ? (
+          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-card to-accent/10">
+            <Newspaper className="h-12 w-12 text-primary/40" />
+          </div>
+        ) : (
+          <img
+            src={article.image_url}
+            alt={article.title}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-100"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/90 via-transparent to-transparent opacity-70" />
 
         {/* Date + reading time overlay badges */}

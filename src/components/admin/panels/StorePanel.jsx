@@ -9,7 +9,7 @@ import FaqManager from "../FaqManager";
 
 export default function StorePanel() {
   const [activeTab, setActiveTab] = useState("products");
-  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200) });
+  const { data: products = [], isLoading: productsLoading } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200) });
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200) });
   const { data: faqs = [] } = useQuery({ queryKey: ["faqs"], queryFn: () => base44.entities.Faq.list("sort_order", 200), retry: false, meta: { silent: true } });
 
@@ -92,7 +92,7 @@ export default function StorePanel() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
             >
-              <ProductsManager products={products} />
+              <ProductsManager products={products} loading={productsLoading} />
             </motion.div>
           )}
 

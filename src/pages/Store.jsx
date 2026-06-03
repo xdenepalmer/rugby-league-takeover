@@ -22,7 +22,8 @@ import {
   Rocket,
   Info,
   Lock,
-  Truck
+  Truck,
+  Ruler
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -34,6 +35,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 
 /* ── 3D Product Card Component ── */
+const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
+
 const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease, onOpenQuickView }) {
   const stock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
@@ -86,13 +89,13 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.08, 0.4), duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      onMouseMove={isTouch ? undefined : handleMouseMove}
+      onMouseLeave={isTouch ? undefined : handleMouseLeave}
       onClick={(e) => {
         if (e.target.closest("button, form, input, a")) return;
         onOpenQuickView(product);
       }}
-      style={{ rotateX, rotateY, transformPerspective: 1000 }}
+      style={isTouch ? undefined : { rotateX, rotateY, transformPerspective: 1000 }}
       className="group relative flex flex-col border border-border bg-card/40 cmd-glass transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_25px_rgba(249,115,22,0.15)] overflow-hidden cursor-pointer"
     >
       {/* Glow highlight inside */}
@@ -329,7 +332,16 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
               <div className="space-y-2 border-t border-border/20 pt-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Select Size</h3>
-                  <span className="text-[10px] text-primary hover:underline cursor-pointer">Size Guide</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      setTimeout(() => document.getElementById("sizing")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+                    }}
+                    className="min-h-8 px-2 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline cursor-pointer"
+                  >
+                    Size Guide
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {sizes.map(size => (
@@ -400,15 +412,27 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
 function SkeletonLoader() {
   return (
     <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {[1, 2, 3].map((n) => (
-        <div key={n} className="border border-border bg-card/30 p-6 space-y-6">
-          <div className="aspect-square bg-muted/20 animate-pulse w-full border border-border/40" />
-          <div className="h-6 bg-muted/20 animate-pulse w-2/3" />
-          <div className="space-y-2">
-            <div className="h-4 bg-muted/20 animate-pulse w-full" />
-            <div className="h-4 bg-muted/20 animate-pulse w-5/6" />
+      {[1, 2, 3, 4, 5, 6].map((n) => (
+        <div key={n} className="border border-border/30 bg-muted/10 flex flex-col overflow-hidden">
+          {/* Image placeholder */}
+          <div className="aspect-square w-full bg-muted/10 animate-pulse border-b border-border/30" />
+          {/* Content area */}
+          <div className="p-6 space-y-4">
+            {/* Title bar */}
+            <div className="h-6 bg-muted/10 animate-pulse w-3/4 border border-border/30" />
+            {/* Description bars */}
+            <div className="space-y-2">
+              <div className="h-4 bg-muted/10 animate-pulse w-full border border-border/30" />
+              <div className="h-4 bg-muted/10 animate-pulse w-5/6 border border-border/30" />
+            </div>
+            {/* Stock bar */}
+            <div className="h-1 bg-muted/10 animate-pulse w-full border border-border/30" />
+            {/* Price + button row */}
+            <div className="flex items-center justify-between border-t border-border/30 pt-4">
+              <div className="h-5 bg-muted/10 animate-pulse w-24 border border-border/30" />
+              <div className="h-9 bg-muted/10 animate-pulse w-20 border border-border/30" />
+            </div>
           </div>
-          <div className="h-10 bg-muted/20 animate-pulse w-full mt-4" />
         </div>
       ))}
     </div>
@@ -473,6 +497,43 @@ function StoreExperienceRail({ productCount, categoryCount, cartCount, onCartOpe
   );
 }
 
+function StoreSizeGuide() {
+  const rows = [
+    { size: "S", chest: "92-97 cm", fit: "Slim supporter fit" },
+    { size: "M", chest: "98-103 cm", fit: "Regular match-day fit" },
+    { size: "L", chest: "104-109 cm", fit: "Regular relaxed fit" },
+    { size: "XL", chest: "110-116 cm", fit: "Relaxed travel fit" },
+    { size: "2XL", chest: "117-123 cm", fit: "Roomy supporter fit" },
+  ];
+
+  return (
+    <section id="sizing" className="mt-12 border border-border/50 bg-card/25 p-4 cmd-glass sm:p-5" aria-labelledby="store-size-guide-title">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-primary">
+            <Ruler className="h-3.5 w-3.5" /> Size guide
+          </p>
+          <h2 id="store-size-guide-title" className="mt-2 font-display text-2xl uppercase tracking-wide text-foreground sm:text-3xl">
+            Pick the right fit
+          </h2>
+        </div>
+        <p className="max-w-sm text-xs leading-5 text-muted-foreground">
+          General apparel guide. If you prefer a looser travel-day fit, choose one size up.
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-5">
+        {rows.map((row) => (
+          <div key={row.size} className="border border-border/45 bg-background/35 p-3">
+            <p className="font-display text-2xl uppercase text-foreground">{row.size}</p>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-accent">{row.chest}</p>
+            <p className="mt-2 text-[11px] leading-4 text-muted-foreground">{row.fit}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* ── Main Store Component ── */
 export default function Store() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -522,6 +583,7 @@ export default function Store() {
 
   useEffect(() => {
     localStorage.setItem("rlt_cart", JSON.stringify(cart));
+    window.dispatchEvent(new CustomEvent("rlt_cart_changed", { detail: { count: cart.reduce((s, i) => s + i.quantity, 0) } }));
   }, [cart]);
 
   // Lock body scroll when cart drawer is open
@@ -533,6 +595,12 @@ export default function Store() {
     }
     return () => { document.body.style.overflow = ''; };
   }, [cartOpen]);
+
+  useEffect(() => {
+    const openCart = () => setCartOpen(true);
+    window.addEventListener("rlt_open_cart", openCart);
+    return () => window.removeEventListener("rlt_open_cart", openCart);
+  }, []);
 
   // Prefill checkout details for signed-in buyers (they can still edit them).
   useEffect(() => {
@@ -601,6 +669,9 @@ export default function Store() {
   const shippingThreshold = 150;
   const progressPercent = Math.min(100, (cartSubtotal / shippingThreshold) * 100);
   const needsMore = Math.max(0, shippingThreshold - cartSubtotal);
+  const shippingLabel = cartSubtotal >= shippingThreshold ? "Free shipping" : "Standard shipping";
+  const shippingEstimate = cartSubtotal >= shippingThreshold ? "$0.00 AUD" : "Calculated at checkout";
+  const deliveryWindow = cartSubtotal >= shippingThreshold ? "Estimated delivery 4-7 business days" : "Delivery estimate shown after address";
 
   const handleCheckout = async (e) => {
     e.preventDefault();
@@ -760,10 +831,12 @@ export default function Store() {
               <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-300">Browse the drop</span>
               <span className="text-[10px] font-mono text-muted-foreground">{filteredProducts.length} visible</span>
             </div>
-            <div className="store-category-rail -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+            <div role="tablist" className="store-category-rail -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
               {categories.map((cat) => (
                 <button
                   key={cat}
+                  role="tab"
+                  aria-selected={selectedCategory === cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`min-h-[44px] shrink-0 border px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                     selectedCategory === cat
@@ -814,15 +887,15 @@ export default function Store() {
           <div className="py-8">
             <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
           </div>
+          <StoreSizeGuide />
           <StoreFaq />
         </div>
       </div>
-
       {/* Cart Drawer & Slide-over Overlay */}
       <AnimatePresence>
         {cartOpen && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -834,7 +907,7 @@ export default function Store() {
               aria-label="Close cart"
             />
 
-            <motion.div 
+            <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -845,14 +918,13 @@ export default function Store() {
               aria-modal="true"
               aria-label="Shopping cart"
             >
-              {/* Decorative side tag */}
               <div className="absolute left-[-2px] top-0 bottom-0 w-[2px] cmd-accent-bar" />
 
               <div className="flex items-center justify-between border-b border-border pb-4">
                 <h3 className="flex items-center gap-2 font-display text-2xl uppercase tracking-wider text-foreground">
                   <ShoppingBag className="h-5 w-5 text-primary" /> Your Cart
                 </h3>
-                <button 
+                <button
                   onClick={() => setCartOpen(false)}
                   className="min-h-[44px] px-4 py-3 text-xs uppercase tracking-[0.25em] text-slate-300 hover:text-primary transition-colors font-bold cursor-pointer"
                   aria-label="Close cart"
@@ -861,40 +933,40 @@ export default function Store() {
                 </button>
               </div>
 
-              {/* Cart Stepper Indicator */}
               {cart.length > 0 && (
                 <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-slate-300 border-b border-border/10 pb-3 pt-4 mb-1">
                   <span className="text-primary flex items-center gap-1 font-extrabold">1. Cart</span>
-                  <span className="text-muted-foreground/30">➔</span>
+                  <span className="text-muted-foreground/30">→</span>
                   <span className={checkoutEmail ? "text-primary flex items-center gap-1 font-extrabold" : "text-slate-400"}>2. Details</span>
-                  <span className="text-muted-foreground/30">➔</span>
+                  <span className="text-muted-foreground/30">→</span>
                   <span className="text-slate-400">3. Pay</span>
                 </div>
               )}
 
-              {/* Items Section */}
               <div className="flex-1 overflow-y-auto cmd-scrollbar py-4 pr-1">
                 {cart.length === 0 ? (
-                  <div className="flex h-64 flex-col items-center justify-center text-slate-300">
+                  <div className="flex h-64 flex-col items-center justify-center text-center px-4">
                     <motion.div
                       animate={{ y: [0, -10, 0] }}
                       transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                     >
-                      <BagIcon className="h-12 w-12 stroke-1 mb-3 text-slate-400" />
+                      <ShoppingBag className="h-14 w-14 stroke-1 mb-4 text-muted-foreground" />
                     </motion.div>
-                    <p className="text-sm font-semibold uppercase tracking-wider">Your cart is empty</p>
-                    <button 
+                    <h4 className="text-lg font-display uppercase tracking-wider text-foreground">Your cart is empty</h4>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-xs">Browse our merch collection and add items to get started</p>
+                    <Button
                       onClick={() => setCartOpen(false)}
-                      className="mt-4 min-h-[44px] px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary hover:underline cursor-pointer"
+                      variant="outline"
+                      className="mt-6 rounded-none border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-widest text-xs px-6 py-3 cursor-pointer"
                     >
-                      Browse items <ChevronRight className="h-3 w-3 inline" />
-                    </button>
+                      Continue Shopping
+                    </Button>
                   </div>
                 ) : (
                   <div className="grid gap-4">
                     {cart.map((item) => (
-                      <motion.div 
-                        key={item.cartItemId} 
+                      <motion.div
+                        key={item.cartItemId}
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -10 }}
@@ -917,15 +989,17 @@ export default function Store() {
                           </div>
                           <div className="mt-2 flex items-center justify-between">
                             <div className="flex items-center border border-border">
-                              <button 
+                              <button
                                 onClick={() => updateQuantity(item.cartItemId, -1)}
+                                aria-label={`Decrease quantity of ${item.name}`}
                                 className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
                               >
                                 <Minus className="h-3 w-3" />
                               </button>
                               <span className="w-10 text-center text-xs font-mono font-bold text-foreground">{item.quantity}</span>
-                              <button 
+                              <button
                                 onClick={() => updateQuantity(item.cartItemId, 1)}
+                                aria-label={`Increase quantity of ${item.name}`}
                                 className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
                               >
                                 <Plus className="h-3 w-3" />
@@ -946,21 +1020,36 @@ export default function Store() {
                 )}
               </div>
 
-              {/* Cart Footer */}
               {cart.length > 0 && (
                 <div className="border-t border-border/60 bg-card/60 pt-4 backdrop-blur-md pb-safe">
-                  {/* Shipping status banner */}
                   <div className="mb-4 bg-muted/20 border border-border/40 p-3 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
                       <span className="flex items-center gap-1">{needsMore > 0 ? `Spend $${needsMore.toFixed(2)} AUD more for free shipping` : <><Rocket className="h-3 w-3 inline" /> You qualify for free shipping!</>}</span>
                     </div>
                     <div className="h-1.5 w-full bg-border overflow-hidden rounded-full">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progressPercent}%` }}
                         transition={{ duration: 0.5 }}
-                        className="h-full bg-gradient-to-r from-primary to-accent" 
+                        className="h-full bg-gradient-to-r from-primary to-accent"
                       />
+                    </div>
+                  </div>
+
+                  <div className="mb-4 grid grid-cols-2 gap-2">
+                    <div className="border border-border/40 bg-background/35 p-3">
+                      <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                        <Truck className="h-3 w-3 text-primary" /> Shipping
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-foreground">{shippingLabel}</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">{shippingEstimate}</p>
+                    </div>
+                    <div className="border border-border/40 bg-background/35 p-3">
+                      <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Delivery
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-foreground">Tracked updates</p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">{deliveryWindow}</p>
                     </div>
                   </div>
 
@@ -986,13 +1075,13 @@ export default function Store() {
                     <div className="relative">
                       <label htmlFor="checkout-name" className="sr-only">Your full name</label>
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input 
+                      <Input
                         id="checkout-name"
-                        required 
-                        placeholder="Your full name" 
+                        required
+                        placeholder="Your full name"
                         value={checkoutName}
                         onChange={(e) => setCheckoutName(e.target.value)}
-                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary text-foreground" 
+                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary text-foreground"
                       />
                     </div>
                     <div className="relative">
@@ -1010,9 +1099,9 @@ export default function Store() {
                         className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary"
                       />
                     </div>
-                    
-                    <Button 
-                      type="submit" 
+
+                    <Button
+                      type="submit"
                       disabled={checkingOut}
                       className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >

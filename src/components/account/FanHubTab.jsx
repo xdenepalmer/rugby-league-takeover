@@ -81,6 +81,52 @@ export default function FanHubTab() {
 
   const hasProgress = xp > 0 || chips > 0 || rewards.length > 0;
 
+  if (user?.casino_xp === undefined) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        {/* Rank header skeleton */}
+        <div className="border border-border/40 bg-card/30 cmd-glass p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 bg-muted/15 border border-border/30" />
+              <div className="space-y-2">
+                <div className="h-2 w-16 bg-muted/10" />
+                <div className="h-5 w-32 bg-muted/15" />
+              </div>
+            </div>
+            <div className="text-right space-y-2">
+              <div className="h-6 w-16 bg-muted/15 ml-auto" />
+              <div className="h-2 w-12 bg-muted/10 ml-auto" />
+            </div>
+          </div>
+          <div className="mt-4 h-2 w-full bg-muted/10 rounded-full" />
+        </div>
+        {/* Stats tiles skeleton */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="flex items-center gap-3 border border-border/40 bg-card/30 px-4 py-3">
+              <div className="h-7 w-7 bg-muted/15 border border-border/30" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 w-10 bg-muted/15" />
+                <div className="h-2 w-16 bg-muted/10" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Recent rewards skeleton */}
+        <div className="border border-border/40 bg-card/20">
+          <div className="border-b border-border/30 px-4 py-3">
+            <div className="h-3 w-28 bg-muted/10" />
+          </div>
+          <div className="px-4 py-8 text-center">
+            <div className="h-6 w-6 bg-muted/10 mx-auto mb-2" />
+            <div className="h-3 w-48 bg-muted/10 mx-auto" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Level / rank header */}

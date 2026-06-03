@@ -104,10 +104,41 @@ function HomeContent({ onNavigate, onClose }) {
   );
 }
 
-function StoreContent({ onClose }) {
+function StoreContent({ onClose, cartCount = 0 }) {
+  const openCart = () => {
+    try {
+      window.dispatchEvent(new Event("rlt_open_cart"));
+    } catch {}
+    onClose();
+  };
+
   return (
     <>
       <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-2">Store Quick Actions</p>
+      <div className="border border-primary/25 bg-primary/[0.045] p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center border border-primary/30 bg-background/50 text-primary">
+            <Package className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-primary">Current cart</p>
+            <p className="mt-0.5 text-sm font-bold text-foreground">
+              {cartCount > 0 ? `${cartCount} item${cartCount === 1 ? "" : "s"} ready` : "No items yet"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={openCart}
+            className="min-h-11 border border-primary/30 bg-primary/10 px-3 text-[10px] font-extrabold uppercase tracking-wider text-primary transition-colors hover:bg-primary/15"
+          >
+            Open
+          </button>
+        </div>
+        <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+          Free shipping progress and delivery estimates are shown inside the cart before checkout.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <Link
           to="/account"
@@ -298,7 +329,7 @@ const CONTEXT_HEADERS = {
   account: { label: "ACCOUNT // CONSOLE", title: "My Takeover" },
 };
 
-export default function MobileCommandSheet({ isOpen, onClose, onNavigate, context = "home" }) {
+export default function MobileCommandSheet({ isOpen, onClose, onNavigate, context = "home", cartCount = 0 }) {
   const header = CONTEXT_HEADERS[context] || CONTEXT_HEADERS.home;
 
   return (
@@ -350,7 +381,7 @@ export default function MobileCommandSheet({ isOpen, onClose, onNavigate, contex
 
             {/* Scrollable Content — context-aware */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 cmd-scrollbar">
-              {context === "store" && <StoreContent onClose={onClose} />}
+              {context === "store" && <StoreContent onClose={onClose} cartCount={cartCount} />}
               {context === "forum" && <ForumContent onClose={onClose} />}
               {context === "account" && <AccountContent onClose={onClose} />}
               {context === "home" && <HomeContent onNavigate={onNavigate} onClose={onClose} />}

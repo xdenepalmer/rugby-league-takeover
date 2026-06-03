@@ -40,7 +40,22 @@ export default function PostsTab() {
 
   const isLoading = myPostsLoading || allPostsLoading;
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading posts…</p>;
+  if (isLoading) return (
+    <div className="grid gap-4">
+      {[1,2,3].map(i => (
+        <div key={i} className="animate-pulse border border-border bg-card p-5 grid gap-2">
+          <div className="flex items-center justify-between">
+            <div className="h-3 w-20 bg-muted/15" />
+            <div className="h-5 w-24 bg-muted/10" />
+          </div>
+          <div className="h-6 w-2/3 bg-muted/15" />
+          <div className="h-3 w-full bg-muted/10" />
+          <div className="h-3 w-4/5 bg-muted/10" />
+          <div className="h-2 w-24 bg-muted/10 mt-1" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-5">

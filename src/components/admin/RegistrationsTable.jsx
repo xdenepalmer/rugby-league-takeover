@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Download, Search, ClipboardList, Users, CalendarCheck,
   Hash, Check, X, Phone, MapPin, Mail, Shield,
-  ClipboardCopy, Send
+  ClipboardCopy, Send, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { downloadCsv } from "@/lib/csv";
 import { SUPPORTED_TEAMS } from "@/lib/public-forms";
@@ -41,6 +41,8 @@ export default function RegistrationsTable({ registrations }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [copied, setCopied] = useState(false);
   const [emailConfirmOpen, setEmailConfirmOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 25;
 
   /* Filter logic (unchanged) */
   const filtered = useMemo(() => {
@@ -50,6 +52,15 @@ export default function RegistrationsTable({ registrations }) {
       return `${item.name || ""} ${item.email || ""} ${item.postcode || ""}`.toLowerCase().includes(term);
     });
   }, [registrations, search, teamFilter]);
+
+  /* Reset page when filters change */
+  React.useEffect(() => {
+    setPage(1);
+  }, [search, teamFilter]);
+
+  /* Paginate */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const pagedItems = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   /* CSV export (unchanged) */
   const exportCsv = () => {
@@ -328,7 +339,7 @@ export default function RegistrationsTable({ registrations }) {
                 animate="show"
                 className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
               >
-                {filtered.map((item) => {
+                {pagedItems.map((item, index) => {
                   const tc = teamColor(item.team_supported);
                   const initial = (item.name || "?")[0].toUpperCase();
                   return (
@@ -336,6 +347,7 @@ export default function RegistrationsTable({ registrations }) {
                       key={item.id}
                       variants={cardVariant}
                       layout
+                      transition={{ ...cardVariant.show.transition, delay: Math.min(index * 0.04, 0.3) }}
                       className={`group relative border bg-card/50 transition-all hover:border-primary/30 hover:bg-card/80 ${
                         selectedIds.has(item.id)
                           ? "border-primary/60 ring-1 ring-primary/20"
@@ -446,13 +458,79 @@ export default function RegistrationsTable({ registrations }) {
 
         {/* ── Footer count ── */}
         {filtered.length > 0 && (
-          <div className="border-t border-border/30 px-5 py-2.5 md:px-6 flex items-center justify-between">
+          <div className="border-t border-border/30 px-5 py-2.5 md:px-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-1.5">
               <Hash className="h-3 w-3 text-muted-foreground/50" />
               <span className="text-[9px] font-mono text-muted-foreground/60">
-                Showing {filtered.length} record{filtered.length !== 1 ? "s" : ""}
+                Showing {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length} record{filtered.length !== 1 ? "s" : ""}
               </span>
             </div>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="flex min-h-8 items-center gap-1 border border-border/50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-border hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="h-3 w-3" /> Prev
+                </button>
+
+                {totalPages <= 7 ? (
+                  Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`flex min-h-8 min-w-8 items-center justify-center border text-[9px] font-bold font-mono transition-colors ${
+                        p === page
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))
+                ) : (
+                  /* Show first, surrounding, and last pages with ellipsis */
+                  (() => {
+                    const pages = [];
+                    const addPage = (p) => { if (!pages.includes(p)) pages.push(p); };
+                    addPage(1);
+                    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) addPage(i);
+                    addPage(totalPages);
+                    return pages.reduce((acc, p, idx) => {
+                      if (idx > 0 && p - pages[idx - 1] > 1) {
+                        acc.push(<span key={`e${p}`} className="px-1 text-[9px] text-muted-foreground/40">…</span>);
+                      }
+                      acc.push(
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`flex min-h-8 min-w-8 items-center justify-center border text-[9px] font-bold font-mono transition-colors ${
+                            p === page
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                      return acc;
+                    }, []);
+                  })()
+                )}
+
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="flex min-h-8 items-center gap-1 border border-border/50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-border hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  Next <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+
             <span className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground/40">
               rlt–registrations
             </span>

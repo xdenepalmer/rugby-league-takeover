@@ -14,7 +14,17 @@ export default function InterestTab() {
     enabled: Boolean(user?.email),
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading your registrations…</p>;
+  if (isLoading) return (
+    <div className="space-y-3">
+      {[1,2].map(i => (
+        <div key={i} className="animate-pulse border border-border/30 bg-muted/5 p-4">
+          <div className="h-4 w-1/3 bg-muted/15 mb-3" />
+          <div className="h-3 w-2/3 bg-muted/10 mb-2" />
+          <div className="h-3 w-1/2 bg-muted/10" />
+        </div>
+      ))}
+    </div>
+  );
 
   if (registrations.length === 0) {
     return (

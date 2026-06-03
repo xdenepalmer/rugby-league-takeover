@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -54,6 +54,16 @@ export default function ProfileTab() {
   const { user, updateProfile } = useAuth();
   const [draft, setDraft] = useState(() => profileFields(user));
 
+  const originalSnapshot = useMemo(() => JSON.stringify(profileFields(user)), [user]);
+  const isDirty = JSON.stringify(draft) !== originalSnapshot;
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
   const { data: dbTeams = [] } = useQuery({
     queryKey: ["teams"],
     queryFn: () => base44.entities.Team.list("name", 200),
@@ -86,6 +96,12 @@ export default function ProfileTab() {
 
   return (
     <div className="grid gap-6">
+      {isDirty && (
+        <div className="sticky top-0 z-20 flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-400">
+          <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+          You have unsaved changes
+        </div>
+      )}
       <div className="grid gap-5 border border-border bg-card p-6 md:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="profile-full-name" className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Full name</Label>

@@ -158,8 +158,37 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
   );
 }
 
+/* ── Shimmer skeleton card ── */
+function ProductSkeleton({ index }) {
+  return (
+    <div
+      className="border border-border/30 bg-card/10 overflow-hidden animate-pulse"
+      style={{ animationDelay: `${index * 120}ms` }}
+    >
+      <div className="flex flex-col gap-4 p-4 sm:flex-row">
+        {/* Image placeholder */}
+        <div className="h-20 w-20 shrink-0 bg-muted/20 border border-border/20" />
+        {/* Text lines */}
+        <div className="min-w-0 flex-1 space-y-3 py-1">
+          <div className="h-3 w-2/5 rounded bg-muted/20" />
+          <div className="flex gap-2">
+            <div className="h-4 w-20 bg-muted/15" />
+            <div className="h-4 w-16 bg-muted/15" />
+          </div>
+          <div className="h-2.5 w-3/4 rounded bg-muted/10" />
+        </div>
+        {/* Action placeholders */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:flex-col">
+          <div className="h-9 w-9 border border-border/20 bg-muted/10" />
+          <div className="h-9 w-9 border border-border/20 bg-muted/10" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Component ── */
-export default function ProductsManager({ products }) {
+export default function ProductsManager({ products, loading }) {
   const [draft, setDraft] = useState(emptyProduct);
   const [showCreate, setShowCreate] = useState(false);
   const [confirmProductId, setConfirmProductId] = useState(null);
@@ -270,22 +299,30 @@ export default function ProductsManager({ products }) {
 
         {/* Product Grid */}
         <div className="space-y-2">
-          {products.length === 0 && (
+          {loading ? (
+            /* Shimmer skeleton grid while loading */
+            <div className="space-y-2">
+              {Array.from({ length: 4 }, (_, i) => (
+                <ProductSkeleton key={i} index={i} />
+              ))}
+            </div>
+          ) : products.length === 0 ? (
             <div className="border border-border/30 bg-muted/5 p-10 text-center">
               <Package className="h-6 w-6 mx-auto text-muted-foreground/15 mb-2" />
               <p className="text-sm text-muted-foreground/30">No products yet. Add your first one above.</p>
             </div>
+          ) : (
+            products.map((product, index) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                index={index}
+                saving={updateMutation.isPending}
+                onUpdate={(data) => updateMutation.mutate({ id: product.id, data })}
+                onDelete={(id) => setConfirmProductId(id)}
+              />
+            ))
           )}
-          {products.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              index={index}
-              saving={updateMutation.isPending}
-              onUpdate={(data) => updateMutation.mutate({ id: product.id, data })}
-              onDelete={(id) => setConfirmProductId(id)}
-            />
-          ))}
         </div>
       </div>
 
