@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, AlertTriangle, X, ChevronRight, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
 
 /* ── Size presets with responsive fallback chain ── */
 const SIZE_MAP = {
@@ -239,9 +240,10 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
   const { data: allAds = [] } = useQuery({
     queryKey: ["siteAds"],
     queryFn: () => base44.entities.SiteAd.list("-created_date", 200),
-    staleTime: 30000, // 30s cache to avoid hammering
-    refetchInterval: 60000, // Re-check every 60s for schedule-based ads
-    retry: false,
+    staleTime: 30000,
+    refetchInterval: 60000,
+    retry: 1,
+    enabled: appParams.hasBase44Config,
     meta: { silent: true },
   });
 
@@ -250,7 +252,8 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
     staleTime: 30000,
-    retry: false,
+    retry: 1,
+    enabled: appParams.hasBase44Config,
     meta: { silent: true },
   });
   const globalEnabled = settingsRecords[0]?.ads_enabled !== false && settingsRecords[0]?.ads_enabled !== "false";
