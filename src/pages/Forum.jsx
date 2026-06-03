@@ -218,7 +218,7 @@ const ForumPostCard = memo(function ForumPostCard({
       {/* Hot badge */}
       {engagement.hot && !post.is_pinned && (
         <div className="absolute top-3 right-3 z-10">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 border border-orange-500/20 text-[7px] font-bold uppercase tracking-wider text-orange-400">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 border border-orange-500/20 text-[9px] font-bold uppercase tracking-wider text-orange-400">
             <Flame className="h-2 w-2" /> Hot
           </span>
         </div>
@@ -241,11 +241,11 @@ const ForumPostCard = memo(function ForumPostCard({
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {post.is_pinned && (
-                <span className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-primary">
+                <span className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
                   <Pin className="h-2 w-2" /> Pinned
                 </span>
               )}
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border border-border/30 bg-gradient-to-r ${meta.gradient}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-border/30 bg-gradient-to-r ${meta.gradient}`}>
                 <MetaIcon className={`h-3 w-3 ${meta.accent}`} />
                 <span className={meta.accent}>{meta.label}</span>
               </span>
@@ -790,7 +790,7 @@ export default function Forum() {
               <div className="flex items-center gap-2 mb-3">
                 <Radio className="h-3.5 w-3.5 text-primary cmd-pulse" />
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-primary font-mono">Fan Discussion Board</p>
-                <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[7px] font-bold uppercase tracking-wider text-emerald-400">
+                <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
                   <Activity className="h-2 w-2" /> Live
                 </span>
               </div>
@@ -823,7 +823,7 @@ export default function Forum() {
                     <p className="font-display text-xl tabular-nums text-foreground leading-none">
                       <AnimatedNumber value={value} />
                     </p>
-                    <p className="text-[8px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">{label}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">{label}</p>
                   </div>
                 </div>
               ))}
@@ -848,7 +848,7 @@ export default function Forum() {
                 <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 <span className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary">Trending Now</span>
                 <div className="flex-1" />
-                <span className="text-[8px] font-mono text-muted-foreground/30">Updated live</span>
+                <span className="text-[10px] font-mono text-muted-foreground/30">Updated live</span>
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 {[...allThreads].sort((a, b) => getEngagement(b).likes - getEngagement(a).likes).slice(0, 3).map((t, i) => (

@@ -580,7 +580,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
           aria-label="Show advertisement"
         >
           <ChevronRight className="h-3 w-3 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5" />
-          <span className="text-[7px] font-bold uppercase tracking-[0.3em] text-muted-foreground/40 font-mono group-hover:text-muted-foreground/60 transition-colors">
+          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/40 font-mono group-hover:text-muted-foreground/60 transition-colors">
             Show Ad
           </span>
         </motion.button>
@@ -634,7 +634,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
 
           {/* "Sponsored" label — always visible for transparency */}
           <span
-            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.2em] font-mono pointer-events-none"
+            className="absolute top-0 right-0 z-20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] font-mono pointer-events-none"
             style={{
               background: "hsl(var(--background) / 0.7)",
               color: "hsl(var(--muted-foreground) / 0.6)",
@@ -684,7 +684,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
                   className="absolute bottom-1.5 right-1.5 z-20 flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 backdrop-blur-sm"
                 >
                   <Eye className="h-2.5 w-2.5 text-emerald-400" />
-                  <span className="text-[7px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 font-mono">
                     100% Viewable
                   </span>
                 </motion.span>

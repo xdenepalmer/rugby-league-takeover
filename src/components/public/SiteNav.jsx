@@ -195,14 +195,14 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               <Link 
                 key={link.href} 
                 to={link.href} 
-                className={`group relative py-2 font-display text-[8.5px] xl:text-[10px] 2xl:text-[10.5px] font-bold uppercase tracking-[0.12em] xl:tracking-[0.2em] whitespace-nowrap transition-all duration-300 ${
+                className={`group relative py-2 font-display text-[10px] xl:text-[10px] 2xl:text-[10.5px] font-bold uppercase tracking-[0.12em] xl:tracking-[0.2em] whitespace-nowrap transition-all duration-300 ${
                   active ? "text-primary" : "text-slate-300 hover:text-foreground"
                 }`}
               >
                 <span className="relative z-10 flex items-center">
-                  <span className="opacity-0 -translate-x-1 text-primary transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 mr-1 text-[8px] font-mono">[</span>
+                  <span className="opacity-0 -translate-x-1 text-primary transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 mr-1 text-[10px] font-mono">[</span>
                   {link.label}
-                  <span className="opacity-0 translate-x-1 text-primary transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 ml-1 text-[8px] font-mono">]</span>
+                  <span className="opacity-0 translate-x-1 text-primary transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 ml-1 text-[10px] font-mono">]</span>
                 </span>
                 {active ? (
                   <motion.span 
@@ -252,7 +252,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0, y: -4 }}
                   transition={{ type: "spring", stiffness: 450, damping: 15 }}
-                  className="absolute -right-1 -top-1.5 flex h-4.5 min-w-[18px] items-center justify-center bg-primary px-1 text-[8.5px] font-bold text-white rounded-none shadow-[0_0_10px_hsl(var(--primary))]"
+                  className="absolute -right-1 -top-1.5 flex h-4.5 min-w-[18px] items-center justify-center bg-primary px-1 text-[10px] font-bold text-white rounded-none shadow-[0_0_10px_hsl(var(--primary))]"
                 >
                   {cartCount}
                 </motion.span>
@@ -385,7 +385,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="font-bold text-sm tracking-wide text-foreground truncate">{user?.full_name || "My Account"}</span>
-                            <span className="text-[8px] font-mono text-slate-300 uppercase tracking-widest truncate">{user?.email}</span>
+                            <span className="text-[10px] font-mono text-slate-300 uppercase tracking-widest truncate">{user?.email}</span>
                           </div>
                         </Link>
                         {isAdmin && (

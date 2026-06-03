@@ -69,7 +69,7 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
 
         {/* Label */}
         <span
-          className={`relative z-10 mt-1.5 block truncate text-[8px] font-black uppercase leading-tight ${
+          className={`relative z-10 mt-1.5 block truncate text-[10px] font-black uppercase leading-tight ${
             owned ? "text-current" : "text-slate-700"
           }`}
         >
@@ -78,7 +78,7 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
 
         {/* Tier indicator */}
         <span
-          className={`relative z-10 mt-0.5 flex items-center justify-center gap-0.5 text-[7px] font-bold uppercase tracking-wide ${
+          className={`relative z-10 mt-0.5 flex items-center justify-center gap-0.5 text-[9px] font-bold uppercase tracking-wide ${
             owned ? "text-current/80" : "text-slate-700"
           }`}
         >
@@ -97,10 +97,10 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
             className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 w-36 border border-amber-300/20 bg-black/95 p-2 text-center shadow-[0_0_20px_rgba(0,0,0,0.8)]"
           >
             <div className="text-[10px] font-bold text-amber-200">{badge.label}</div>
-            <div className="mt-0.5 text-[8px] text-slate-400">
+            <div className="mt-0.5 text-[10px] text-slate-400">
               {badge.tier} · Rarity {badge.rarity}/12
             </div>
-            <div className="mt-0.5 text-[8px] text-slate-500">
+            <div className="mt-0.5 text-[10px] text-slate-500">
               {owned ? "✓ Unlocked" : `Land three ${badge.emoji}`}
             </div>
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 border-r border-b border-amber-300/20 bg-black/95" />

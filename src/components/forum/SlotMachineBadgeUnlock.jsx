@@ -509,7 +509,7 @@ export default function SlotMachineBadgeUnlock() {
               <h3 className="font-display text-base font-black uppercase tracking-[0.1em] text-amber-100">
                 Vegas Slot Machine
               </h3>
-              <div className="flex items-center gap-3 text-[8px] font-mono uppercase tracking-wider text-purple-300/70 flex-wrap">
+              <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-wider text-purple-300/70 flex-wrap">
                 <span>{earnedCount}/{totalBadges} rewards</span>
                 <span className="text-amber-300/60">·</span>
                 <span className="text-amber-200/60">SPINS: {totalSpins}</span>
@@ -531,7 +531,7 @@ export default function SlotMachineBadgeUnlock() {
           </div>
           <div className="flex items-center gap-1.5">
             {topOwnedBadge && (
-              <span className="hidden items-center gap-1 border border-amber-300/20 bg-black/50 px-2 py-1 text-[8px] font-mono uppercase text-amber-200/80 sm:inline-flex">
+              <span className="hidden items-center gap-1 border border-amber-300/20 bg-black/50 px-2 py-1 text-[10px] font-mono uppercase text-amber-200/80 sm:inline-flex">
                 <Trophy className="h-3 w-3" /> {topOwnedBadge.emoji} {topOwnedBadge.tier}
               </span>
             )}
@@ -702,9 +702,9 @@ export default function SlotMachineBadgeUnlock() {
             <div className="mt-2 flex items-center justify-center gap-2">
               <div className="relative inline-flex items-center justify-center">
                 <ProgressRing progress={collectionProgress} size={28} strokeWidth={2} />
-                <span className="text-[7px] font-mono text-purple-300/60">{earnedCount}</span>
+                <span className="text-[9px] font-mono text-purple-300/60">{earnedCount}</span>
               </div>
-              <span className="text-[8px] font-mono uppercase tracking-wider text-purple-300/40">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-purple-300/40">
                 Collection {Math.round(collectionProgress * 100)}%
               </span>
             </div>
@@ -720,7 +720,7 @@ export default function SlotMachineBadgeUnlock() {
             <p className="text-[9px] font-mono uppercase tracking-wider text-purple-200/50">
               Prize Ladder · {earnedCount}/{totalBadges}
             </p>
-            <span className="inline-flex items-center gap-1 border border-purple-400/15 bg-black/40 px-2 py-0.5 text-[7px] font-mono uppercase text-purple-200/60">
+            <span className="inline-flex items-center gap-1 border border-purple-400/15 bg-black/40 px-2 py-0.5 text-[9px] font-mono uppercase text-purple-200/60">
               <Gem className="h-2.5 w-2.5" /> {totalBadges} rewards
             </span>
           </div>
@@ -751,7 +751,7 @@ export default function SlotMachineBadgeUnlock() {
           </div>
 
           {!isAuthenticated && earnedCount > 0 && (
-            <p className="mt-2.5 text-[8px] text-slate-500">
+            <p className="mt-2.5 text-[10px] text-slate-500">
               Log in to show your badges next to your name in the forum.
             </p>
           )}

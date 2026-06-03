@@ -37,9 +37,9 @@ function RoundBadge({ label, games, tips }) {
     <div className="flex items-center gap-2 px-2 py-2">
       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       <div className="flex items-center gap-2">
-        <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-primary/60">{label}</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60">{label}</span>
         {gameCount > 0 && (
-          <span className={`text-[7px] font-mono px-1.5 py-0.5 border ${
+          <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${
             allTipped
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
               : "border-border/20 bg-black/30 text-slate-500"
@@ -65,13 +65,13 @@ function LockedTipReceipt({ game, tip }) {
     >
       <div className="flex items-center gap-2 mb-2">
         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-        <span className="text-[8px] font-bold uppercase tracking-[0.25em] text-emerald-300">Tip Locked</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-300">Tip Locked</span>
         <Lock className="h-2.5 w-2.5 text-emerald-500/50 ml-auto" />
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <div className={`text-center p-2 border ${isHome ? "border-emerald-500/30 bg-emerald-500/10" : "border-border/20 bg-black/20"}`}>
-          <TeamCrest name={game.home_team} className="mx-auto h-8 w-8 text-[8px]" />
-          <p className="mt-1 truncate text-[8px] font-bold text-foreground">{shortName(game.home_team)}</p>
+          <TeamCrest name={game.home_team} className="mx-auto h-8 w-8 text-[10px]" />
+          <p className="mt-1 truncate text-[10px] font-bold text-foreground">{shortName(game.home_team)}</p>
           {isHome && <Star className="mx-auto mt-0.5 h-3 w-3 text-emerald-400" />}
         </div>
         <div className="text-center">
@@ -80,15 +80,15 @@ function LockedTipReceipt({ game, tip }) {
             <span className="text-slate-600 mx-1">-</span>
             <span className={!isHome ? "text-emerald-300" : ""}>{scores.away}</span>
           </p>
-          <p className="text-[7px] text-slate-500">by {tip.margin} pts</p>
+          <p className="text-[9px] text-slate-500">by {tip.margin} pts</p>
         </div>
         <div className={`text-center p-2 border ${!isHome ? "border-emerald-500/30 bg-emerald-500/10" : "border-border/20 bg-black/20"}`}>
-          <TeamCrest name={game.away_team} className="mx-auto h-8 w-8 text-[8px]" />
-          <p className="mt-1 truncate text-[8px] font-bold text-foreground">{shortName(game.away_team)}</p>
+          <TeamCrest name={game.away_team} className="mx-auto h-8 w-8 text-[10px]" />
+          <p className="mt-1 truncate text-[10px] font-bold text-foreground">{shortName(game.away_team)}</p>
           {!isHome && <Star className="mx-auto mt-0.5 h-3 w-3 text-emerald-400" />}
         </div>
       </div>
-      <p className="mt-2 text-center text-[7px] text-slate-500">
+      <p className="mt-2 text-center text-[9px] text-slate-500">
         Locked {new Date(tip.tipped_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
       </p>
     </motion.div>
@@ -219,12 +219,12 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                 className="flex items-center gap-1 border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5"
               >
                 <Clock className="h-2.5 w-2.5 text-amber-300" />
-                <span className="text-[8px] font-mono font-bold tabular-nums text-amber-200">{countdown}</span>
+                <span className="text-[10px] font-mono font-bold tabular-nums text-amber-200">{countdown}</span>
               </motion.div>
             )}
             <div className="flex items-center gap-1 min-w-0">
               <Calendar className="h-2.5 w-2.5 shrink-0 text-slate-500" />
-              <span className="truncate text-[8px] text-slate-400">{formatKickoff(game.kickoff)}</span>
+              <span className="truncate text-[10px] text-slate-400">{formatKickoff(game.kickoff)}</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -232,7 +232,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className={`flex items-center gap-0.5 text-[8px] font-bold ${tipResult.correct ? "text-emerald-400" : "text-red-400"}`}
+                className={`flex items-center gap-0.5 text-[10px] font-bold ${tipResult.correct ? "text-emerald-400" : "text-red-400"}`}
               >
                 {tipResult.correct ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                 {tipResult.correct
@@ -240,7 +240,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                   : "Wrong"}
               </motion.span>
             )}
-            <span className={`border px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.15em] ${
+            <span className={`border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] ${
               alreadyTipped && !timeLocked
                 ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10"
                 : status.tone
@@ -252,7 +252,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
         </div>
 
         {/* Round + venue */}
-        <div className="mt-1.5 flex items-center gap-2 text-[8px] text-slate-500">
+        <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-500">
           <span className="font-bold uppercase tracking-[0.15em] text-primary/70">{game.label || "NRL Fixture"}</span>
           {game.venue && (
             <>
@@ -311,7 +311,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                       {game.away_score}
                     </motion.span>
                   </div>
-                  <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500">Full time</p>
+                  <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">Full time</p>
                 </div>
               ), el], [])}
             </div>
@@ -396,7 +396,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
             {/* Margin slider + quick-picks */}
             <div className="mt-3 border border-border/20 bg-black/30 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400">Win margin</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Win margin</span>
                 <div className="flex items-baseline gap-1">
                   <motion.span
                     key={margin}
@@ -406,7 +406,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                   >
                     {margin}
                   </motion.span>
-                  <span className="text-[8px] text-slate-500">pts</span>
+                  <span className="text-[10px] text-slate-500">pts</span>
                 </div>
               </div>
               {/* Quick-pick margin buttons */}
@@ -417,7 +417,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                     type="button"
                     disabled={!canInteract}
                     onClick={(e) => { e.stopPropagation(); setMargin(m); }}
-                    className={`flex-1 min-h-[28px] text-[8px] font-bold font-mono border transition-all ${
+                    className={`flex-1 min-h-[28px] text-[10px] font-bold font-mono border transition-all ${
                       margin === m
                         ? "border-primary/50 bg-primary/20 text-primary"
                         : "border-border/20 bg-black/20 text-slate-500 hover:border-primary/25 hover:text-slate-300"
@@ -435,7 +435,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                 aria-label="Win margin prediction"
               />
               <div className="mt-1.5 flex items-center justify-between">
-                <span className="text-[8px] text-slate-500">Your prediction</span>
+                <span className="text-[10px] text-slate-500">Your prediction</span>
                 <span className="flex items-center gap-1 text-[10px] font-bold text-foreground">
                   <span className={selectedTeam === game.home_team ? "text-primary" : ""}>{scores.home}</span>
                   <span className="text-slate-600">-</span>
@@ -493,7 +493,7 @@ function CommunityPulse({ game, entries, tip }) {
 
   return (
     <div className="mt-3">
-      <div className="mb-1 flex items-center justify-between text-[7px] font-bold uppercase tracking-[0.2em]">
+      <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.2em]">
         <span className="text-slate-500 flex items-center gap-1">
           <Users className="h-2.5 w-2.5" /> Community pulse
         </span>
@@ -515,8 +515,8 @@ function CommunityPulse({ game, entries, tip }) {
             userPicked === game.home_team ? 'ring-1 ring-inset ring-primary/40' : ''
           }`}
         >
-          <TeamCrest name={game.home_team} className="h-4 w-4 text-[6px] shrink-0" />
-          <span className="text-[8px] font-bold text-white/90 truncate">{homePct}%</span>
+          <TeamCrest name={game.home_team} className="h-4 w-4 text-[9px] shrink-0" />
+          <span className="text-[10px] font-bold text-white/90 truncate">{homePct}%</span>
         </motion.div>
         <motion.div
           initial={{ width: 0 }}
@@ -526,8 +526,8 @@ function CommunityPulse({ game, entries, tip }) {
             userPicked === game.away_team ? 'ring-1 ring-inset ring-accent/40' : ''
           }`}
         >
-          <span className="text-[8px] font-bold text-white/90 truncate">{awayPct}%</span>
-          <TeamCrest name={game.away_team} className="h-4 w-4 text-[6px] shrink-0" />
+          <span className="text-[10px] font-bold text-white/90 truncate">{awayPct}%</span>
+          <TeamCrest name={game.away_team} className="h-4 w-4 text-[9px] shrink-0" />
         </motion.div>
       </div>
       {/* Social proof */}
@@ -539,11 +539,11 @@ function CommunityPulse({ game, entries, tip }) {
             ))}
             {gameEntries.length > 4 && (
               <div className="h-4 w-4 rounded-full border border-black bg-primary/20 flex items-center justify-center">
-                <span className="text-[5px] font-bold text-primary">+{gameEntries.length - 4}</span>
+                <span className="text-[10px] font-bold text-primary">+{gameEntries.length - 4}</span>
               </div>
             )}
           </div>
-          <span className="text-[7px] text-slate-500">
+          <span className="text-[9px] text-slate-500">
             {gameEntries.length} fan{gameEntries.length !== 1 ? 's' : ''} tipped
           </span>
         </div>
@@ -582,7 +582,7 @@ function Leaderboard({ entries, tips, totalPoints }) {
           <Crown className="h-3.5 w-3.5 text-amber-400" />
           <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">Tipster Ladder</p>
         </div>
-        <span className="text-[7px] text-slate-500">{PTS_CORRECT}pt/correct · {PTS_MARGIN_BONUS}pt margin bonus</span>
+        <span className="text-[9px] text-slate-500">{PTS_CORRECT}pt/correct · {PTS_MARGIN_BONUS}pt margin bonus</span>
       </div>
       <div className="space-y-1.5">
         {community.length ? community.map((row, i) => {
@@ -619,13 +619,13 @@ function Leaderboard({ entries, tips, totalPoints }) {
               }`}>
                 {row.name}
               </p>
-              <p className="text-[7px] text-slate-500">{row.tips} tip{row.tips !== 1 ? 's' : ''} locked</p>
+              <p className="text-[9px] text-slate-500">{row.tips} tip{row.tips !== 1 ? 's' : ''} locked</p>
             </div>
             <div className="relative flex items-center gap-2">
               <span className={`text-[11px] font-bold tabular-nums ${
                 row.me ? "text-primary" : i === 0 ? "text-amber-300" : "text-foreground/80"
               }`}>{row.points || 0}</span>
-              <span className="text-[7px] text-slate-500">pts</span>
+              <span className="text-[9px] text-slate-500">pts</span>
             </div>
           </motion.div>
           );
@@ -851,7 +851,7 @@ export default function ScorePredictor({ onSharePrediction }) {
               </div>
               <button
                 onClick={() => setShowResetConfirm(true)}
-                className="shrink-0 flex items-center gap-1 px-2 py-1 border border-amber-500/30 bg-amber-500/10 text-[8px] font-bold uppercase text-amber-300 hover:bg-amber-500/20 transition-colors"
+                className="shrink-0 flex items-center gap-1 px-2 py-1 border border-amber-500/30 bg-amber-500/10 text-[10px] font-bold uppercase text-amber-300 hover:bg-amber-500/20 transition-colors"
               >
                 <RefreshCw className="h-3 w-3" /> Reset
               </button>
@@ -913,7 +913,7 @@ export default function ScorePredictor({ onSharePrediction }) {
                 <motion.span
                   animate={{ scale: [1, 1.3, 1] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[7px] font-black text-white"
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white"
                 >
                   {untippedUpcoming}
                 </motion.span>
@@ -923,7 +923,7 @@ export default function ScorePredictor({ onSharePrediction }) {
               <h3 className="font-display text-lg uppercase leading-none tracking-wide text-foreground">
                 Footy Tipping
               </h3>
-              <p className="mt-1 text-[7px] font-mono uppercase tracking-[0.3em] text-slate-400">
+              <p className="mt-1 text-[9px] font-mono uppercase tracking-[0.3em] text-slate-400">
                 NRL 2026 · {totalPoints} pts · {tippedCount}/{fixtures.length} tipped
               </p>
               {/* Mini progress bar */}
@@ -941,17 +941,17 @@ export default function ScorePredictor({ onSharePrediction }) {
           </div>
           <div className="flex flex-col items-end gap-1">
             {totalPoints > 0 && (
-              <span className="flex items-center gap-1 border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[8px] font-bold text-amber-300">
+              <span className="flex items-center gap-1 border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-300">
                 <Flame className="h-3 w-3" /> {totalPoints} pts
               </span>
             )}
             {apiLoading && (
-              <span className="text-[7px] text-slate-500 animate-pulse">Loading fixtures…</span>
+              <span className="text-[9px] text-slate-500 animate-pulse">Loading fixtures…</span>
             )}
             {apiError && (
               <button
                 onClick={() => retryApi()}
-                className="flex items-center gap-1 text-[7px] text-red-400 hover:text-red-300 transition-colors"
+                className="flex items-center gap-1 text-[9px] text-red-400 hover:text-red-300 transition-colors"
               >
                 <AlertTriangle className="h-2.5 w-2.5" /> API Error
                 <RefreshCw className="h-2.5 w-2.5" />
@@ -976,7 +976,7 @@ export default function ScorePredictor({ onSharePrediction }) {
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
-              className={`relative flex items-center justify-center gap-1 min-h-9 text-[8px] font-bold uppercase tracking-[0.15em] transition-all ${
+              className={`relative flex items-center justify-center gap-1 min-h-9 text-[10px] font-bold uppercase tracking-[0.15em] transition-all ${
                 filter === item.id
                   ? "text-primary-foreground"
                   : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
@@ -993,7 +993,7 @@ export default function ScorePredictor({ onSharePrediction }) {
                 <item.icon className="h-3 w-3" />
                 {item.label}
                 {item.count > 0 && (
-                  <span className={`ml-0.5 text-[7px] ${filter === item.id ? "opacity-80" : "text-primary"}`}>
+                  <span className={`ml-0.5 text-[9px] ${filter === item.id ? "opacity-80" : "text-primary"}`}>
                     ({item.count})
                   </span>
                 )}
@@ -1013,10 +1013,10 @@ export default function ScorePredictor({ onSharePrediction }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-3 w-3 text-accent" />
-                <p className="text-[8px] font-bold uppercase tracking-[0.25em] text-primary/80">Featured Match</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary/80">Featured Match</p>
               </div>
               {tips[activeGame.id] && (
-                <span className="flex items-center gap-1 text-[7px] text-emerald-400">
+                <span className="flex items-center gap-1 text-[9px] text-emerald-400">
                   <CheckCircle2 className="h-2.5 w-2.5" /> Tipped
                 </span>
               )}
@@ -1042,7 +1042,7 @@ export default function ScorePredictor({ onSharePrediction }) {
                     >
                       {activeGame.home_score} - {activeGame.away_score}
                     </motion.p>
-                    <p className="text-[7px] text-slate-500 uppercase tracking-wider">Final</p>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider">Final</p>
                   </>
                 ) : (
                   <>
@@ -1053,7 +1053,7 @@ export default function ScorePredictor({ onSharePrediction }) {
                     >
                       VS
                     </motion.p>
-                    <p className="text-[7px] text-slate-500">{formatKickoff(activeGame.kickoff)}</p>
+                    <p className="text-[9px] text-slate-500">{formatKickoff(activeGame.kickoff)}</p>
                   </>
                 )}
               </div>
@@ -1156,7 +1156,7 @@ export default function ScorePredictor({ onSharePrediction }) {
             ].map((item) => (
               <div key={item.step} className="flex items-start gap-2.5 p-2 border border-border/10 bg-black/20">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-primary/10 border border-primary/20">
-                  <span className="text-[8px] font-black text-primary">{item.step}</span>
+                  <span className="text-[10px] font-black text-primary">{item.step}</span>
                 </div>
                 <div className="flex items-start gap-1.5 min-w-0">
                   <item.icon className={`mt-0.5 h-3 w-3 shrink-0 ${item.color}`} />
@@ -1169,7 +1169,7 @@ export default function ScorePredictor({ onSharePrediction }) {
         </div>
 
         {/* Footer */}
-        <div className="mt-4 flex items-center justify-between border-t border-border/15 pt-3 text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500">
+        <div className="mt-4 flex items-center justify-between border-t border-border/15 pt-3 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
           <span className="flex items-center gap-1.5">
             <TrendingUp className="h-3 w-3 text-primary/60" /> Live tipping hub
           </span>
