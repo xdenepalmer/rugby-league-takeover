@@ -1074,6 +1074,7 @@ export default function Forum() {
 
           {/* ━━━ RIGHT: Sidebar ━━━ */}
           <div className="hidden lg:block">
+            <AdSlot position="sidebar" size="medium-rectangle" className="mb-6 w-full" />
             <ComposeSidebar
               draft={draft} setDraft={setDraft}
               isAuthenticated={isAuthenticated} user={user}

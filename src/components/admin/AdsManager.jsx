@@ -47,6 +47,21 @@ const emptyAd = () => ({
   ab_variants: [],
 });
 
+/* ── Sample/test ad: a ready-to-go ad (self-contained SVG creative) so you can
+   verify a slot renders without sourcing a real creative. Delete it any time. ── */
+function sampleAdCreative() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="728" height="90"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#d97706"/></linearGradient></defs><rect width="728" height="90" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="bold" fill="#ffffff" letter-spacing="2">SAMPLE AD · 728 × 90</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+const sampleAd = (position = "footer") => ({
+  ...emptyAd(),
+  title: "Sample Ad (test)",
+  image_url: sampleAdCreative(),
+  target_url: "https://example.com",
+  position,
+  is_active: true,
+});
+
 /* ── Helpers ── */
 function readLS(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -327,8 +342,21 @@ export default function AdsManager() {
         ))}
         <Button
           size="sm"
+          variant="outline"
+          onClick={() => saveMutation.mutate(sampleAd(), {
+            onSuccess: () => toast({ title: "Sample ad added", description: "A test ad is live in the Footer slot — view the site to confirm it renders, then delete it when done." }),
+          })}
+          disabled={saveMutation.isPending}
+          className="ml-auto rounded-none text-xs uppercase tracking-wider font-bold"
+          title="Create a ready-made sample ad to verify a slot renders"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Sample Ad
+        </Button>
+        <Button
+          size="sm"
           onClick={() => { setEditing(emptyAd()); setView("form"); setErrors([]); }}
-          className="ml-auto rounded-none bg-primary hover:bg-primary/90 text-xs uppercase tracking-wider font-bold"
+          className="rounded-none bg-primary hover:bg-primary/90 text-xs uppercase tracking-wider font-bold"
         >
           <Plus className="mr-2 h-4 w-4" />
           New Ad
