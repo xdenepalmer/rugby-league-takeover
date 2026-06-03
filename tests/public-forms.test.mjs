@@ -109,6 +109,23 @@ test("requires contact consent for registrations", () => {
   );
 });
 
+test("accepts admin-managed (dynamic) team names beyond the built-in list", () => {
+  const registration = normalizeInterestRegistration({
+    name: "Sam",
+    email: "sam@example.com",
+    team_supported: "Newcastle Knights",
+    consent_to_contact: true,
+  });
+  assert.equal(registration.team_supported, "Newcastle Knights");
+});
+
+test("requires a non-empty team_supported", () => {
+  assert.throws(
+    () => normalizeInterestRegistration({ name: "Sam", email: "sam@example.com", team_supported: "", consent_to_contact: true }),
+    /team/i
+  );
+});
+
 test("detects honeypot bot submissions", () => {
   assert.equal(isLikelyBotSubmission({ website: "https://spam.example" }), true);
   assert.equal(isLikelyBotSubmission({ website: "" }), false);
