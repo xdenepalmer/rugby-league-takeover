@@ -37,10 +37,10 @@ export default function PublicLayout() {
         <Outlet />
       </div>
 
-      {/* Sponsored Ad Slot — above footer, proper placement */}
+      {/* Sponsored Ad Slot — above footer, all pages */}
       <div className="w-full border-t border-border/30">
         <div className="mx-auto max-w-5xl px-4 py-6">
-          <AdSlot position="banner-bottom" size="leaderboard" className="w-full" />
+          <AdSlot position="footer" size="leaderboard" className="w-full" />
         </div>
       </div>
 
