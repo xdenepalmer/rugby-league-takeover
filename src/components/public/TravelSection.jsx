@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,22 @@ export default function TravelSection({ packages, settings = {} }) {
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
   const queryClient = useQueryClient();
+
+  // "Team you support" options come from Team management (the Team entity, active
+  // teams), with "Other" as a catch-all. Falls back to the built-in list if no
+  // teams are configured yet so the form never renders empty.
+  const { data: dbTeams = [] } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => base44.entities.Team.list("sort_order", 200),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
+  const teamOptions = useMemo(() => {
+    const managed = dbTeams.filter((t) => t?.is_active !== false && t?.name).map((t) => t.name);
+    const base = managed.length ? managed : teams;
+    return [...base.filter((t) => t !== "Other"), "Other"];
+  }, [dbTeams]);
 
   const mutation = useMutation({
     mutationFn: async (data) => {
@@ -217,7 +233,7 @@ export default function TravelSection({ packages, settings = {} }) {
                   <SelectValue placeholder="Team you support" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border rounded-none">
-                  {teams.map((team) => (
+                  {teamOptions.map((team) => (
                     <SelectItem key={team} value={team} className="rounded-none uppercase text-xs font-semibold tracking-wider">
                       {team}
                     </SelectItem>

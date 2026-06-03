@@ -3,7 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
 // Self-contained by design: Base44 deploys each function from its own directory
 // and does not support cross-function imports. This mirrors
 // normalizeInterestRegistration() in src/lib/public-forms.js — keep the two in sync.
-const SUPPORTED_TEAMS = ['Eels', 'Tigers', 'Titans', 'Storm', 'Leopards', 'Bulls', 'Other'];
+// Teams are admin-managed (Team entity) and dynamic, so team_supported is accepted
+// as any non-empty, length-capped string rather than gated on a fixed list.
 
 const trimToLength = (value, maxLength) => String(value ?? '').trim().slice(0, maxLength);
 const isEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -48,7 +49,9 @@ Deno.serve(async (req) => {
 
     if (!name) return Response.json({ error: 'Name is required' }, { status: 400 });
     if (!isEmail(email)) return Response.json({ error: 'A valid email address is required' }, { status: 400 });
-    if (!SUPPORTED_TEAMS.includes(team)) return Response.json({ error: 'Team supported is required' }, { status: 400 });
+    // Teams are admin-managed (Team entity) and dynamic — accept any non-empty,
+    // length-capped value rather than gating on a hardcoded list.
+    if (!team) return Response.json({ error: 'Team supported is required' }, { status: 400 });
     if (input?.consent_to_contact !== true) return Response.json({ error: 'Contact consent is required' }, { status: 400 });
 
     let user = null;

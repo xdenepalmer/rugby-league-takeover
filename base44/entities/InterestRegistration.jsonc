@@ -21,16 +21,7 @@
     },
     "team_supported": {
       "type": "string",
-      "enum": [
-        "Eels",
-        "Tigers",
-        "Titans",
-        "Storm",
-        "Leopards",
-        "Bulls",
-        "Other"
-      ],
-      "description": "Rugby league team supported"
+      "description": "Rugby league team supported (from admin-managed Team list; free string so dynamically added teams + 'Other' are accepted)"
     },
     "trip_details": {
       "type": "string",
