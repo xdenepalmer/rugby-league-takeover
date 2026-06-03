@@ -138,6 +138,11 @@
     "countdown_cta_url": {
       "type": "string",
       "description": "Optional button link under the countdown"
+    },
+    "ads_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable site-wide advertising slots"
     }
   },
   "required": [],

@@ -1,0 +1,109 @@
+{
+  "name": "SiteAd",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Ad campaign title"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Advertisement creative image URL"
+    },
+    "target_url": {
+      "type": "string",
+      "description": "Destination URL when the ad is clicked"
+    },
+    "position": {
+      "type": "string",
+      "enum": [
+        "banner-top",
+        "banner-bottom",
+        "sidebar",
+        "in-feed",
+        "footer"
+      ],
+      "default": "banner-top",
+      "description": "Where the ad is displayed on the site"
+    },
+    "size": {
+      "type": "string",
+      "enum": [
+        "leaderboard",
+        "medium-rectangle",
+        "wide-skyscraper",
+        "mobile-banner"
+      ],
+      "default": "leaderboard",
+      "description": "Ad size preset"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the ad is enabled"
+    },
+    "start_date": {
+      "type": "string",
+      "description": "Optional start date in YYYY-MM-DD format"
+    },
+    "end_date": {
+      "type": "string",
+      "description": "Optional end date in YYYY-MM-DD format"
+    },
+    "sponsor_id": {
+      "type": "string",
+      "description": "Linked sponsor identifier"
+    },
+    "price_per_month": {
+      "type": "number",
+      "default": 0,
+      "description": "Monthly ad rate in AUD"
+    },
+    "cpm_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "CPM rate in AUD"
+    },
+    "device_target": {
+      "type": "string",
+      "enum": [
+        "all",
+        "desktop",
+        "mobile"
+      ],
+      "default": "all",
+      "description": "Device targeting rule"
+    },
+    "ab_variants": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Optional A/B creative variants"
+    }
+  },
+  "required": [
+    "title",
+    "image_url",
+    "position",
+    "size"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
