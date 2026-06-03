@@ -11,7 +11,7 @@ export default function PublicLayout() {
   const { isAdmin, user } = useAuth();
   const { pathname } = useLocation();
   const isHome = pathname === "/";
-  const { data: settingsRecords = [] } = useQuery({
+  const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
     enabled: appParams.hasBase44Config,
@@ -28,7 +28,7 @@ export default function PublicLayout() {
       </a>
 
       {/* Top Site Navigation */}
-      <SiteNav settings={settingsRecords[0] || {}} />
+      <SiteNav settings={settingsRecords[0] || {}} settingsLoading={isLoadingSettings} />
 
       {/* Content wrapper with padding at bottom on mobile to clear the tab bar */}
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">

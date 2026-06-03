@@ -28,9 +28,9 @@ const wordVariants = {
     } 
   }
 };
-export default function HeroSection({ settings = {} }) {
+export default function HeroSection({ settings = {}, settingsLoading = false }) {
   const title = settings.hero_title || "The annual\nVegas takeover";
-  const logo = settings.site_logo_url || logoUrl;
+  const logo = settings.site_logo_url || (!settingsLoading ? logoUrl : "");
 
   // Split title lines and words for staggered reveals
   const titleLines = title.split("\n");
@@ -71,14 +71,18 @@ export default function HeroSection({ settings = {} }) {
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-28 text-center md:px-8 md:pb-24">
         
         {/* Site Logo with smooth spring entry */}
-        <motion.img
-          src={logo}
-          alt="Rugby League Takeover Las Vegas"
-          initial={{ opacity: 0, y: -80, scale: 0.8 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-8 w-52 drop-shadow-[0_15px_30px_rgba(249,115,22,0.25)] sm:w-64 md:w-80 select-none pointer-events-none"
-        />
+        {logo ? (
+          <motion.img
+            src={logo}
+            alt="Rugby League Takeover Las Vegas"
+            initial={{ opacity: 0, y: -80, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-8 w-52 drop-shadow-[0_15px_30px_rgba(249,115,22,0.25)] sm:w-64 md:w-80 select-none pointer-events-none"
+          />
+        ) : (
+          <div className="mb-8 h-52 w-52 sm:h-64 sm:w-64 md:h-80 md:w-80" aria-hidden="true" />
+        )}
 
         {/* Title & Subtext block */}
         <div className="space-y-4 max-w-4xl">

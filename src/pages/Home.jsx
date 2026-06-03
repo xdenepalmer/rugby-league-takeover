@@ -101,7 +101,7 @@ const BulbRow = React.memo(function BulbRow({ isTop }) {
 
 export default function Home() {
   const queriesEnabled = appParams.hasBase44Config;
-  const { data: settingsRecords = [] } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1), enabled: queriesEnabled });
+  const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1), enabled: queriesEnabled });
   const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 20), enabled: queriesEnabled });
   const { data: packages = [] } = useQuery({ queryKey: ["packages"], queryFn: () => base44.entities.TravelPackage.list("sort_order", 20), enabled: queriesEnabled });
   const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: queriesEnabled });
@@ -116,7 +116,7 @@ export default function Home() {
     <main className="relative min-h-dvh overflow-hidden bg-background text-foreground">
       <BackgroundVideo sources={videoSources} />
       <div className="relative z-10">
-        <HeroSection settings={settings} />
+        <HeroSection settings={settings} settingsLoading={isLoadingSettings} />
         <div className="relative w-full overflow-hidden border-y-2 border-amber-500/60 bg-neutral-950 py-5 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
           <BulbRow isTop={true} />
           

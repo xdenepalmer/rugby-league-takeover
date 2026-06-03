@@ -26,12 +26,13 @@ const initials = (user) => {
   return source.trim().slice(0, 2).toUpperCase();
 };
 
-export default function SiteNav({ settings = {} }) {
+export default function SiteNav({ settings = {}, settingsLoading = false }) {
   const { isAuthenticated, isAdmin, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
+  const logo = settings.site_logo_url || (!settingsLoading ? logoUrl : "");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -173,11 +174,15 @@ export default function SiteNav({ settings = {} }) {
           to="/"
           className="group relative z-10 block shrink-0 overflow-hidden transition-transform duration-300 hover:scale-105"
         >
-          <img
-            src={settings.site_logo_url || logoUrl}
-            alt="Rugby League Takeover Las Vegas"
-            className="h-12 w-12 shrink-0 object-contain md:h-14 md:w-14"
-          />
+          {logo ? (
+            <img
+              src={logo}
+              alt="Rugby League Takeover Las Vegas"
+              className="h-12 w-12 shrink-0 object-contain md:h-14 md:w-14"
+            />
+          ) : (
+            <div className="h-12 w-12 shrink-0 md:h-14 md:w-14" aria-hidden="true" />
+          )}
           {/* Glass glare sweep overlay */}
           <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-25deg] -translate-x-[150%] transition-transform duration-1000 group-hover:translate-x-[250%] pointer-events-none" />
         </Link>
