@@ -66,7 +66,7 @@ function isScheduleActive(ad) {
   return true;
 }
 function getStatusLabel(ad) {
-  if (!ad.is_active) return { label: "Paused", color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
+  if (!ad.is_active || ad.is_active === "false") return { label: "Paused", color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
   if (!isScheduleActive(ad)) return { label: "Scheduled", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
   return { label: "Live", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
 }
@@ -96,7 +96,7 @@ export default function AdsManager() {
     queryFn: () => base44.entities.SiteSettings.list('-updated_date', 1),
   });
   const settings = settingsRecords[0] || {};
-  const adsEnabled = settings.ads_enabled === true;
+  const adsEnabled = settings.ads_enabled === true || settings.ads_enabled === "true";
 
   /* ── Local UI state ── */
   const [stats, setStats] = useState(() => readLS("rlt_ad_stats", {}));

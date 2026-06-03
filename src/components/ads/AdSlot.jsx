@@ -40,7 +40,8 @@ function getSessionId() {
 /* ── Date-range validation ── */
 function isAdScheduleActive(ad) {
   if (!ad) return false;
-  if (ad.is_active === false) return false;
+  // Base44 may store booleans as strings
+  if (ad.is_active === false || ad.is_active === "false") return false;
   const now = new Date();
   const today = now.toISOString().split("T")[0]; // YYYY-MM-DD
   if (ad.start_date && today < ad.start_date) return false;
@@ -294,15 +295,22 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     );
     setAds(candidates);
 
-    // Pick initial ad via weighted selection
-    const picked = selectAdWeighted(candidates);
-    setCurrentAd(picked || null);
-    setImgError(false);
-    setImgRetried(false);
-    setImgLoaded(false);
-    setImgSrc(null);
-    setViewable(false);
-    tracked.current = false;
+    // Pick ad via weighted selection — only change if current ad is no longer valid
+    setCurrentAd((prev) => {
+      const prevStillValid = prev && candidates.some((c) => c.id === prev.id);
+      if (prevStillValid) return prev; // Don't flicker on React Query refetch
+      const picked = selectAdWeighted(candidates);
+      // Reset image state only when ad actually changes
+      if (picked?.id !== prev?.id) {
+        setImgError(false);
+        setImgRetried(false);
+        setImgLoaded(false);
+        setImgSrc(null);
+        setViewable(false);
+        tracked.current = false;
+      }
+      return picked || null;
+    });
   }, [position, globalEnabled, allAds]);
 
   /* ── React to data changes (React Query handles reactivity) ── */
