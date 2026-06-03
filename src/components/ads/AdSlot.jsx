@@ -310,9 +310,16 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
   const resolve = useCallback(() => {
     if (!mountedRef.current) return;
     setEnabled(globalEnabled);
-    const candidates = allAds.filter(
+    // First try exact position match
+    let candidates = allAds.filter(
       (a) => a.position === position && isAdScheduleActive(a) && matchesDevice(a)
     );
+    // Fallback: if no ads for this specific position, show any active ad
+    if (candidates.length === 0) {
+      candidates = allAds.filter(
+        (a) => isAdScheduleActive(a) && matchesDevice(a)
+      );
+    }
     setAds(candidates);
 
     // Pick ad via weighted selection — only change if current ad is no longer valid
