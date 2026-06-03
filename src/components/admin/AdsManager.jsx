@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Megaphone, Plus, Trash2, Pencil, Eye, EyeOff,
@@ -7,6 +8,7 @@ import {
   Calendar, AlertTriangle, CheckCircle2, RefreshCw, Link2,
   ImageIcon, Zap, Clock, Monitor, Smartphone,
 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +32,6 @@ const SIZES = [
 ];
 
 const emptyAd = () => ({
-  id: crypto.randomUUID(),
   title: "",
   image_url: "",
   target_url: "",
@@ -44,7 +45,6 @@ const emptyAd = () => ({
   cpm_rate: 0,
   device_target: "all",
   ab_variants: [],
-  created_at: new Date().toISOString(),
 });
 
 /* ── Helpers ── */
@@ -83,9 +83,22 @@ function validateAd(ad) {
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function AdsManager() {
-  /* ── State ── */
-  const [adsEnabled, setAdsEnabled] = useState(() => localStorage.getItem("rlt_ads_enabled") === "true");
-  const [ads, setAds] = useState(() => readLS("rlt_ad_config", []));
+  /* ── React Query data layer ── */
+  const queryClient = useQueryClient();
+
+  const { data: ads = [] } = useQuery({
+    queryKey: ['siteAds'],
+    queryFn: () => base44.entities.SiteAd.list('-created_date', 200),
+  });
+
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: () => base44.entities.SiteSettings.list('-updated_date', 1),
+  });
+  const settings = settingsRecords[0] || {};
+  const adsEnabled = settings.ads_enabled === true;
+
+  /* ── Local UI state ── */
   const [stats, setStats] = useState(() => readLS("rlt_ad_stats", {}));
   const [editing, setEditing] = useState(null);
   const [view, setView] = useState("slots");
@@ -93,18 +106,50 @@ export default function AdsManager() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [sponsors] = useState(() => readLS('rlt_sponsors', []));
 
-  /* Persist on change */
-  useEffect(() => {
-    localStorage.setItem("rlt_ads_enabled", String(adsEnabled));
-  }, [adsEnabled]);
+  /* ── Mutations ── */
+  const toggleAdsMutation = useMutation({
+    mutationFn: async (enabled) => {
+      if (settings.id) {
+        return base44.entities.SiteSettings.update(settings.id, { ads_enabled: enabled });
+      }
+      return base44.entities.SiteSettings.create({ ads_enabled: enabled });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['siteSettings'] }),
+  });
 
-  useEffect(() => {
-    writeLS("rlt_ad_config", ads);
-    // Notify same-tab listeners (AdSlot components)
-    try { window.dispatchEvent(new CustomEvent("rlt_ad_config_updated")); } catch { /* noop */ }
-  }, [ads]);
+  const saveMutation = useMutation({
+    mutationFn: async (ad) => {
+      if (ad.id) {
+        const { id, ...payload } = ad;
+        return base44.entities.SiteAd.update(id, payload);
+      }
+      return base44.entities.SiteAd.create(ad);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['siteAds'] }),
+  });
 
-  /* Refresh stats periodically */
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.SiteAd.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['siteAds'] }),
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (ad) => {
+      const { id, created_date, updated_date, ...rest } = ad;
+      return base44.entities.SiteAd.create({ ...rest, title: `${ad.title} (Copy)` });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['siteAds'] });
+      toast({ title: "Ad duplicated" });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, is_active }) => base44.entities.SiteAd.update(id, { is_active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['siteAds'] }),
+  });
+
+  /* Refresh stats periodically (session metrics — stays in localStorage) */
   useEffect(() => {
     const refresh = () => setStats(readLS("rlt_ad_stats", {}));
     const id = setInterval(refresh, 10000);
@@ -127,31 +172,34 @@ export default function AdsManager() {
       return;
     }
     setErrors([]);
-    setAds((prev) => {
-      const idx = prev.findIndex((a) => a.id === ad.id);
-      if (idx >= 0) { const copy = [...prev]; copy[idx] = { ...ad, updated_at: new Date().toISOString() }; return copy; }
-      return [...prev, { ...ad, created_at: new Date().toISOString() }];
+    saveMutation.mutate(ad, {
+      onSuccess: () => {
+        setEditing(null);
+        setView("slots");
+        toast({ title: "Ad saved", description: `"${ad.title}" has been saved successfully.` });
+      },
     });
-    setEditing(null);
-    setView("slots");
-    toast({ title: "Ad saved", description: `"${ad.title}" has been saved successfully.` });
-  }, []);
+  }, [saveMutation]);
 
   const deleteAd = useCallback((id) => {
-    setAds((prev) => prev.filter((a) => a.id !== id));
-    setDeleteConfirm(null);
-    toast({ title: "Ad removed" });
-  }, []);
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        setDeleteConfirm(null);
+        toast({ title: "Ad removed" });
+      },
+    });
+  }, [deleteMutation]);
 
   const duplicateAd = useCallback((ad) => {
-    const dup = { ...ad, id: crypto.randomUUID(), title: `${ad.title} (Copy)`, created_at: new Date().toISOString() };
-    setAds((prev) => [...prev, dup]);
-    toast({ title: "Ad duplicated" });
-  }, []);
+    duplicateMutation.mutate(ad);
+  }, [duplicateMutation]);
 
   const toggleAdActive = useCallback((id) => {
-    setAds((prev) => prev.map((a) => a.id === id ? { ...a, is_active: !a.is_active } : a));
-  }, []);
+    const ad = ads.find((a) => a.id === id);
+    if (ad) {
+      toggleActiveMutation.mutate({ id, is_active: !ad.is_active });
+    }
+  }, [ads, toggleActiveMutation]);
 
   const clearAllStats = useCallback(() => {
     writeLS("rlt_ad_stats", {});
@@ -249,7 +297,7 @@ export default function AdsManager() {
 
             <Switch
               checked={adsEnabled}
-              onCheckedChange={setAdsEnabled}
+              onCheckedChange={(v) => toggleAdsMutation.mutate(v)}
               className="scale-125"
             />
           </div>
@@ -526,7 +574,7 @@ export default function AdsManager() {
           >
             <div className="flex items-center justify-between border-b border-border p-4">
               <p className="text-xs font-bold uppercase tracking-[0.2em] font-mono text-muted-foreground">
-                {ads.find((a) => a.id === editing.id) ? "Edit Ad" : "New Ad"}
+                {editing.id ? "Edit Ad" : "New Ad"}
               </p>
               <button
                 onClick={() => { setEditing(null); setView("slots"); setErrors([]); }}

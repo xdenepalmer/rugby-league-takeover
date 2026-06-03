@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, AlertTriangle, X, ChevronRight, Eye } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 
 /* ── Size presets with responsive fallback chain ── */
 const SIZE_MAP = {
@@ -33,20 +35,6 @@ function getSessionId() {
     _sessionId = crypto.randomUUID();
   }
   return _sessionId;
-}
-
-/* ── Safe localStorage helpers ── */
-function getAdsEnabled() {
-  try { return localStorage.getItem("rlt_ads_enabled") === "true"; } catch { return false; }
-}
-
-function getAdConfig() {
-  try {
-    const raw = localStorage.getItem("rlt_ad_config");
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
 }
 
 /* ── Date-range validation ── */
@@ -246,6 +234,26 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
   const mountedRef = useRef(true);
   const viewabilityTimerRef = useRef(null);
 
+  /* ── Fetch all ads from database ── */
+  const { data: allAds = [] } = useQuery({
+    queryKey: ["siteAds"],
+    queryFn: () => base44.entities.SiteAd.list("-created_date", 200),
+    staleTime: 30000, // 30s cache to avoid hammering
+    refetchInterval: 60000, // Re-check every 60s for schedule-based ads
+    retry: false,
+    meta: { silent: true },
+  });
+
+  /* ── Fetch ads_enabled from SiteSettings ── */
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    staleTime: 30000,
+    retry: false,
+    meta: { silent: true },
+  });
+  const globalEnabled = settingsRecords[0]?.ads_enabled === true;
+
   /* ── Cleanup on unmount ── */
   useEffect(() => {
     mountedRef.current = true;
@@ -277,13 +285,11 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     [effectiveSize, currentAd?.size]
   );
 
-  /* ── Resolve ads on mount & listen for config changes ── */
+  /* ── Resolve ads when data changes ── */
   const resolve = useCallback(() => {
     if (!mountedRef.current) return;
-    setEnabled(getAdsEnabled());
-    const config = getAdConfig();
-    // Find ALL matching ads: active + in date range
-    const candidates = config.filter(
+    setEnabled(globalEnabled);
+    const candidates = allAds.filter(
       (a) => a.position === position && isAdScheduleActive(a)
     );
     setAds(candidates);
@@ -297,29 +303,11 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
     setImgSrc(null);
     setViewable(false);
     tracked.current = false;
-  }, [position]);
+  }, [position, globalEnabled, allAds]);
 
+  /* ── React to data changes (React Query handles reactivity) ── */
   useEffect(() => {
     resolve();
-
-    // Cross-tab changes
-    const onStorage = (e) => {
-      if (e.key === "rlt_ads_enabled" || e.key === "rlt_ad_config") resolve();
-    };
-    window.addEventListener("storage", onStorage);
-
-    // Same-tab changes (admin saves while on same page)
-    const onConfigUpdate = () => resolve();
-    window.addEventListener("rlt_ad_config_updated", onConfigUpdate);
-
-    // Re-check schedule every 60s for date-based ads
-    const interval = setInterval(resolve, 60000);
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("rlt_ad_config_updated", onConfigUpdate);
-      clearInterval(interval);
-    };
   }, [resolve]);
 
   /* ── Ad rotation for multi-ad positions ── */
