@@ -19,6 +19,7 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-001C-1 | Make forum compose copy truthful (auto-publish) | merged | PR #8 squash-merged → `main` `876de8c`; ComposeSidebar copy only |
 | RLT-001C-1b | Restore local PWA install assets in index.html | completed (await merge) | Fixes test regression from Base44 auto-sync re-adding remote logo to index.html; `href`→`/icons/icon-192.png`; tests back to 42/42 |
 | RLT-001C-2 | Forum report/flag + auto-hide + rate-limit | queued | Backend (`submitForumPost`/`forumAction` + `ForumReport` or fields); needs Base44 deploy+Publish. Option D safety layer |
+| RLT-002A | Interest form free-text "trip details" box | completed (await merge) | `feat/interest-trip-details` off `6c28707`; `Textarea` under team Select + `trip_details` through normalize/function/entity; 43/43 green. **Backend needs Base44 deploy+Publish** |
 | RLT-001D | BMAD files + project identity/docs | completed | Architect-approved (`f6d1271`) |
 | RLT-001E | Mobile/PWA/brand/store hardening | completed | Antigravity final UX pass (P0 12/12); **merged into `bmad/baseline-integration`** (RLT-001E-MERGE). 8-shell `min-h-dvh`, HeroSection double-vh fix, local PWA icons/manifest/OG metadata, brand-asset delocalization, Store inline checkout notice + trust signal, skip-link; 5 deferred tests green |
 | RLT-001E-FIXUP | Antigravity-reviewed viewport/a11y polish | completed | Account/Store safe-area bottom padding, `#root` dvh+fallback, AuthLayout panel overflow-y-auto — merged into baseline |

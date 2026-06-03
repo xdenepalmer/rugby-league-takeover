@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isLikelyBotSubmission, normalizeInterestRegistration } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
@@ -28,7 +29,7 @@ const cardVariants = {
 };
 
 export default function TravelSection({ packages, settings = {} }) {
-  const emptyForm = { name: "", phone: "", email: "", postcode: "", team_supported: "", consent_to_contact: false, website: "" };
+  const emptyForm = { name: "", phone: "", email: "", postcode: "", team_supported: "", trip_details: "", consent_to_contact: false, website: "" };
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(false);
   const queryClient = useQueryClient();
@@ -223,7 +224,20 @@ export default function TravelSection({ packages, settings = {} }) {
                   ))}
                 </SelectContent>
               </Select>
-              
+
+              <div className="md:col-span-2">
+                <label htmlFor="reg-trip-details" className="sr-only">Tell us about the trip you're after</label>
+                <Textarea
+                  id="reg-trip-details"
+                  placeholder="Explain what trip you are after — how many days? what type of hotel? and do you need any customisation?"
+                  value={form.trip_details}
+                  onChange={(e) => setForm({ ...form, trip_details: e.target.value })}
+                  maxLength={1000}
+                  rows={4}
+                  className="min-h-28 rounded-none bg-background/50 border-border focus-visible:ring-primary focus-visible:border-primary/50 text-foreground resize-none"
+                />
+              </div>
+
               <label className="flex items-start gap-3 border border-border bg-background/30 p-4 text-xs leading-relaxed text-muted-foreground md:col-span-2 select-none">
                 <input
                   required

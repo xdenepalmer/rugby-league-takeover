@@ -73,6 +73,7 @@ test("normalizes registrations with consent metadata", () => {
       email: " SAM@EXAMPLE.COM ",
       postcode: " 4000 ",
       team_supported: "Storm",
+      trip_details: "  10 days, 5-star hotel, custom stadium tour  ",
       consent_to_contact: true,
     },
     "2026-05-31T03:15:00.000Z"
@@ -84,10 +85,21 @@ test("normalizes registrations with consent metadata", () => {
     email: "sam@example.com",
     postcode: "4000",
     team_supported: "Storm",
+    trip_details: "10 days, 5-star hotel, custom stadium tour",
     consent_to_contact: true,
     consent_timestamp: "2026-05-31T03:15:00.000Z",
     source: "homepage_travel_form",
   });
+});
+
+test("registration trip_details defaults to empty string when omitted", () => {
+  const registration = normalizeInterestRegistration({
+    name: "Sam",
+    email: "sam@example.com",
+    team_supported: "Storm",
+    consent_to_contact: true,
+  });
+  assert.equal(registration.trip_details, "");
 });
 
 test("requires contact consent for registrations", () => {
