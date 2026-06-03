@@ -21,15 +21,6 @@
     },
     "team_supported": {
       "type": "string",
-      "enum": [
-        "Eels",
-        "Tigers",
-        "Titans",
-        "Storm",
-        "Leopards",
-        "Bulls",
-        "Other"
-      ],
       "description": "Rugby league team supported"
     },
     "trip_details": {
