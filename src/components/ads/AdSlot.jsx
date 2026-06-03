@@ -310,16 +310,10 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
   const resolve = useCallback(() => {
     if (!mountedRef.current) return;
     setEnabled(globalEnabled);
-    // First try exact position match
-    let candidates = allAds.filter(
+    // Match ads to this slot's position
+    const candidates = allAds.filter(
       (a) => a.position === position && isAdScheduleActive(a) && matchesDevice(a)
     );
-    // Fallback: if no ads for this specific position, show any active ad
-    if (candidates.length === 0) {
-      candidates = allAds.filter(
-        (a) => isAdScheduleActive(a) && matchesDevice(a)
-      );
-    }
     setAds(candidates);
 
     // Pick ad via weighted selection — only change if current ad is no longer valid
@@ -721,7 +715,7 @@ export default function AdSlot({ position, size, isAdmin = false, className = ""
                 className="block mx-auto object-contain"
                 style={{
                   maxWidth: "100%",
-                  maxHeight: 280,
+                  maxHeight: position?.startsWith("banner") ? 120 : 250,
                   width: "auto",
                   height: "auto",
                   opacity: imgLoaded ? 1 : 0,
