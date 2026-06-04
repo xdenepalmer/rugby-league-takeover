@@ -689,15 +689,13 @@ export default function Store() {
     setCheckoutNotice("");
     try {
       const response = await base44.functions.invoke("createCheckout", {
-        items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
+        items: cart.map((item) => ({ productId: item.id, quantity: item.quantity, size: item.size || "" })),
         customerName: checkoutName,
         customerEmail: checkoutEmail,
       });
 
       if (response?.data?.url) {
         new URL(response.data.url);
-        localStorage.removeItem("rlt_cart");
-        setCart([]);
         window.location.href = response.data.url;
       } else {
         throw new Error("Failed to create checkout session.");
@@ -711,6 +709,12 @@ export default function Store() {
 
   const isSuccess = searchParams.get("success") === "true";
   const isCancelled = searchParams.get("cancelled") === "true";
+
+  useEffect(() => {
+    if (!isSuccess) return;
+    localStorage.removeItem("rlt_cart");
+    setCart([]);
+  }, [isSuccess]);
 
   const clearAlerts = () => {
     setSearchParams({});

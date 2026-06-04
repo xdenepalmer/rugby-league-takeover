@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@22.2.0';
 
 // NOTE: Base44 deploys each function from its own directory and does not support
@@ -22,6 +22,8 @@ const toMoneyCents = (value) => {
   return Math.round(number * 100);
 };
 
+const isEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+
 const getTrackedStock = (product) => {
   const stock = Number(product?.stock_quantity);
   return Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : null;
@@ -38,16 +40,20 @@ const parseOrigin = (value) => {
 function normalizeCheckoutItems(rawItems) {
   if (!Array.isArray(rawItems)) return [];
 
-  const byProductId = new Map();
+  const byCartKey = new Map();
   for (const item of rawItems) {
     const productId = toTrimmedString(item?.productId);
     if (!productId) continue;
 
+    const size = toTrimmedString(item?.size).slice(0, 20);
+    const key = `${productId}::${size}`;
     const quantity = Math.min(toPositiveInteger(item?.quantity), MAX_CHECKOUT_QUANTITY);
-    byProductId.set(productId, Math.min((byProductId.get(productId) || 0) + quantity, MAX_CHECKOUT_QUANTITY));
+    const existing = byCartKey.get(key) || { productId, size, quantity: 0 };
+    existing.quantity = Math.min(existing.quantity + quantity, MAX_CHECKOUT_QUANTITY);
+    byCartKey.set(key, existing);
   }
 
-  return [...byProductId.entries()].map(([productId, quantity]) => ({ productId, quantity }));
+  return [...byCartKey.values()];
 }
 
 function buildCheckoutLineItems(items, getProduct) {
@@ -70,9 +76,12 @@ function buildCheckoutLineItems(items, getProduct) {
       return { ok: false, status: 409, error: `Not enough stock for product '${product.name || item.productId}'` };
     }
 
+    const displayName = item.size ? `${product.name} — Size ${item.size}` : product.name;
+
     lineItems.push({
       product_id: product.id,
       name: product.name,
+      size: item.size || '',
       quantity: item.quantity,
       price_aud: Number((unitAmount / 100).toFixed(2)),
     });
@@ -83,7 +92,7 @@ function buildCheckoutLineItems(items, getProduct) {
         currency: CHECKOUT_CURRENCY,
         unit_amount: unitAmount,
         product_data: {
-          name: product.name,
+          name: displayName,
           description: product.description || undefined,
           images: product.image_url ? [product.image_url] : undefined,
         },
@@ -150,8 +159,8 @@ Deno.serve(async (req) => {
 
     const { name: resolvedName, email: resolvedEmail } = resolveCheckoutCustomer({ customerName, customerEmail, user });
 
-    if (!normalizedItems.length || !resolvedEmail) {
-      return Response.json({ error: 'Cart items and email are required' }, { status: 400 });
+    if (!normalizedItems.length || !isEmail(resolvedEmail)) {
+      return Response.json({ error: 'Cart items and a valid email are required' }, { status: 400 });
     }
 
     const productsById = new Map();
@@ -188,6 +197,8 @@ Deno.serve(async (req) => {
       success_url: `${origin}/store?success=true`,
       cancel_url: `${origin}/store?cancelled=true`,
       line_items: stripeLineItems,
+      phone_number_collection: { enabled: true },
+      shipping_address_collection: { allowed_countries: ['AU', 'NZ', 'US'] },
       metadata: buildOrderMetadata({
         appId: Deno.env.get('BASE44_APP_ID'),
         orderId: order.id,

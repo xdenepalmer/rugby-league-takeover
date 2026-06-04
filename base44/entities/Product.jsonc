@@ -14,6 +14,11 @@
       "type": "string",
       "description": "Product image URL"
     },
+    "category": {
+      "type": "string",
+      "default": "Merch",
+      "description": "Product category shown in the store"
+    },
     "price_aud": {
       "type": "number",
       "description": "Price in AUD"
@@ -22,6 +27,16 @@
       "type": "number",
       "default": 0,
       "description": "Available stock"
+    },
+    "coming_soon": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this product is a preview and not yet purchasable"
+    },
+    "release_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional release date/time for coming soon products"
     },
     "is_active": {
       "type": "boolean",

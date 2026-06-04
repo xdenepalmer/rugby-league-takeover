@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // Real likes + views + delete for forum posts. Base44 RLS blocks a user from
 // updating/deleting a post they don't own, so these run with the service role
