@@ -185,7 +185,7 @@ ${item.blurb || ""}`;
   if (list.length === 0) return null;
 
   return (
-    <section id="events" className="relative border-t border-border bg-secondary/80 px-5 py-24 md:px-8 md:py-32">
+    <section className="relative border-t border-border bg-secondary/80 px-5 py-24 md:px-8 md:py-32">
       <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-[400px] w-[600px] bg-primary/[0.03] blur-[120px]" />
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Events" title="What's on in Vegas">

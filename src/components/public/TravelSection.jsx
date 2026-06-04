@@ -148,7 +148,7 @@ export default function TravelSection({ packages, settings = {} }) {
   };
 
   return (
-    <section id="travel" className="relative border-t border-border bg-background/85 px-5 py-24 md:px-8 md:py-32 overflow-hidden">
+    <section className="relative border-t border-border bg-background/85 px-5 py-24 md:px-8 md:py-32 overflow-hidden">
       {/* Laser glow background element */}
       <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-primary/[0.03] rounded-full blur-[100px] pointer-events-none" />
 
