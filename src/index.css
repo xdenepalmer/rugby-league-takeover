@@ -556,6 +556,14 @@
     transition-duration: 0.001ms !important;
     will-change: auto !important;
   }
+
+  /* The decorative Las Vegas brand marquee is core to the site identity — keep
+     it scrolling even under reduced-motion / battery-saver, which would
+     otherwise freeze it (a common "the banner stopped moving" report). */
+  .animate-marquee {
+    animation-duration: 30s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 /* ─── Las Vegas Casino Marquee & LED Bulb Animations ─────────────────────── */
