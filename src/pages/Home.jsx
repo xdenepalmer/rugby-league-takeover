@@ -488,12 +488,14 @@ export default function Home() {
               <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
               <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 <span>Powered by</span>
-                <img
-                  src="https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/830b4f67c_deneoailq.png"
-                  alt={settings.footer_powered_by || "DENEO.AI"}
-                  className="h-6 w-auto object-contain sm:h-7"
-                  loading="lazy"
-                />
+                <span className="inline-flex items-center border border-sky-400/20 bg-white/90 px-2 py-1 shadow-[0_0_18px_rgba(14,165,233,0.18)]">
+                  <img
+                    src="https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/830b4f67c_deneoailq.png"
+                    alt={settings.footer_powered_by || "DENEO.AI"}
+                    className="h-5 w-auto object-contain sm:h-6"
+                    loading="lazy"
+                  />
+                </span>
               </div>
             </div>
           </div>
