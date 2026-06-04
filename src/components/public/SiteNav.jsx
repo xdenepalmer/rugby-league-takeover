@@ -13,6 +13,7 @@ const NotificationBell = lazy(() => import("@/components/NotificationBell"));
 const links = [
   { label: "Home", href: "/" },
   { label: "Latest News", href: "/#news" },
+  { label: "FAQs", href: "/faq" },
   { label: "Travel Packages", href: "/#travel" },
   { label: "Match Events", href: "/#events" },
   { label: "Merch Shop", href: "/store" },

@@ -451,6 +451,7 @@ export default function Home() {
                   <ul className="space-y-2">
                     {[
                       { label: "Latest News", href: "/#news" },
+                      { label: "FAQs", href: "/faq" },
                       { label: "About Us", href: "/#about" },
                       { label: "Travel Packages", href: "/#travel" },
                       { label: "Events", href: "/#events" },
