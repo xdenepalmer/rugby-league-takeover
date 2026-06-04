@@ -486,7 +486,15 @@ export default function Home() {
           <div className="border-t border-border/50 px-5 py-5">
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 sm:flex-row sm:justify-between">
               <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Powered by <span className="text-foreground/80">{settings.footer_powered_by || "DENEO.AI"}</span></p>
+              <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <span>Powered by</span>
+                <img
+                  src="https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/830b4f67c_deneoailq.png"
+                  alt={settings.footer_powered_by || "DENEO.AI"}
+                  className="h-6 w-auto object-contain sm:h-7"
+                  loading="lazy"
+                />
+              </div>
             </div>
           </div>
         </footer>
