@@ -16,9 +16,13 @@ async function deleteWithChildren(base44, postId) {
 }
 
 async function getForumPost(base44, postId) {
+  const id = String(postId || '').trim();
+  if (!id) return null;
   try {
-    return await base44.asServiceRole.entities.ForumPost.get(postId);
-  } catch {
+    const matches = await base44.asServiceRole.entities.ForumPost.filter({ id }, '-created_date', 1);
+    return matches?.[0] || null;
+  } catch (error) {
+    console.error('getForumPost lookup error:', error?.message || error);
     return null;
   }
 }

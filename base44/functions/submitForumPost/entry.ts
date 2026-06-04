@@ -87,6 +87,18 @@ async function awardForumReward(base44, user, { kind, xp, chips, postId, note, c
   } catch (error) { console.error('awardForumReward error:', error); return null; }
 }
 
+async function getForumPost(base44, postId) {
+  const id = String(postId || '').trim();
+  if (!id) return null;
+  try {
+    const matches = await base44.asServiceRole.entities.ForumPost.filter({ id }, '-created_date', 1);
+    return matches?.[0] || null;
+  } catch (error) {
+    console.error('getForumPost lookup error:', error?.message || error);
+    return null;
+  }
+}
+
 // Best-effort notification fan-out for a new post/reply. Never throws.
 async function createForumNotifications(base44, { post, parentId, actor, authorName, body }) {
   try {
@@ -94,7 +106,7 @@ async function createForumNotifications(base44, { post, parentId, actor, authorN
     const recipients = new Map(); // recipientId -> { email, type, title }
 
     if (parentId) {
-      const parent = await base44.asServiceRole.entities.ForumPost.get(parentId);
+      const parent = await getForumPost(base44, parentId);
       if (parent?.user_id && parent.user_id !== actor?.id) {
         recipients.set(parent.user_id, { email: parent.user_email || '', type: 'reply', title: `${authorName} replied to your post` });
       }

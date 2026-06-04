@@ -887,7 +887,11 @@ export default function Forum() {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] });
       setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false); setDraftRecovered(false);
       try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
+      toast({ title: data?.id ? "Post published" : "Post submitted", description: "Your discussion is now visible in the forum." });
       if (data?.reward) toast({ title: `+${data.reward.xp} XP · +${data.reward.chips} chips`, description: `${data.reward.rank}${data.reward.streak ? ` · ${data.reward.streak} day streak` : ""}` });
+    },
+    onError: (error) => {
+      toast({ title: "Post failed", description: error?.response?.data?.error || error?.message || "Please try again." });
     },
   });
 
