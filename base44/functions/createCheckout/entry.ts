@@ -169,8 +169,24 @@ Deno.serve(async (req) => {
     }
 
     const productsById = new Map();
+    const unavailableProductIds = [];
     for (const item of normalizedItems) {
-      productsById.set(item.productId, await base44.asServiceRole.entities.Product.get(item.productId));
+      try {
+        productsById.set(item.productId, await base44.asServiceRole.entities.Product.get(item.productId));
+      } catch (error) {
+        if (error?.status === 404) {
+          unavailableProductIds.push(item.productId);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (unavailableProductIds.length > 0) {
+      return Response.json({
+        error: 'Some items in your cart are no longer available. Please review your cart.',
+        unavailableProductIds,
+      }, { status: 409 });
     }
 
     const lineItemResult = buildCheckoutLineItems(normalizedItems, (productId) => productsById.get(productId));

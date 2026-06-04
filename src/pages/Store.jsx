@@ -567,6 +567,43 @@ export default function Store() {
     return products.filter((product) => product.is_active !== false);
   }, [products]);
 
+  useEffect(() => {
+    if (isLoading || !appParams.hasBase44Config || cart.length === 0) return;
+
+    const productsById = new Map(visibleProducts.map((product) => [product.id, product]));
+    let changed = false;
+    const nextCart = cart.flatMap((item) => {
+      const product = productsById.get(item.id);
+      const stock = Number(product?.stock_quantity);
+      if (!product || product.coming_soon === true || (Number.isFinite(stock) && stock <= 0)) {
+        changed = true;
+        return [];
+      }
+
+      const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
+      const quantity = Math.min(item.quantity, maxQuantity);
+      const updated = {
+        ...item,
+        name: product.name,
+        price_aud: product.price_aud,
+        image_url: product.image_url,
+        stock_quantity: product.stock_quantity,
+        quantity,
+      };
+
+      if (quantity !== item.quantity || updated.name !== item.name || updated.price_aud !== item.price_aud || updated.stock_quantity !== item.stock_quantity) {
+        changed = true;
+      }
+      return [updated];
+    });
+
+    if (changed) {
+      setCart(nextCart);
+      setCheckoutError("");
+      setCheckoutNotice("Some unavailable cart items were removed. Please review your cart before checkout.");
+    }
+  }, [isLoading, visibleProducts, cart]);
+
   // Extract categories dynamically
   const categories = useMemo(() => {
     const list = new Set();
@@ -704,7 +741,12 @@ export default function Store() {
         throw new Error("Failed to create checkout session.");
       }
     } catch (err) {
-      setCheckoutError(err?.response?.data?.error || err?.data?.error || err?.message || "An error occurred during checkout.");
+      const errorData = err?.response?.data || err?.data || {};
+      if (errorData.unavailableProductIds?.length) {
+        setCart((curr) => curr.filter((item) => !errorData.unavailableProductIds.includes(item.id)));
+        setCheckoutNotice("Some unavailable cart items were removed. Please review your cart before checkout.");
+      }
+      setCheckoutError(errorData.error || err?.message || "An error occurred during checkout.");
     } finally {
       setCheckingOut(false);
     }
