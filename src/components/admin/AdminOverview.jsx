@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import {
   TrendingUp, DollarSign, Users, ShoppingCart, MessageSquare,
   ArrowUpRight, ArrowDownRight, Newspaper, Package,
-  PackageCheck, ShieldAlert, ArrowRight
+  PackageCheck, ShieldAlert, ArrowRight, Pencil, Check, RotateCcw
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SystemStatusPanel from "./SystemStatusPanel";
@@ -29,10 +29,49 @@ function useAnimatedCount(target, duration = 800) {
   return val;
 }
 
-/* ─── KPI Card Component ────────────────────────────────── */
-function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, trendBadge, color, delay = 0 }) {
+/* ─── KPI Card Component (editable by owner) ───────────── */
+function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, trendBadge, color, delay = 0, statKey, onSave, overrideValue }) {
   const displayVal = useAnimatedCount(typeof value === "number" ? value : 0);
   const isPositive = trend >= 0;
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState("");
+  const inputRef = useRef(null);
+  const hasOverride = overrideValue !== undefined && overrideValue !== null && overrideValue !== "";
+  const shownValue = hasOverride ? overrideValue : value;
+  const shownDisplay = useAnimatedCount(typeof shownValue === "number" ? shownValue : 0);
+
+  const startEdit = () => {
+    setEditVal(String(hasOverride ? overrideValue : value));
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 50);
+  };
+
+  const saveEdit = () => {
+    if (onSave && statKey) {
+      const trimmed = editVal.trim();
+      // If the input is empty or matches the live value, clear the override
+      if (!trimmed || trimmed === String(value)) {
+        onSave(statKey, null);
+      } else {
+        // Store as number if numeric, otherwise string (e.g. "$1234.56")
+        const asNum = Number(trimmed.replace(/[^0-9.-]/g, ""));
+        onSave(statKey, trimmed.startsWith("$") ? trimmed : (isNaN(asNum) ? trimmed : asNum));
+      }
+    }
+    setEditing(false);
+  };
+
+  const resetOverride = () => {
+    if (onSave && statKey) onSave(statKey, null);
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") saveEdit();
+    if (e.key === "Escape") setEditing(false);
+  };
+
+  const canEdit = !!onSave && !!statKey;
 
   return (
     <motion.div
@@ -44,14 +83,53 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, trendBa
       <div className={`h-[2px] w-full ${color}`} />
       <div className="p-5">
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-              {label}
-            </p>
-            <p className="font-display text-3xl tabular-nums leading-none text-foreground">
-              {typeof value === "string" ? value : displayVal.toLocaleString()}
-            </p>
-            {trendBadge && (
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                {label}
+              </p>
+              {hasOverride && (
+                <span className="text-[8px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1 py-0.5">Manual</span>
+              )}
+            </div>
+            {editing ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editVal}
+                  onChange={(e) => setEditVal(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full font-display text-2xl tabular-nums leading-none text-foreground bg-transparent border-b-2 border-primary/60 outline-none py-1"
+                  autoFocus
+                />
+                <button type="button" onClick={saveEdit} className="flex h-8 w-8 shrink-0 items-center justify-center border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors" title="Save">
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+                {hasOverride && (
+                  <button type="button" onClick={resetOverride} className="flex h-8 w-8 shrink-0 items-center justify-center border border-border/50 bg-muted/20 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors" title="Reset to auto">
+                    <RotateCcw className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="font-display text-3xl tabular-nums leading-none text-foreground">
+                  {typeof shownValue === "string" ? shownValue : shownDisplay.toLocaleString()}
+                </p>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={startEdit}
+                    className="opacity-0 group-hover:opacity-100 flex h-7 w-7 shrink-0 items-center justify-center border border-border/50 bg-muted/20 text-muted-foreground hover:text-primary hover:border-primary/30 transition-all"
+                    title="Edit this stat"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )}
+            {!editing && trendBadge && (
               <span className={`inline-block mt-1 text-[9px] font-bold tabular-nums ${trendBadge.color}`}>
                 {trendBadge.text}
               </span>
@@ -70,7 +148,7 @@ function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, trendBa
             </span>
           )}
           <span className="text-[10px] text-muted-foreground">
-            {trendLabel || subtext}
+            {hasOverride ? `Auto: ${typeof value === "string" ? value : Number(value || 0).toLocaleString()} · ${subtext}` : (trendLabel || subtext)}
           </span>
         </div>
       </div>
@@ -112,7 +190,7 @@ function PriorityTile({ to, icon: Icon, label, value, detail, tone = "primary" }
 
 
 /* ─── Main AdminOverview ────────────────────────────────── */
-export default function AdminOverview({ counts, registrations = [], orders = [] }) {
+export default function AdminOverview({ counts, registrations = [], orders = [], statOverrides = {}, onSaveOverride }) {
   const paidOrders = useMemo(
     () => orders.filter((o) => o.status === "paid" || o.status === "completed" || o.status === "packing" || o.status === "shipped"),
     [orders]
@@ -307,6 +385,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           trendBadge={revenueTrend}
           color="bg-gradient-to-r from-accent to-accent/60"
           delay={0.05}
+          statKey="revenue"
+          onSave={onSaveOverride}
+          overrideValue={statOverrides.revenue}
         />
         <KpiCard
           icon={Users}
@@ -316,6 +397,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           trendBadge={regsTrend}
           color="bg-gradient-to-r from-primary to-primary/60"
           delay={0.1}
+          statKey="registrations"
+          onSave={onSaveOverride}
+          overrideValue={statOverrides.registrations}
         />
         <KpiCard
           icon={ShoppingCart}
@@ -325,6 +409,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           trendBadge={ordersTrend}
           color="bg-gradient-to-r from-emerald-500 to-emerald-500/60"
           delay={0.15}
+          statKey="orders"
+          onSave={onSaveOverride}
+          overrideValue={statOverrides.orders}
         />
         <KpiCard
           icon={MessageSquare}
@@ -333,6 +420,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           subtext="Active discussions"
           color="bg-gradient-to-r from-blue-500 to-blue-500/60"
           delay={0.2}
+          statKey="posts"
+          onSave={onSaveOverride}
+          overrideValue={statOverrides.posts}
         />
       </div>
 
@@ -345,6 +435,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           subtext="Published content"
           color="bg-gradient-to-r from-violet-500 to-violet-500/60"
           delay={0.25}
+          statKey="news"
+          onSave={onSaveOverride}
+          overrideValue={statOverrides.news}
         />
         <KpiCard
           icon={Package}
@@ -353,6 +446,9 @@ export default function AdminOverview({ counts, registrations = [], orders = [] 
           subtext="Active in store"
           color="bg-gradient-to-r from-cyan-500 to-cyan-500/60"
           delay={0.3}
+          statKey="products"
+          onSave={onSaveOverride}
+          overrideValue={statOverrides.products}
         />
       </div>
 

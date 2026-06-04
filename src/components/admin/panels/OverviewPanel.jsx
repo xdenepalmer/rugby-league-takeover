@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users as UsersIcon, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -28,6 +28,7 @@ const PANEL_ROUTE_MAP = {
 
 export default function OverviewPanel() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showStats, setShowStats] = useState(true);
 
   const handleNavigate = useCallback(
@@ -57,6 +58,43 @@ export default function OverviewPanel() {
   const pendingPosts = forumPosts.filter((p) => p.is_published !== true).length;
   const pendingTestimonials = testimonials.filter((t) => t.is_published === false).length;
   const counts = { news: news.length, products: products.length, orders: orders.length, registrations: registrations.length, posts: forumPosts.length, pendingPosts, pendingTestimonials };
+
+  /* ── Stat overrides from SiteSettings ── */
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    staleTime: 60_000,
+  });
+  const siteSettings = settingsRecords[0] || {};
+  const statOverrides = (() => {
+    try {
+      if (typeof siteSettings.stat_overrides === "string") return JSON.parse(siteSettings.stat_overrides);
+      if (typeof siteSettings.stat_overrides === "object" && siteSettings.stat_overrides) return siteSettings.stat_overrides;
+    } catch {}
+    return {};
+  })();
+
+  const overrideMutation = useMutation({
+    mutationFn: async ({ key, value }) => {
+      const current = { ...statOverrides };
+      if (value === null || value === undefined) {
+        delete current[key];
+      } else {
+        current[key] = value;
+      }
+      const payload = { stat_overrides: JSON.stringify(current) };
+      if (siteSettings.id) {
+        return base44.entities.SiteSettings.update(siteSettings.id, payload);
+      } else {
+        return base44.entities.SiteSettings.create(payload);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["siteSettings"] }),
+  });
+
+  const handleSaveOverride = useCallback((key, value) => {
+    overrideMutation.mutate({ key, value });
+  }, [overrideMutation]);
 
   return (
     <div className="grid gap-5">
@@ -109,7 +147,7 @@ export default function OverviewPanel() {
               className="overflow-hidden"
             >
               <div className="grid gap-5 pt-4">
-                <AdminOverview counts={counts} registrations={registrations} orders={orders} />
+              <AdminOverview counts={counts} registrations={registrations} orders={orders} statOverrides={statOverrides} onSaveOverride={handleSaveOverride} />
 
                 {/* ── Additional Stats Row ── */}
                 <div className="grid gap-4 sm:grid-cols-2">
