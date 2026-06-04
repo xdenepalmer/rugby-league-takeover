@@ -59,7 +59,7 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined
 
           const normalized = id.replace(/\\/g, '/')
-          if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-router-dom/')) {
+          if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-router-dom/') || normalized.includes('/node_modules/scheduler/') || normalized.includes('/node_modules/react-is/')) {
             return 'vendor-react'
           }
           if (normalized.includes('/node_modules/@base44/') || normalized.includes('/node_modules/axios/')) {
