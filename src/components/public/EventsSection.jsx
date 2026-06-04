@@ -3,13 +3,7 @@ import { motion } from "framer-motion";
 import { CalendarDays, Clock, MapPin, ArrowUpRight, Ticket } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 import PublicDetailSheet from "./PublicDetailSheet";
-
-const formatDate = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value; // free-text dates pass through
-  return date.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-};
+import { formatVegasDate, formatVegasEventTime } from "@/lib/vegas-time";
 
 const formatPrice = (value) => {
   const number = Number(value);
@@ -140,8 +134,8 @@ function EventCard({ event, featured, index, onClick }) {
       <div className={`flex flex-1 flex-col p-6 ${featured ? "lg:w-1/2 lg:p-8" : ""}`}>
         <h3 className="font-display text-3xl uppercase leading-none text-foreground md:text-4xl">{event.title}</h3>
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-          {formatDate(event.event_date) && <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {formatDate(event.event_date)}</span>}
-          {event.start_time && <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {event.start_time}</span>}
+          {formatVegasDate(event.event_date) && <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {formatVegasDate(event.event_date)}</span>}
+          {formatVegasEventTime(event) && <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {formatVegasEventTime(event)}</span>}
           {event.location && <span className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> {event.location}</span>}
         </div>
         {event.address && <p className="mt-2 text-xs text-muted-foreground">{event.address}</p>}
@@ -220,9 +214,7 @@ export default function EventsSection({ events, event }) {
 
   const getTimezoneConversionText = (item) => {
     if (!item) return "";
-    return `📅 Las Vegas Local: ${item.event_date || "TBD"} @ ${item.start_time || "TBD"}
-🇦🇺 Australia (AEDT/Syd): 19 Hours Ahead
-(e.g., Thursday 7:00 PM in Las Vegas is Friday 2:00 PM in Sydney/AEST)
+    return `📅 Las Vegas time: ${formatVegasDate(item.event_date) || "TBD"} @ ${formatVegasEventTime(item) || "TBD"}
 
 📍 Venue Address: ${item.address || item.location || "Vegas Strip"}
 
@@ -290,7 +282,7 @@ ${item.blurb || ""}`;
         onClose={() => setSelectedEvent(null)}
         title={selectedEvent?.title}
         category="Match Event"
-        date={selectedEvent ? formatDate(selectedEvent.event_date) : undefined}
+        date={selectedEvent ? formatVegasDate(selectedEvent.event_date) : undefined}
         author="Vegas Coordinator"
         image={selectedEvent?.photo_urls?.[0]}
         body={selectedEvent ? getTimezoneConversionText(selectedEvent) : undefined}

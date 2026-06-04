@@ -4,28 +4,9 @@ import { Swords, MapPin, ArrowUpRight, Calendar } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import TeamCrest from "./TeamCrest";
+import { formatVegasDateTime } from "@/lib/vegas-time";
 
 const norm = (s) => String(s || "").trim().toLowerCase();
-
-const formatTimezone = (value, timeZone) => {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  try {
-    return d.toLocaleString("en-AU", {
-      timeZone,
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-      timeZoneName: "short"
-    });
-  } catch (e) {
-    return d.toLocaleString("en-AU");
-  }
-};
 
 const handleCalendarDownload = (m) => {
   if (!m) return;
@@ -128,15 +109,9 @@ export default function MatchupsSection() {
               ) : (m.kickoff || m.venue) && (
                 <div className="mt-5 border-t border-border pt-4 text-xs tracking-wider text-muted-foreground">
                   {m.kickoff && (
-                    <div className="flex flex-col items-center justify-center gap-1 mb-3">
-                      <div className="flex items-center gap-1.5 font-bold uppercase text-accent">
-                        <span className="text-[10px]">🇺🇸 LV:</span>
-                        <span>{formatTimezone(m.kickoff, "America/Los_Angeles")}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 font-bold uppercase text-primary">
-                        <span className="text-[10px]">🇦🇺 SYD:</span>
-                        <span>{formatTimezone(m.kickoff, "Australia/Sydney")}</span>
-                      </div>
+                    <div className="mb-3 flex items-center justify-center gap-1.5 font-bold uppercase text-accent">
+                      <span className="text-[10px]">Las Vegas:</span>
+                      <span>{formatVegasDateTime(m.kickoff)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-center gap-4 text-[11px] font-bold uppercase tracking-[0.15em]">

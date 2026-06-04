@@ -1,3 +1,5 @@
+import { LAS_VEGAS_TIME_ZONE } from "@/lib/vegas-time";
+
 export const NRL_CLUBS = [
   "Brisbane Broncos",
   "Canberra Raiders",
@@ -91,11 +93,13 @@ export function formatKickoff(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "TBA";
   return d.toLocaleString("en-AU", {
+    timeZone: LAS_VEGAS_TIME_ZONE,
     weekday: "short",
     day: "numeric",
     month: "short",
     hour: "numeric",
     minute: "2-digit",
+    timeZoneName: "short",
   });
 }
 
