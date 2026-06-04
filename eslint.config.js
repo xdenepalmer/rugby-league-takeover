@@ -37,6 +37,10 @@ export default [
       "no-unused-vars": "off",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
+      // Catch <Component> used without an import/definition (e.g. a missing
+      // lucide icon). This class of bug builds + ran lint clean before and
+      // black-screened the live forum (RLT-HOTFIX-004).
+      "react/jsx-no-undef": "error",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "warn",

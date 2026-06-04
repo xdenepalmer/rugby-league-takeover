@@ -7,7 +7,7 @@ import {
   MessageSquare, Send, Pin, Search, MessageCircle, Heart,
   TrendingUp, Users, Flame, Sparkles, Clock, Eye,
   X, Radio, ChevronDown, ChevronUp, Trash2,
-  Trophy, Activity, Reply, Shield, Pencil, Flag, Plane, ShoppingBag, CalendarDays, ArrowRight
+  Trophy, Activity, Reply, Shield, Pencil, Flag, Plane, ShoppingBag, CalendarDays, ArrowRight, Bookmark
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
