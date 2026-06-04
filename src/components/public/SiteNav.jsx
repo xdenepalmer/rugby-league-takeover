@@ -40,15 +40,23 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     if (!href.startsWith("/#")) return; // not a hash link
     e.preventDefault();
     const hash = href.substring(1); // e.g. "#events"
-    if (location.pathname === "/") {
+
+    const scrollToTarget = (attempt = 0) => {
       const el = document.querySelector(hash);
-      if (el) el.scrollIntoView({ behavior: "smooth" });
+      if (el) {
+        setActiveHash(hash);
+        window.history.replaceState(null, "", `/${hash}`);
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (attempt < 6) setTimeout(() => scrollToTarget(attempt + 1), 150);
+    };
+
+    if (location.pathname === "/") {
+      scrollToTarget();
     } else {
-      navigateTo("/");
-      setTimeout(() => {
-        const el = document.querySelector(hash);
-        if (el) el.scrollIntoView({ behavior: "smooth" });
-      }, 400);
+      navigateTo(`/${hash}`);
+      setTimeout(() => scrollToTarget(), 150);
     }
   };
 
