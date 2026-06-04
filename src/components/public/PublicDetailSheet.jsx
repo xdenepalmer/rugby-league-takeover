@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Share2, Calendar, Clock, User, Check } from "lucide-react";
 
-export default function PublicDetailSheet({ isOpen, onClose, title, category, date, author, image, body, readingTime, shareUrl, ctaLabel, onCtaClick }) {
+export default function PublicDetailSheet({ isOpen, onClose, title, category, date, author, image, body, readingTime, shareUrl, ctaLabel, onCtaClick, extraContent }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -155,6 +155,8 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
                   <p className="text-muted-foreground italic">No description details provided.</p>
                 )}
               </div>
+
+              {extraContent}
 
               {/* Bottom Call to Action */}
               {ctaLabel && (

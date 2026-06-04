@@ -16,6 +16,53 @@ const formatPrice = (value) => {
   return Number.isFinite(number) && number > 0 ? `$${number.toFixed(2)}` : "";
 };
 
+function EventDetailTickets({ event }) {
+  if (!event) return null;
+  const tickets = (event.tickets || []).filter((ticket) => ticket && (ticket.name || ticket.url));
+  const hasTicketUrl = Boolean(event.ticket_url);
+
+  if (!tickets.length && !hasTicketUrl) {
+    const searchUrl = `https://www.ticketmaster.com/search?q=${encodeURIComponent(`${event.title || "NRL Las Vegas"} tickets`)}`;
+    return (
+      <div className="border border-primary/30 bg-primary/[0.045] p-4">
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">Tickets & purchase links</p>
+        <a href={searchUrl} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between border border-primary bg-primary/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+          <span>Search ticket availability</span>
+          <span className="flex items-center gap-1">Open <ArrowUpRight className="h-4 w-4" /></span>
+        </a>
+        <p className="mt-2 text-[10px] leading-4 text-muted-foreground">Event-specific purchase links will replace this search link when released.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-primary/30 bg-primary/[0.045] p-4">
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">Tickets & purchase links</p>
+      <div className="grid gap-2">
+        {tickets.map((ticket, index) => (
+          ticket.sold_out || !ticket.url ? (
+            <div key={index} className="flex items-center justify-between border border-border/50 bg-background/30 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              <span>{ticket.name || "Ticket"} {formatPrice(ticket.price_aud) && `· ${formatPrice(ticket.price_aud)}`}</span>
+              <span>{ticket.sold_out ? "Sold out" : "Soon"}</span>
+            </div>
+          ) : (
+            <a key={index} href={ticket.url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between border border-primary bg-primary/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+              <span>{ticket.name || "Buy tickets"} {formatPrice(ticket.price_aud) && `· ${formatPrice(ticket.price_aud)}`}</span>
+              <span className="flex items-center gap-1">Buy <ArrowUpRight className="h-4 w-4" /></span>
+            </a>
+          )
+        ))}
+        {hasTicketUrl && (
+          <a href={event.ticket_url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between border border-primary bg-primary/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+            <span>Official tickets & event info</span>
+            <span className="flex items-center gap-1">Open <ArrowUpRight className="h-4 w-4" /></span>
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function EventTickets({ event }) {
   const tickets = (event.tickets || []).filter((t) => t && (t.name || t.url));
 
@@ -247,6 +294,7 @@ ${item.blurb || ""}`;
         author="Vegas Coordinator"
         image={selectedEvent?.photo_urls?.[0]}
         body={selectedEvent ? getTimezoneConversionText(selectedEvent) : undefined}
+        extraContent={<EventDetailTickets event={selectedEvent} />}
         ctaLabel="Add to Calendar (ICS)"
         onCtaClick={() => handleCalendarDownload(selectedEvent)}
       />
