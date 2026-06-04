@@ -97,13 +97,13 @@ export default function ReactionPicker({ reactions = {}, legacyLikes = 0, curren
 
         <button
           type="button"
-          onClick={() => (isAuthenticated ? setOpen((o) => !o) : requireLogin())}
-          title={selectedEmoji ? "Change your reaction" : "Add a reaction"}
-          aria-label={selectedEmoji ? "Change your reaction" : "Add a reaction"}
+          onClick={() => (isAuthenticated ? (selectedEmoji ? setOpen((o) => !o) : toggle("❤️")) : requireLogin())}
+          title={selectedEmoji ? "Change your reaction" : "Like this post"}
+          aria-label={selectedEmoji ? "Change your reaction" : "Like this post"}
           className={`flex min-h-11 items-center gap-1.5 border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${open ? "border-primary bg-primary/10 text-primary" : "border-border/30 bg-background/20 text-slate-200 hover:border-primary/35 hover:text-primary"}`}
         >
           <Smile className="h-4 w-4" />
-          <span className="hidden sm:inline">{selectedEmoji ? "Change" : "React"}</span>
+          <span className="hidden sm:inline">{selectedEmoji ? "Change" : "Like"}</span>
         </button>
 
         {total > 0 && (

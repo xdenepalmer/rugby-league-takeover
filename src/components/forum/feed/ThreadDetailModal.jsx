@@ -187,7 +187,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
 
         {/* Sticky reply form at bottom */}
         <div className="ios-keyboard-spacer shrink-0 border-t border-border/30 bg-card/80 p-4 backdrop-blur-sm md:p-6">
-          <form onSubmit={onReply} className="space-y-3">
+          <form onSubmit={(e) => onReply(post, e)} className="space-y-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-300">
               Write a Reply
             </p>
@@ -203,7 +203,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
                       id="modal-reply-name"
                       required placeholder="Your name"
                       value={replyDraft.author_name}
-                      onChange={(e) => onUpdateReply({ author_name: e.target.value })}
+                      onChange={(e) => onUpdateReply(post.id, { author_name: e.target.value })}
                       className="h-11 rounded-none border-border bg-background text-sm"
                     />
                   </>
@@ -213,7 +213,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
                   people={replyApi?.people}
                   placeholder={`Reply to ${post.author_name || "this thread"}… use @ to mention`}
                   value={replyDraft.body}
-                  onChange={(val) => onUpdateReply({ body: val })}
+                  onChange={(val) => onUpdateReply(post.id, { body: val })}
                   className="min-h-16 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
                 />
               </div>

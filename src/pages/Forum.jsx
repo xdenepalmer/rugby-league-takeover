@@ -443,7 +443,7 @@ const ForumPostCard = memo(function ForumPostCard({
 
           <button
             type="button"
-            onClick={onToggleReply}
+            onClick={() => onToggleReply(post.id)}
             className={`forum-action-button flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold transition-all duration-200 border ${
               replyOpen
                 ? "bg-accent/10 text-accent border-accent/20"
@@ -602,7 +602,7 @@ const ForumPostCard = memo(function ForumPostCard({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              onSubmit={onReply}
+              onSubmit={(e) => onReply(post, e)}
               className="overflow-hidden"
             >
               <div className="mt-4 space-y-3 border-t border-border/20 pt-4">
@@ -620,7 +620,7 @@ const ForumPostCard = memo(function ForumPostCard({
                   <Input
                     required placeholder="Your name"
                     value={replyDraft.author_name}
-                    onChange={(e) => onUpdateReply({ author_name: e.target.value })}
+                    onChange={(e) => onUpdateReply(post.id, { author_name: e.target.value })}
                     className="h-11 rounded-none border-border bg-background text-sm"
                   />
                 )}
@@ -629,11 +629,11 @@ const ForumPostCard = memo(function ForumPostCard({
                   people={replyApi?.people}
                   placeholder={`Reply to ${post.author_name || "this thread"}… use @ to mention`}
                   value={replyDraft.body}
-                  onChange={(val) => onUpdateReply({ body: val })}
+                  onChange={(val) => onUpdateReply(post.id, { body: val })}
                   className="min-h-20 rounded-none border-border bg-background text-sm leading-relaxed resize-none"
                 />
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" size="mobile" onClick={onToggleReply} className="rounded-none text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-white">
+                  <Button type="button" variant="ghost" size="mobile" onClick={() => onToggleReply(post.id)} className="rounded-none text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-white">
                     Cancel
                   </Button>
                   <Button
