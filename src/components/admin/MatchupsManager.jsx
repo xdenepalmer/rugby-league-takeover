@@ -11,7 +11,17 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { ALL_TEAMS } from "@/lib/nrl-teams";
 import DateTimePicker from "./DateTimePicker";
 
-const emptyMatchup = { home_team: "", home_logo: "", away_team: "", away_logo: "", kickoff: "", label: "", venue: "", ticket_url: "", sort_order: 1, is_published: true, status: "scheduled", home_score: "", away_score: "", result_note: "" };
+const emptyMatchup = { home_team: "", home_logo: "", away_team: "", away_logo: "", kickoff: "", label: "", venue: "", ticket_url: "", sort_order: 1, is_published: true, status: "scheduled", home_score: null, away_score: null, result_note: "" };
+
+// Coerce score fields: base44 rejects empty strings for numeric columns.
+const cleanPayload = (data) => {
+  const out = { ...data };
+  if (out.home_score === "" || out.home_score === undefined) out.home_score = null;
+  else out.home_score = Number(out.home_score) || 0;
+  if (out.away_score === "" || out.away_score === undefined) out.away_score = null;
+  else out.away_score = Number(out.away_score) || 0;
+  return out;
+};
 const norm = (s) => String(s || "").trim().toLowerCase();
 
 function TeamSelect({ valueName, onPick, placeholder }) {
@@ -84,11 +94,11 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["matchups"] });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Matchup.create(data),
+    mutationFn: (data) => base44.entities.Matchup.create(cleanPayload(data)),
     onSuccess: () => { refresh(); setDraft(emptyMatchup); toast({ title: "Matchup added" }); },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Matchup.update(id, data),
+    mutationFn: ({ id, data }) => base44.entities.Matchup.update(id, cleanPayload(data)),
     onSuccess: () => { refresh(); setEditId(null); setEditDraft(null); },
   });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Matchup.delete(id), onSuccess: () => { refresh(); toast({ title: "Matchup removed" }); } });
