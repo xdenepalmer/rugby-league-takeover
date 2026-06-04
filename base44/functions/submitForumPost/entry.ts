@@ -61,15 +61,6 @@ function matchesMention(u, tokens) {
   return tokens.some((t) => candidates.has(t));
 }
 
-async function getForumPost(base44, postId) {
-  try {
-    const matches = await base44.asServiceRole.entities.ForumPost.filter({ id: postId }, '-created_date', 1);
-    return Array.isArray(matches) ? matches[0] || null : null;
-  } catch {
-    return null;
-  }
-}
-
 const CASINO_RANKS = [
   { min: 2500, name: 'Vegas Royalty' }, { min: 1500, name: 'Whale' }, { min: 900, name: 'High Roller' },
   { min: 450, name: 'Pit Boss' }, { min: 180, name: 'Table Regular' }, { min: 60, name: 'Lucky Local' }, { min: 0, name: 'Rookie Punter' },
@@ -79,7 +70,9 @@ const rankForXp = (xp) => CASINO_RANKS.find((r) => xp >= r.min)?.name || 'Rookie
 async function awardForumReward(base44, user, { kind, xp, chips, postId, note, counter }) {
   if (!user?.id) return null;
   try {
-    const fullUser = await base44.asServiceRole.entities.User.get(user.id);
+    const users = await base44.asServiceRole.entities.User.filter({ id: user.id }, '-created_date', 1);
+    const fullUser = Array.isArray(users) ? users[0] : null;
+    if (!fullUser) return null;
     const today = todayKey();
     const last = String(fullUser?.casino_last_active_date || '');
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);

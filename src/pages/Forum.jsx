@@ -881,11 +881,12 @@ export default function Forum() {
         author_name: post.author_name, title: post.title, body: post.body,
         category: post.category, parent_id: post.parent_id, media_url: data.media_url || "",
       });
-      return response.data;
+      return { ...response.data, parent_id: post.parent_id };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] });
       setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false); setDraftRecovered(false);
+      if (!data?.parent_id) { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); setUserFilter("all"); setMobileTab("feed"); }
       try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
       toast({ title: data?.id ? "Post published" : "Post submitted", description: "Your discussion is now visible in the forum." });
       if (data?.reward) toast({ title: `+${data.reward.xp} XP · +${data.reward.chips} chips`, description: `${data.reward.rank}${data.reward.streak ? ` · ${data.reward.streak} day streak` : ""}` });

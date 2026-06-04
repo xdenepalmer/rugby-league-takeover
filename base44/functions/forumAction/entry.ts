@@ -52,7 +52,9 @@ const rankForXp = (xp) => CASINO_RANKS.find((r) => xp >= r.min)?.name || 'Rookie
 async function awardForumReward(base44, user, { kind, xp, chips, postId, note, counter }) {
   if (!user?.id) return null;
   try {
-    const fullUser = await base44.asServiceRole.entities.User.get(user.id);
+    const users = await base44.asServiceRole.entities.User.filter({ id: user.id }, '-created_date', 1);
+    const fullUser = Array.isArray(users) ? users[0] : null;
+    if (!fullUser) return null;
     const today = todayKey();
     const last = String(fullUser?.casino_last_active_date || '');
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
