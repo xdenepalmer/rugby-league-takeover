@@ -18,7 +18,7 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
     >
       <motion.div
         layout
-        className={`group relative min-h-[3.75rem] sm:min-h-[5rem] overflow-hidden border p-1.5 sm:p-2 text-center transition-all ${
+        className={`group relative min-h-[4.5rem] overflow-hidden border p-2 text-center transition-all sm:min-h-[5rem] ${
           owned
             ? `${tier.border} ${tier.bg} ${tier.text}`
             : "border-white/5 bg-black/40"
@@ -59,7 +59,7 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
 
         {/* Emoji */}
         <motion.span
-          className={`relative z-10 block text-lg sm:text-2xl leading-none transition-transform ${
+          className={`relative z-10 block text-xl leading-none transition-transform sm:text-2xl ${
             owned ? "" : "grayscale opacity-20"
           }`}
           whileHover={owned ? { scale: 1.15 } : {}}

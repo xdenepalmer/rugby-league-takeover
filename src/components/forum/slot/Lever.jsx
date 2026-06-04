@@ -10,7 +10,7 @@ export default function Lever({ canSpin, leverDown, onPull }) {
       disabled={!canSpin}
       onClick={onPull}
       aria-label="Pull lever to spin"
-      className="relative hidden w-10 transition-opacity disabled:opacity-35 sm:block focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 group"
+      className="group relative hidden w-10 transition-opacity disabled:opacity-35 xl:block focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
       title="Pull the lever"
       style={{ height: REEL_WINDOW_H }}
     >

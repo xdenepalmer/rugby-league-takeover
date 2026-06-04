@@ -480,7 +480,7 @@ export default function SlotMachineBadgeUnlock() {
       {/* Top neon bar */}
       <div className="relative h-[3px] w-full bg-gradient-to-r from-pink-500 via-purple-400 to-amber-400 shadow-[0_0_12px_rgba(168,85,247,0.5)]" />
 
-      <div className="relative p-4 sm:p-5">
+      <div className="relative p-3 sm:p-5">
         {/* ─── Header ─── */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -601,7 +601,7 @@ export default function SlotMachineBadgeUnlock() {
         </AnimatePresence>
 
         {/* ─── Machine Body ─── */}
-        <div className="relative overflow-hidden border border-purple-500/20 bg-black p-3 shadow-[inset_0_0_50px_rgba(0,0,0,0.98),0_0_30px_rgba(88,28,135,0.12)]">
+        <div className="relative overflow-hidden border border-purple-500/20 bg-black p-2.5 shadow-[inset_0_0_50px_rgba(0,0,0,0.98),0_0_30px_rgba(88,28,135,0.12)] sm:p-3">
           {/* Top light strip */}
           <div className="mb-2.5 flex gap-0.5">
             {Array.from({ length: 24 }).map((_, i) => (
@@ -626,8 +626,8 @@ export default function SlotMachineBadgeUnlock() {
           </div>
 
           {/* Reels + Lever */}
-          <div className="relative grid grid-cols-[1fr_auto] gap-3">
-            <div className="grid grid-cols-3 gap-3">
+          <div className="relative grid grid-cols-1 gap-2.5 xl:grid-cols-[1fr_auto] xl:gap-3">
+            <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3">
               {tracks.map((track, index) => (
                 <ReelWindow
                   key={index}
@@ -725,7 +725,7 @@ export default function SlotMachineBadgeUnlock() {
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4 sm:gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {TIER_ORDER.map((tierName) => {
               const group = badgesByTier[tierName];
               if (!group) return null;

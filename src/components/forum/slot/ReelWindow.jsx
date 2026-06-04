@@ -90,7 +90,7 @@ export default function ReelWindow({ track, index, spinning, stopped, highlight,
               style={{ height: REEL_CELL }}
             >
               <span
-                className="text-[3rem] drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)] select-none"
+                className="select-none text-[2.35rem] leading-none drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)] sm:text-[2.8rem]"
                 style={{ filter: spinning && !stopped ? "brightness(0.85)" : "brightness(1.05)" }}
               >
                 {emoji}
