@@ -874,6 +874,7 @@ export default function Forum() {
   }, [profileById, teamLogoByName]);
 
   const createMutation = useMutation({
+    meta: { silent: true },
     mutationFn: async (data) => {
       const authorName = isAuthenticated ? (user?.full_name || "Member") : data.author_name;
       const post = buildPendingForumPost({ ...data, author_name: authorName });
@@ -924,18 +925,18 @@ export default function Forum() {
 
   const handleReply = useCallback((post, e) => {
     e.preventDefault();
-    setReplyDrafts((currentDrafts) => {
-      const reply = currentDrafts[post.id] || emptyReply;
-      if (!post.id || (!isAuthenticated && !reply.author_name) || !reply.body) return currentDrafts;
-      createMutation.mutate({
-        author_name: reply.author_name,
-        title: `Re: ${post.title || "Discussion Thread"}`,
-        body: reply.body, category: post.category || "General", parent_id: post.id,
-        media_url: reply.media_url || "",
-      });
-      return currentDrafts;
+    const parentId = String(post?.id || "").trim();
+    const reply = replyDrafts[parentId] || emptyReply;
+    if (!parentId || (!isAuthenticated && !reply.author_name) || !reply.body) return;
+    createMutation.mutate({
+      author_name: reply.author_name,
+      title: `Re: ${post.title || "Discussion Thread"}`,
+      body: reply.body,
+      category: post.category || "General",
+      parent_id: parentId,
+      media_url: reply.media_url || "",
     });
-  }, [isAuthenticated, createMutation]);
+  }, [isAuthenticated, createMutation, replyDrafts]);
 
   const deleteMutation = useMutation({
     mutationFn: (postId) => base44.functions.invoke("forumAction", { action: "delete", postId }),

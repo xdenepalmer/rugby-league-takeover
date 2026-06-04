@@ -1,8 +1,10 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
 
-const messageFrom = (error, fallback) =>
-	error?.response?.data?.error || error?.data?.error || error?.message || fallback;
+const messageFrom = (error, fallback) => {
+	const responseData = error?.response?.data;
+	return (typeof responseData === 'string' ? responseData : null) || responseData?.error || responseData?.message || responseData?.detail || error?.data?.error || error?.data?.message || error?.message || fallback;
+};
 
 // Errors that mean "this entity/function hasn't been deployed to the Base44 app
 // yet" are a transient platform-state issue, not something the user can act on.
@@ -23,7 +25,7 @@ export const queryClientInstance = new QueryClient({
 	}),
 	mutationCache: new MutationCache({
 		onError: (error, _vars, _ctx, mutation) => {
-			if (mutation?.meta?.silent) return;
+			if (mutation?.meta?.silent || isRateLimitError(error)) return;
 			if (isUndeployedSchemaError(error)) {
 				toast({ title: 'Not available yet', description: 'This feature needs the latest changes deployed to the app before it can be used.' });
 				return;
