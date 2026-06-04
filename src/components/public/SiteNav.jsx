@@ -12,7 +12,7 @@ const NotificationBell = lazy(() => import("@/components/NotificationBell"));
 
 const links = [
   { label: "Home", href: "/" },
-  { label: "Latest News", href: "/#news" },
+  { label: "Latest News", href: "/news" },
   { label: "FAQs", href: "/faq" },
   { label: "Travel Packages", href: "/#travel" },
   { label: "Match Events", href: "/#events" },
@@ -248,6 +248,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     try {
       if (href === "/store") import("@/pages/Store");
       else if (href === "/forum") import("@/pages/Forum");
+      else if (href === "/news") import("@/pages/News");
       else if (href === "/admin") import("@/pages/Admin");
       else if (href === "/account") import("@/pages/Account");
       else if (href === "/login") import("@/pages/Login");

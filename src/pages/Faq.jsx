@@ -1,79 +1,101 @@
-import React, { useMemo, useState } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { HelpCircle, Search } from "lucide-react";
+import { HelpCircle, MessageCircle, ShoppingBag, Plane, ShieldCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import SectionHeader from "@/components/public/SectionHeader";
-import { Input } from "@/components/ui/input";
+import { appParams } from "@/lib/app-params";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+
+const fallbackFaqs = [
+  {
+    id: "travel",
+    question: "What is Rugby League Takeover Las Vegas?",
+    answer: "Rugby League Takeover Las Vegas is a supporter hub for fans travelling to Las Vegas for rugby league week, with official updates, travel interest registration, event information, merch and community links.",
+  },
+  {
+    id: "packages",
+    question: "Where can I register interest for travel packages?",
+    answer: "Use the travel registration form on the homepage to tell us your preferred trip details, dates, hotel style and team support. The team can then follow up with relevant package information.",
+  },
+  {
+    id: "events",
+    question: "Where do I find official event and ticket information?",
+    answer: "Event listings are available on the homepage in the Events section. Where official ticket or purchase links are available, they are shown directly on each event card and detail panel.",
+  },
+  {
+    id: "store",
+    question: "How do I buy merchandise?",
+    answer: "Visit the Merch Shop, add items to your cart, enter your checkout details, and complete payment securely through Stripe from the published site.",
+  },
+];
 
 export default function Faq() {
-  const [search, setSearch] = useState("");
-
-  const { data: faqs = [], isLoading } = useQuery({
-    queryKey: ["publicFaqs"],
+  const { data: faqs = [] } = useQuery({
+    queryKey: ["faqs"],
     queryFn: () => base44.entities.Faq.list("sort_order", 200),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
   });
 
-  const publishedFaqs = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return faqs
-      .filter((faq) => faq.is_published !== false)
-      .filter((faq) => {
-        if (!query) return true;
-        return `${faq.question || ""} ${faq.answer || ""}`.toLowerCase().includes(query);
-      });
-  }, [faqs, search]);
+  const visibleFaqs = faqs.filter((faq) => faq.is_published !== false && faq.question);
+  const items = visibleFaqs.length ? visibleFaqs : fallbackFaqs;
 
   return (
-    <div className="min-h-screen bg-background pt-28 text-foreground">
-      <section className="relative overflow-hidden border-b border-border px-5 py-16 md:px-8 md:py-24">
-        <div className="absolute left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-[110px]" />
-        <div className="relative mx-auto max-w-5xl">
-          <SectionHeader eyebrow="Support" title="Frequently asked questions">
-            Official answers for Rugby League Takeover travel, events, merch, community and account questions.
-          </SectionHeader>
-          <div className="relative mt-8 max-w-2xl">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search FAQs..."
-              className="h-12 border-primary/20 bg-card/60 pl-11"
-            />
+    <main className="relative min-h-dvh overflow-hidden bg-background px-5 pb-20 pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8">
+      <div className="absolute inset-0 cmd-grid-bg opacity-25 pointer-events-none" />
+      <div className="absolute left-1/2 top-24 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
+
+      <div className="relative z-10 mx-auto max-w-4xl">
+        <div className="border border-border/60 bg-card/40 p-6 cmd-glass md:p-10">
+          <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
+            <HelpCircle className="h-4 w-4" /> Official FAQ
+          </p>
+          <h1 className="mt-4 font-display text-5xl uppercase leading-none tracking-wide md:text-7xl">
+            Frequently Asked Questions
+          </h1>
+          <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+            Official answers for travel interest, Vegas events, merchandise, checkout and community features.
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-4">
+            {[{ icon: Plane, label: "Travel" }, { icon: ShieldCheck, label: "Events" }, { icon: ShoppingBag, label: "Store" }, { icon: MessageCircle, label: "Community" }].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="border border-border/50 bg-background/35 p-3">
+                  <Icon className="h-4 w-4 text-primary" />
+                  <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">{item.label}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </section>
 
-      <section className="px-5 py-12 md:px-8 md:py-16">
-        <div className="mx-auto max-w-5xl">
-          {isLoading ? (
-            <div className="grid gap-3">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-16 animate-pulse border border-border bg-card/40" />
-              ))}
-            </div>
-          ) : publishedFaqs.length > 0 ? (
-            <Accordion type="single" collapsible className="grid gap-3">
-              {publishedFaqs.map((faq, index) => (
-                <AccordionItem key={faq.id || index} value={`faq-${faq.id || index}`} className="border border-border bg-card/55 px-5">
-                  <AccordionTrigger className="text-left font-display text-xl uppercase tracking-wide text-foreground hover:text-primary">
-                    {faq.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="whitespace-pre-line text-sm leading-7 text-muted-foreground">
-                    {faq.answer || "Answer coming soon."}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-            <div className="border border-dashed border-border bg-card/40 px-6 py-16 text-center">
-              <HelpCircle className="mx-auto mb-4 h-10 w-10 text-primary" />
-              <p className="font-display text-2xl uppercase">No FAQs found</p>
-              <p className="mt-2 text-sm text-muted-foreground">Try a different search or check back soon.</p>
-            </div>
-          )}
+        <section className="mt-8 border border-border bg-card/35 p-4 cmd-glass md:p-6" aria-label="Frequently asked questions">
+          <Accordion type="single" collapsible className="w-full">
+            {items.map((faq, index) => (
+              <AccordionItem key={faq.id || index} value={String(faq.id || index)} className="border-border/70">
+                <AccordionTrigger className="text-left font-display text-xl uppercase tracking-wide text-foreground hover:text-primary">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                  {faq.answer || "More details coming soon."}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <Button asChild className="h-12 rounded-none bg-primary font-bold uppercase tracking-widest text-primary-foreground hover:bg-primary/90">
+            <Link to="/#travel">Register travel interest</Link>
+          </Button>
+          <Button asChild variant="outline" className="h-12 rounded-none border-border font-bold uppercase tracking-widest">
+            <Link to="/store">Visit merch shop</Link>
+          </Button>
         </div>
-      </section>
-    </div>
+      </div>
+    </main>
   );
 }

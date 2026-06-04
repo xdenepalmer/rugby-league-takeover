@@ -450,7 +450,7 @@ export default function Home() {
                   <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Explore</p>
                   <ul className="space-y-2">
                     {[
-                      { label: "Latest News", href: "/#news" },
+                      { label: "Latest News", href: "/news" },
                       { label: "FAQs", href: "/faq" },
                       { label: "About Us", href: "/#about" },
                       { label: "Travel Packages", href: "/#travel" },
