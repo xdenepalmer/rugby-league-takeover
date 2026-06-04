@@ -246,7 +246,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)]">
+    <header className={`fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${scrolled ? "bg-background/85 backdrop-blur-xl" : ""}`}>
       <div 
         className={`pointer-events-auto mx-auto flex items-center justify-between transition-[background-color,border-color,box-shadow,padding] duration-300 ${
           scrolled 
