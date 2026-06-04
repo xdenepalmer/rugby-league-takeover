@@ -59,6 +59,10 @@ function normalizeCheckoutItems(rawItems) {
 function buildCheckoutLineItems(items, getProduct) {
   const lineItems = [];
   const stripeLineItems = [];
+  const requestedByProductId = new Map();
+  for (const item of items) {
+    requestedByProductId.set(item.productId, (requestedByProductId.get(item.productId) || 0) + item.quantity);
+  }
 
   for (const item of items) {
     const product = getProduct(item.productId);
@@ -72,7 +76,8 @@ function buildCheckoutLineItems(items, getProduct) {
     }
 
     const stock = getTrackedStock(product);
-    if (stock !== null && stock < item.quantity) {
+    const requestedTotal = requestedByProductId.get(item.productId) || item.quantity;
+    if (stock !== null && stock < requestedTotal) {
       return { ok: false, status: 409, error: `Not enough stock for product '${product.name || item.productId}'` };
     }
 

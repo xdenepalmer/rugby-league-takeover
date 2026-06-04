@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // Admin-only user management. Base44 blocks client-side User.list/update, so the
 // admin panel calls this function; it verifies the caller is an admin, then uses
@@ -39,12 +39,21 @@ Deno.serve(async (req) => {
       for (const key of ['role', 'disabled']) {
         if (data && key in data) allowed[key] = data[key];
       }
-      if (allowed.role && !['admin', 'user'].includes(allowed.role)) {
+      if (allowed.role && !['admin', 'moderator', 'user'].includes(allowed.role)) {
         return Response.json({ error: 'Invalid role' }, { status: 400 });
       }
       // Guard: an admin cannot disable or demote their own account here.
-      if (userId === me.id && (allowed.disabled === true || allowed.role === 'user')) {
+      if (userId === me.id && (allowed.disabled === true || (allowed.role && allowed.role !== 'admin'))) {
         return Response.json({ error: 'You cannot disable or demote your own account' }, { status: 400 });
+      }
+      if (allowed.role && allowed.role !== 'admin') {
+        const target = await base44.asServiceRole.entities.User.get(userId);
+        if (target?.role === 'admin') {
+          const admins = await base44.asServiceRole.entities.User.filter({ role: 'admin' }, '-created_date', 2);
+          if ((admins || []).length <= 1) {
+            return Response.json({ error: 'At least one admin must remain' }, { status: 400 });
+          }
+        }
       }
       const updated = await base44.asServiceRole.entities.User.update(userId, allowed);
       return Response.json({ user: pick(updated) });

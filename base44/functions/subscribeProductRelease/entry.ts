@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const clean = (value) => String(value ?? '').trim();
 const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(value));

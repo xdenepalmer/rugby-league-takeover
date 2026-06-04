@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // Returns a minimal per-user map for forum rendering: the LATEST avatar plus the
 // optional location/team the member chose to display next to their name. Base44
@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const users = await base44.asServiceRole.entities.User.list('-created_date', 1000);
 
     const avatars = (users || [])
-      .filter((u) => u && u.id)
+      .filter((u) => u && u.id && !u.disabled)
       .map((u) => {
         const city = clean(u.city);
         const country = clean(u.country);

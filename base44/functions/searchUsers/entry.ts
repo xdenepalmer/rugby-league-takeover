@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // Lightweight user search for @mention autocomplete. Base44 blocks client-side
 // User.list, so authenticated users hit this; it returns minimal public fields

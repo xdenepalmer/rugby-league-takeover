@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.30';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const clean = (value) => String(value ?? '').trim();
 const nowIso = () => new Date().toISOString();
@@ -6,7 +6,7 @@ const nowIso = () => new Date().toISOString();
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const payload = await req.json();
+    const payload = await req.json().catch(() => ({}));
     const product = payload?.data;
 
     if (!product?.id || product.coming_soon === true || product.is_active === false) {
