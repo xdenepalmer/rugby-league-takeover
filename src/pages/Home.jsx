@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
-function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, tone = "primary" }) {
+function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, onClick, tone = "primary" }) {
   const toneClass = {
     primary: "border-primary/25 bg-primary/[0.045] text-primary hover:border-primary/55 hover:bg-primary/[0.075]",
     accent: "border-accent/25 bg-accent/[0.045] text-accent hover:border-accent/55 hover:bg-accent/[0.075]",
@@ -51,13 +51,19 @@ function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, 
   }
 
   return (
-    <a href={href} className={className}>
+    <a href={href} onClick={onClick} className={className}>
       {content}
     </a>
   );
 }
 
 function LiveHudDashboard() {
+  const scrollToSection = (id) => (event) => {
+    event.preventDefault();
+    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+    window.history.replaceState(null, "", id);
+  };
+
   return (
     <section className="relative z-20 mx-auto max-w-7xl px-5 py-8 md:px-8" aria-labelledby="takeover-actions-heading">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
@@ -82,6 +88,7 @@ function LiveHudDashboard() {
               body="Get ready for flights, hotels, events, and supporter package drops."
               action="View travel"
               href="#travel"
+              onClick={scrollToSection("#travel")}
               tone="primary"
             />
             <PublicActionCard
@@ -91,6 +98,7 @@ function LiveHudDashboard() {
               body="See what is coming for parties, stadium days, and fan gatherings."
               action="See events"
               href="#events"
+              onClick={scrollToSection("#events")}
               tone="accent"
             />
             <PublicActionCard
@@ -441,8 +449,13 @@ export default function Home() {
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Explore</p>
                   <ul className="space-y-2">
-                    {["Latest News", "About Us", "Travel Packages", "Events"].map((link) => (
-                      <li key={link}><a href={`/#${link.toLowerCase().replace(/\s+/g, '-')}`} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">{link}</a></li>
+                    {[
+                      { label: "Latest News", href: "/#news" },
+                      { label: "About Us", href: "/#about" },
+                      { label: "Travel Packages", href: "/#travel" },
+                      { label: "Events", href: "/#events" },
+                    ].map((link) => (
+                      <li key={link.label}><a href={link.href} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
                     ))}
                   </ul>
                 </div>
