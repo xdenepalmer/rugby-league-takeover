@@ -15,16 +15,15 @@ function EventDetailTickets({ event }) {
   const tickets = (event.tickets || []).filter((ticket) => ticket && (ticket.name || ticket.url));
   const hasTicketUrl = Boolean(event.ticket_url);
 
-  if (!tickets.length && !hasTicketUrl) {
-    const searchUrl = `https://www.ticketmaster.com/search?q=${encodeURIComponent(`${event.title || "NRL Las Vegas"} tickets`)}`;
+  if (event.is_coming_soon || (!tickets.length && !hasTicketUrl)) {
     return (
-      <div className="border border-primary/30 bg-primary/[0.045] p-4">
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">Tickets & purchase links</p>
-        <a href={searchUrl} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between border border-primary bg-primary/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
-          <span>Search ticket availability</span>
-          <span className="flex items-center gap-1">Open <ArrowUpRight className="h-4 w-4" /></span>
-        </a>
-        <p className="mt-2 text-[10px] leading-4 text-muted-foreground">Event-specific purchase links will replace this search link when released.</p>
+      <div className="border border-border/50 bg-background/30 p-4">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">Tickets & purchase links</p>
+        <div className="flex min-h-11 items-center justify-between border border-border/50 bg-background/30 px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+          <span>Ticket details coming soon</span>
+          <span>Not on sale yet</span>
+        </div>
+        <p className="mt-2 text-[10px] leading-4 text-muted-foreground">A direct purchase link will appear here once this event has confirmed ticket sales.</p>
       </div>
     );
   }
