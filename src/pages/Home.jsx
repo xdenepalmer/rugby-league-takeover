@@ -11,6 +11,7 @@ import MatchupsSection from "@/components/public/MatchupsSection";
 import LazySection from "@/components/public/LazySection";
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 
 function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, tone = "primary" }) {
   const toneClass = {
@@ -240,6 +241,7 @@ const BulbRow = React.memo(function BulbRow({ isTop }) {
 });
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   const queriesEnabled = appParams.hasBase44Config;
   const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({ queryKey: ["siteSettings"], queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1), enabled: queriesEnabled });
   const { data: news = [] } = useQuery({ queryKey: ["news"], queryFn: () => base44.entities.NewsArticle.list("-published_date", 20), enabled: queriesEnabled });
@@ -251,6 +253,9 @@ export default function Home() {
   const visiblePackages = packages.length ? packages : defaultPackages;
   const event = events[0] || defaultEvent;
   const videoSources = settings.background_video_urls?.length ? settings.background_video_urls : stadiumVideoUrls;
+  const accountLinks = isAuthenticated
+    ? [{ label: "My Account", href: "/account" }]
+    : [{ label: "Sign In", href: "/login" }, { label: "Register", href: "/register" }];
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-background text-foreground">
@@ -452,7 +457,7 @@ export default function Home() {
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Account</p>
                   <ul className="space-y-2">
-                    {[{label:"Sign In", href:"/login"}, {label:"Register", href:"/register"}, {label:"My Account", href:"/account"}].map((link) => (
+                    {accountLinks.map((link) => (
                       <li key={link.label}><a href={link.href} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
                     ))}
                   </ul>
