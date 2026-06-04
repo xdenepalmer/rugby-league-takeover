@@ -1,7 +1,7 @@
 /* ━━━ Compose Sidebar (Premium Enhanced) ━━━━━━━━━━━━━━━━━
  * Extracted verbatim from src/pages/Forum.jsx (behaviour-preserving).
  */
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   MessageSquare, MessageCircle, Send, Sparkles, Users, BarChart3,
@@ -13,15 +13,23 @@ import { FORUM_CATEGORIES } from "@/lib/public-forms";
 import { appParams } from "@/lib/app-params";
 import MentionTextarea from "@/components/forum/MentionTextarea";
 import MediaAttach from "@/components/forum/MediaAttach";
-import StadiumSeatPlanner from "@/components/forum/StadiumSeatPlanner";
-import ScorePredictor from "@/components/forum/ScorePredictor";
-import SlotMachineBadgeUnlock from "@/components/forum/SlotMachineBadgeUnlock";
 import UserAvatar from "./UserAvatar";
 import TopContributors from "./TopContributors";
 import OnlineUsersWidget from "./OnlineUsersWidget";
 import RecentActivityFeed from "./RecentActivityFeed";
 import CollapsibleGuidelines from "./CollapsibleGuidelines";
 import { getCategoryMeta, getEngagement } from "./forumHelpers";
+
+// Lazy-load heavy feature islands (same as Forum.jsx) to avoid chunk conflicts
+const StadiumSeatPlanner = lazy(() => import("@/components/forum/StadiumSeatPlanner"));
+const ScorePredictor = lazy(() => import("@/components/forum/ScorePredictor"));
+const SlotMachineBadgeUnlock = lazy(() => import("@/components/forum/SlotMachineBadgeUnlock"));
+
+const SidebarSuspense = ({ children }) => (
+  <Suspense fallback={<div className="h-24 bg-card/10 animate-pulse border border-border/10" />}>
+    {children}
+  </Suspense>
+);
 
 const categories = [
   { value: "All" },
@@ -131,19 +139,25 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
       </div>
 
       {/* Stadium Seating Planner */}
-      <StadiumSeatPlanner
-        onFilterSearch={onFilterSearch}
-        onClaimSeat={onClaimSeat}
-        currentSearch={searchQuery}
-      />
+      <SidebarSuspense>
+        <StadiumSeatPlanner
+          onFilterSearch={onFilterSearch}
+          onClaimSeat={onClaimSeat}
+          currentSearch={searchQuery}
+        />
+      </SidebarSuspense>
 
       {/* Score Predictor */}
-      <ScorePredictor
-        onSharePrediction={onSharePrediction}
-      />
+      <SidebarSuspense>
+        <ScorePredictor
+          onSharePrediction={onSharePrediction}
+        />
+      </SidebarSuspense>
 
       {/* Vegas Takeover Slot Machine */}
-      <SlotMachineBadgeUnlock />
+      <SidebarSuspense>
+        <SlotMachineBadgeUnlock />
+      </SidebarSuspense>
 
       {/* Top Contributors */}
       <TopContributors allThreads={allThreads} />
