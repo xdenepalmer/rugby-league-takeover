@@ -15,12 +15,18 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
   const videoRef = useRef(null);
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const ordered = useMemo(() => {
     const list = (sources?.length ? sources : [src]).filter(Boolean);
     return [...list].sort((a, b) => (FORMAT_RANK[extOf(a)] ?? 5) - (FORMAT_RANK[extOf(b)] ?? 5));
   }, [sources, src]);
   const key = ordered.join("|");
+  const activeVideo = ordered[currentIndex % Math.max(ordered.length, 1)] || "";
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [key]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,6 +50,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     const video = videoRef.current;
     if (!video) return undefined;
 
+    setVideoReady(false);
     video.muted = true;
     const playVideo = () => video.play().then(() => setVideoReady(true)).catch(() => {});
 
@@ -57,7 +64,15 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
     };
-  }, [shouldPlayVideo, key]);
+  }, [shouldPlayVideo, activeVideo]);
+
+  useEffect(() => {
+    if (!shouldPlayVideo || ordered.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setCurrentIndex((index) => (index + 1) % ordered.length);
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [shouldPlayVideo, ordered.length, key]);
 
   return (
     <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-background">
@@ -76,13 +91,13 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       {shouldPlayVideo && (
         <video
           ref={videoRef}
-          key={key}
+          key={activeVideo}
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
             videoReady ? "opacity-70" : "opacity-0"
           }`}
           autoPlay
           muted
-          loop
+          loop={ordered.length < 2}
           playsInline
           preload="metadata"
           controls={false}
@@ -90,10 +105,9 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => videoRef.current?.play().then(() => setVideoReady(true)).catch(() => {})}
           onPlaying={() => setVideoReady(true)}
+          onEnded={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
-          {ordered.map((url) => (
-            <source key={url} src={url} type={mimeFor(url) || undefined} />
-          ))}
+          <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
         </video>
       )}
 
