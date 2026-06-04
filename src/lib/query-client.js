@@ -9,10 +9,15 @@ const messageFrom = (error, fallback) =>
 // We silence them so a pending deploy never spams error toasts.
 const isUndeployedSchemaError = (error) => /not found in app|schema .* not found/i.test(messageFrom(error, ''));
 
+const isRateLimitError = (error) => {
+	const message = messageFrom(error, '');
+	return error?.response?.status === 429 || error?.status === 429 || /rate limit exceeded/i.test(message);
+};
+
 export const queryClientInstance = new QueryClient({
 	queryCache: new QueryCache({
 		onError: (error, query) => {
-			if (query?.meta?.silent || isUndeployedSchemaError(error)) return;
+			if (query?.meta?.silent || isUndeployedSchemaError(error) || isRateLimitError(error)) return;
 			toast({ title: 'Unable to load data', description: messageFrom(error, 'Something went wrong loading data.') });
 		},
 	}),
