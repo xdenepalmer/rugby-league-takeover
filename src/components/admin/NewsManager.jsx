@@ -259,9 +259,21 @@ export default function NewsManager({ articles }) {
   const [formOpen, setFormOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const createMutation = useMutation({ mutationFn: (data) => base44.entities.NewsArticle.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["news"] }); setDraft(emptyArticle); setFormOpen(false); } });
-  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.NewsArticle.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["news"] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.NewsArticle.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["news"] }) });
+  const refreshNews = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["news"] });
+    await queryClient.refetchQueries({ queryKey: ["news"] });
+  };
+
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.NewsArticle.create(data),
+    onSuccess: async () => {
+      await refreshNews();
+      setDraft(emptyArticle);
+      setFormOpen(false);
+    },
+  });
+  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.NewsArticle.delete(id), onSuccess: refreshNews });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.NewsArticle.update(id, data), onSuccess: refreshNews });
 
   const publishedCount = articles.filter((a) => a.is_published !== false).length;
   const draftCount = articles.length - publishedCount;
