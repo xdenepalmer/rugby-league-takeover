@@ -305,6 +305,8 @@ export default function Home() {
 
         {/* Travel Interest / Registration */}
         <motion.div
+          id="travel"
+          style={{ scrollMarginTop: "80px" }}
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
@@ -319,6 +321,8 @@ export default function Home() {
 
         {/* Match Day Events */}
         <motion.div
+          id="events"
+          style={{ scrollMarginTop: "80px" }}
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
