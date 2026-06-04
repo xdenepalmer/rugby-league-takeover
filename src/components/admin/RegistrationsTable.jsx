@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Download, Search, ClipboardList, Users, CalendarCheck,
   Hash, Check, X, Phone, MapPin, Mail, Shield,
-  ClipboardCopy, Send, ChevronLeft, ChevronRight
+  ClipboardCopy, Send, ChevronLeft, ChevronRight, FileText
 } from "lucide-react";
 import { downloadCsv } from "@/lib/csv";
 import { SUPPORTED_TEAMS } from "@/lib/public-forms";
@@ -49,7 +49,7 @@ export default function RegistrationsTable({ registrations }) {
     const term = search.toLowerCase();
     return registrations.filter((item) => {
       if (teamFilter !== "all" && item.team_supported !== teamFilter) return false;
-      return `${item.name || ""} ${item.email || ""} ${item.postcode || ""}`.toLowerCase().includes(term);
+      return `${item.name || ""} ${item.email || ""} ${item.phone || ""} ${item.postcode || ""} ${item.team_supported || ""} ${item.trip_details || ""}`.toLowerCase().includes(term);
     });
   }, [registrations, search, teamFilter]);
 
@@ -64,9 +64,10 @@ export default function RegistrationsTable({ registrations }) {
 
   /* CSV export (unchanged) */
   const exportCsv = () => {
-    const headers = ["Name", "Email", "Phone", "Postcode", "Team", "Consented", "Date"];
+    const headers = ["Name", "Email", "Phone", "Postcode", "Team", "Travel Plans", "Consented", "Date"];
     const rows = filtered.map((item) => [
       item.name, item.email, item.phone, item.postcode, item.team_supported,
+      item.trip_details || "",
       item.consent_to_contact ? "yes" : "no",
       item.created_date ? format(new Date(item.created_date), "yyyy-MM-dd") : "",
     ]);
@@ -266,7 +267,7 @@ export default function RegistrationsTable({ registrations }) {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search name, email or postcode…"
+              placeholder="Search name, email, phone, postcode or travel plans…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full border border-border bg-card/50 py-2.5 pl-10 pr-4 text-sm font-mono
@@ -383,7 +384,7 @@ export default function RegistrationsTable({ registrations }) {
                             <h3 className="truncate text-sm font-bold text-foreground">{item.name}</h3>
                             <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
                               <Mail className="h-3 w-3 shrink-0" />
-                              <span className="truncate text-[11px] font-mono">{item.email}</span>
+                              <span className="break-all text-[11px] font-mono">{item.email}</span>
                             </div>
                           </div>
                         </div>
@@ -426,6 +427,17 @@ export default function RegistrationsTable({ registrations }) {
                               : "—"}
                           </div>
                         </div>
+
+                        {item.trip_details && (
+                          <div className="mt-3 border border-border/40 bg-background/35 p-3">
+                            <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+                              <FileText className="h-3 w-3" /> Travel plans
+                            </div>
+                            <p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground">
+                              {item.trip_details}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );
