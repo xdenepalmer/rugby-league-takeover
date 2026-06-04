@@ -61,6 +61,15 @@ function matchesMention(u, tokens) {
   return tokens.some((t) => candidates.has(t));
 }
 
+async function getForumPost(base44, postId) {
+  try {
+    const matches = await base44.asServiceRole.entities.ForumPost.filter({ id: postId }, '-created_date', 1);
+    return Array.isArray(matches) ? matches[0] || null : null;
+  } catch {
+    return null;
+  }
+}
+
 const CASINO_RANKS = [
   { min: 2500, name: 'Vegas Royalty' }, { min: 1500, name: 'Whale' }, { min: 900, name: 'High Roller' },
   { min: 450, name: 'Pit Boss' }, { min: 180, name: 'Table Regular' }, { min: 60, name: 'Lucky Local' }, { min: 0, name: 'Rookie Punter' },
