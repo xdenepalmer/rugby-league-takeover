@@ -15,7 +15,30 @@ async function deleteWithChildren(base44, postId) {
   await base44.asServiceRole.entities.ForumPost.delete(postId);
 }
 
+async function getForumPost(base44, postId) {
+  try {
+    return await base44.asServiceRole.entities.ForumPost.get(postId);
+  } catch {
+    return null;
+  }
+}
+
 const ALLOWED_REACTIONS = ['❤️', '🏉', '🔥', '🎉', '👏'];
+const FORUM_CATEGORIES = ['General', 'Travel', 'Events', 'MatchDay', 'VegasTips'];
+const trimToLength = (value, maxLength) => String(value ?? '').trim().slice(0, maxLength);
+const PROFANITY = [
+  'fuck', 'fucker', 'fucking', 'motherfucker', 'shit', 'bullshit', 'bitch', 'cunt',
+  'asshole', 'arsehole', 'bastard', 'dickhead', 'piss', 'slut', 'whore', 'wanker',
+  'prick', 'bollocks', 'bugger', 'twat', 'fag', 'faggot', 'nigger', 'nigga', 'retard',
+];
+const PROFANITY_RE = new RegExp(`\\b(${PROFANITY.join('|')})\\b`, 'gi');
+const censorProfanity = (text) =>
+  String(text || '').replace(PROFANITY_RE, (match) => match[0] + '*'.repeat(Math.max(match.length - 1, 1)));
+function resolveClientIp(req) {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return (req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || '').trim();
+}
 const CASINO_RANKS = [
   { min: 2500, name: 'Vegas Royalty' }, { min: 1500, name: 'Whale' }, { min: 900, name: 'High Roller' },
   { min: 450, name: 'Pit Boss' }, { min: 180, name: 'Table Regular' }, { min: 60, name: 'Lucky Local' }, { min: 0, name: 'Rookie Punter' },
@@ -45,7 +68,8 @@ async function awardForumReward(base44, user, { kind, xp, chips, postId, note, c
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const { action, postId, emoji } = await req.json().catch(() => ({}));
+    const input = await req.json().catch(() => ({}));
+    const { action, postId, emoji } = input;
     if (!postId) return Response.json({ error: 'postId is required' }, { status: 400 });
 
     if (action === 'delete') {
@@ -57,7 +81,7 @@ Deno.serve(async (req) => {
       }
       if (!user) return Response.json({ error: 'Login required' }, { status: 401 });
 
-      const post = await base44.asServiceRole.entities.ForumPost.get(postId);
+      const post = await getForumPost(base44, postId);
       if (!post) return Response.json({ error: 'Post not found' }, { status: 404 });
 
       const isOwner = post.user_id && String(post.user_id) === String(user.id);
@@ -69,8 +93,79 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true });
     }
 
+    if (action === 'update') {
+      let user = null;
+      try {
+        user = await base44.auth.me();
+      } catch {
+        user = null;
+      }
+      if (!user) return Response.json({ error: 'Login required' }, { status: 401 });
+
+      const post = await getForumPost(base44, postId);
+      if (!post) return Response.json({ error: 'Post not found' }, { status: 404 });
+
+      const isOwner = post.user_id && String(post.user_id) === String(user.id);
+      const isModerator = user.role === 'admin' || user.role === 'moderator';
+      if (!isOwner && !isModerator) {
+        return Response.json({ error: 'You can only edit your own posts' }, { status: 403 });
+      }
+
+      const title = censorProfanity(trimToLength(input?.title, 120));
+      const body = censorProfanity(trimToLength(input?.body, 2000));
+      const category = trimToLength(input?.category || post.category || 'General', 32);
+      const mediaUrl = trimToLength(input?.media_url, 600);
+      if (!body) return Response.json({ error: 'Message is required' }, { status: 400 });
+      if (!FORUM_CATEGORIES.includes(category)) return Response.json({ error: 'Forum category is not supported' }, { status: 400 });
+
+      await base44.asServiceRole.entities.ForumPost.update(postId, {
+        title: title || post.title || 'Discussion Thread',
+        body,
+        category,
+        media_url: mediaUrl,
+      });
+      return Response.json({ ok: true });
+    }
+
+    if (action === 'pin') {
+      let user = null;
+      try {
+        user = await base44.auth.me();
+      } catch {
+        user = null;
+      }
+      if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
+        return Response.json({ error: 'Moderator access required' }, { status: 403 });
+      }
+      await base44.asServiceRole.entities.ForumPost.update(postId, { is_pinned: input?.is_pinned === true });
+      return Response.json({ ok: true });
+    }
+
+    if (action === 'report') {
+      let user = null;
+      try {
+        user = await base44.auth.me();
+      } catch {
+        user = null;
+      }
+      const post = await getForumPost(base44, postId);
+      if (!post) return Response.json({ error: 'Post not found' }, { status: 404 });
+
+      const ip = resolveClientIp(req);
+      const reporter = String(user?.id || user?.email || ip || 'anonymous').toLowerCase();
+      const reportedBy = Array.isArray(post.reported_by) ? post.reported_by.map(String) : [];
+      const alreadyReported = reportedBy.includes(reporter);
+      const nextReportedBy = alreadyReported ? reportedBy : [...reportedBy, reporter];
+      await base44.asServiceRole.entities.ForumPost.update(postId, {
+        reported_by: nextReportedBy,
+        reported_count: nextReportedBy.length,
+        moderation_reason: censorProfanity(trimToLength(input?.reason || post.moderation_reason || 'Reported by user', 160)),
+      });
+      return Response.json({ ok: true, reported_count: nextReportedBy.length });
+    }
+
     if (action === 'view') {
-      const post = await base44.asServiceRole.entities.ForumPost.get(postId);
+      const post = await getForumPost(base44, postId);
       if (!post) return Response.json({ error: 'Post not found' }, { status: 404 });
       const next = Number(post.view_count || 0) + 1;
       await base44.asServiceRole.entities.ForumPost.update(postId, { view_count: next });
@@ -86,7 +181,7 @@ Deno.serve(async (req) => {
       }
       if (!user) return Response.json({ error: 'Login required to like posts' }, { status: 401 });
 
-      const post = await base44.asServiceRole.entities.ForumPost.get(postId);
+      const post = await getForumPost(base44, postId);
       if (!post) return Response.json({ error: 'Post not found' }, { status: 404 });
 
       const likedBy = Array.isArray(post.liked_by) ? post.liked_by.slice() : [];
@@ -114,7 +209,7 @@ Deno.serve(async (req) => {
       if (!user) return Response.json({ error: 'Login required to react' }, { status: 401 });
       if (!ALLOWED_REACTIONS.includes(emoji)) return Response.json({ error: 'Unsupported reaction' }, { status: 400 });
 
-      const post = await base44.asServiceRole.entities.ForumPost.get(postId);
+      const post = await getForumPost(base44, postId);
       if (!post) return Response.json({ error: 'Post not found' }, { status: 404 });
 
       const reactions = (post.reactions && typeof post.reactions === 'object' && !Array.isArray(post.reactions))

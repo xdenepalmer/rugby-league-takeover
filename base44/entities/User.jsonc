@@ -2,6 +2,21 @@
   "name": "User",
   "type": "object",
   "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "moderator",
+        "user"
+      ],
+      "default": "user",
+      "description": "User access role"
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this user has been disabled by an admin"
+    },
     "phone": {
       "type": "string",
       "description": "User phone number"
@@ -97,24 +112,5 @@
       "description": "Whether to show the user's favourite team on forum posts"
     }
   },
-  "required": [],
-  "rls": {
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.email": "{{user.email}}"
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  "required": []
 }

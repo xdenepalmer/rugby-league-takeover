@@ -62,12 +62,25 @@ Deno.serve(async (req) => {
           return Response.json({ error: verification.error }, { status: 400 });
         }
 
+        const paidAt = new Date().toISOString();
+        const shipping = session.shipping_details;
+        const shippingAddress = shipping?.address
+          ? [shipping.name, shipping.address.line1, shipping.address.line2, shipping.address.city, shipping.address.state, shipping.address.postal_code, shipping.address.country].filter(Boolean).join(', ')
+          : order.shipping_address || '';
+
         await base44.asServiceRole.entities.StoreOrder.update(orderId, {
           status: 'paid',
           stripe_session_id: session.id,
           customer_email: session.customer_details?.email || session.customer_email || order.customer_email || '',
+          customer_name: session.customer_details?.name || order.customer_name || '',
           stripe_payment_status: session.payment_status,
-          payment_verified_at: new Date().toISOString()
+          payment_verified_at: paidAt,
+          shipping_address: shippingAddress,
+          customer_status_note: 'Payment confirmed. Your order is being prepared.',
+          timeline: [
+            ...(Array.isArray(order.timeline) ? order.timeline : []),
+            { action: 'payment_confirmed', timestamp: paidAt, note: 'Stripe payment verified', actor: 'stripe' }
+          ]
         });
 
         for (const item of order.line_items || []) {

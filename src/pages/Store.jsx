@@ -389,10 +389,10 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                 <div className="flex items-center border border-border h-12 bg-background">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">-</button>
                   <span className="w-8 text-center font-mono font-bold">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
+                  <button onClick={() => setQuantity(q => Number.isFinite(stock) ? Math.min(stock, q + 1) : q + 1)} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
                 </div>
-                <Button onClick={handleAdd} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs">
-                  Add to Cart • ${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD
+                <Button onClick={handleAdd} disabled={Number.isFinite(stock) && quantity > stock} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
+                {Number.isFinite(stock) && quantity > stock ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
                 </Button>
               </div>
             )}
@@ -621,6 +621,9 @@ export default function Store() {
       const existing = curr.find((item) => item.cartItemId === cartItemId);
       if (existing) {
         const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
+        if (existing.quantity >= maxQuantity) {
+          toast({ title: "Stock limit reached", description: `You can add up to ${maxQuantity} of this item.` });
+        }
         return curr.map((item) => 
           item.cartItemId === cartItemId ? { ...item, quantity: Math.min(item.quantity + 1, maxQuantity) } : item
         );

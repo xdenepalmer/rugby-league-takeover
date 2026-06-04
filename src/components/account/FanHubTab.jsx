@@ -81,7 +81,7 @@ export default function FanHubTab() {
 
   const hasProgress = xp > 0 || chips > 0 || rewards.length > 0;
 
-  if (user?.casino_xp === undefined) {
+  if (!user) {
     return (
       <div className="space-y-6 animate-pulse">
         {/* Rank header skeleton */}
