@@ -7,6 +7,12 @@ const mimeFor = (url) => ({ mp4: "video/mp4", webm: "video/webm", ogg: "video/og
 // in Chrome/Edge/Firefox, so it must never be the first/only source — otherwise
 // autoplay silently fails and only the poster shows. mp4 first, mov last.
 const FORMAT_RANK = { mp4: 0, webm: 1, ogg: 2, mov: 9 };
+const IOS_FORMAT_RANK = { mov: 0, mp4: 1, webm: 2, ogg: 3 };
+
+const prefersQuickTimeVideo = () => {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+};
 
 const normalizeVideoSources = (sources, src) => {
   const rawList = sources?.length ? sources : [src];
@@ -28,9 +34,11 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
   const ordered = useMemo(() => {
     const list = normalizeVideoSources(sources, src);
+    const isIos = prefersQuickTimeVideo();
     const browserFriendly = list.filter((url) => ["mp4", "webm", "ogg"].includes(extOf(url)));
-    const playableList = browserFriendly.length ? browserFriendly : list;
-    return [...playableList].sort((a, b) => (FORMAT_RANK[extOf(a)] ?? 5) - (FORMAT_RANK[extOf(b)] ?? 5));
+    const playableList = isIos ? list : (browserFriendly.length ? browserFriendly : list);
+    const rank = isIos ? IOS_FORMAT_RANK : FORMAT_RANK;
+    return [...playableList].sort((a, b) => (rank[extOf(a)] ?? 5) - (rank[extOf(b)] ?? 5));
   }, [sources, src]);
   const key = ordered.join("|");
   const activeVideo = ordered[currentIndex % Math.max(ordered.length, 1)] || "";
@@ -120,9 +128,18 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           preload="auto"
           controls={false}
           disablePictureInPicture
-          onLoadedData={() => videoRef.current?.play().catch(() => {})}
-          onCanPlay={() => videoRef.current?.play().catch(() => {})}
+          disableRemotePlayback
+          onLoadedMetadata={() => videoRef.current?.play().catch(() => {})}
+          onLoadedData={() => {
+            setVideoReady(true);
+            videoRef.current?.play().catch(() => {});
+          }}
+          onCanPlay={() => {
+            setVideoReady(true);
+            videoRef.current?.play().catch(() => {});
+          }}
           onPlaying={() => setVideoReady(true)}
+          onPause={() => videoRef.current?.play().catch(() => {})}
           onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
           <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
