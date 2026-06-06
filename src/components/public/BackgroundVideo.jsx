@@ -132,7 +132,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           autoPlay
           muted
           defaultMuted
-          loop
+          loop={ordered.length <= 1}
           playsInline
           webkit-playsinline="true"
           preload="auto"
@@ -150,6 +150,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           }}
           onPlaying={() => setVideoReady(true)}
           onPause={() => videoRef.current?.play().catch(() => {})}
+          onEnded={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
           onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
           <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
