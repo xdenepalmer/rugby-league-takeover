@@ -72,7 +72,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       if (!cancelled && (!videoReady || video.paused || video.readyState < 2)) {
         playVideo();
         window.setTimeout(() => {
-          if (!cancelled && (video.paused || video.readyState < 2)) advanceVideo();
+          if (!cancelled && video.paused) playVideo();
         }, 1200);
       }
     }, 3000);
@@ -88,14 +88,6 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     };
   }, [shouldPlayVideo, activeVideo, ordered.length]);
 
-  useEffect(() => {
-    if (!shouldPlayVideo || ordered.length < 2) return undefined;
-    const timer = window.setInterval(() => {
-      setCurrentIndex((index) => (index + 1) % ordered.length);
-    }, 20000);
-    return () => window.clearInterval(timer);
-  }, [shouldPlayVideo, ordered.length, key]);
-
   return (
     <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-background">
       {/* Fallback Static Poster Image (always rendered under video, or as main background) */}
@@ -104,8 +96,8 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
         alt=""
         decoding="async"
         fetchPriority="high"
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
-          videoReady ? "opacity-20" : "opacity-60"
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+          videoReady ? "opacity-0" : "opacity-60"
         }`}
       />
 
@@ -114,12 +106,12 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
         <video
           ref={videoRef}
           key={activeVideo}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-            videoReady ? "opacity-70" : "opacity-0"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+            videoReady ? "opacity-100" : "opacity-0"
           }`}
           autoPlay
           muted
-          loop={ordered.length < 2}
+          loop
           playsInline
           preload="metadata"
           controls={false}
@@ -127,9 +119,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => videoRef.current?.play().then(() => setVideoReady(true)).catch(() => {})}
           onPlaying={() => setVideoReady(true)}
-          onEnded={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
           onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
-          onStalled={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
           <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
         </video>
