@@ -227,7 +227,7 @@ ${item.blurb || ""}`;
       <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-[400px] w-[600px] bg-primary/[0.03] blur-[120px]" />
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Events" title="What's on in Vegas">
-          From Stadium Swim to supporter meetups and match-week parties, here's where the takeover comes together.
+          From Stadium Swim to supporter meetups and Vegas events, here's where the takeover comes together.
         </SectionHeader>
 
         {/* Categories Tabs */}
@@ -280,7 +280,7 @@ ${item.blurb || ""}`;
         isOpen={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
         title={selectedEvent?.title}
-        category="Match Event"
+        category="Event"
         date={selectedEvent ? formatVegasDate(selectedEvent.event_date) : undefined}
         author="Vegas Coordinator"
         image={selectedEvent?.photo_urls?.[0]}

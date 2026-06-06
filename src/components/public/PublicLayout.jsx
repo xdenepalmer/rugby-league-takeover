@@ -273,6 +273,7 @@ export default function PublicLayout() {
             onClose={() => setIsPlanOpen(false)}
             onNavigate={handleNavigate}
             cartCount={cartCount}
+            settings={settingsRecords[0] || {}}
             context={pathname.startsWith("/store") ? "store" : pathname.startsWith("/forum") ? "forum" : pathname.startsWith("/account") ? "account" : "home"}
           />
         </Suspense>

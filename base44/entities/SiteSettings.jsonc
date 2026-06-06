@@ -29,6 +29,18 @@
       },
       "description": "Homepage background video URLs"
     },
+    "social_facebook_url": {
+      "type": "string",
+      "description": "Facebook community link shown on the public site"
+    },
+    "social_instagram_url": {
+      "type": "string",
+      "description": "Instagram profile link shown on the public site"
+    },
+    "social_tiktok_url": {
+      "type": "string",
+      "description": "TikTok profile link shown on the public site"
+    },
     "news_eyebrow": {
       "type": "string",
       "description": "News section eyebrow"

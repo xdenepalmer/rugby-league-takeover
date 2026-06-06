@@ -1,15 +1,16 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Plane, Calendar, Users, Trophy, ExternalLink, ArrowRight,
+  X, Plane, Calendar, Trophy, ArrowRight,
   PenSquare, Ruler,
   Bookmark, Award, Package, Settings, HelpCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import SocialLinks from "./SocialLinks";
 
 /* ── Context-specific content sections ── */
 
-function HomeContent({ onNavigate, onClose }) {
+function HomeContent({ onNavigate, onClose, settings = {} }) {
   return (
     <>
       {/* Quick Actions Grid */}
@@ -32,7 +33,7 @@ function HomeContent({ onNavigate, onClose }) {
           <div className="p-2 border border-border bg-background/50 text-accent group-hover:border-primary/30">
             <Calendar className="h-5 w-5" />
           </div>
-          <span className="mt-3 text-xs font-bold uppercase tracking-wider text-foreground">Match Day Events</span>
+          <span className="mt-3 text-xs font-bold uppercase tracking-wider text-foreground">Events</span>
           <span className="text-[9.5px] text-muted-foreground mt-1">Pool parties &amp; meetups schedule</span>
         </button>
       </div>
@@ -63,23 +64,8 @@ function HomeContent({ onNavigate, onClose }) {
         </button>
       </div>
 
-      {/* Facebook Fan Group Integration */}
-      <a
-        href="https://www.facebook.com/groups/663237792349090"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-4 border border-[#1877F2]/20 bg-[#1877F2]/[0.03] p-4 hover:bg-[#1877F2]/[0.08] transition-all group"
-      >
-        <div className="p-3 border border-[#1877F2]/30 bg-background/50 text-[#1877F2] shrink-0">
-          <Users className="h-6 w-6" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1 text-[8.5px] font-mono font-bold tracking-widest text-[#1877F2] uppercase border border-[#1877F2]/30 bg-[#1877F2]/5 px-2 py-0.5 mb-1.5">Facebook Group</span>
-          <h4 className="text-xs font-bold text-foreground truncate">NRL Las Vegas Fan Group</h4>
-          <p className="text-[9.5px] text-muted-foreground mt-0.5">16.8k members · Match coordinates, tickets exchange</p>
-        </div>
-        <ExternalLink className="h-4 w-4 text-slate-500 group-hover:text-[#1877F2] group-hover:translate-x-0.5 transition-all shrink-0" />
-      </a>
+      {/* Social Links */}
+      <SocialLinks settings={settings} compact />
 
       {/* Quick Community / Shop shortcuts */}
       <div className="grid grid-cols-2 gap-3 border-t border-border/40 pt-5">
@@ -329,7 +315,7 @@ const CONTEXT_HEADERS = {
   account: { label: "ACCOUNT // CONSOLE", title: "My Takeover" },
 };
 
-export default function MobileCommandSheet({ isOpen, onClose, onNavigate, context = "home", cartCount = 0 }) {
+export default function MobileCommandSheet({ isOpen, onClose, onNavigate, context = "home", cartCount = 0, settings = {} }) {
   const header = CONTEXT_HEADERS[context] || CONTEXT_HEADERS.home;
 
   return (
@@ -384,7 +370,7 @@ export default function MobileCommandSheet({ isOpen, onClose, onNavigate, contex
               {context === "store" && <StoreContent onClose={onClose} cartCount={cartCount} />}
               {context === "forum" && <ForumContent onClose={onClose} />}
               {context === "account" && <AccountContent onClose={onClose} />}
-              {context === "home" && <HomeContent onNavigate={onNavigate} onClose={onClose} />}
+              {context === "home" && <HomeContent onNavigate={onNavigate} onClose={onClose} settings={settings} />}
             </div>
           </motion.div>
         </div>

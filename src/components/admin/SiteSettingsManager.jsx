@@ -27,6 +27,9 @@ const defaults = {
     "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
     "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/bf55ac1e7_AllegiantStadiumParadiseNevadaclaytonhaamallegiantallegiantstadiumparadis.mp4"
   ],
+  social_facebook_url: "https://www.facebook.com/groups/663237792349090",
+  social_instagram_url: "https://www.instagram.com/rugbyleaguetakeover?igsh=MTY1d3lkaWs1NDhnaw==",
+  social_tiktok_url: "https://www.tiktok.com/@nrl_las_vegas?_r=1&_t=ZS-96zem8W4clw",
   news_eyebrow: "Latest News",
   news_title: "From the strip",
   news_description: "Fresh updates, announcements and supporter news for Rugby League Las Vegas.",
@@ -193,10 +196,10 @@ export default function SiteSettingsManager({ settings }) {
     },
     {
       id: "footer",
-      title: "Footer & Attribution",
-      desc: "Copyright lines, attribution brand labels, and powered-by text.",
+      title: "Footer, Socials & Attribution",
+      desc: "Copyright lines, social profile links, attribution brand labels, and powered-by text.",
       icon: PanelBottom,
-      summary: `Powered by: ${draft.footer_powered_by || "None"}`,
+      summary: `Socials + powered by: ${draft.footer_powered_by || "None"}`,
     },
   ];
 
@@ -549,6 +552,21 @@ export default function SiteSettingsManager({ settings }) {
                         </LabeledField>
                         <LabeledField label="Powered By" help="Attribution line.">
                           <Input placeholder="DENEO.AI" value={draft.footer_powered_by || ""} onChange={(e) => update("footer_powered_by", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-primary/40 bg-primary/5 mt-4">
+                        <Users className="h-3 w-3 text-primary" />
+                        <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">Social Links</span>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <LabeledField label="Facebook URL" help="Shown in the homepage social blocks.">
+                          <Input placeholder="https://facebook.com/..." value={draft.social_facebook_url || ""} onChange={(e) => update("social_facebook_url", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Instagram URL" help="Shown below the Facebook link.">
+                          <Input placeholder="https://instagram.com/..." value={draft.social_instagram_url || ""} onChange={(e) => update("social_instagram_url", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="TikTok URL" help="Shown below the Facebook link." fullWidth>
+                          <Input placeholder="https://tiktok.com/@..." value={draft.social_tiktok_url || ""} onChange={(e) => update("social_tiktok_url", e.target.value)} />
                         </LabeledField>
                       </div>
                     </div>

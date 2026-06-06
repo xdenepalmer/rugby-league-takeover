@@ -106,6 +106,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           onCanPlay={() => videoRef.current?.play().then(() => setVideoReady(true)).catch(() => {})}
           onPlaying={() => setVideoReady(true)}
           onEnded={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
+          onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
           <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
         </video>

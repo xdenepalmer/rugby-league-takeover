@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import HeroSection from "@/components/public/HeroSection";
 import BackgroundVideo from "@/components/public/BackgroundVideo";
+import SocialLinks from "@/components/public/SocialLinks";
 import CountdownTimer from "@/components/public/CountdownTimer";
 import MatchupsSection from "@/components/public/MatchupsSection";
 import LazySection from "@/components/public/LazySection";
@@ -57,7 +58,7 @@ function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, 
   );
 }
 
-function LiveHudDashboard() {
+function LiveHudDashboard({ settings = {} }) {
   const scrollToSection = (id) => (event) => {
     event.preventDefault();
     document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
@@ -122,32 +123,35 @@ function LiveHudDashboard() {
           </div>
         </div>
 
-        <a
-          href="https://www.facebook.com/groups/663237792349090"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex min-h-full flex-col justify-between border border-[#1877F2]/25 bg-[#1877F2]/[0.035] p-5 text-left transition-colors hover:bg-[#1877F2]/[0.07] cmd-glass"
-        >
-          <div>
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div className="flex h-12 w-12 items-center justify-center border border-[#1877F2]/35 bg-background/45 text-[#1877F2]">
-                <Radio className="h-5 w-5" />
+        <div className="grid gap-3">
+          <a
+            href={settings.social_facebook_url || "https://www.facebook.com/groups/663237792349090"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex min-h-full flex-col justify-between border border-[#1877F2]/25 bg-[#1877F2]/[0.035] p-5 text-left transition-colors hover:bg-[#1877F2]/[0.07] cmd-glass"
+          >
+            <div>
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div className="flex h-12 w-12 items-center justify-center border border-[#1877F2]/35 bg-background/45 text-[#1877F2]">
+                  <Radio className="h-5 w-5" />
+                </div>
+                <span className="border border-[#1877F2]/25 bg-[#1877F2]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#8dbbff]">
+                  16.8k fans
+                </span>
               </div>
-              <span className="border border-[#1877F2]/25 bg-[#1877F2]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#8dbbff]">
-                16.8k fans
-              </span>
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#8dbbff]">Facebook group</p>
+              <h3 className="mt-2 font-display text-3xl uppercase leading-none tracking-wide text-foreground">Meet the travelling crowd</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                Jump into the bigger Las Vegas fan conversation for tickets, meetups, travel tips, and game-week chatter.
+              </p>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#8dbbff]">Facebook group</p>
-            <h3 className="mt-2 font-display text-3xl uppercase leading-none tracking-wide text-foreground">Meet the travelling crowd</h3>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Jump into the bigger Las Vegas fan conversation for tickets, meetups, travel tips, and game-week chatter.
-            </p>
-          </div>
-          <div className="mt-5 flex items-center justify-between border-t border-[#1877F2]/20 pt-4">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-foreground">Join group</span>
-            <ArrowRight className="h-4 w-4 text-[#8dbbff] transition-transform duration-200 group-hover:translate-x-1" />
-          </div>
-        </a>
+            <div className="mt-5 flex items-center justify-between border-t border-[#1877F2]/20 pt-4">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-foreground">Join group</span>
+              <ArrowRight className="h-4 w-4 text-[#8dbbff] transition-transform duration-200 group-hover:translate-x-1" />
+            </div>
+          </a>
+          <SocialLinks settings={settings} compact />
+        </div>
       </div>
     </section>
   );
@@ -294,7 +298,7 @@ export default function Home() {
         </div>
 
         {/* Live HUD Dashboard */}
-        <LiveHudDashboard />
+        <LiveHudDashboard settings={settings} />
 
         {/* Countdown Timer */}
         <motion.div
@@ -479,19 +483,7 @@ export default function Home() {
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary mb-3">Connect</p>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">Join the movement. Rugby League's biggest fan invasion of Las Vegas.</p>
-                  <a
-                    href="https://www.facebook.com/groups/663237792349090"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 flex items-center gap-2.5 border border-border/40 bg-card/20 px-3 py-2.5 group hover:border-[#1877F2]/40 hover:bg-[#1877F2]/5 transition-all duration-300"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#1877F2] shrink-0" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-foreground group-hover:text-[#1877F2] transition-colors truncate">NRL Las Vegas</p>
-                      <p className="text-[9px] text-muted-foreground font-mono">16.8k members</p>
-                    </div>
-                    <svg viewBox="0 0 24 24" className="h-3 w-3 ml-auto text-muted-foreground group-hover:text-[#1877F2] group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-                  </a>
+                  <SocialLinks settings={settings} compact className="mt-3" />
                   <div className="mt-3 flex items-center gap-1">
                     <span className="inline-block h-1 w-6 bg-primary" />
                     <span className="inline-block h-1 w-4 bg-accent" />

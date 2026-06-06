@@ -159,7 +159,7 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
             className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 cursor-pointer text-center"
           >
             <Calendar className="h-4 w-4" />
-            <span>View Match Events</span>
+            <span>View Events</span>
           </a>
           <Link
             to="/store"
