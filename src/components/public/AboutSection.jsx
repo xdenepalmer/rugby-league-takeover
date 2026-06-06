@@ -27,9 +27,9 @@ function useAnimatedCounter(target, isInView, duration = 2) {
 
 /* ─── Stats data ────────────────────────────────────────────── */
 const STATS = [
-  { key: "fans", value: 16000, suffix: "+", label: "Fans", icon: Users },
-  { key: "groups", value: 15, suffix: "+", label: "Supporter Groups", icon: Flag },
-  { key: "days", value: 4, suffix: "", label: "Days of Events", icon: CalendarDays },
+  { key: "supporters", value: 17000, suffix: "", label: "Supporters", icon: Users },
+  { key: "legacy", value: 4, suffix: "", label: "Years Running", icon: Flag },
+  { key: "days", value: 7, suffix: "", label: "Days of Events", icon: CalendarDays },
 ];
 
 /* ─── Single stat card ──────────────────────────────────────── */
