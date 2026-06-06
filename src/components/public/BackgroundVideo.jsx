@@ -28,6 +28,7 @@ const DEFAULT_POSTER = "https://media.base44.com/images/public/6a18d49a2b8f40f0f
 
 export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER }) {
   const videoRef = useRef(null);
+  const isAdvancingRef = useRef(false);
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,6 +60,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
     let cancelled = false;
     setVideoReady(false);
+    isAdvancingRef.current = false;
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
@@ -131,7 +133,6 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           }`}
           autoPlay
           muted
-          defaultMuted
           loop={ordered.length <= 1}
           playsInline
           webkit-playsinline="true"
@@ -140,17 +141,25 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           disablePictureInPicture
           disableRemotePlayback
           onLoadedMetadata={() => videoRef.current?.play().catch(() => {})}
-          onLoadedData={() => {
-            setVideoReady(true);
-            videoRef.current?.play().catch(() => {});
-          }}
-          onCanPlay={() => {
-            setVideoReady(true);
-            videoRef.current?.play().catch(() => {});
-          }}
+          onLoadedData={() => videoRef.current?.play().catch(() => {})}
+          onCanPlay={() => videoRef.current?.play().catch(() => {})}
           onPlaying={() => setVideoReady(true)}
+          onTimeUpdate={(event) => {
+            const video = event.currentTarget;
+            if (ordered.length > 1 && video.duration && video.currentTime >= video.duration - 0.4 && !isAdvancingRef.current) {
+              isAdvancingRef.current = true;
+              setVideoReady(false);
+              setCurrentIndex((index) => (index + 1) % ordered.length);
+            }
+          }}
           onPause={() => videoRef.current?.play().catch(() => {})}
-          onEnded={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
+          onEnded={() => {
+            if (ordered.length > 1 && !isAdvancingRef.current) {
+              isAdvancingRef.current = true;
+              setVideoReady(false);
+              setCurrentIndex((index) => (index + 1) % ordered.length);
+            }
+          }}
           onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
           <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
