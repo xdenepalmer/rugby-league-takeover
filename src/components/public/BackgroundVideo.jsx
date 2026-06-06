@@ -60,7 +60,11 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     let cancelled = false;
     setVideoReady(false);
     video.muted = true;
+    video.defaultMuted = true;
     video.playsInline = true;
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
 
     const advanceVideo = () => {
       if (ordered.length > 1) setCurrentIndex((index) => (index + 1) % ordered.length);
@@ -68,7 +72,11 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
     const playVideo = () => {
       video.muted = true;
+      video.defaultMuted = true;
       video.playsInline = true;
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
       video.play().then(() => {
         if (!cancelled) setVideoReady(true);
       }).catch(() => {
@@ -123,8 +131,10 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           }`}
           autoPlay
           muted
+          defaultMuted
           loop
           playsInline
+          webkit-playsinline="true"
           preload="auto"
           controls={false}
           disablePictureInPicture
