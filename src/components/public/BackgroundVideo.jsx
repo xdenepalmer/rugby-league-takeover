@@ -30,18 +30,6 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // ── Gating: respect data-saver and reduced-motion only. ──
-    // Do NOT disable purely on a mobile viewport — muted+playsInline autoplay is
-    // allowed on mobile and the background video is expected there by design.
-    const isSaveData = !!(navigator.connection && navigator.connection.saveData);
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (isSaveData || prefersReducedMotion) {
-      setShouldPlayVideo(false);
-      return;
-    }
-
     setShouldPlayVideo(true);
   }, [key]);
 
@@ -50,21 +38,46 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     const video = videoRef.current;
     if (!video) return undefined;
 
+    let cancelled = false;
     setVideoReady(false);
     video.muted = true;
-    const playVideo = () => video.play().then(() => setVideoReady(true)).catch(() => {});
+    video.playsInline = true;
+
+    const advanceVideo = () => {
+      if (ordered.length > 1) setCurrentIndex((index) => (index + 1) % ordered.length);
+    };
+
+    const playVideo = () => {
+      video.muted = true;
+      video.play().then(() => {
+        if (!cancelled) setVideoReady(true);
+      }).catch(() => {
+        if (!cancelled) advanceVideo();
+      });
+    };
 
     video.load();
     playVideo();
+
+    const watchdog = window.setTimeout(() => {
+      if (!cancelled && (!videoReady || video.paused || video.readyState < 2)) {
+        playVideo();
+        window.setTimeout(() => {
+          if (!cancelled && (video.paused || video.readyState < 2)) advanceVideo();
+        }, 1200);
+      }
+    }, 3000);
 
     window.addEventListener("touchstart", playVideo, { once: true });
     window.addEventListener("click", playVideo, { once: true });
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(watchdog);
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
     };
-  }, [shouldPlayVideo, activeVideo]);
+  }, [shouldPlayVideo, activeVideo, ordered.length]);
 
   useEffect(() => {
     if (!shouldPlayVideo || ordered.length < 2) return undefined;
@@ -107,6 +120,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           onPlaying={() => setVideoReady(true)}
           onEnded={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
           onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
+          onStalled={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
           <source src={activeVideo} type={mimeFor(activeVideo) || undefined} />
         </video>
