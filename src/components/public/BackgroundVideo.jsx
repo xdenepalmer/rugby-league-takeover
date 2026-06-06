@@ -8,6 +8,15 @@ const mimeFor = (url) => ({ mp4: "video/mp4", webm: "video/webm", ogg: "video/og
 // autoplay silently fails and only the poster shows. mp4 first, mov last.
 const FORMAT_RANK = { mp4: 0, webm: 1, ogg: 2, mov: 9 };
 
+const normalizeVideoSources = (sources, src) => {
+  const rawList = sources?.length ? sources : [src];
+  return rawList
+    .flatMap((value) => String(value || "").split(/[\n,]+/))
+    .flatMap((value) => value.split(/(?=https?:\/\/)/g))
+    .map((value) => value.trim())
+    .filter(Boolean);
+};
+
 // A high-quality static image of Allegiant Stadium to serve as the background poster
 const DEFAULT_POSTER = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg";
 
@@ -18,7 +27,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const ordered = useMemo(() => {
-    const list = (sources?.length ? sources : [src]).filter(Boolean);
+    const list = normalizeVideoSources(sources, src);
     return [...list].sort((a, b) => (FORMAT_RANK[extOf(a)] ?? 5) - (FORMAT_RANK[extOf(b)] ?? 5));
   }, [sources, src]);
   const key = ordered.join("|");
