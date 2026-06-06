@@ -28,7 +28,9 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
   const ordered = useMemo(() => {
     const list = normalizeVideoSources(sources, src);
-    return [...list].sort((a, b) => (FORMAT_RANK[extOf(a)] ?? 5) - (FORMAT_RANK[extOf(b)] ?? 5));
+    const browserFriendly = list.filter((url) => ["mp4", "webm", "ogg"].includes(extOf(url)));
+    const playableList = browserFriendly.length ? browserFriendly : list;
+    return [...playableList].sort((a, b) => (FORMAT_RANK[extOf(a)] ?? 5) - (FORMAT_RANK[extOf(b)] ?? 5));
   }, [sources, src]);
   const key = ordered.join("|");
   const activeVideo = ordered[currentIndex % Math.max(ordered.length, 1)] || "";
@@ -58,18 +60,20 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
     const playVideo = () => {
       video.muted = true;
+      video.playsInline = true;
       video.play().then(() => {
         if (!cancelled) setVideoReady(true);
       }).catch(() => {
-        if (!cancelled) advanceVideo();
+        // Autoplay can reject briefly on mobile while the video is still loading.
+        // Do not switch sources here — the real media error handler handles bad files.
       });
     };
 
     video.load();
-    playVideo();
+    window.setTimeout(playVideo, 80);
 
     const watchdog = window.setTimeout(() => {
-      if (!cancelled && (!videoReady || video.paused || video.readyState < 2)) {
+      if (!cancelled && (video.paused || video.readyState < 2)) {
         playVideo();
         window.setTimeout(() => {
           if (!cancelled && video.paused) playVideo();
@@ -113,11 +117,11 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           controls={false}
           disablePictureInPicture
-          onLoadedData={() => setVideoReady(true)}
-          onCanPlay={() => videoRef.current?.play().then(() => setVideoReady(true)).catch(() => {})}
+          onLoadedData={() => videoRef.current?.play().catch(() => {})}
+          onCanPlay={() => videoRef.current?.play().catch(() => {})}
           onPlaying={() => setVideoReady(true)}
           onError={() => ordered.length > 1 && setCurrentIndex((index) => (index + 1) % ordered.length)}
         >
