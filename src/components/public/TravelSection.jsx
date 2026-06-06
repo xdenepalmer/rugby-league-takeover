@@ -235,7 +235,7 @@ export default function TravelSection({ packages, settings = {} }) {
         </div>
 
         {/* Lead/Registration Stepper Form Block */}
-        <div className="mt-16 border border-border bg-card/45 cmd-glass p-6 md:p-10 relative overflow-hidden shadow-2xl">
+        <div id="travel-registration" style={{ scrollMarginTop: "96px" }} className="mt-16 border border-border bg-card/45 cmd-glass p-6 md:p-10 relative overflow-hidden shadow-2xl">
           {/* Top accent line */}
           <div className="absolute top-0 left-0 right-0 h-[2.5px] cmd-accent-bar animate-pulse" />
 

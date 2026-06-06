@@ -61,7 +61,13 @@ function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, 
 function LiveHudDashboard({ settings = {} }) {
   const scrollToSection = (id) => (event) => {
     event.preventDefault();
-    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+    const target = document.querySelector(id);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth" });
+    } else if (id === "#travel-registration") {
+      document.querySelector("#travel")?.scrollIntoView({ behavior: "smooth" });
+      window.setTimeout(() => document.querySelector(id)?.scrollIntoView({ behavior: "smooth" }), 650);
+    }
     window.history.replaceState(null, "", id);
   };
 
@@ -87,9 +93,9 @@ function LiveHudDashboard({ settings = {} }) {
               eyebrow="Travel"
               title="Register interest"
               body="Get ready for flights, hotels, events, and supporter package drops."
-              action="View travel"
-              href="#travel"
-              onClick={scrollToSection("#travel")}
+              action="Register now"
+              href="#travel-registration"
+              onClick={scrollToSection("#travel-registration")}
               tone="primary"
             />
             <PublicActionCard

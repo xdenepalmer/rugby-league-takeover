@@ -33,6 +33,18 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
   const title = settings.hero_title || "The annual\nVegas takeover";
   const logo = settings.site_logo_url || (!settingsLoading ? logoUrl : "");
 
+  const handleTravelInterestClick = (event) => {
+    event.preventDefault();
+    const target = document.querySelector("#travel-registration");
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth" });
+    } else {
+      document.querySelector("#travel")?.scrollIntoView({ behavior: "smooth" });
+      window.setTimeout(() => document.querySelector("#travel-registration")?.scrollIntoView({ behavior: "smooth" }), 650);
+    }
+    window.history.replaceState(null, "", "#travel-registration");
+  };
+
   // Split title lines and words for staggered reveals
   const titleLines = title.split("\n");
 
@@ -148,7 +160,8 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
           className="mt-12 w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 px-4"
         >
           <a
-            href="#travel"
+            href="#travel-registration"
+            onClick={handleTravelInterestClick}
             className="group flex items-center justify-center gap-2.5 border border-primary bg-primary/20 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-foreground hover:bg-primary hover:text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer text-center"
           >
             <UserPlus className="h-4 w-4" />
