@@ -50,6 +50,14 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Respect data-saver and reduced-motion only — do NOT gate on mobile viewport
+    // (muted+playsInline autoplay is expected on mobile by design).
+    const isSaveData = !!(navigator.connection && navigator.connection.saveData);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (isSaveData || prefersReducedMotion) {
+      setShouldPlayVideo(false);
+      return;
+    }
     setShouldPlayVideo(true);
   }, [key]);
 
@@ -135,7 +143,6 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
           muted
           loop={ordered.length <= 1}
           playsInline
-          webkit-playsinline="true"
           preload="auto"
           controls={false}
           disablePictureInPicture

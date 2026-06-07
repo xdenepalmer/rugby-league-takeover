@@ -222,7 +222,7 @@ const defaultEvent = {
 };
 
 const tickerItems = [
-  { text: "LAS VEGAS TAKEOVER 2026", type: "gold" },
+  { text: "LAS VEGAS TAKEOVER 2027", type: "gold" },
   { text: "RUGBY LEAGUE GLOBAL INVASION", type: "red" },
   { text: "VIP TRAVEL PACKAGES DROPPING SOON", type: "gold" },
   { text: "EXCLUSIVE FAN EVENTS & MEETUPS", type: "red" },
