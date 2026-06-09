@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect } from "react";
+import React, { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User as UserIcon, ShieldCheck, LogOut, ShoppingBag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -13,11 +13,12 @@ const NotificationBell = lazy(() => import("@/components/NotificationBell"));
 const links = [
   { label: "Home", href: "/" },
   { label: "Latest News", href: "/news" },
-  { label: "FAQs", href: "/faq" },
+  { label: "About Us", href: "/#about" },
   { label: "Travel Packages", href: "/#travel" },
   { label: "Events", href: "/#events" },
   { label: "Merch Shop", href: "/store" },
-  { label: "Fan Forum", href: "/forum" }
+  { label: "Fan Forum", href: "/forum" },
+  { label: "FAQs", href: "/faq" }
 ];
 
 const initials = (user) => {
@@ -28,6 +29,8 @@ const initials = (user) => {
 export default function SiteNav({ settings = {}, settingsLoading = false }) {
   const { isAuthenticated, isAdmin, user } = useAuth();
   const [open, setOpen] = useState(false);
+  const scrollYRef = useRef(0);
+  const wasDrawerOpenRef = useRef(false);
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
@@ -144,14 +147,36 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     };
   }, []);
 
-  // Lock body scroll when mobile drawer is open
+  // Lock the page behind the mobile drawer, including iOS Safari.
   useEffect(() => {
+    const unlockBody = () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      document.body.style.overflow = "";
+    };
+
     if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      wasDrawerOpenRef.current = true;
+      scrollYRef.current = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollYRef.current}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+      return unlockBody;
     }
-    return () => { document.body.style.overflow = ''; };
+
+    if (wasDrawerOpenRef.current) {
+      wasDrawerOpenRef.current = false;
+      unlockBody();
+      window.scrollTo(0, scrollYRef.current);
+    }
+
+    return undefined;
   }, [open]);
 
   // Close drawer on ESC key
@@ -257,7 +282,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${scrolled ? "bg-background/85 backdrop-blur-xl" : ""}`}>
+    <header className={`fixed top-0 left-0 right-0 z-[200] w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${scrolled ? "bg-background/85 backdrop-blur-xl" : ""}`}>
       <div 
         className={`pointer-events-auto mx-auto flex items-center justify-between transition-[background-color,border-color,box-shadow,padding] duration-300 ${
           scrolled 
@@ -407,7 +432,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               onClick={() => setOpen(false)}
               role="button"
               aria-label="Close menu"
-              className="fixed inset-0 z-50 bg-black/65 lg:hidden pointer-events-auto"
+              className="fixed inset-0 z-[210] bg-black/80 lg:hidden pointer-events-auto"
             />
  
             <motion.nav 
@@ -419,7 +444,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               exit={{ x: "100%" }}
               transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.28 }}
               style={{ willChange: "transform" }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex w-72 max-w-[86vw] flex-col justify-between border-l border-border bg-background px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto lg:hidden"
+              className="fixed bottom-0 right-0 top-0 z-[220] flex w-72 max-w-[86vw] flex-col justify-between overflow-y-auto overscroll-contain border-l border-border bg-[#030712] px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto lg:hidden"
             >
               {/* Technical Grid background decoration */}
               <div 
