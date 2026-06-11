@@ -540,10 +540,10 @@ const ForumPostCard = memo(function ForumPostCard({
           <button
             type="button"
             onClick={() => onOpenThread(post)}
-            className="hidden min-h-11 items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20 sm:flex"
+            className="flex min-h-11 items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20"
           >
             <Eye className="h-3 w-3" />
-            <span className="hidden sm:inline">View Thread</span>
+            <span>View Thread</span>
           </button>
 
           {/* Mobile stats */}
@@ -812,7 +812,7 @@ export default function Forum() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
-  const { data: posts = [] } = useQuery({
+  const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
     queryKey: ["forumPosts"],
     queryFn: () => base44.entities.ForumPost.list("-created_date", 100),
     enabled: appParams.hasBase44Config,
@@ -1547,6 +1547,19 @@ export default function Forum() {
 
               {/* Thread Feed */}
               <div className="space-y-3">
+                {/* Loading skeletons while threads load */}
+                {isLoadingPosts && threadsToRender.length === 0 && [1, 2, 3, 4].map((i) => (
+                  <div key={i} className="border border-border/40 bg-card/20 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted/30" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-32 animate-pulse bg-muted/30" />
+                        <div className="h-5 w-3/4 animate-pulse bg-muted/20" />
+                        <div className="h-3 w-1/2 animate-pulse bg-muted/10" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 {threadsToRender.map((post, index) => {
                   const isActiveThread = activeReplyId && (activeReplyId === post.id || containsActiveReply(post, activeReplyId));
                   const activeReplyDraft = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
@@ -1582,12 +1595,12 @@ export default function Forum() {
                       onClick={() => setVisibleCount((prev) => prev + 15)}
                       className="border border-primary px-8 py-3.5 text-xs font-bold uppercase tracking-[0.25em] text-foreground bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all duration-300 rounded-none relative overflow-hidden"
                     >
-                      Load More Discussions
+                      Load More ({filteredThreads.length - visibleCount} remaining)
                     </Button>
                   </div>
                 )}
 
-                {filteredThreads.length === 0 && (
+                {!isLoadingPosts && filteredThreads.length === 0 && (
                   <EmptyState
                     onClearFilters={clearAllFilters}
                     onSelectCategory={(cat) => { setSelectedCategory(cat); setSearchQuery(""); setSortBy("latest"); }}
