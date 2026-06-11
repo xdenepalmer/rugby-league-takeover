@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 const shellFiles = [
   "../src/components/AuthLayout.jsx",
-  "../src/components/admin/AdminShell.jsx",
+  "../src/components/admin/AdminLayout.jsx",
   "../src/components/public/HeroSection.jsx",
   "../src/components/public/PublicLayout.jsx",
   "../src/pages/Account.jsx",

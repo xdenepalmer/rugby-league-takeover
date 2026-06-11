@@ -48,12 +48,26 @@
     },
     "user_id": {
       "type": "string",
-      "description": "Optional authenticated user ID"
+      "description": "Optional authenticated user ID",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "user_email": {
       "type": "string",
       "format": "email",
-      "description": "Optional authenticated user email"
+      "description": "Optional authenticated user email (admin-only read — entries are publicly listable for the leaderboard, which only needs tipper_name)",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "kickoff": {
       "type": "string",

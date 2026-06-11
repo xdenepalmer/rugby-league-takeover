@@ -7,8 +7,16 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const payload = await req.json().catch(() => ({}));
-    const product = payload?.data;
+    const productId = clean(payload?.data?.id);
 
+    if (!productId) {
+      return Response.json({ ok: true, skipped: true });
+    }
+
+    // This endpoint is unauthenticated (invoked by a Base44 automation that
+    // cannot send custom headers), so never trust the caller's product fields —
+    // re-fetch server-side and only notify for a genuinely live product.
+    const product = await base44.asServiceRole.entities.Product.get(productId).catch(() => null);
     if (!product?.id || product.coming_soon === true || product.is_active === false) {
       return Response.json({ ok: true, skipped: true });
     }

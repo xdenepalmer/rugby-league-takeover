@@ -890,7 +890,12 @@ export default function Forum() {
       if (!data?.parent_id) { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); setUserFilter("all"); setMobileTab("feed"); }
       try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
       toast({ title: data?.id ? "Post published" : "Post submitted", description: "Your discussion is now visible in the forum." });
-      if (data?.reward) toast({ title: `+${data.reward.xp} XP · +${data.reward.chips} chips`, description: `${data.reward.rank}${data.reward.streak ? ` · ${data.reward.streak} day streak` : ""}` });
+      if (data?.reward) {
+        // Pre-compute the conditional part — nested template literals inside ${}
+        // have broken the Base44 build pipeline before (publish-killer pattern).
+        const streakNote = data.reward.streak ? " · " + data.reward.streak + " day streak" : "";
+        toast({ title: `+${data.reward.xp} XP · +${data.reward.chips} chips`, description: data.reward.rank + streakNote });
+      }
     },
     onError: (error) => {
       toast({ title: "Post failed", description: error?.response?.data?.error || error?.message || "Please try again." });
