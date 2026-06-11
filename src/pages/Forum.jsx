@@ -370,7 +370,7 @@ const ForumPostCard = memo(function ForumPostCard({
         {/* Title + compact stats row — always visible, clickable to expand */}
         <div
           className="mt-3 cursor-pointer select-none"
-          onClick={(e) => { if (e.target.closest('button, a')) return; setCardOpen(!cardOpen); }}
+          onClick={(e) => { if (e.target.closest('button, a')) return; if (!cardOpen) markThreadRead(post.id); setCardOpen(!cardOpen); }}
         >
           <div className="flex items-start gap-2">
             <h3 className="flex-1 font-display text-lg md:text-xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 break-words">
@@ -789,6 +789,19 @@ export default function Forum() {
     return () => clearTimeout(timer);
   }, [draft]);
 
+  // "/" keyboard shortcut focuses the forum search (desktop power-user nicety)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+      e.preventDefault();
+      document.getElementById("forum-search-input")?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // Re-sync saved post IDs when localStorage changes (e.g. from SaveButton)
   useEffect(() => {
     const onStorage = () => setSavedPostIds(getSavedPostIds());
@@ -1108,8 +1121,8 @@ export default function Forum() {
     } else if (sortBy === "top") {
       result = [...result].sort((a, b) => getEngagement(b).views - getEngagement(a).views);
     }
-    // "latest" is default order
-    return result;
+    // Pinned threads always float to the top (stable within sort order)
+    return [...result].sort((a, b) => (b.is_pinned === true) - (a.is_pinned === true));
   }, [allThreads, selectedCategory, deferredSearchQuery, sortBy, isAuthenticated, user, userFilter]);
 
   const threadsToRender = useMemo(() => {
@@ -1214,7 +1227,7 @@ export default function Forum() {
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 {[...allThreads].sort((a, b) => getEngagement(b).likes - getEngagement(a).likes).slice(0, 3).map((t, i) => (
-                  <TrendingCard key={t.id} thread={t} rank={i + 1} onClick={() => setThreadModalPost(t)} />
+                  <TrendingCard key={t.id} thread={t} rank={i + 1} onClick={() => handleOpenThread(t)} />
                 ))}
               </div>
             </div>
@@ -1420,7 +1433,8 @@ export default function Forum() {
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/30" />
                       <Input
-                        placeholder="Search discussions, topics, or users…"
+                        id="forum-search-input"
+                        placeholder="Search discussions… (press / to focus)"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="h-11 rounded-none border-border/50 bg-background/60 pl-9 text-sm"

@@ -253,6 +253,18 @@
     min-width: 0;
   }
 
+  /* Desktop: category pills flow inline instead of stacking full-width */
+  @media (min-width: 768px) {
+    .forum-filter-rail {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .forum-filter-rail > * {
+      width: auto;
+    }
+  }
+
   .forum-post-card *,
   .forum-mobile-hero *,
   .forum-mobile-content * {
@@ -268,6 +280,14 @@
     width: 100%;
     max-width: 100%;
     overflow: hidden;
+  }
+
+  /* Desktop: sort tabs size to content so the search field gets the space */
+  @media (min-width: 640px) {
+    .forum-sort-tabs {
+      width: auto;
+      flex-shrink: 0;
+    }
   }
 
   .forum-action-button {
