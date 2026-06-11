@@ -376,6 +376,11 @@
   }
 }
 
+/* Pause all ticker animations (marquee + LED bulbs) while scrolled off-screen */
+.ticker-paused * {
+  animation-play-state: paused !important;
+}
+
 @keyframes marquee {
   0% { transform: translateX(0%); }
   100% { transform: translateX(-50%); }
