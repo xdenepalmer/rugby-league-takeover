@@ -413,6 +413,8 @@ export default function Home() {
 
         {/* About Section */}
         <motion.div
+          id="about"
+          style={{ scrollMarginTop: "80px" }}
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
@@ -439,6 +441,8 @@ export default function Home() {
 
         {/* Partners Section */}
         <motion.div
+          id="partners"
+          style={{ scrollMarginTop: "80px" }}
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
@@ -453,6 +457,8 @@ export default function Home() {
 
         {/* Testimonials Section */}
         <motion.div
+          id="testimonials"
+          style={{ scrollMarginTop: "80px" }}
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}

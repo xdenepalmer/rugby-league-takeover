@@ -18,9 +18,19 @@ export default function ScrollToTop() {
   useEffect(() => {
     if (hash) {
       const id = getHashId(hash);
-      const timer = window.setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
+      // Retry a few times — the target section may still be lazy-loading
+      // when navigating to a hash from another page.
+      let attempts = 0;
+      const tryScroll = () => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+        } else if (attempts < 10) {
+          attempts += 1;
+          timer = window.setTimeout(tryScroll, 200);
+        }
+      };
+      let timer = window.setTimeout(tryScroll, 50);
       return () => window.clearTimeout(timer);
     }
 
