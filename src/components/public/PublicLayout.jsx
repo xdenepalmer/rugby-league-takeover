@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useState } from "react";
 import { NavLink, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
@@ -113,17 +113,16 @@ export default function PublicLayout() {
 
       {/* Content wrapper with page transition animation */}
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            {outlet}
-          </motion.div>
-        </AnimatePresence>
+        {/* Instant native-style tab switching: new page mounts immediately with a
+            quick fade-in — no exit-animation wait between routes. */}
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
+          {outlet}
+        </motion.div>
       </div>
 
       {/* Sponsored Ad Slot — above footer, all pages */}

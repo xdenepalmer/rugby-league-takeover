@@ -6,7 +6,11 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- Load fonts in parallel with CSS instead of blocking via @import -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" />
+    <!-- Preload the home hero poster (LCP image) so it paints immediately -->
+    <link rel="preload" as="image" href="https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg" />
     <meta name="theme-color" content="#030712" />
     <meta name="description" content="Rugby League Takeover Las Vegas news, forum, travel, events, and merch." />
     <!-- Social share metadata (local assets for reliable previews) -->
