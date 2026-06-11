@@ -251,9 +251,10 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
         addToCart(product, isApparel ? selectedSize : undefined);
       }
     }
+    const sizeNote = isApparel ? "(Size " + selectedSize + ") " : "";
     toast({
       title: "Added to Cart",
-      description: `${product.name} ${isApparel ? `(Size ${selectedSize})` : ""} x${quantity} added to cart.`,
+      description: `${product.name} ${sizeNote}x${quantity} added to cart.`,
     });
     onClose();
   };
