@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { useAuth } from "@/lib/AuthContext";
 import { formatKickoff, isNearFixture } from "@/lib/nrl-fixtures";
 import { fetchUpcomingFixtures } from "@/lib/nrl-api";
 import TeamCrest from "@/components/public/TeamCrest";
@@ -552,7 +553,7 @@ function CommunityPulse({ game, entries, tip }) {
   );
 }
 
-function Leaderboard({ entries, tips, totalPoints }) {
+function Leaderboard({ entries, tips, totalPoints, myName }) {
   const community = useMemo(() => {
     const totals = new Map();
     const seen = new Set();
@@ -561,6 +562,8 @@ function Leaderboard({ entries, tips, totalPoints }) {
       if (seen.has(key)) return;
       seen.add(key);
       const name = entry.tipper_name || "Mystery Fan";
+      // The signed-in tipper already appears as the "You" row
+      if (myName && name === myName) return;
       const curr = totals.get(name) || { name, tips: 0 };
       curr.tips += 1;
       totals.set(name, curr);
@@ -570,7 +573,7 @@ function Leaderboard({ entries, tips, totalPoints }) {
       .filter((r) => r.tips > 0)
       .sort((a, b) => (b.points || 0) - (a.points || 0))
       .slice(0, 8);
-  }, [entries, tips, totalPoints]);
+  }, [entries, tips, totalPoints, myName]);
 
   const medals = ["🥇", "🥈", "🥉"];
   const maxPts = Math.max(1, ...community.map((r) => r.points || 0));
@@ -640,6 +643,8 @@ function Leaderboard({ entries, tips, totalPoints }) {
 // ── Main Export ──────────────────────────────────────────────────────
 export default function ScorePredictor({ onSharePrediction }) {
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
+  const tipperName = (isAuthenticated && (user?.full_name || user?.email)) || "Vegas Fan";
   const [tips, setTips] = useState(() => sanitizeTips(readJson(STORAGE_KEY, {})));
   const [filter, setFilter] = useState("near");
   const [activeGameId, setActiveGameId] = useState("");
@@ -795,7 +800,7 @@ export default function ScorePredictor({ onSharePrediction }) {
           predicted_home_score: tip.predicted_home_score,
           predicted_away_score: tip.predicted_away_score,
           margin: tip.margin,
-          tipper_name: "Vegas Fan",
+          tipper_name: tipperName,
           kickoff: game.kickoff,
         },
         {
@@ -806,7 +811,7 @@ export default function ScorePredictor({ onSharePrediction }) {
         }
       );
     }
-  }, [tips, queriesEnabled, createTip]);
+  }, [tips, queriesEnabled, createTip, tipperName]);
 
   // Reset handler (for corruption recovery)
   const handleResetTips = useCallback(() => {
@@ -1141,7 +1146,7 @@ export default function ScorePredictor({ onSharePrediction }) {
 
         {/* Bottom panels */}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <Leaderboard entries={entries} tips={tips} totalPoints={totalPoints} />
+          <Leaderboard entries={entries} tips={tips} totalPoints={totalPoints} myName={isAuthenticated ? tipperName : ""} />
           <div className="border border-border/30 bg-black/30 p-3">
             <div className="flex items-center gap-2">
               <Zap className="h-3.5 w-3.5 text-primary" />

@@ -440,6 +440,11 @@ export default function SlotMachineBadgeUnlock() {
     SLOT_BADGES.filter((b) => ownedIds.includes(b.id)).sort((a, b) => b.rarity - a.rarity)[0],
     [ownedIds]
   );
+  // Next target: the most common (easiest) badge the player doesn't own yet
+  const nextTargetBadge = useMemo(() =>
+    SLOT_BADGES.filter((b) => !ownedIds.includes(b.id)).sort((a, b) => a.rarity - b.rarity)[0],
+    [ownedIds]
+  );
 
   // Streak at-risk: user has a streak but hasn't spun today
   const streakAtRisk = streak > 0 && !hasSpunToday && cooldownLeft <= 0;
@@ -719,6 +724,11 @@ export default function SlotMachineBadgeUnlock() {
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <p className="text-[9px] font-mono uppercase tracking-wider text-purple-200/50">
               Prize Ladder · {earnedCount}/{totalBadges}
+              {nextTargetBadge && (
+                <span className="ml-2 text-amber-300/70">
+                  Next target: {nextTargetBadge.emoji} {nextTargetBadge.label}
+                </span>
+              )}
             </p>
             <span className="inline-flex items-center gap-1 border border-purple-400/15 bg-black/40 px-2 py-0.5 text-[9px] font-mono uppercase text-purple-200/60">
               <Gem className="h-2.5 w-2.5" /> {totalBadges} rewards
