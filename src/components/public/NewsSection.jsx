@@ -62,7 +62,7 @@ function NewsCard({ article, index, onClick }) {
       variants={cardVariants}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, margin: "-60px" }}
+      viewport={{ once: true, amount: 0.1 }}
       custom={index}
       onMouseMove={handleMouseMove}
       onClick={() => onClick(article)}

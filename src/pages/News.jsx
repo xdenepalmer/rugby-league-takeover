@@ -54,6 +54,7 @@ export default function News() {
               <Newspaper className="h-6 w-6" />
               <span className="text-[10px] font-bold uppercase tracking-[0.35em]">Latest News</span>
             </div>
+            <div className="mb-6 h-[380px] animate-pulse border border-border bg-card/40" />
             <div className="grid gap-6 md:grid-cols-3">
               {[1, 2, 3].map((item) => <div key={item} className="h-80 animate-pulse border border-border bg-card/40" />)}
             </div>
