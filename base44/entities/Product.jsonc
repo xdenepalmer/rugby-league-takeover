@@ -52,8 +52,7 @@
   "required": [
     "name",
     "price_aud"
-  ]
-,
+  ],
   "rls": {
     "create": {
       "user_condition": {

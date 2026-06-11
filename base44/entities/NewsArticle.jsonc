@@ -31,8 +31,7 @@
   },
   "required": [
     "title"
-  ]
-,
+  ],
   "rls": {
     "create": {
       "user_condition": {

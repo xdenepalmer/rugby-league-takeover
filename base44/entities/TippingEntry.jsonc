@@ -60,7 +60,7 @@
     "user_email": {
       "type": "string",
       "format": "email",
-      "description": "Optional authenticated user email (admin-only read — entries are publicly listable for the leaderboard, which only needs tipper_name)",
+      "description": "Optional authenticated user email",
       "rls": {
         "read": {
           "user_condition": {
