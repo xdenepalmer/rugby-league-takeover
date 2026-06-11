@@ -6,8 +6,10 @@ import {
   MessagesSquare, Users, Settings, ExternalLink, LogOut,
   Menu, X, Activity, Radio, ChevronLeft, ChevronRight,
   Shield, Zap, Download, Keyboard, MoreHorizontal, Megaphone,
-  PackageCheck, ShieldAlert, Gauge, Search,
+  PackageCheck, ShieldAlert, Gauge, Search, RefreshCw,
 } from "lucide-react";
+import { queryClientInstance } from "@/lib/query-client";
+import AdminPullToRefresh from "./AdminPullToRefresh";
 
 const AdminCommandPalette = lazy(() => import("./AdminCommandPalette"));
 import { base44 } from "@/api/base44Client";
@@ -95,6 +97,8 @@ const mobileIconMap = {
   PackageCheck,
   ShieldAlert,
   Gauge,
+  RefreshCw,
+  LogOut,
 };
 
 /* ── Live clock hook ─────────────────────────────────────────── */
@@ -185,7 +189,10 @@ function useBadgeCounts() {
     }
     fetchCounts();
     const id = setInterval(fetchCounts, 60000); // refresh every minute
-    return () => { cancelled = true; clearInterval(id); };
+    // PWA resume: refresh badges immediately when the app returns to foreground
+    const onVisible = () => { if (!document.hidden) fetchCounts(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { cancelled = true; clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
   return counts;
 }
@@ -323,10 +330,19 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     setMobileMoreOpen(false);
+    // Always start a panel at the top — PWA tab switches keep stale scroll otherwise
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, [location.pathname]);
 
   const triggerExport = () => {
     window.dispatchEvent(new CustomEvent("admin:export-data"));
+  };
+
+  const handleMobileAction = (action) => {
+    if (action === "export") triggerExport();
+    else if (action === "refresh") queryClientInstance.invalidateQueries();
+    else if (action === "logout") { base44.auth.logout("/"); return; }
+    setMobileMoreOpen(false);
   };
 
   return (
@@ -423,7 +439,7 @@ export default function AdminLayout({ children }) {
                 asChild
                 variant="outline"
                 size="mobile"
-                className="rounded-none text-[10px] font-bold uppercase tracking-wider md:h-7 md:px-2"
+                className="hidden rounded-none text-[10px] font-bold uppercase tracking-wider sm:inline-flex md:h-7 md:px-2"
               >
                 <Link to="/">
                   <ExternalLink className="mr-1.5 h-3 w-3" /> Site
@@ -432,7 +448,7 @@ export default function AdminLayout({ children }) {
               <Button
                 variant="ghost"
                 size="mobile"
-                className="rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-destructive md:h-7 md:px-2"
+                className="hidden rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-destructive sm:inline-flex md:h-7 md:px-2"
                 onClick={() => base44.auth.logout("/")}
               >
                 <LogOut className="mr-1.5 h-3 w-3" /> Exit
@@ -771,13 +787,13 @@ export default function AdminLayout({ children }) {
                     <h2 className="mt-1 font-display text-2xl uppercase leading-none tracking-wide md:text-3xl">
                       {activeMeta.title}
                     </h2>
-                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    <p className="mt-1.5 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block">
                       {activeMeta.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2 md:w-[360px]">
+                <div className="hidden gap-2 md:grid md:w-[360px] md:grid-cols-2">
                   {attentionItems.map((item) => (
                     <AttentionCard key={item.label} {...item} />
                   ))}
@@ -786,19 +802,18 @@ export default function AdminLayout({ children }) {
             </section>
           </div>
 
-          {/* Page Content with Framer Motion transitions */}
-          <AnimatePresence mode="wait">
+          {/* Page Content — instant native-style switch with a quick fade-in */}
+          <AdminPullToRefresh>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               className="px-4 pb-[calc(7.75rem+var(--safe-bottom))] pt-4 md:px-8 md:pb-8 md:pt-6"
             >
               {children}
             </motion.div>
-          </AnimatePresence>
+          </AdminPullToRefresh>
         </main>
       </div>
 
@@ -864,10 +879,7 @@ export default function AdminLayout({ children }) {
                         key={item.label}
                         type="button"
                         className={itemClass}
-                        onClick={() => {
-                          triggerExport();
-                          setMobileMoreOpen(false);
-                        }}
+                        onClick={() => handleMobileAction(item.action)}
                       >
                         <Icon className="h-4 w-4 text-accent" />
                         <span className="flex-1">{item.label}</span>

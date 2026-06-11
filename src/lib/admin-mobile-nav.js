@@ -13,6 +13,8 @@ export const mobileMoreAdminItems = [
   { kind: "route", label: "Settings", to: "/admin/settings", icon: "Settings" },
   { kind: "link", label: "View Site", to: "/", icon: "ExternalLink" },
   { kind: "action", action: "export", label: "Export Data", icon: "Download" },
+  { kind: "action", action: "refresh", label: "Refresh Data", icon: "RefreshCw" },
+  { kind: "action", action: "logout", label: "Log Out", icon: "LogOut" },
 ];
 
 const sectionLabels = [

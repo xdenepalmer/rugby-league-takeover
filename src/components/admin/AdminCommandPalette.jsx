@@ -9,8 +9,9 @@ import {
   LayoutDashboard, ShoppingBag, FileText, Users, CalendarDays,
   MessagesSquare, Settings, Megaphone, PackagePlus, CalendarPlus,
   Newspaper, Download, ClipboardList, UserCheck, MessageSquare,
-  Search, Command, CornerDownLeft, ArrowUp, ArrowDown, Ban,
+  Search, Command, CornerDownLeft, ArrowUp, ArrowDown, Ban, RefreshCw,
 } from "lucide-react";
+import { queryClientInstance } from "@/lib/query-client";
 
 /* ── Command definitions ─────────────────────────────────── */
 const commands = [
@@ -28,6 +29,7 @@ const commands = [
   { id: "act-new-event",   type: "action",   label: "New Event",       description: "Create a fan event or matchday",          icon: CalendarPlus,    path: "/admin/events" },
   { id: "act-new-article", type: "action",   label: "New Article",     description: "Publish a news story",                    icon: Newspaper,       path: "/admin/content" },
   { id: "act-export",      type: "action",   label: "Export Data",     description: "Download registrations & orders",         icon: Download,        action: "export" },
+  { id: "act-refresh",     type: "action",   label: "Refresh Data",    description: "Reload all admin data from the server",   icon: RefreshCw,       action: "refresh" },
   { id: "act-orders",      type: "action",   label: "View Orders",     description: "Jump to order fulfilment",               icon: ClipboardList,   path: "/admin/store" },
   { id: "act-regs",        type: "action",   label: "View Registrations", description: "See interest sign-ups",               icon: UserCheck,       path: "/admin/people" },
   { id: "act-forum",       type: "action",   label: "View Forum Posts",description: "Browse and moderate posts",               icon: MessageSquare,   path: "/admin/community" },
@@ -103,6 +105,8 @@ export default function AdminCommandPalette({ isOpen, onClose }) {
     (cmd) => {
       if (cmd.action === "export") {
         window.dispatchEvent(new CustomEvent("admin:export-data"));
+      } else if (cmd.action === "refresh") {
+        queryClientInstance.invalidateQueries();
       } else if (cmd.path) {
         navigate(cmd.path);
       }
