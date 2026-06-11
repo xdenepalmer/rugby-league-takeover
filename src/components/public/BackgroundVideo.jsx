@@ -110,11 +110,23 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     window.addEventListener("touchstart", playVideo, { once: true });
     window.addEventListener("click", playVideo, { once: true });
 
+    // Battery saver: pause the background video while the app is backgrounded
+    // (home-screen PWA switched away / tab hidden) and resume on return.
+    const handleVisibility = () => {
+      if (document.hidden) {
+        video.pause();
+      } else {
+        playVideo();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       cancelled = true;
       window.clearTimeout(watchdog);
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [shouldPlayVideo, activeVideo, ordered.length]);
 
@@ -159,7 +171,10 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
               setCurrentIndex((index) => (index + 1) % ordered.length);
             }
           }}
-          onPause={() => videoRef.current?.play().catch(() => {})}
+          onPause={() => {
+            // Don't fight an intentional battery-saver pause while backgrounded
+            if (!document.hidden) videoRef.current?.play().catch(() => {});
+          }}
           onEnded={() => {
             if (ordered.length > 1 && !isAdvancingRef.current) {
               isAdvancingRef.current = true;
