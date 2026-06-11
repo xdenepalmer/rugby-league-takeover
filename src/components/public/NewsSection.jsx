@@ -9,6 +9,7 @@ import { motion, useMotionValue, useSpring } from "framer-motion";
 import { Calendar, ArrowRight, Clock, Newspaper } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 import PublicDetailSheet from "./PublicDetailSheet";
+import FeaturedNewsCard from "./FeaturedNewsCard";
 
 /* ── Reading time estimator ── */
 const readingTime = (text) => {
@@ -191,16 +192,22 @@ export default function NewsSection({ articles = [], settings = {} }) {
             <p className="text-sm text-muted-foreground">No articles published yet. Check back soon!</p>
           </div>
         ) : (
-          <div ref={containerRef} className="grid gap-6 md:grid-cols-3">
-            {articles.map((article, index) => (
-              <NewsCard
-                key={article.id || index}
-                article={article}
-                index={index}
-                onClick={setSelectedArticle}
-              />
-            ))}
-          </div>
+          <>
+            {/* Editorial lead story when there's more than one article */}
+            {articles.length > 1 && (
+              <FeaturedNewsCard article={articles[0]} onClick={setSelectedArticle} />
+            )}
+            <div ref={containerRef} className="grid gap-6 md:grid-cols-3">
+              {(articles.length > 1 ? articles.slice(1) : articles).map((article, index) => (
+                <NewsCard
+                  key={article.id || index}
+                  article={article}
+                  index={index}
+                  onClick={setSelectedArticle}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
