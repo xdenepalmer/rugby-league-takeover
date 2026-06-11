@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, UserPlus, Calendar, ShoppingBag, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
+import CursorSpotlight from "./CursorSpotlight";
 
 const logoUrl = "/icons/icon-192.png";
 
@@ -58,6 +59,9 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
         {/* Obsidian background grid */}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:80px_80px] opacity-25 z-0 cmd-grid-bg" />
       </div>
+
+      {/* Desktop cursor-trailing ambient spotlight */}
+      <CursorSpotlight />
 
       {/* Floating Ambient Glowing Orbs */}
       <motion.div
@@ -158,28 +162,28 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
           <a
             href="#travel-registration"
             onClick={handleTravelInterestClick}
-            className="group flex items-center justify-center gap-2.5 border border-primary bg-primary/20 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-foreground hover:bg-primary hover:text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer text-center"
+            className="group flex items-center justify-center gap-2.5 border border-primary bg-primary/20 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-foreground hover:bg-primary hover:text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all duration-300 lg:hover:-translate-y-0.5 cursor-pointer text-center"
           >
             <UserPlus className="h-4 w-4" />
             <span>Register Travel Interest</span>
           </a>
           <a
             href="#events"
-            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 cursor-pointer text-center"
+            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 lg:hover:-translate-y-0.5 cursor-pointer text-center"
           >
             <Calendar className="h-4 w-4" />
             <span>View Events</span>
           </a>
           <Link
             to="/store"
-            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 text-center"
+            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 lg:hover:-translate-y-0.5 text-center"
           >
             <ShoppingBag className="h-4 w-4" />
             <span>Shop Supporter Merch</span>
           </Link>
           <Link
             to="/forum"
-            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 text-center"
+            className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 lg:hover:-translate-y-0.5 text-center"
           >
             <MessageSquare className="h-4 w-4" />
             <span>Join Fan Forum</span>

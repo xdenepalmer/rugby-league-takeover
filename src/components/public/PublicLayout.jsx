@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import SiteNav from "./SiteNav";
+import ScrollProgressBar from "./ScrollProgressBar";
 import AdSlot from "@/components/ads/AdSlot";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
@@ -96,6 +97,9 @@ export default function PublicLayout() {
       >
         Skip to content
       </a>
+
+      {/* Desktop neon scroll progress indicator */}
+      <ScrollProgressBar />
 
       {/* Top Site Navigation */}
       <SiteNav settings={settingsRecords[0] || {}} settingsLoading={isLoadingSettings} />
