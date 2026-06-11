@@ -82,10 +82,6 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
       {/* Mobile-only subtle floating orb */}
       <div className="absolute bottom-1/4 right-6 w-[60px] h-[60px] rounded-full bg-gradient-to-br from-primary/10 to-accent/10 blur-xl animate-float z-0 pointer-events-none md:hidden" />
 
-      {/* 3D Floating Shapes with cmd-float */}
-      <div className="absolute top-1/3 left-1/6 w-8 h-8 border border-primary/20 bg-primary/5 cmd-float hidden md:block" style={{ animationDelay: "1s" }} />
-      <div className="absolute bottom-1/3 right-1/6 w-12 h-12 border border-accent/20 bg-accent/5 cmd-float hidden md:block" style={{ animationDelay: "2s" }} />
-
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-[calc(7rem+env(safe-area-inset-top,0px))] text-center md:px-8 md:pb-24">
         
         {/* Site Logo with smooth spring entry */}
