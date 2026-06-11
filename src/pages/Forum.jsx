@@ -279,7 +279,7 @@ const ForumPostCard = memo(function ForumPostCard({
     <motion.article
       ref={ref}
       initial={{ opacity: 0, y: 24 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.07, 0.35), duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
       style={isTouch ? {} : { rotateX, rotateY, transformPerspective: 1200 }}
       onMouseMove={isTouch ? undefined : handleMouseMove}
@@ -659,7 +659,7 @@ const ForumPostCard = memo(function ForumPostCard({
         <motion.div
           className="h-full"
           initial={{ width: 0 }}
-          animate={isInView ? { width: `${recency * 100}%` } : { width: 0 }}
+          animate={{ width: `${recency * 100}%` }}
           transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
           style={{
             background: `linear-gradient(90deg, hsl(${meta.hue}, 70%, 50%, 0.6), hsl(${meta.hue}, 70%, 50%, 0.1))`,
