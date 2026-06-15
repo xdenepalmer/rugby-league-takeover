@@ -29,6 +29,11 @@
       },
       "description": "Homepage background video URLs"
     },
+    "contact_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Public contact email shown in the footer and used as the sender for site emails"
+    },
     "social_facebook_url": {
       "type": "string",
       "description": "Facebook community link shown on the public site"
