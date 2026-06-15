@@ -51,6 +51,7 @@ const defaults = {
   merch_description: "Browse official Rugby League Takeover merch and checkout securely in AUD.",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
   footer_powered_by: "DENEO.AI",
+  contact_email: "",
   countdown_enabled: true,
   countdown_title: "The takeover begins in",
   countdown_subtitle: "Las Vegas • NRL Takeover",
@@ -552,6 +553,9 @@ export default function SiteSettingsManager({ settings }) {
                         </LabeledField>
                         <LabeledField label="Powered By" help="Attribution line.">
                           <Input placeholder="DENEO.AI" value={draft.footer_powered_by || ""} onChange={(e) => update("footer_powered_by", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Contact Email" help="Shown in the footer for visitor inquiries." fullWidth>
+                          <Input placeholder="admin@rugbyleaguetakeover.com" value={draft.contact_email || ""} onChange={(e) => update("contact_email", e.target.value)} />
                         </LabeledField>
                       </div>
                       <div className="flex items-center gap-2 px-3 py-2 border-l-2 border-primary/40 bg-primary/5 mt-4">

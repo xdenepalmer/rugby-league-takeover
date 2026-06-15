@@ -521,7 +521,12 @@ export default function Home() {
           {/* Bottom bar */}
           <div className="border-t border-border/50 px-5 py-5">
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 sm:flex-row sm:justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
+                {settings.contact_email && (
+                  <a href={`mailto:${settings.contact_email}`} className="text-[10px] text-primary/80 hover:text-primary transition-colors">{settings.contact_email}</a>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 <span>Powered by</span>
                 <span className="inline-flex items-center border border-sky-400/25 bg-white px-2.5 py-1.5 shadow-[0_0_18px_rgba(14,165,233,0.22)]">
