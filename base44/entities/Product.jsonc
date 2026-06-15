@@ -26,15 +26,29 @@
     "stock_quantity": {
       "type": "number",
       "default": 0,
-      "description": "Available stock"
+      "description": "Total available stock (set manually or sum of per-size stock)"
     },
     "sizes": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "string",
+            "description": "Size label e.g. S, M, L, XL"
+          },
+          "stock_quantity": {
+            "type": "number",
+            "default": 0,
+            "description": "Stock count for this specific size"
+          }
+        },
+        "required": [
+          "size"
+        ]
       },
       "default": [],
-      "description": "Available sizes for this product (e.g. ['S','M','L','XL']) \u2014 leave empty if sizing does not apply"
+      "description": "Size variants with per-size stock \u2014 leave empty if sizing does not apply"
     },
     "coming_soon": {
       "type": "boolean",

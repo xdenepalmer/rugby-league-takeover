@@ -141,9 +141,53 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
 
           <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
 
-          <div className="space-y-1">
-            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sizes (comma-separated, e.g. S,M,L,XL,2XL)</label>
-            <Input placeholder="S,M,L,XL" value={(draft.sizes || []).join(",")} onChange={(e) => setDraft({ ...draft, sizes: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} className="h-11 rounded-none border-border/40 text-sm" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Size Variants (with per-size stock)</label>
+              <button type="button" onClick={() => {
+                const next = [...(draft.sizes || [])];
+                next.push({ size: "", stock_quantity: 0 });
+                setDraft({ ...draft, sizes: next });
+              }} className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline cursor-pointer">+ Add Size</button>
+            </div>
+            {(draft.sizes || []).map((v, i) => {
+              const sizeObj = typeof v === "string" ? { size: v, stock_quantity: 0 } : v;
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    placeholder="e.g. S"
+                    value={sizeObj.size || ""}
+                    onChange={(e) => {
+                      const next = [...(draft.sizes || [])];
+                      next[i] = { ...sizeObj, size: e.target.value };
+                      setDraft({ ...draft, sizes: next });
+                    }}
+                    className="h-11 w-24 rounded-none border-border/40 text-sm shrink-0"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Stock"
+                    value={sizeObj.stock_quantity ?? 0}
+                    onChange={(e) => {
+                      const next = [...(draft.sizes || [])];
+                      next[i] = { ...sizeObj, stock_quantity: Number(e.target.value) };
+                      setDraft({ ...draft, sizes: next });
+                    }}
+                    className="h-11 w-20 rounded-none border-border/40 text-sm shrink-0"
+                  />
+                  <button type="button" onClick={() => {
+                    const next = [...(draft.sizes || [])];
+                    next.splice(i, 1);
+                    setDraft({ ...draft, sizes: next });
+                  }} className="touch-target flex items-center justify-center text-muted-foreground/40 hover:text-destructive" aria-label="Remove size">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+            {(draft.sizes || []).length === 0 && (
+              <p className="text-[10px] text-muted-foreground/30 italic">No size variants — leave empty if sizing doesn't apply</p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -294,9 +338,53 @@ export default function ProductsManager({ products, loading }) {
                     <Input type="number" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sizes (comma-separated, e.g. S,M,L,XL,2XL)</label>
-                  <Input placeholder="S,M,L,XL" value={(draft.sizes || []).join(",")} onChange={(e) => setDraft({ ...draft, sizes: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} className="h-11 rounded-none border-border/40 text-sm" />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Size Variants (with per-size stock)</label>
+                    <button type="button" onClick={() => {
+                      const next = [...(draft.sizes || [])];
+                      next.push({ size: "", stock_quantity: 0 });
+                      setDraft({ ...draft, sizes: next });
+                    }} className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline cursor-pointer">+ Add Size</button>
+                  </div>
+                  {(draft.sizes || []).map((v, i) => {
+                    const sizeObj = typeof v === "string" ? { size: v, stock_quantity: 0 } : v;
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          placeholder="e.g. S"
+                          value={sizeObj.size || ""}
+                          onChange={(e) => {
+                            const next = [...(draft.sizes || [])];
+                            next[i] = { ...sizeObj, size: e.target.value };
+                            setDraft({ ...draft, sizes: next });
+                          }}
+                          className="h-11 w-24 rounded-none border-border/40 text-sm shrink-0"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Stock"
+                          value={sizeObj.stock_quantity ?? 0}
+                          onChange={(e) => {
+                            const next = [...(draft.sizes || [])];
+                            next[i] = { ...sizeObj, stock_quantity: Number(e.target.value) };
+                            setDraft({ ...draft, sizes: next });
+                          }}
+                          className="h-11 w-20 rounded-none border-border/40 text-sm shrink-0"
+                        />
+                        <button type="button" onClick={() => {
+                          const next = [...(draft.sizes || [])];
+                          next.splice(i, 1);
+                          setDraft({ ...draft, sizes: next });
+                        }} className="touch-target flex items-center justify-center text-muted-foreground/40 hover:text-destructive" aria-label="Remove size">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {(draft.sizes || []).length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/30 italic">No size variants — leave empty if sizing doesn't apply</p>
+                  )}
                 </div>
                 <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
                   <Plus className="mr-1.5 h-3 w-3" /> {createMutation.isPending ? "Adding…" : "Add Product"}

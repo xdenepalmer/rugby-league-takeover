@@ -218,29 +218,37 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
 });
 
 /* ── apparel sizing options and descriptions ── */
+function normalizeSizeVariants(raw) {
+  if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
+  return raw.map(v => typeof v === "string" ? { size: v, stock_quantity: 0 } : v);
+}
+
 function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user }) {
   const [quantity, setQuantity] = useState(1);
-  const productSizes = product.sizes?.length ? product.sizes : ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
-  const defaultSize = productSizes.includes("M") ? "M" : productSizes[0] || "M";
+  const variants = useMemo(() => normalizeSizeVariants(product?.sizes), [product?.sizes]);
+  const variantLabels = useMemo(() => variants.map(v => v.size), [variants]);
+  const hasSizes = variantLabels.length > 0;
+  const defaultSize = variantLabels.includes("M") ? "M" : variantLabels[0] || "M";
   const [selectedSize, setSelectedSize] = useState(defaultSize);
+
+  const selectedVariant = useMemo(() => variants.find(v => v.size === selectedSize), [variants, selectedSize]);
 
   useEffect(() => {
     if (isOpen) {
-      const sizes = product.sizes?.length ? product.sizes : ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
-      const def = sizes.includes("M") ? "M" : sizes[0] || "M";
+      const v = normalizeSizeVariants(product?.sizes);
+      const labels = v.map(x => x.size);
+      const def = labels.includes("M") ? "M" : labels[0] || "M";
       setSelectedSize(def);
       setQuantity(1);
     }
-  }, [isOpen, product.sizes]);
+  }, [isOpen, product?.sizes]);
 
   if (!isOpen || !product) return null;
 
-  const stock = Number(product.stock_quantity);
+  const totalStock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
-  const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
+  const soldOut = !comingSoon && Number.isFinite(totalStock) && totalStock <= 0;
   const inCart = cart.find(item => item.id === product.id && item.size === (hasSizes ? selectedSize : undefined));
-  
-  const hasSizes = productSizes.length > 0;
 
   const handleAdd = () => {
     addToCart(product, hasSizes ? selectedSize : undefined);
@@ -315,13 +323,13 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                 <div className="mt-4">
                   {/* Stock status indicator */}
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                    <span className={comingSoon ? "text-primary" : soldOut ? "text-destructive" : stock <= 5 ? "text-amber-400" : "text-emerald-400"}>
-                      {comingSoon ? "Coming Soon" : soldOut ? "Sold Out" : stock <= 5 ? `Only ${stock} left!` : "In Stock"}
+                    <span className={comingSoon ? "text-primary" : soldOut ? "text-destructive" : totalStock <= 5 ? "text-amber-400" : "text-emerald-400"}>
+                      {comingSoon ? "Coming Soon" : soldOut ? "Sold Out" : totalStock <= 5 ? `Only ${totalStock} left!` : "In Stock"}
                     </span>
-                    <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : stock} left`}</span>
+                    <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : totalStock} left`}</span>
                   </div>
                   <div className="h-1 w-full bg-border overflow-hidden mt-1.5">
-                    <div className={`h-full ${comingSoon ? "bg-primary" : soldOut ? "bg-destructive" : stock <= 5 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${comingSoon ? 100 : Number.isFinite(stock) ? Math.min(100, Math.max(0, (stock / 15) * 100)) : 100}%` }} />
+                    <div className={`h-full ${comingSoon ? "bg-primary" : soldOut ? "bg-destructive" : totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${comingSoon ? 100 : Number.isFinite(totalStock) ? Math.min(100, Math.max(0, (totalStock / 15) * 100)) : 100}%` }} />
                   </div>
                 </div>
               </div>
@@ -344,19 +352,37 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {productSizes.map(size => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`h-11 w-11 text-xs font-bold border transition-all cursor-pointer ${
-                        selectedSize === size 
-                          ? "border-primary bg-primary text-primary-foreground font-extrabold" 
-                          : "border-border bg-background/50 text-slate-300 hover:border-primary/50"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {variants.map(v => {
+                    const sizeStock = Number(v.stock_quantity);
+                    const isOut = Number.isFinite(sizeStock) && sizeStock <= 0;
+                    const isSelected = selectedSize === v.size;
+                    return (
+                      <button
+                        key={v.size}
+                        onClick={() => !isOut && setSelectedSize(v.size)}
+                        disabled={isOut}
+                        className={`h-11 w-11 text-xs font-bold border transition-all ${
+                          isOut ? "border-border/20 bg-muted/10 text-muted-foreground/30 cursor-not-allowed line-through" :
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground font-extrabold cursor-pointer" 
+                            : "border-border bg-background/50 text-slate-300 hover:border-primary/50 cursor-pointer"
+                        }`}
+                      >
+                        {v.size}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Per-size stock badges */}
+                <div className="flex flex-wrap gap-1.5 text-[9px] font-bold uppercase tracking-wider">
+                  {variants.map(v => {
+                    const sizeStock = Number(v.stock_quantity);
+                    return (
+                      <span key={v.size} className={`px-1.5 py-0.5 border ${Number.isFinite(sizeStock) && sizeStock <= 0 ? "border-destructive/20 text-destructive/50" : sizeStock <= 3 ? "border-amber-500/20 text-amber-400" : "border-emerald-500/20 text-emerald-400"}`}>
+                        {v.size}: {Number.isFinite(sizeStock) && sizeStock <= 0 ? "Sold" : `${sizeStock} left`}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -389,10 +415,15 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                 <div className="flex items-center border border-border h-12 bg-background">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">-</button>
                   <span className="w-8 text-center font-mono font-bold">{quantity}</span>
-                  <button onClick={() => setQuantity(q => Number.isFinite(stock) ? Math.min(stock, q + 1) : q + 1)} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
+                  <button onClick={() => {
+                    const maxQty = selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)
+                      ? selectedVariant.stock_quantity
+                      : Number.isFinite(totalStock) ? totalStock : 99;
+                    setQuantity(q => Math.min(maxQty, q + 1));
+                  }} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
                 </div>
-                <Button onClick={handleAdd} disabled={Number.isFinite(stock) && quantity > stock} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
-                {Number.isFinite(stock) && quantity > stock ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
+                <Button onClick={handleAdd} disabled={quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99))} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
+                {quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99)) ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
                 </Button>
               </div>
             )}
@@ -649,15 +680,28 @@ export default function Store() {
 
   const addToCart = useCallback((product, size) => {
     if (product.coming_soon === true) return;
-    const stock = Number(product.stock_quantity);
-    if (Number.isFinite(stock) && stock <= 0) return;
+
+    // Determine max quantity: per-size stock takes priority, fall back to total stock
+    let maxQuantity = 20;
+    if (size) {
+      const variants = normalizeSizeVariants(product.sizes);
+      const variant = variants.find(v => v.size === size);
+      if (variant) {
+        const vs = Number(variant.stock_quantity);
+        if (Number.isFinite(vs)) maxQuantity = Math.min(vs, 20);
+      }
+    }
+    if (maxQuantity === 20) {
+      const total = Number(product.stock_quantity);
+      if (Number.isFinite(total)) maxQuantity = Math.min(total, 20);
+    }
+    if (maxQuantity <= 0) return;
 
     const cartItemId = product.id + (size ? "-" + size : "");
 
     setCart((curr) => {
       const existing = curr.find((item) => item.cartItemId === cartItemId);
       if (existing) {
-        const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
         if (existing.quantity >= maxQuantity) {
           toast({ title: "Stock limit reached", description: `You can add up to ${maxQuantity} of this item.` });
         }
