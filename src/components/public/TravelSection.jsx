@@ -47,7 +47,8 @@ export default function TravelSection({ packages, settings = {} }) {
     consent_to_contact: false, 
     website: "",
     travel_type: "",
-    budget_range: ""
+    budget_range: "",
+    fan_events_only: false
   };
   const [form, setForm] = useState(emptyForm);
   const [_submitted, setSubmitted] = useState(false);
@@ -103,12 +104,12 @@ export default function TravelSection({ packages, settings = {} }) {
       if (!appParams.hasBase44Config) return { skipped: true };
       if (isLikelyBotSubmission(data)) return { skipped: true };
       
-      const tripNote = `[Travel Type: ${data.travel_type || "N/A"}] [Budget: ${data.budget_range || "N/A"}] ${data.trip_details || ""}`;
+      const tripNote = `[Travel Type: ${data.travel_type || "N/A"}] [Budget: ${data.budget_range || "N/A"}] [Fan Events Only: ${data.fan_events_only ? "Yes" : "No"}] ${data.trip_details || ""}`;
       const clean = normalizeInterestRegistration({
         ...data,
         trip_details: tripNote
       });
-      const response = await base44.functions.invoke("submitRegistration", { ...clean, website: data.website });
+      const response = await base44.functions.invoke("submitRegistration", { ...clean, website: data.website, fan_events_only: data.fan_events_only || false });
       return response.data;
     },
     onSuccess: () => {
@@ -403,6 +404,18 @@ export default function TravelSection({ packages, settings = {} }) {
                         className="min-h-20 rounded-none bg-background/50 border-border text-sm resize-none"
                       />
                     </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="flex items-start gap-3 border border-border bg-background/30 p-3 text-[10.5px] leading-relaxed text-muted-foreground select-none cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.fan_events_only}
+                          onChange={(e) => setForm({ ...form, fan_events_only: e.target.checked })}
+                          className="mt-0.5 h-[18px] w-[18px] rounded-none border-border bg-background/40 checked:bg-primary accent-primary focus:ring-2 focus:ring-primary"
+                        />
+                        <span>Send me Fan events info only <span className="text-slate-500">(skip travel packages, just events &amp; meetups)</span></span>
+                      </label>
+                    </div>
                   </div>
 
                   <div className="pt-6 flex justify-between">
@@ -437,6 +450,9 @@ export default function TravelSection({ packages, settings = {} }) {
                     <div><span className="text-primary font-bold">EMAIL:</span> {form.email}</div>
                     <div><span className="text-primary font-bold">PARTY:</span> {form.travel_type ? form.travel_type.toUpperCase() : "—"}</div>
                     <div><span className="text-primary font-bold">BUDGET:</span> {form.budget_range ? form.budget_range.replace("budget-", "").toUpperCase() : "—"}</div>
+                    {form.fan_events_only && (
+                      <div><span className="text-primary font-bold">FAN EVENTS ONLY:</span> Yes — skip travel packages, send event &amp; meetup info only</div>
+                    )}
                     <div><span className="text-primary font-bold">SUPPORT TEAM:</span> {form.team_supported}</div>
                   </div>
 

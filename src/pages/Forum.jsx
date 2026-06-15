@@ -1166,8 +1166,8 @@ export default function Forum() {
                 </span>
               </div>
               <h1 className="font-display text-4xl sm:text-6xl md:text-7xl uppercase tracking-tight leading-[0.92]">
-                <span className="block">Rugby in</span>
-                <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">Vegas</span>
+                <span className="block">Footy Fan</span>
+                <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">Forum</span>
               </h1>
               <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground/60 sm:mt-4 sm:leading-relaxed">
                 Connect with fellow Rugby League fans heading to Las Vegas. Share tips, plan meetups, and get the inside word on the takeover.

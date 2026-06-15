@@ -27,6 +27,11 @@
       "type": "string",
       "description": "Free-text trip requirements: what trip, how many days, hotel type, customisation"
     },
+    "fan_events_only": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt-in: send fan events info only, skip travel packages"
+    },
     "consent_to_contact": {
       "type": "boolean",
       "default": false,

@@ -257,12 +257,12 @@ ${item.blurb || ""}`;
         </div>
 
         {/* Events Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={`grid gap-6 ${filteredEvents.length === 1 ? "max-w-2xl mx-auto" : "lg:grid-cols-2"}`}>
           {filteredEvents.map((item, index) => (
             <EventCard 
               key={item.id || index} 
               event={item} 
-              featured={filteredEvents.length > 1 && index === 0} 
+              featured={false} 
               index={index} 
               onClick={setSelectedEvent}
             />

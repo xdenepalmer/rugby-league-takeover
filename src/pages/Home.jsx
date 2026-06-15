@@ -90,9 +90,9 @@ function LiveHudDashboard({ settings = {} }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <PublicActionCard
               icon={Plane}
-              eyebrow="Travel"
-              title="Register interest"
-              body="Get ready for flights, hotels, events, and supporter package drops."
+              eyebrow="Travel &amp; Events"
+              title="Travel and Fan events"
+              body="Get ready for flights, hotels, supporter meetups, pool parties, and package drops."
               action="Register now"
               href="#travel-registration"
               onClick={scrollToSection("#travel-registration")}

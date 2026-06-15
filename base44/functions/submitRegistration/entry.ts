@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
       postcode: trimToLength(input?.postcode, 20),
       team_supported: team,
       trip_details: trimToLength(input?.trip_details, 1000),
+      fan_events_only: input?.fan_events_only === true,
       consent_to_contact: true,
       consent_timestamp: new Date().toISOString(),
       source: 'homepage_travel_form',
