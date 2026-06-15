@@ -219,39 +219,38 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
 
 /* ── apparel sizing options and descriptions ── */
 function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user }) {
-  const [selectedSize, setSelectedSize] = useState("M");
   const [quantity, setQuantity] = useState(1);
+  const productSizes = product.sizes?.length ? product.sizes : ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+  const defaultSize = productSizes.includes("M") ? "M" : productSizes[0] || "M";
+  const [selectedSize, setSelectedSize] = useState(defaultSize);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSize("M");
+      const sizes = product.sizes?.length ? product.sizes : ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+      const def = sizes.includes("M") ? "M" : sizes[0] || "M";
+      setSelectedSize(def);
       setQuantity(1);
     }
-  }, [isOpen]);
+  }, [isOpen, product.sizes]);
 
   if (!isOpen || !product) return null;
 
   const stock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
-  const inCart = cart.find(item => item.id === product.id && item.size === (product.category === "Apparel" ? selectedSize : undefined));
+  const inCart = cart.find(item => item.id === product.id && item.size === (hasSizes ? selectedSize : undefined));
   
-  const isApparel = product.category === "Apparel" || 
-                    product.name.toLowerCase().includes("jersey") || 
-                    product.name.toLowerCase().includes("tee") || 
-                    product.name.toLowerCase().includes("hoodie");
-
-  const sizes = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+  const hasSizes = productSizes.length > 0;
 
   const handleAdd = () => {
-    addToCart(product, isApparel ? selectedSize : undefined);
+    addToCart(product, hasSizes ? selectedSize : undefined);
     // Add additional quantities if selected
     if (quantity > 1) {
       for (let i = 1; i < quantity; i++) {
-        addToCart(product, isApparel ? selectedSize : undefined);
+        addToCart(product, hasSizes ? selectedSize : undefined);
       }
     }
-    const sizeNote = isApparel ? "(Size " + selectedSize + ") " : "";
+    const sizeNote = hasSizes ? "(Size " + selectedSize + ") " : "";
     toast({
       title: "Added to Cart",
       description: `${product.name} ${sizeNote}x${quantity} added to cart.`,
@@ -329,7 +328,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
             </div>
 
             {/* Sizing selection */}
-            {isApparel && !comingSoon && !soldOut && (
+            {hasSizes && !comingSoon && !soldOut && (
               <div className="space-y-2 border-t border-border/20 pt-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Select Size</h3>
@@ -345,7 +344,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {sizes.map(size => (
+                  {productSizes.map(size => (
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
@@ -363,7 +362,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
             )}
 
             {/* Sizing Details */}
-            {isApparel && (
+            {hasSizes && (
               <div className="border border-border/30 bg-muted/5 p-4 space-y-1.5 text-[11px] text-slate-300 font-medium">
                 <span className="font-bold uppercase text-slate-200 block mb-1">Standard Fit &amp; Care</span>
                 <p>• Heavyweight cotton fit. For an oversized fit, select one size up.</p>

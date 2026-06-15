@@ -252,7 +252,7 @@ export default function TravelSection({ packages, settings = {} }) {
               </h3>
               
               <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                Ensure you are in the first supporter group contacted when flights, ticket unlocks, and hotel packages drop.
+                Ensure you are the first Fan/s contacted when Events and Fan Meetups drop. Also register your interest in any of the travel packages we have on offer.
               </p>
 
               {/* Progress Steps Indicators */}

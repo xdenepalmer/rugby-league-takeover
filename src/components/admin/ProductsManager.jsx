@@ -19,7 +19,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", image_url: "", price_aud: 0, stock_quantity: 0, is_active: true, sort_order: 1 };
+const emptyProduct = { name: "", description: "", image_url: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1 };
 
 /* ── Product Card ── */
 function ProductCard({ product, onUpdate, onDelete, index, saving }) {
@@ -140,6 +140,11 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
           </div>
 
           <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
+
+          <div className="space-y-1">
+            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sizes (comma-separated, e.g. S,M,L,XL,2XL)</label>
+            <Input placeholder="S,M,L,XL" value={(draft.sizes || []).join(",")} onChange={(e) => setDraft({ ...draft, sizes: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} className="h-11 rounded-none border-border/40 text-sm" />
+          </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <label className="touch-target inline-flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -288,6 +293,10 @@ export default function ProductsManager({ products, loading }) {
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sort Order</label>
                     <Input type="number" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sizes (comma-separated, e.g. S,M,L,XL,2XL)</label>
+                  <Input placeholder="S,M,L,XL" value={(draft.sizes || []).join(",")} onChange={(e) => setDraft({ ...draft, sizes: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} className="h-11 rounded-none border-border/40 text-sm" />
                 </div>
                 <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
                   <Plus className="mr-1.5 h-3 w-3" /> {createMutation.isPending ? "Adding…" : "Add Product"}

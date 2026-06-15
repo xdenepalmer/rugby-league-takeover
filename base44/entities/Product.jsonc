@@ -28,6 +28,14 @@
       "default": 0,
       "description": "Available stock"
     },
+    "sizes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Available sizes for this product (e.g. ['S','M','L','XL']) \u2014 leave empty if sizing does not apply"
+    },
     "coming_soon": {
       "type": "boolean",
       "default": false,
