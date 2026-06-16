@@ -82,7 +82,11 @@
     "selected_team"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": true,
     "update": {
       "$or": [

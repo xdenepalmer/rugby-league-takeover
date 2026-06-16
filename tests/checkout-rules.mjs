@@ -139,6 +139,20 @@ export function getNextStockQuantity(product, purchasedQuantity) {
   return Math.max(0, stock - toPositiveInteger(purchasedQuantity));
 }
 
+// Webhook-time oversell detection (mirrors stripeWebhook). Returns the product
+// ids whose paid quantity exceeded available stock at fulfillment — so the order
+// can be flagged for admin review instead of silently shipping gone inventory.
+export function detectOversoldItems(lineItems, getProduct) {
+  const oversold = [];
+  for (const item of lineItems || []) {
+    if (!item.product_id) continue;
+    const available = getTrackedStock(getProduct(item.product_id));
+    if (available === null) continue;
+    if (toPositiveInteger(item.quantity) > available) oversold.push(item.product_id);
+  }
+  return oversold;
+}
+
 function parseOrigin(value) {
   try {
     return new URL(String(value || "")).origin;

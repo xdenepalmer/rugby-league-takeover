@@ -758,7 +758,9 @@ export default function ScorePredictor({ onSharePrediction }) {
   const activeGame = fixtures.find((g) => g.id === activeGameId) || fixtures[0];
 
   const createTip = useMutation({
-    mutationFn: (payload) => base44.entities.TippingEntry.create(payload),
+    // Routed through submitTip so the kickoff deadline is enforced server-side
+    // (TippingEntry.create is admin-only; the client UI lock alone is bypassable).
+    mutationFn: (payload) => base44.functions.invoke("submitTip", payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tippingEntries"] }),
   });
 
