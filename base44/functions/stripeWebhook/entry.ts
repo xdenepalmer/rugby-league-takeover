@@ -31,12 +31,6 @@ function isPaidSessionForOrder(session, order, expectedAppId = '') {
   return { ok: true };
 }
 
-function getNextStockQuantity(product, purchasedQuantity) {
-  const stock = getTrackedStock(product);
-  if (stock === null) return null;
-  return Math.max(0, stock - toPositiveInteger(purchasedQuantity));
-}
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -68,6 +62,26 @@ Deno.serve(async (req) => {
           ? [shipping.name, shipping.address.line1, shipping.address.line2, shipping.address.city, shipping.address.state, shipping.address.postal_code, shipping.address.country].filter(Boolean).join(', ')
           : order.shipping_address || '';
 
+        // Decrement stock and detect oversell. Checkout has no atomic reservation
+        // (Base44 has no transactions), so two concurrent buyers can both pass the
+        // checkout-time stock check. We never let stock go negative, but we DO flag
+        // when paid quantity exceeded available stock at payment time, so the admin
+        // can refund/backorder instead of silently shipping inventory that's gone.
+        const stockUpdates = [];
+        const oversoldItems = [];
+        for (const item of order.line_items || []) {
+          if (!item.product_id) continue;
+          const product = await base44.asServiceRole.entities.Product.get(item.product_id);
+          const available = getTrackedStock(product);
+          if (available === null) continue; // untracked stock — unlimited
+          const purchased = toPositiveInteger(item.quantity);
+          if (purchased > available) {
+            oversoldItems.push(`${product.name || item.product_id} (ordered ${purchased}, had ${available})`);
+          }
+          stockUpdates.push({ id: product.id, stock_quantity: Math.max(0, available - purchased) });
+        }
+
+        const oversold = oversoldItems.length > 0;
         await base44.asServiceRole.entities.StoreOrder.update(orderId, {
           status: 'paid',
           stripe_session_id: session.id,
@@ -76,20 +90,19 @@ Deno.serve(async (req) => {
           stripe_payment_status: session.payment_status,
           payment_verified_at: paidAt,
           shipping_address: shippingAddress,
-          customer_status_note: 'Payment confirmed. Your order is being prepared.',
+          stock_oversold: oversold,
+          customer_status_note: oversold
+            ? 'Payment confirmed. One or more items sold out as you ordered — our team will be in touch about your order.'
+            : 'Payment confirmed. Your order is being prepared.',
           timeline: [
             ...(Array.isArray(order.timeline) ? order.timeline : []),
-            { action: 'payment_confirmed', timestamp: paidAt, note: 'Stripe payment verified', actor: 'stripe' }
+            { action: 'payment_confirmed', timestamp: paidAt, note: 'Stripe payment verified', actor: 'stripe' },
+            ...(oversold ? [{ action: 'stock_oversold', timestamp: paidAt, note: `Oversell needs review: ${oversoldItems.join('; ')}`, actor: 'system' }] : [])
           ]
         });
 
-        for (const item of order.line_items || []) {
-          if (!item.product_id) continue;
-          const product = await base44.asServiceRole.entities.Product.get(item.product_id);
-          const nextStock = getNextStockQuantity(product, item.quantity);
-          if (nextStock !== null) {
-            await base44.asServiceRole.entities.Product.update(product.id, { stock_quantity: nextStock });
-          }
+        for (const update of stockUpdates) {
+          await base44.asServiceRole.entities.Product.update(update.id, { stock_quantity: update.stock_quantity });
         }
       }
     }

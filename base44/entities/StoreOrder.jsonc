@@ -128,6 +128,11 @@
       },
       "default": [],
       "description": "Order audit trail: [{action, timestamp, note, actor}]"
+    },
+    "stock_oversold": {
+      "type": "boolean",
+      "default": false,
+      "description": "Paid quantity exceeded available stock at payment time — needs admin review (refund/backorder)"
     }
   },
   "required": [
