@@ -1,0 +1,69 @@
+{
+  "name": "AchievementUnlock",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "App user ID who unlocked the achievement"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "App user email who unlocked the achievement"
+    },
+    "achievement_id": {
+      "type": "string",
+      "description": "Catalog achievement id (see src/lib/achievements.js)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Achievement category at unlock time"
+    },
+    "tier": {
+      "type": "string",
+      "description": "Achievement tier at unlock time"
+    },
+    "reward_chips": {
+      "type": "number",
+      "default": 0,
+      "description": "One-time chips awarded for this unlock"
+    },
+    "unlocked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the achievement was unlocked"
+    }
+  },
+  "required": [
+    "user_id",
+    "achievement_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
