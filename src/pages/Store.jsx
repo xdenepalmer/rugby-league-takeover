@@ -605,8 +605,12 @@ export default function Store() {
     let changed = false;
     const nextCart = cart.flatMap((item) => {
       const product = productsById.get(item.id);
-      const stock = Number(product?.stock_quantity);
-      if (!product || product.coming_soon === true || (Number.isFinite(stock) && stock <= 0)) {
+      if (!product) {
+        changed = true;
+        return [];
+      }
+      const stock = Number(product.stock_quantity);
+      if (product.coming_soon === true || (Number.isFinite(stock) && stock <= 0)) {
         changed = true;
         return [];
       }
@@ -684,7 +688,7 @@ export default function Store() {
     // Determine max quantity: per-size stock takes priority, fall back to total stock
     let maxQuantity = 20;
     if (size) {
-      const variants = normalizeSizeVariants(product.sizes);
+      const variants = normalizeSizeVariants(product?.sizes);
       const variant = variants.find(v => v.size === size);
       if (variant) {
         const vs = Number(variant.stock_quantity);
