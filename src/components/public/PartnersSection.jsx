@@ -189,7 +189,7 @@ export default function PartnersSection({ settings = {} }) {
         </div>
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground mb-4">Interested in partnering with us?</p>
-          <a href="mailto:info@rugbyleaguetakeover.com" className="inline-flex items-center gap-2 border border-accent/30 bg-accent/5 px-6 py-3 text-sm font-bold uppercase tracking-widest text-accent transition-all hover:bg-accent/10 hover:border-accent/50 hover:shadow-[0_0_20px_hsl(var(--accent)/0.15)]">
+          <a href="mailto:admin@rugbyleaguetakeover.com" className="inline-flex items-center gap-2 border border-accent/30 bg-accent/5 px-6 py-3 text-sm font-bold uppercase tracking-widest text-accent transition-all hover:bg-accent/10 hover:border-accent/50 hover:shadow-[0_0_20px_hsl(var(--accent)/0.15)]">
             Become a Partner
           </a>
         </div>
