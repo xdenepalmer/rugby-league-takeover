@@ -197,22 +197,11 @@ export default function TravelSection({ packages, settings = {} }) {
                   <h3 className="font-display text-2xl uppercase leading-none text-foreground group-hover:text-primary transition-colors duration-300">
                     {pkg.name}
                   </h3>
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground whitespace-pre-line">
                     {pkg.description}
                   </p>
 
-                  {/* Bulleted inclusions list */}
-                  <div className="mt-4 border-t border-border/30 pt-4">
-                    <p className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest mb-2">Likely Inclusions:</p>
-                    <ul className="space-y-1.5">
-                      {pkg.inclusions.map((inclusion, i) => (
-                        <li key={i} className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                          <span className="h-1 w-1 bg-accent rounded-full shrink-0" />
-                          <span>{inclusion}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+
                 </div>
                 
                 {/* Status Indicator */}
