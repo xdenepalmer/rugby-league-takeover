@@ -34,10 +34,15 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [draft, setDraft] = useState({ name: pkg.name || "", description: pkg.description || "", sort_order: pkg.sort_order || 1, image_url: pkg.image_url || "", is_coming_soon: pkg.is_coming_soon !== false });
 
   const descPreview = pkg.description?.length > 100
     ? pkg.description.slice(0, 100) + "…"
     : pkg.description;
+
+  const handleSave = () => {
+    updateMutation.mutate({ id: pkg.id, data: draft }, { onSuccess: () => setEditing(false) });
+  };
 
   return (
     <motion.div
@@ -87,44 +92,54 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
           <div className="grid gap-4 md:grid-cols-2">
             <FieldLabel label="Package Name" icon={Package} helpText="Display name shown on the homepage">
               <Input
-                defaultValue={pkg.name || ""}
-                onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { name: e.target.value } })}
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 className="h-11 rounded-none"
               />
             </FieldLabel>
             <FieldLabel label="Sort Order" icon={ArrowUpDown} helpText="Lower numbers appear first">
               <Input
                 type="number"
-                defaultValue={pkg.sort_order || 1}
-                onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { sort_order: Number(e.target.value) } })}
+                value={draft.sort_order}
+                onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })}
                 className="h-11 rounded-none"
               />
             </FieldLabel>
             <FieldLabel label="Description" className="md:col-span-2" helpText="Brief summary shown in the package card">
               <Textarea
-                defaultValue={pkg.description || ""}
-                onBlur={(e) => updateMutation.mutate({ id: pkg.id, data: { description: e.target.value } })}
+                value={draft.description}
+                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                 className="min-h-24 rounded-none"
               />
             </FieldLabel>
             <ImageField
               label="Package image"
-              value={pkg.image_url}
-              onChange={(url) => updateMutation.mutate({ id: pkg.id, data: { image_url: url } })}
+              value={draft.image_url}
+              onChange={(url) => setDraft({ ...draft, image_url: url })}
               className="md:col-span-2"
             />
             <div className="flex items-end gap-3 pb-1">
               <FieldLabel label="Coming Soon">
                 <div className="flex items-center gap-2 h-10">
                   <Switch
-                    checked={pkg.is_coming_soon !== false}
-                    onCheckedChange={(value) => updateMutation.mutate({ id: pkg.id, data: { is_coming_soon: value } })}
+                    checked={draft.is_coming_soon}
+                    onCheckedChange={(value) => setDraft({ ...draft, is_coming_soon: value })}
                   />
                   <span className="text-xs text-muted-foreground">
-                    {pkg.is_coming_soon !== false ? "Coming Soon" : "Available Now"}
+                    {draft.is_coming_soon ? "Coming Soon" : "Available Now"}
                   </span>
                 </div>
               </FieldLabel>
+            </div>
+            <div className="md:col-span-2 flex justify-end pt-2">
+              <Button
+                onClick={handleSave}
+                disabled={updateMutation.isPending}
+                className="rounded-none bg-cyan-600 hover:bg-cyan-500 text-white h-11 px-6"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {updateMutation.isPending ? "Saving…" : "Save Changes"}
+              </Button>
             </div>
           </div>
         </div>

@@ -204,8 +204,25 @@ export default function TravelSection({ packages, settings = {} }) {
 
                 </div>
                 
+                {/* Action Buttons */}
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <a
+                    href="#travel-registration"
+                    onClick={(e) => { e.preventDefault(); document.getElementById("travel-registration")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                    className="flex items-center justify-center gap-1.5 border border-primary bg-primary/10 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                  >
+                    Register Interest
+                  </a>
+                  <a
+                    href="mailto:Claire.Mccallum@ind-flightcentre.com.au?subject=Vegas%20Travel%20Package%20Enquiry"
+                    className="flex items-center justify-center gap-1.5 border border-border bg-muted/10 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:border-accent hover:text-accent transition-all"
+                  >
+                    Email Agent
+                  </a>
+                </div>
+
                 {/* Status Indicator */}
-                <div className="mt-6 border-t border-border/30 pt-4 flex items-center justify-between">
+                <div className="mt-4 border-t border-border/30 pt-4 flex items-center justify-between">
                   <span className="text-[9px] font-mono font-bold uppercase tracking-[0.25em] text-muted-foreground">
                     Status
                   </span>
