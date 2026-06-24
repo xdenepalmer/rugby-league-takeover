@@ -220,7 +220,9 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
 /* ── apparel sizing options and descriptions ── */
 function normalizeSizeVariants(raw) {
   if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
-  return raw.map(v => typeof v === "string" ? { size: v, stock_quantity: 0 } : v);
+  return raw
+    .map(v => typeof v === "string" ? { size: v, stock_quantity: 0 } : v)
+    .filter(v => v && v.size && String(v.size).trim() !== "");
 }
 
 function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user }) {
@@ -388,7 +390,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
             )}
 
             {/* Sizing Details */}
-            {hasSizes && (
+            {hasSizes && variants.length > 0 && (
               <div className="border border-border/30 bg-muted/5 p-4 space-y-1.5 text-[11px] text-slate-300 font-medium">
                 <span className="font-bold uppercase text-slate-200 block mb-1">Standard Fit &amp; Care</span>
                 <p>• Heavyweight cotton fit. For an oversized fit, select one size up.</p>
