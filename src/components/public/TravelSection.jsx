@@ -221,6 +221,19 @@ export default function TravelSection({ packages, settings = {} }) {
                   </a>
                 </div>
 
+                {/* Direct booking / promo click-through (admin-set per package) */}
+                {pkg.booking_url && (
+                  <a
+                    href={pkg.booking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center justify-center gap-1.5 border border-accent bg-accent/10 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-accent hover:bg-accent hover:text-accent-foreground transition-all"
+                  >
+                    {pkg.booking_label || "Book Now"}
+                    <ArrowRight className="h-3 w-3" />
+                  </a>
+                )}
+
                 {/* Status Indicator */}
                 <div className="mt-4 border-t border-border/30 pt-4 flex items-center justify-between">
                   <span className="text-[9px] font-mono font-bold uppercase tracking-[0.25em] text-muted-foreground">

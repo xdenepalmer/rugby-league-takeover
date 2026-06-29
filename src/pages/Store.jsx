@@ -234,6 +234,8 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
   const [selectedSize, setSelectedSize] = useState(defaultSize);
 
   const selectedVariant = useMemo(() => variants.find(v => v.size === selectedSize), [variants, selectedSize]);
+  const gallery = useMemo(() => [product?.image_url, product?.image_url_2].filter(Boolean), [product?.image_url, product?.image_url_2]);
+  const [activeImg, setActiveImg] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -242,8 +244,9 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
       const def = labels.includes("M") ? "M" : labels[0] || "M";
       setSelectedSize(def);
       setQuantity(1);
+      setActiveImg(product?.image_url || product?.image_url_2 || "");
     }
-  }, [isOpen, product?.sizes]);
+  }, [isOpen, product?.id, product?.sizes, product?.image_url, product?.image_url_2]);
 
   if (!isOpen || !product) return null;
 
@@ -298,13 +301,30 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
 
           <div className="ios-scroll flex-1 overflow-y-auto cmd-scrollbar p-6 space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
-              {/* Product Image */}
-              <div className="aspect-square bg-muted/10 border border-border/40 overflow-hidden relative">
-                {product.image_url ? (
-                  <img src={product.image_url} alt={product.name} decoding="async" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-slate-400">
-                    <ShoppingBag className="h-12 w-12 stroke-1" />
+              {/* Product Image (+ optional 2nd photo gallery) */}
+              <div>
+                <div className="aspect-square bg-muted/10 border border-border/40 overflow-hidden relative">
+                  {activeImg ? (
+                    <img src={activeImg} alt={product.name} decoding="async" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-slate-400">
+                      <ShoppingBag className="h-12 w-12 stroke-1" />
+                    </div>
+                  )}
+                </div>
+                {gallery.length > 1 && (
+                  <div className="mt-2 flex gap-2">
+                    {gallery.map((img) => (
+                      <button
+                        key={img}
+                        type="button"
+                        onClick={() => setActiveImg(img)}
+                        className={`h-16 w-16 shrink-0 overflow-hidden border transition-colors ${activeImg === img ? "border-primary" : "border-border/40 hover:border-border"}`}
+                        aria-label="View product photo"
+                      >
+                        <img src={img} alt="" decoding="async" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -319,7 +339,11 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                   )}
                   <h2 className="font-display text-2xl uppercase tracking-wide text-foreground mt-2">{product.name}</h2>
                   <p className="text-xl font-bold font-mono text-accent mt-1">${Number(product.price_aud || 0).toFixed(2)} AUD</p>
-                  <p className="text-xs text-slate-250 leading-relaxed mt-4">{product.description}</p>
+                  {/* whitespace-pre-line preserves the line breaks/paragraphs entered in admin */}
+                  <p className="text-xs text-slate-250 leading-relaxed mt-4 whitespace-pre-line">{product.description}</p>
+                  {product.details && (
+                    <p className="text-xs text-slate-300/90 leading-relaxed mt-3 whitespace-pre-line border-t border-border/30 pt-3">{product.details}</p>
+                  )}
                 </div>
 
                 <div className="mt-4">

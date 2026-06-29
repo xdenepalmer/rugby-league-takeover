@@ -46,6 +46,18 @@
       "type": "string",
       "description": "TikTok profile link shown on the public site"
     },
+    "facebook_fans": {
+      "type": "string",
+      "description": "Editable fan-count shown on the Facebook community card (e.g. \"16.8k\")"
+    },
+    "legal_terms": {
+      "type": "string",
+      "description": "Website Terms & Conditions content (admin-editable, shown at /terms)"
+    },
+    "legal_privacy": {
+      "type": "string",
+      "description": "Privacy Policy content (admin-editable, shown at /privacy)"
+    },
     "news_eyebrow": {
       "type": "string",
       "description": "News section eyebrow"

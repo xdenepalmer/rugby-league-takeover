@@ -18,6 +18,8 @@ const Store = lazy(() => import("./pages/Store"));
 const Forum = lazy(() => import("./pages/Forum"));
 const News = lazy(() => import("./pages/News"));
 const Faq = lazy(() => import("./pages/Faq"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -70,6 +72,8 @@ const AuthenticatedApp = () => {
           <Route path="/forum" element={<Forum />} />
           <Route path="/news" element={<News />} />
           <Route path="/faq" element={<Faq />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

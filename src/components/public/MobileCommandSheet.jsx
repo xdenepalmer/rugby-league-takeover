@@ -1,16 +1,40 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
   X, Plane, Calendar, Trophy, ArrowRight,
   PenSquare, Ruler,
   Bookmark, Award, Package, Settings, HelpCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
+import { LAS_VEGAS_TIME_ZONE } from "@/lib/vegas-time";
 import SocialLinks from "./SocialLinks";
+
+/* Compact Las Vegas date for the matchup HUD (e.g. "28 FEB"). */
+const vegasShort = (kickoff) => {
+  if (!kickoff) return "TBA";
+  const d = new Date(kickoff);
+  if (Number.isNaN(d.getTime())) return "TBA";
+  return d.toLocaleDateString("en-AU", { timeZone: LAS_VEGAS_TIME_ZONE, day: "numeric", month: "short" }).toUpperCase();
+};
 
 /* ── Context-specific content sections ── */
 
 function HomeContent({ onNavigate, onClose, settings = {} }) {
+  // Real admin-managed fixtures (mirrors MatchupsSection), shown in Las Vegas time.
+  const { data: matchups = [] } = useQuery({
+    queryKey: ["matchups"],
+    queryFn: () => base44.entities.Matchup.list("sort_order", 50),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
+  const fixtures = (matchups || [])
+    .filter((m) => m.is_published !== false && m.home_team && m.away_team)
+    .slice(0, 2);
+
   return (
     <>
       {/* Quick Actions Grid */}
@@ -46,14 +70,19 @@ function HomeContent({ onNavigate, onClose, settings = {} }) {
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Vegas Matchups</span>
         </div>
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between text-[11px] border-b border-border/30 pb-1.5">
-            <span className="font-bold text-foreground">Warriors vs Raiders</span>
-            <span className="text-[10px] font-mono text-primary">AEST // 28 FEB</span>
-          </div>
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-bold text-foreground">Panthers vs Sharks</span>
-            <span className="text-[10px] font-mono text-primary">AEST // 28 FEB</span>
-          </div>
+          {fixtures.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">Fixtures announced soon — check back closer to game week.</p>
+          ) : (
+            fixtures.map((m, i) => (
+              <div
+                key={m.id || i}
+                className={`flex items-center justify-between text-[11px] ${i < fixtures.length - 1 ? "border-b border-border/30 pb-1.5" : ""}`}
+              >
+                <span className="font-bold text-foreground">{m.home_team} vs {m.away_team}</span>
+                <span className="text-[10px] font-mono text-primary">LV // {vegasShort(m.kickoff)}</span>
+              </div>
+            ))
+          )}
         </div>
         <button
           onClick={() => { onNavigate("#matchups"); onClose(); }}

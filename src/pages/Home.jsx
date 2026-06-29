@@ -142,7 +142,7 @@ function LiveHudDashboard({ settings = {} }) {
                   <Radio className="h-5 w-5" />
                 </div>
                 <span className="border border-[#1877F2]/25 bg-[#1877F2]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.24em] text-[#8dbbff]">
-                  16.8k fans
+                  {settings.facebook_fans || "16.8k"} fans
                 </span>
               </div>
               <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#8dbbff]">Facebook group</p>
@@ -521,11 +521,14 @@ export default function Home() {
           {/* Bottom bar */}
           <div className="border-t border-border/50 px-5 py-5">
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 sm:flex-row sm:justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 sm:justify-start">
                 <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{settings.footer_text || "Rugby League Takeover Las Vegas © 2026"}</p>
                 {settings.contact_email && (
                   <a href={`mailto:${settings.contact_email}`} className="text-[10px] text-primary/80 hover:text-primary transition-colors">{settings.contact_email}</a>
                 )}
+                <Link to="/terms" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70 hover:text-foreground transition-colors">Terms</Link>
+                <span className="text-muted-foreground/30">·</span>
+                <Link to="/privacy" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70 hover:text-foreground transition-colors">Privacy</Link>
               </div>
               <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 <span>Powered by</span>

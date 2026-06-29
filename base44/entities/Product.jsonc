@@ -14,6 +14,14 @@
       "type": "string",
       "description": "Product image URL"
     },
+    "image_url_2": {
+      "type": "string",
+      "description": "Second product image URL (optional gallery photo)"
+    },
+    "details": {
+      "type": "string",
+      "description": "Extra free-text details (what's included, care, sizing) shown under the description"
+    },
     "category": {
       "type": "string",
       "default": "Merch",

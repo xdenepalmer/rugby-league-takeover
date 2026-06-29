@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import { NavLink, useLocation, useOutlet, useNavigate } from "react-router-dom";
+import { NavLink, Link, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
 import { motion } from "framer-motion";
@@ -142,6 +142,11 @@ export default function PublicLayout() {
           <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
             Rugby League Takeover Las Vegas © 2026
           </p>
+          <div className="mt-2 flex items-center justify-center gap-4">
+            <Link to="/terms" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Terms &amp; Conditions</Link>
+            <span className="text-muted-foreground/30">·</span>
+            <Link to="/privacy" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Privacy Policy</Link>
+          </div>
         </footer>
       )}
 

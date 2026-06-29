@@ -569,9 +569,24 @@ export default function SiteSettingsManager({ settings }) {
                         <LabeledField label="Instagram URL" help="Shown below the Facebook link.">
                           <Input placeholder="https://instagram.com/..." value={draft.social_instagram_url || ""} onChange={(e) => update("social_instagram_url", e.target.value)} />
                         </LabeledField>
-                        <LabeledField label="TikTok URL" help="Shown below the Facebook link." fullWidth>
+                        <LabeledField label="TikTok URL" help="Shown below the Facebook link.">
                           <Input placeholder="https://tiktok.com/@..." value={draft.social_tiktok_url || ""} onChange={(e) => update("social_tiktok_url", e.target.value)} />
                         </LabeledField>
+                        <LabeledField label="Facebook fan count" help="The figure on the 'Meet the travelling crowd' card. Keep it current (e.g. 16.8k).">
+                          <Input placeholder="16.8k" value={draft.facebook_fans || ""} onChange={(e) => update("facebook_fans", e.target.value)} />
+                        </LabeledField>
+                      </div>
+
+                      <div className="mt-6 border-t border-border/30 pt-5">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Legal pages (footer)</p>
+                        <div className="grid gap-4">
+                          <LabeledField label="Terms & Conditions" help="Shown at /terms. Leave blank to use the built-in starter text. Blank lines = new paragraph; wrap a line in [brackets] for a heading." fullWidth>
+                            <Textarea placeholder="Your Terms & Conditions…" value={draft.legal_terms || ""} onChange={(e) => update("legal_terms", e.target.value)} className="min-h-40" />
+                          </LabeledField>
+                          <LabeledField label="Privacy Policy" help="Shown at /privacy. Same formatting rules as above." fullWidth>
+                            <Textarea placeholder="Your Privacy Policy…" value={draft.legal_privacy || ""} onChange={(e) => update("legal_privacy", e.target.value)} className="min-h-40" />
+                          </LabeledField>
+                        </div>
                       </div>
                     </div>
                   )}

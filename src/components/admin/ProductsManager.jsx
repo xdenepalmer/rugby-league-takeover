@@ -19,7 +19,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", image_url: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1 };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1 };
 
 /* ── Product Card ── */
 function ProductCard({ product, onUpdate, onDelete, index, saving }) {
@@ -137,9 +137,18 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
           <div className="space-y-1">
             <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Description</label>
             <Textarea value={draft.description || ""} onChange={(e) => setDraft({ ...draft, description: e.target.value })} className="min-h-16 rounded-none text-sm border-border/40 resize-none" />
+            <p className="text-[8px] text-muted-foreground/40">Line breaks and blank lines are preserved on the store page.</p>
           </div>
 
-          <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
+          <div className="space-y-1">
+            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Extra details (optional)</label>
+            <Textarea value={draft.details || ""} onChange={(e) => setDraft({ ...draft, details: e.target.value })} placeholder="What's included, care instructions, sizing notes…" className="min-h-16 rounded-none text-sm border-border/40 resize-none" />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
+            <ImageField label="Second photo (optional)" value={draft.image_url_2} onChange={(url) => setDraft({ ...draft, image_url_2: url })} />
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

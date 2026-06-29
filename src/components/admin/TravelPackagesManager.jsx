@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import ImageField from "./ImageField";
 
-const emptyPackage = { name: "", description: "", image_url: "", is_coming_soon: true, sort_order: 1 };
+const emptyPackage = { name: "", description: "", image_url: "", booking_url: "", booking_label: "", is_coming_soon: true, sort_order: 1 };
 
 /* ─── Inline label wrapper ──────────────────────────────── */
 function FieldLabel({ label, helpText, icon: Icon, children, className = "" }) {
@@ -34,7 +34,7 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [draft, setDraft] = useState({ name: pkg.name || "", description: pkg.description || "", sort_order: pkg.sort_order || 1, image_url: pkg.image_url || "", is_coming_soon: pkg.is_coming_soon !== false });
+  const [draft, setDraft] = useState({ name: pkg.name || "", description: pkg.description || "", sort_order: pkg.sort_order || 1, image_url: pkg.image_url || "", booking_url: pkg.booking_url || "", booking_label: pkg.booking_label || "", is_coming_soon: pkg.is_coming_soon !== false });
 
   const descPreview = pkg.description?.length > 100
     ? pkg.description.slice(0, 100) + "…"
@@ -118,6 +118,22 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
               onChange={(url) => setDraft({ ...draft, image_url: url })}
               className="md:col-span-2"
             />
+            <FieldLabel label="Booking link (optional)" helpText="Promo/booking URL — shows a click-through button on the card">
+              <Input
+                value={draft.booking_url}
+                onChange={(e) => setDraft({ ...draft, booking_url: e.target.value })}
+                placeholder="https://circalasvegas.book.pegsbe.com/promo?offerCode=PROMO7&hotel=CRCLV"
+                className="h-11 rounded-none"
+              />
+            </FieldLabel>
+            <FieldLabel label="Booking button label" helpText="Defaults to 'Book Now'">
+              <Input
+                value={draft.booking_label}
+                onChange={(e) => setDraft({ ...draft, booking_label: e.target.value })}
+                placeholder="Book Circa Rate"
+                className="h-11 rounded-none"
+              />
+            </FieldLabel>
             <div className="flex items-end gap-3 pb-1">
               <FieldLabel label="Coming Soon">
                 <div className="flex items-center gap-2 h-10">
