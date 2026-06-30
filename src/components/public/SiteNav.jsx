@@ -18,7 +18,8 @@ const links = [
   { label: "Events", href: "/#events" },
   { label: "Merch Shop", href: "/store" },
   { label: "Fan Forum", href: "/forum" },
-  { label: "FAQs", href: "/faq" }
+  { label: "FAQs", href: "/faq" },
+  { label: "Gallery", href: "/gallery" }
 ];
 
 const initials = (user) => {
