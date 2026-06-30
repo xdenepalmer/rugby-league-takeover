@@ -149,7 +149,7 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
         <h2 className="font-display text-2xl uppercase tracking-wide text-foreground group-hover:text-primary transition-colors">
           {product.name}
         </h2>
-        <p className="mt-2 flex-1 text-sm leading-6 text-slate-200 line-clamp-3">
+        <p className="mt-2 flex-1 text-sm leading-6 text-slate-200 line-clamp-3 whitespace-pre-line">
           {product.description}
         </p>
 

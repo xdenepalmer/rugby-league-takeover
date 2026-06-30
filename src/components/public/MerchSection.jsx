@@ -12,7 +12,7 @@ export default function MerchSection({ settings }) {
       
       <div className="relative mx-auto max-w-4xl">
         <SectionHeader eyebrow="Merch" title="Official Gear">
-          Rep the takeover. Exclusive Rugby League Takeover merch, shipped worldwide.
+          Rep the takeover. Exclusive Rugby League Takeover merch.
         </SectionHeader>
         
         <motion.div

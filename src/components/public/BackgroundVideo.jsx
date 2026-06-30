@@ -98,14 +98,21 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     video.load();
     window.setTimeout(playVideo, 80);
 
-    const watchdog = window.setTimeout(() => {
-      if (!cancelled && (video.paused || video.readyState < 2)) {
-        playVideo();
-        window.setTimeout(() => {
-          if (!cancelled && video.paused) playVideo();
-        }, 1200);
-      }
-    }, 3000);
+    // Watchdog: retry play if still paused after a few seconds
+    const watchdog1 = window.setTimeout(() => {
+      if (!cancelled && (video.paused || video.readyState < 2)) playVideo();
+    }, 2000);
+    const watchdog2 = window.setTimeout(() => {
+      if (!cancelled && video.paused) playVideo();
+    }, 4500);
+    const watchdog3 = window.setTimeout(() => {
+      if (!cancelled && video.paused) playVideo();
+    }, 8000);
+
+    // Periodic keep-alive: every 10s, if the video has mysteriously stopped, restart it
+    const keepAlive = window.setInterval(() => {
+      if (!cancelled && !document.hidden && video.paused) playVideo();
+    }, 10000);
 
     window.addEventListener("touchstart", playVideo, { once: true });
     window.addEventListener("click", playVideo, { once: true });
@@ -116,14 +123,18 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       if (document.hidden) {
         video.pause();
       } else {
-        playVideo();
+        // Small delay to let browser settle after returning from background
+        window.setTimeout(playVideo, 200);
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(watchdog);
+      window.clearTimeout(watchdog1);
+      window.clearTimeout(watchdog2);
+      window.clearTimeout(watchdog3);
+      window.clearInterval(keepAlive);
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
       document.removeEventListener("visibilitychange", handleVisibility);
