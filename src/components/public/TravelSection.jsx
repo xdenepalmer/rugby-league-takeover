@@ -15,6 +15,24 @@ import { Heart, Loader2, Plane, ShieldCheck, ArrowRight, ArrowLeft, CheckCircle2
 
 const teams = ["Eels", "Tigers", "Titans", "Storm", "Leopards", "Bulls", "Other"];
 
+// Renders text with URLs converted to clickable links
+function TextWithLinks({ text, className }) {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return (
+    <p className={className}>
+      {parts.map((part, i) =>
+        urlRegex.test(part) ? (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 break-all hover:text-accent transition-colors">
+            {part}
+          </a>
+        ) : part
+      )}
+    </p>
+  );
+}
+
 // Fade up variants
 const cardVariants = {
   hidden: { opacity: 0, y: 25 },
@@ -197,9 +215,7 @@ export default function TravelSection({ packages, settings = {} }) {
                   <h3 className="font-display text-2xl uppercase leading-none text-foreground group-hover:text-primary transition-colors duration-300">
                     {pkg.name}
                   </h3>
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground whitespace-pre-line">
-                    {pkg.description}
-                  </p>
+                  <TextWithLinks text={pkg.description} className="mt-3 text-xs leading-relaxed text-muted-foreground whitespace-pre-line" />
 
 
                 </div>
