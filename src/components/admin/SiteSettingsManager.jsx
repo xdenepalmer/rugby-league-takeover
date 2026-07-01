@@ -351,6 +351,18 @@ export default function SiteSettingsManager({ settings }) {
                         <h3 className="font-display text-lg uppercase text-primary">Brand and Hero Settings</h3>
                         <p className="text-[10px] text-muted-foreground">Adjust branding assets and the initial landing section of the homepage.</p>
                       </div>
+
+                      {/* ── Eyebrow visibility toggle ── */}
+                      <div className="flex items-center justify-between border border-primary/30 bg-primary/5 p-4">
+                        <div>
+                          <p className="text-sm font-bold text-foreground">Show eyebrow text</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            The small line above the hero title — e.g. "Built by fans, for fans"
+                          </p>
+                        </div>
+                        <Switch checked={draft.hero_eyebrow_visible !== false} onCheckedChange={(value) => update("hero_eyebrow_visible", value)} />
+                      </div>
+
                       <div className="grid gap-4 md:grid-cols-2">
                         <LabeledField label="Logo URL" help="Direct URL to your site logo image." indicator={isCustom("site_logo_url") ? "custom" : "default"}>
                           <Input placeholder="https://example.com/logo.png" value={draft.site_logo_url || ""} onChange={(e) => update("site_logo_url", e.target.value)} />
@@ -364,13 +376,7 @@ export default function SiteSettingsManager({ settings }) {
                         <LabeledField label="Hero Eyebrow" help="Small text above the main heading.">
                           <Input placeholder="Las Vegas • Rugby League" value={draft.hero_eyebrow || ""} onChange={(e) => update("hero_eyebrow", e.target.value)} />
                         </LabeledField>
-                        <div className="flex items-center justify-between border border-border/60 bg-muted/10 p-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`h-2 w-2 rounded-full ${draft.hero_eyebrow_visible !== false ? "bg-emerald-400 cmd-blink" : "bg-muted-foreground/40"}`} />
-                            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Show eyebrow text on homepage</span>
-                          </div>
-                          <Switch checked={draft.hero_eyebrow_visible !== false} onCheckedChange={(value) => update("hero_eyebrow_visible", value)} />
-                        </div>
+
                         <LabeledField label="Hero Button Label" help="Call-to-action button text.">
                           <Input placeholder="Enter the site" value={draft.hero_button_label || ""} onChange={(e) => update("hero_button_label", e.target.value)} />
                         </LabeledField>
