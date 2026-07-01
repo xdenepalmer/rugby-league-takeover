@@ -10,6 +10,11 @@
       "type": "string",
       "description": "Small hero text above the main heading"
     },
+    "hero_eyebrow_visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show or hide the hero eyebrow line"
+    },
     "hero_title": {
       "type": "string",
       "description": "Main homepage hero title"

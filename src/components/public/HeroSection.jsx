@@ -106,15 +106,17 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
 
         {/* Title & Subtext block */}
         <div className="space-y-4 max-w-4xl">
-          <motion.p 
-            initial={{ opacity: 0, letterSpacing: "0.2em" }}
-            animate={{ opacity: 1, letterSpacing: "0.35em" }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary sm:text-xs md:text-sm md:tracking-[0.42em] flex items-center justify-center gap-1.5"
-          >
-            <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
-            <span>{settings.hero_eyebrow || "Las Vegas • Rugby League • Supporter Takeover"}</span>
-          </motion.p>
+          {settings.hero_eyebrow_visible !== false && (
+            <motion.p 
+              initial={{ opacity: 0, letterSpacing: "0.2em" }}
+              animate={{ opacity: 1, letterSpacing: "0.35em" }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="text-[10px] font-bold uppercase tracking-[0.32em] text-primary sm:text-xs md:text-sm md:tracking-[0.42em] flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />
+              <span>{settings.hero_eyebrow || "Las Vegas • Rugby League • Supporter Takeover"}</span>
+            </motion.p>
+          )}
 
           {/* Staggered Heading Revealer */}
           <motion.h1 
