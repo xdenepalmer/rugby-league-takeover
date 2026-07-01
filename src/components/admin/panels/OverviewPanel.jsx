@@ -10,6 +10,7 @@ import RevenueBreakdown from "@/components/admin/RevenueBreakdown";
 import AdminNotepad from "@/components/admin/AdminNotepad";
 import DataExporter from "@/components/admin/DataExporter";
 import ActionQueue from "@/components/admin/ActionQueue";
+import GrowthChart from "@/components/admin/GrowthChart";
 
 /* Map ActionQueue panel names → admin routes */
 const PANEL_ROUTE_MAP = {
@@ -195,6 +196,9 @@ export default function OverviewPanel() {
                     </div>
                   </motion.div>
                 </div>
+
+                {/* ── Growth Chart ── */}
+                <GrowthChart registrations={registrations} />
 
                 {/* ── Revenue Analytics (moved into collapsible) ── */}
                 <RevenueBreakdown orders={orders} />

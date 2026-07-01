@@ -39,7 +39,8 @@ function getThumb(item) {
 
 function GalleryCard({ item, onClick }) {
   const isPlayable = item.media_type !== "photo";
-  const thumb = getThumb(item);
+  // For video type with no explicit thumbnail, try to grab the first frame via the video element
+  const thumb = getThumb(item) || (item.media_type === "video" ? null : null);
 
   return (
     <motion.div
@@ -57,6 +58,14 @@ function GalleryCard({ item, onClick }) {
             src={thumb}
             alt={item.title || ""}
             loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : item.media_type === "video" && item.media_url ? (
+          <video
+            src={item.media_url}
+            preload="metadata"
+            muted
+            playsInline
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -161,7 +170,14 @@ function MediaLightbox({ items, index, onClose, onPrev, onNext }) {
               <img src={item.media_url} alt={item.title || ""} className="w-full max-h-[75dvh] object-contain mx-auto block" />
             )}
             {item.media_type === "video" && (
-              <video src={item.media_url} controls autoPlay className="w-full max-h-[75dvh]" />
+              <video
+                src={item.media_url}
+                controls
+                autoPlay
+                poster={item.thumbnail_url || undefined}
+                preload="metadata"
+                className="w-full max-h-[75dvh]"
+              />
             )}
             {item.media_type === "youtube" && ytId && (
               <div className="aspect-video w-full">
