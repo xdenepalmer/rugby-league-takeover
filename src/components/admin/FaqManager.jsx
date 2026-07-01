@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, HelpCircle } from "lucide-react";
+import { Plus, Trash2, HelpCircle, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ export default function FaqManager({ faqs = [] }) {
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Faq.update(id, data), onSuccess: refresh });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Faq.delete(id), onSuccess: () => { refresh(); toast({ title: "FAQ removed" }); } });
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const sorted = [...faqs].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
   return (
@@ -53,7 +54,18 @@ export default function FaqManager({ faqs = [] }) {
             <Textarea defaultValue={faq.answer || ""} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { answer: e.target.value } })} className="min-h-20 rounded-none" />
             <div className="flex items-center gap-4 border-t border-border pt-3">
               <label className="flex min-h-11 items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">Published <Switch checked={faq.is_published !== false} onCheckedChange={(v) => updateMutation.mutate({ id: faq.id, data: { is_published: v } })} /></label>
-              <Button variant="destructive" size="mobile" className="ml-auto rounded-none" onClick={() => deleteMutation.mutate(faq.id)}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>
+              {confirmDeleteId === faq.id ? (
+                <div className="ml-auto flex items-center gap-2 border border-destructive/60 bg-destructive/10 px-3 py-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                  <span className="text-xs font-bold text-destructive">Delete this FAQ?</span>
+                  <Button variant="destructive" size="sm" className="rounded-none h-8" onClick={() => { deleteMutation.mutate(faq.id); setConfirmDeleteId(null); }}>Yes, delete</Button>
+                  <Button variant="outline" size="sm" className="rounded-none h-8" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                </div>
+              ) : (
+                <Button variant="destructive" size="mobile" className="ml-auto rounded-none" onClick={() => setConfirmDeleteId(faq.id)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              )}
             </div>
           </div>
         ))}
