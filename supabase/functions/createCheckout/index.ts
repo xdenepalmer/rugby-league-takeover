@@ -1,7 +1,7 @@
 // Stripe checkout session creation. The canonical, unit-tested copy of these
 // rules lives in tests/checkout-rules.mjs — keep the two in sync when editing.
 import Stripe from 'npm:stripe@22.2.0';
-import { json, preflight, serviceClient, getCaller, isEmail } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, isEmail, getStripeSecretKey } from './shared.ts';
 
 const MAX_CHECKOUT_QUANTITY = 20;
 const CHECKOUT_CURRENCY = 'aud';
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
   try {
     const svc = serviceClient();
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
+    const stripe = new Stripe(getStripeSecretKey());
     const { items, customerName = '', customerEmail = '', shipping } = await req.json();
     const normalizedItems = normalizeCheckoutItems(items);
 

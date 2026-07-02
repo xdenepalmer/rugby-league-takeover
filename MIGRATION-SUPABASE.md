@@ -111,8 +111,13 @@ the Base44 app is deleted.
 
 ## Manual dashboard steps (can't be automated via API)
 1. **Stripe**: set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` Edge Function
-   secrets; point the Stripe webhook at
+   secrets (live-mode keys); point a Stripe webhook (live mode) at
    `https://ohytlrgfpcpvnqgdpqap.supabase.co/functions/v1/stripeWebhook`.
+   To test with Stripe test-mode keys without disturbing the live ones, also
+   set `STRIPE_SECRET_KEY_TEST` + `STRIPE_WEBHOOK_SECRET_TEST` (point a
+   second, test-mode Stripe webhook at the same URL), then set `STRIPE_MODE`
+   to `test`; flip it back to `live` (or unset it) to go live again. See
+   `.env.example` for the full variable list.
 2. **Google login**: Supabase Dashboard → Auth → Providers → Google (client id
    + secret from Google Cloud Console).
 3. **Email confirmation code**: the Register page asks for a 6-digit code —

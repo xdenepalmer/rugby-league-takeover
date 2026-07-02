@@ -52,6 +52,33 @@ export async function getCaller(req: Request, svc: any) {
   }
 }
 
+// Stripe test/live mode toggle. Set STRIPE_MODE to 'test' or 'live' (default
+// 'live') to control which key set createCheckout/stripeWebhook use. In live
+// mode this falls back to the plain STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET
+// names for backward compatibility with keys configured before this toggle
+// existed — set STRIPE_SECRET_KEY_LIVE/STRIPE_WEBHOOK_SECRET_LIVE to be explicit.
+export function stripeMode() {
+  return Deno.env.get('STRIPE_MODE') === 'test' ? 'test' : 'live';
+}
+
+export function getStripeSecretKey() {
+  const mode = stripeMode();
+  const key = mode === 'test'
+    ? Deno.env.get('STRIPE_SECRET_KEY_TEST')
+    : Deno.env.get('STRIPE_SECRET_KEY_LIVE') || Deno.env.get('STRIPE_SECRET_KEY');
+  if (!key) throw new Error(`Stripe is not configured for ${mode} mode (missing STRIPE_SECRET_KEY_${mode.toUpperCase()})`);
+  return key;
+}
+
+export function getStripeWebhookSecret() {
+  const mode = stripeMode();
+  const secret = mode === 'test'
+    ? Deno.env.get('STRIPE_WEBHOOK_SECRET_TEST')
+    : Deno.env.get('STRIPE_WEBHOOK_SECRET_LIVE') || Deno.env.get('STRIPE_WEBHOOK_SECRET');
+  if (!secret) throw new Error(`Stripe webhook secret is not configured for ${mode} mode (missing STRIPE_WEBHOOK_SECRET_${mode.toUpperCase()})`);
+  return secret;
+}
+
 export const trimToLength = (value: unknown, maxLength: number) =>
   String(value ?? '').trim().slice(0, maxLength);
 
