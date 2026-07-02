@@ -62,6 +62,19 @@ Deno.serve(async (req) => {
         const shippingAddress = shipping?.address
           ? [shipping.name, shipping.address.line1, shipping.address.line2, shipping.address.city, shipping.address.state, shipping.address.postal_code, shipping.address.country].filter(Boolean).join(', ')
           : order.shipping_address || '';
+        // Structured components (used by the AusPost label API, which needs
+        // discrete address fields rather than the joined display string above).
+        const structuredAddress = shipping?.address
+          ? {
+              shipping_name: shipping.name || '',
+              shipping_address_line1: shipping.address.line1 || '',
+              shipping_address_line2: shipping.address.line2 || '',
+              shipping_suburb: shipping.address.city || '',
+              shipping_state: shipping.address.state || '',
+              shipping_postcode: shipping.address.postal_code || '',
+              shipping_country: shipping.address.country || '',
+            }
+          : {};
 
         // Decrement stock and detect oversell. We never let stock go negative,
         // but we DO flag when paid quantity exceeded available stock at payment
@@ -89,6 +102,7 @@ Deno.serve(async (req) => {
           stripe_payment_status: session.payment_status,
           payment_verified_at: paidAt,
           shipping_address: shippingAddress,
+          ...structuredAddress,
           stock_oversold: oversold,
           customer_status_note: oversold
             ? 'Payment confirmed. One or more items sold out as you ordered — our team will be in touch about your order.'

@@ -5,6 +5,7 @@ import {
   MAX_CHECKOUT_QUANTITY,
   buildCheckoutLineItems,
   buildOrderMetadata,
+  buildShippingLineItem,
   calculateOrderTotalAud,
   getNextStockQuantity,
   isPaidSessionForOrder,
@@ -98,8 +99,33 @@ test("accepts paid webhook sessions only when order, amount, currency, app, and 
 
   assert.equal(isPaidSessionForOrder(session, order, "app_123").ok, true);
   assert.equal(isPaidSessionForOrder({ ...session, amount_total: 9991 }, order, "app_123").ok, false);
-  assert.equal(isPaidSessionForOrder({ ...session, metadata: { ...metadata, base44_app_id: "other" } }, order, "app_123").ok, false);
+  assert.equal(isPaidSessionForOrder({ ...session, metadata: { ...metadata, rlt_app_id: "other" } }, order, "app_123").ok, false);
   assert.equal(isPaidSessionForOrder({ ...session, payment_status: "unpaid" }, order, "app_123").ok, false);
+});
+
+test("builds a priced AusPost shipping line item and rejects missing rate selections", () => {
+  const shipping = buildShippingLineItem({ code: "AUS_PARCEL_REGULAR", name: "Parcel Post", postcode: "4000", price_aud: 12.5 });
+  assert.equal(shipping.price_aud, 12.5);
+  assert.equal(shipping.stripeLineItem.price_data.unit_amount, 1250);
+  assert.match(shipping.stripeLineItem.price_data.product_data.name, /Parcel Post/);
+
+  // Free shipping: recorded on the order, but no Stripe charge for $0.
+  const free = buildShippingLineItem({ code: "FREE", name: "Free Shipping", postcode: "4000", price_aud: 0 });
+  assert.equal(free.price_aud, 0);
+  assert.equal(free.stripeLineItem, null);
+
+  assert.equal(buildShippingLineItem(undefined), null);
+  assert.equal(buildShippingLineItem({ code: "X", name: "Y", postcode: "", price_aud: 5 }), null);
+  assert.equal(buildShippingLineItem({ code: "X", name: "Y", postcode: "4000", price_aud: -1 }), null);
+});
+
+test("order total includes the selected shipping cost", () => {
+  const productsById = new Map([
+    ["shirt", { id: "shirt", name: "Vegas Shirt", price_aud: 49.95, stock_quantity: 5, is_active: true }],
+  ]);
+  const { lineItems } = buildCheckoutLineItems([{ productId: "shirt", quantity: 2 }], (id) => productsById.get(id));
+  assert.equal(calculateOrderTotalAud(lineItems), 99.9);
+  assert.equal(calculateOrderTotalAud(lineItems, 12.5), 112.4);
 });
 
 test("decrements stock without allowing negative inventory", () => {

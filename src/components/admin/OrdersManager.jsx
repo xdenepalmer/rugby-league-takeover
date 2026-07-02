@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Download, DollarSign, ShoppingCart, Clock, PackageCheck, BadgeCheck,
   ChevronDown, Package, CreditCard, Truck, XCircle, CheckCircle2, RotateCcw,
-  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays,
+  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays, Send, RefreshCw,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { downloadCsv } from "@/lib/csv";
@@ -226,6 +226,7 @@ function OrderTimeline({ timeline }) {
 
 /* ── Order Card ── */
 function OrderCard({ order, onUpdate, index, actorEmail }) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || "");
   const [trackingUrl, setTrackingUrl] = useState(order.tracking_url || "");
@@ -236,6 +237,30 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundAmount, setRefundAmount] = useState(Number(order.total_aud || 0));
   const [refundReason, setRefundReason] = useState("");
+  const [freshLabelUrl, setFreshLabelUrl] = useState(null);
+
+  const createLabelMutation = useMutation({
+    mutationFn: () => base44.functions.invoke("auspostCreateLabel", { orderId: order.id }),
+    onSuccess: ({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      if (data?.shipping_label_url) setFreshLabelUrl(data.shipping_label_url);
+      if (data?.status === "processing") {
+        toast({ title: "Label is rendering", description: data.message || "AusPost is still generating the label — try again shortly." });
+      } else {
+        toast({ title: "AusPost label ready", description: `Tracking number: ${data?.tracking_number || "pending"}` });
+      }
+    },
+    onError: (error) => toast({ title: "Could not create label", description: error.message, variant: "destructive" }),
+  });
+
+  const refreshTrackingMutation = useMutation({
+    mutationFn: () => base44.functions.invoke("auspostTrack", { orderId: order.id }),
+    onSuccess: ({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Tracking refreshed", description: data?.latest_event || `Status: ${data?.status || "unknown"}` });
+    },
+    onError: (error) => toast({ title: "Could not refresh tracking", description: error.message, variant: "destructive" }),
+  });
 
   const status = getStatusConfig(order.status || "pending");
   const StatusIcon = status.icon;
@@ -495,6 +520,49 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                     </div>
                   </div>
                 )}
+
+                {/* AusPost label + tracking actions */}
+                <div className="border border-border/20 bg-muted/5 p-3 space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
+                    <Truck className="h-3 w-3 text-primary" /> AusPost Shipping
+                  </p>
+                  {!order.shipping_postcode || !order.shipping_address_line1 ? (
+                    <p className="text-[10px] text-muted-foreground/40 italic">No structured shipping address on file yet for this order.</p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => createLabelMutation.mutate()}
+                        disabled={createLabelMutation.isPending || !["paid", "packing"].includes(order.status)}
+                        className="h-9 rounded-none bg-primary/90 hover:bg-primary text-[9px] font-bold uppercase tracking-wider"
+                      >
+                        <Send className="mr-1.5 h-3 w-3" />
+                        {createLabelMutation.isPending ? "Creating…" : order.shipping_label_url ? "Refresh Label Link" : "Create AusPost Label"}
+                      </Button>
+                      {order.tracking_number && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => refreshTrackingMutation.mutate()}
+                          disabled={refreshTrackingMutation.isPending}
+                          className="h-9 rounded-none border-border/40 text-[9px] font-bold uppercase tracking-wider"
+                        >
+                          <RefreshCw className="mr-1.5 h-3 w-3" /> {refreshTrackingMutation.isPending ? "Refreshing…" : "Refresh Tracking"}
+                        </Button>
+                      )}
+                      {(freshLabelUrl || (order.shipping_label_url && /^https?:\/\//i.test(order.shipping_label_url))) && (
+                        <a
+                          href={freshLabelUrl || order.shipping_label_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-9 items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/5 px-3 text-[9px] font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500/10"
+                        >
+                          <Download className="h-3 w-3" /> Download Label
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Status + Carrier + Shipping Method */}
                 <div className="grid gap-3 md:grid-cols-2">

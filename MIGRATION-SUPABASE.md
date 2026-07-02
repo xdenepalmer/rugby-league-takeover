@@ -125,3 +125,23 @@ the Base44 app is deleted.
 7. When satisfied, the Base44 app can be unpublished/deleted — nothing runtime
    depends on it. `base44/` stays in the repo as historical reference (tests
    still validate those schema files as the migration source of truth).
+8. **AusPost shipping** (domestic AU only): set `AUSPOST_API_KEY` (and
+   `AUSPOST_ACCOUNT_NUMBER` for label creation) as Edge Function secrets, then
+   fill in the sender address under Admin → Site Settings → Shipping
+   (AusPost) — rate calc and label creation both fail until a sender postcode
+   is set there. Product weight/dimensions (Admin → Products) feed the parcel
+   size used for rate calculation and labels; leave dimensions blank to use a
+   default small satchel.
+
+   ⚠️ **This integration has not been tested against a live AusPost account.**
+   The three edge functions (`auspostRates`, `auspostCreateLabel`,
+   `auspostTrack`) were built from AusPost's publicly documented API
+   contracts — their JS-rendered developer portal couldn't be fetched for
+   live schema verification. Before relying on this in production:
+   - Confirm the MyPost Business account has Shipping & Tracking API access
+     enabled (AusPost support may need to switch this on).
+   - Place a real test order and smoke-test all three flows: rate calc at
+     checkout, label creation in Admin → Orders, and tracking refresh.
+   - Watch the Edge Function logs (`auspostRates`/`auspostCreateLabel`/
+     `auspostTrack`) for any request/response field mismatches and adjust the
+     function code if AusPost's actual response shape differs.

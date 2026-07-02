@@ -794,13 +794,61 @@ export default function Store() {
   const shippingThreshold = 150;
   const progressPercent = Math.min(100, (cartSubtotal / shippingThreshold) * 100);
   const needsMore = Math.max(0, shippingThreshold - cartSubtotal);
-  const shippingLabel = cartSubtotal >= shippingThreshold ? "Free shipping" : "Standard shipping";
-  const shippingEstimate = cartSubtotal >= shippingThreshold ? "$0.00 AUD" : "Calculated at checkout";
-  const deliveryWindow = cartSubtotal >= shippingThreshold ? "Estimated delivery 4-7 business days" : "Delivery estimate shown after address";
+  const isFreeShipping = cartSubtotal >= shippingThreshold;
+
+  // AusPost live rate calculation — a real quote (or a $0 override once the
+  // free-shipping threshold is hit) is required before checkout can proceed.
+  const [shippingPostcode, setShippingPostcode] = useState("");
+  const [shippingRates, setShippingRates] = useState([]);
+  const [shippingRatesFor, setShippingRatesFor] = useState("");
+  const [selectedShippingCode, setSelectedShippingCode] = useState("");
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState("");
+
+  const cartSignature = useMemo(
+    () => cart.map((item) => `${item.id}:${item.quantity}`).sort().join("|"),
+    [cart]
+  );
+  const ratesStale = !shippingRates.length || shippingRatesFor !== `${shippingPostcode.trim()}::${cartSignature}`;
+  const selectedRate = shippingRates.find((rate) => rate.code === selectedShippingCode);
+
+  const calculateShipping = async () => {
+    const trimmed = shippingPostcode.trim();
+    if (!/^\d{4}$/.test(trimmed)) {
+      setShippingError("Enter a valid 4-digit Australian postcode.");
+      return;
+    }
+    setShippingLoading(true);
+    setShippingError("");
+    try {
+      const response = await base44.functions.invoke("auspostRates", {
+        toPostcode: trimmed,
+        cart: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
+      });
+      const services = response?.data?.services || [];
+      if (!services.length) throw new Error("No AusPost shipping options are available for this postcode.");
+      setShippingRates(services);
+      setShippingRatesFor(`${trimmed}::${cartSignature}`);
+      setSelectedShippingCode(services[0].code);
+    } catch (err) {
+      const message = err?.response?.data?.error || err?.data?.error || err?.message || "Could not calculate shipping right now.";
+      setShippingError(message);
+      setShippingRates([]);
+      setShippingRatesFor("");
+      setSelectedShippingCode("");
+    } finally {
+      setShippingLoading(false);
+    }
+  };
 
   const handleCheckout = async (e) => {
     e.preventDefault();
     if (cart.length === 0 || !checkoutEmail) return;
+
+    if (ratesStale || !selectedRate) {
+      setShippingError("Please calculate and select a shipping option before checkout.");
+      return;
+    }
 
     if (window.self !== window.top) {
       // Info-style notice (not an error): the preview iframe blocks the Stripe redirect.
@@ -817,6 +865,12 @@ export default function Store() {
         items: cart.map((item) => ({ productId: item.id, quantity: item.quantity, size: item.size || "" })),
         customerName: checkoutName,
         customerEmail: checkoutEmail,
+        shipping: {
+          code: selectedRate.code,
+          name: selectedRate.name,
+          postcode: shippingPostcode.trim(),
+          price_aud: isFreeShipping ? 0 : selectedRate.price_aud,
+        },
       });
 
       if (response?.data?.url) {
@@ -1178,26 +1232,87 @@ export default function Store() {
                     </div>
                   </div>
 
-                  <div className="mb-4 grid grid-cols-2 gap-2">
-                    <div className="border border-border/40 bg-background/35 p-3">
+                  <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                        <Truck className="h-3 w-3 text-primary" /> Shipping
+                        <Truck className="h-3 w-3 text-primary" /> Shipping (AusPost, domestic AU)
                       </p>
-                      <p className="mt-1 text-sm font-bold text-foreground">{shippingLabel}</p>
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">{shippingEstimate}</p>
+                      {selectedRate && !ratesStale && (
+                        <span className="font-mono text-xs font-bold text-emerald-400">
+                          {isFreeShipping ? "FREE" : `$${Number(selectedRate.price_aud).toFixed(2)} AUD`}
+                        </span>
+                      )}
                     </div>
-                    <div className="border border-border/40 bg-background/35 p-3">
-                      <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                        <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Delivery
+
+                    <div className="flex gap-2">
+                      <label htmlFor="shipping-postcode" className="sr-only">Delivery postcode</label>
+                      <Input
+                        id="shipping-postcode"
+                        placeholder="Postcode e.g. 4000"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={shippingPostcode}
+                        onChange={(e) => setShippingPostcode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        className="h-10 rounded-none bg-background/50 border-border text-sm"
+                      />
+                      <Button
+                        type="button"
+                        onClick={calculateShipping}
+                        disabled={shippingLoading || shippingPostcode.length !== 4}
+                        variant="outline"
+                        className="h-10 shrink-0 rounded-none border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-3"
+                      >
+                        {shippingLoading ? "Calculating…" : "Calculate"}
+                      </Button>
+                    </div>
+
+                    {shippingError && (
+                      <p className="flex items-center gap-1.5 text-[10px] font-medium text-destructive" role="alert">
+                        <AlertCircle className="h-3 w-3 shrink-0" /> {shippingError}
                       </p>
-                      <p className="mt-1 text-sm font-bold text-foreground">Tracked updates</p>
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">{deliveryWindow}</p>
-                    </div>
+                    )}
+
+                    {!ratesStale && shippingRates.length > 0 && (
+                      <div className="space-y-1.5">
+                        {shippingRates.map((rate) => (
+                          <label
+                            key={rate.code}
+                            className={`flex cursor-pointer items-center justify-between gap-2 border px-3 py-2 text-xs transition-colors ${
+                              selectedShippingCode === rate.code ? "border-primary bg-primary/5" : "border-border/40 hover:border-border"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="shipping-rate"
+                                value={rate.code}
+                                checked={selectedShippingCode === rate.code}
+                                onChange={() => setSelectedShippingCode(rate.code)}
+                                className="h-3.5 w-3.5 accent-primary"
+                              />
+                              <span>
+                                <span className="block font-bold text-foreground">{rate.name}</span>
+                                {rate.delivery_time && <span className="block text-[10px] text-muted-foreground">{rate.delivery_time}</span>}
+                              </span>
+                            </span>
+                            <span className="shrink-0 font-mono font-bold text-accent">
+                              {isFreeShipping ? "FREE" : `$${Number(rate.price_aud).toFixed(2)}`}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {ratesStale && shippingRates.length > 0 && (
+                      <p className="text-[10px] font-medium text-amber-400">Cart or postcode changed — recalculate shipping.</p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between text-base font-bold uppercase tracking-wider mb-4 border-b border-border/30 pb-3">
-                    <span>Subtotal</span>
-                    <span className="text-accent font-mono tracking-tight text-lg">${cartSubtotal.toFixed(2)} AUD</span>
+                    <span>Total</span>
+                    <span className="text-accent font-mono tracking-tight text-lg">
+                      ${(cartSubtotal + (selectedRate && !ratesStale ? (isFreeShipping ? 0 : Number(selectedRate.price_aud)) : 0)).toFixed(2)} AUD
+                    </span>
                   </div>
 
                   <form onSubmit={handleCheckout} className="grid gap-3">
@@ -1244,11 +1359,15 @@ export default function Store() {
 
                     <Button
                       type="submit"
-                      disabled={checkingOut}
-                      className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      disabled={checkingOut || ratesStale || !selectedRate}
+                      className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       <CreditCard className="h-4 w-4" />
-                      {checkingOut ? "Connecting to Stripe..." : `Checkout • $${cartSubtotal.toFixed(2)} AUD`}
+                      {checkingOut
+                        ? "Connecting to Stripe..."
+                        : ratesStale || !selectedRate
+                          ? "Calculate shipping to continue"
+                          : `Checkout • $${(cartSubtotal + (isFreeShipping ? 0 : Number(selectedRate.price_aud))).toFixed(2)} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe
