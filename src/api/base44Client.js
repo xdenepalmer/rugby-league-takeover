@@ -324,4 +324,14 @@ const integrations = {
   },
 };
 
-export const base44 = { entities, auth, functions, integrations };
+// ---------------------------------------------------------------------------
+// User management helpers (admin panel).
+// ---------------------------------------------------------------------------
+const users = {
+  async inviteUser(email, role = 'user') {
+    const { data } = await functions.invoke('inviteUser', { email, role });
+    return data;
+  },
+};
+
+export const base44 = { entities, auth, functions, integrations, users };
