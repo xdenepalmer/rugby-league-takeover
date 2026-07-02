@@ -30,6 +30,7 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import StoreFaq from "@/components/public/StoreFaq";
+import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
@@ -612,13 +613,23 @@ export default function Store() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
-  const { data: products = [], isLoading } = useQuery({ 
-    queryKey: ["products"], 
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["products"],
     queryFn: () => base44.entities.Product.list("sort_order", 50),
     enabled: appParams.hasBase44Config,
     staleTime: 60000, // Cache products list for 1 minute
     gcTime: 300000,   // Keep in cache garbage collection for 5 minutes
   });
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
+  const videoSources = settingsRecords[0]?.background_video_urls?.length
+    ? settingsRecords[0].background_video_urls
+    : DEFAULT_BACKGROUND_VIDEO_SOURCES;
 
   const visibleProducts = useMemo(() => {
     return products.filter((product) => product.is_active !== false);
@@ -841,6 +852,8 @@ export default function Store() {
 
   return (
     <main className="relative min-h-dvh bg-background px-5 pb-[calc(5rem+var(--safe-bottom))] pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8 overflow-hidden">
+      <BackgroundVideo sources={videoSources} />
+      <div className="relative z-10">
       {/* Background visual components */}
       <div className="absolute inset-0 cmd-grid-bg opacity-30 z-0 pointer-events-none" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-primary/5 blur-3xl z-0 pointer-events-none" />
@@ -1014,6 +1027,12 @@ export default function Store() {
           <StoreFaq />
         </div>
       </div>
+      </div>
+
+      {/* Rendered outside the z-10 content wrapper — the cart drawer, floating
+          cart FAB and quick view modal are fixed overlays whose z-index must
+          escape to cover the fixed nav/tab bar, which a nested stacking
+          context would trap. */}
       {/* Cart Drawer & Slide-over Overlay */}
       <AnimatePresence>
         {cartOpen && (
