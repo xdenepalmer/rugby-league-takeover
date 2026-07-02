@@ -174,8 +174,8 @@ const PartnersSection = lazy(() => import("@/components/public/PartnersSection")
 const TestimonialsSection = lazy(() => import("@/components/public/TestimonialsSection"));
 
 const stadiumVideoUrls = [
-  "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
-  "https://media.base44.com/videos/public/6a18d49a2b8f40f0f81cc26e/bf55ac1e7_AllegiantStadiumParadiseNevadaclaytonhaamallegiantallegiantstadiumparadis.mp4"
+  "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
+  "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/bf55ac1e7_allegiantstadiumparadisenevadaclaytonhaamallegiantallegiantstadiumparadis.mp4"
 ];
 
 const defaultNews = [
@@ -215,8 +215,8 @@ const defaultEvent = {
   title: "Stadium Swim",
   blurb: "Stadium Swim plans are building for the end of February, with more fan meetups and Vegas supporter experiences to be announced soon.",
   photo_urls: [
-    "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg",
-    "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/d22e13269_e3e79af1-bdf3-43c5-81a9-13e918072b94.jpg"
+    "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg",
+    "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/d22e13269_e3e79af1-bdf3-43c5-81a9-13e918072b94.jpg"
   ],
   is_coming_soon: true,
 };
@@ -534,7 +534,7 @@ export default function Home() {
                 <span>Powered by</span>
                 <span className="inline-flex items-center border border-sky-400/25 bg-white px-2.5 py-1.5 shadow-[0_0_18px_rgba(14,165,233,0.22)]">
                   <img
-                    src="https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/830b4f67c_deneoailq.png"
+                    src="https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/830b4f67c_deneoailq.png"
                     alt="DENEO.AI"
                     className="h-5 w-auto object-contain sm:h-6"
                     loading="lazy"

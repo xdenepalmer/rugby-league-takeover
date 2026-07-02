@@ -1,13 +1,13 @@
 # Rugby League Takeover
 
-Fan platform for the **Rugby League Takeover — Las Vegas**: news, multi-event info with external ticketing, travel-package interest, merch store (Stripe), a community forum, accounts, and an admin control centre. Built on **Base44** and installable as a PWA.
+Fan platform for the **Rugby League Takeover — Las Vegas**: news, multi-event info with external ticketing, travel-package interest, merch store (Stripe), a community forum, accounts, and an admin control centre. Built on **Supabase** (Postgres + Auth + Edge Functions + Storage) and installable as a PWA.
 
 ## 1. Project overview
-A public, account-optional web app. Anonymous visitors can browse and (where allowed) participate; logged-in members get profiles, a forum with reactions/badges, order history, and notifications. Admins manage content, store, community moderation, people, and settings. The repo is GitHub-synced to Base44; the Base44 backend (functions + entities) is the system of record.
+A public, account-optional web app. Anonymous visitors can browse and (where allowed) participate; logged-in members get profiles, a forum with reactions/badges, order history, and notifications. Admins manage content, store, community moderation, people, and settings. The Supabase backend (Postgres tables + RLS, Edge Functions) is the system of record — see `MIGRATION-SUPABASE.md` for the full Base44 → Supabase migration record.
 
 ## 2. Tech stack
 - **React 18 + Vite**, React Router, TanStack Query, Tailwind CSS, shadcn/ui, framer-motion, lucide-react, recharts.
-- **Base44 SDK** (`@base44/sdk`) + `@base44/vite-plugin` for entities, auth, and serverless functions.
+- **Supabase** (`@supabase/supabase-js`) for data (Postgres + RLS), auth, Edge Functions, and Storage — wrapped by the compat client in `src/api/base44Client.js` which preserves the original `base44.*` call surface.
 - **Stripe** hosted checkout (PCI SAQ A — no card data touches the app).
 - **PWA**: service worker (`public/sw.js`) + web manifest.
 - **Tests**: Node's built-in test runner (`node --test`). **Typecheck**: `tsc` against `jsconfig.json`. **Lint**: ESLint.
@@ -17,20 +17,14 @@ A public, account-optional web app. Anonymous visitors can browse and (where all
 npm install
 npm run dev      # http://localhost:5173
 ```
-Node 18+ recommended. The app runs locally; live data/auth require Base44 configuration (below).
+Node 18+ recommended. The app connects to the Supabase project out of the box (the publishable key ships as a safe client-side default); override via env vars below.
 
 ## 4. Environment variables
-Create `.env.local` (never commit it):
-- `VITE_BASE44_APP_ID` — Base44 application id.
-- `VITE_BASE44_APP_BASE_URL` — Base44 app base URL (enables the SDK proxy).
-- `VITE_BASE44_FUNCTIONS_VERSION` — (if applicable) pin the deployed functions version.
+Optional `.env.local` overrides (see `.env.example`):
+- `VITE_SUPABASE_URL` — Supabase project URL.
+- `VITE_SUPABASE_ANON_KEY` — Supabase publishable (anon) key.
 
-Example:
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=https://your-app.base44.app
-```
-No secrets belong in the repo. Stripe secret keys live only in Base44 function settings, never in frontend env.
+No secrets belong in the repo. Stripe/Resend secret keys live only in Supabase Edge Function secrets (`supabase secrets set` / dashboard), never in frontend env.
 
 ## 5. Scripts
 - `npm run dev` — Vite dev server.
@@ -41,12 +35,12 @@ No secrets belong in the repo. Stripe secret keys live only in Base44 function s
 - `npm test` — run the `tests/**/*.test.mjs` suite.
 - `npm run preview` — preview the production build.
 
-## 6. Base44 publish flow
+## 6. Deploy flow
 1. Make code changes locally on a branch.
 2. Validate (see §11) and commit.
-3. Push to GitHub — Base44 picks up the synced repo.
-4. **Publish** in Base44 to apply changes and go live.
-5. New entities/entity-fields and functions must be **deployed in Base44** (GitHub sync alone does not deploy them to the running app).
+3. Frontend: `npm run build` → deploy `dist/` to your static host.
+4. Database schema changes: add a migration under `supabase/migrations/` and apply it to the project.
+5. Edge Functions: edit `supabase/functions/<name>/index.ts` (shared helpers live in `supabase/functions/_shared/shared.ts`; run `node scripts/sync-shared.mjs` after editing them) and deploy to Supabase.
 
 ## 7. BMAD workflow rules
 - **No code without a story.** One story = one bounded change.
@@ -65,8 +59,8 @@ No secrets belong in the repo. Stripe secret keys live only in Base44 function s
 All UI/UX work is performed by **Antigravity** using the **`ui-ux-pro-max`** skill from
 https://github.com/sickn33/antigravity-awesome-skills/tree/main. Other agents should not hand-roll UI/UX that bypasses this.
 
-## 10. Manual Base44 Publish requirement
-Merging/pushing does **not** make changes live. A human must **Publish** in Base44. Any story that adds/changes Base44 functions or entities must call out the required deploy + publish step in its handoff.
+## 10. Backend deploy requirement
+Merging/pushing does **not** make backend changes live. Database migrations and Edge Functions must be applied/deployed to the Supabase project. Any story that changes them must call out the required deploy step in its handoff.
 
 ## 11. Validation checklist (before publish)
 - [ ] `npm test` passes
@@ -74,13 +68,13 @@ Merging/pushing does **not** make changes live. A human must **Publish** in Base
 - [ ] `npm run typecheck` clean
 - [ ] `npm run build` succeeds
 - [ ] Working tree intentional (no stray/competing-agent files committed)
-- [ ] Required Base44 entities/functions deployed, then **Published**
+- [ ] Required Supabase migrations applied and Edge Functions deployed
 
 ## 12. Security notes
-- **No secrets in the repo** — Stripe/secret keys live in Base44 function settings only.
+- **No secrets in the repo** — Stripe/secret keys live in Supabase Edge Function secrets only.
 - **Backend is authoritative; the frontend is projection only.** Never rely on client state for security or data integrity.
-- **Admin access must be enforced server-side / by Base44** (RLS + service-role functions), not by hiding UI.
-- PII (e.g. `ip_address`) is admin-only via entity RLS.
+- **Admin access must be enforced server-side** (Postgres RLS + service-role Edge Functions), not by hiding UI.
+- PII (e.g. `ip_address`, linked user emails) is admin-only, enforced by sanitising SQL views (`forum_posts_view`, `testimonials_view`, `tipping_entries_view`).
 - Payments use Stripe **hosted** checkout (PCI SAQ A); no card data touches the site or DB.
 
 ## 13. PWA notes

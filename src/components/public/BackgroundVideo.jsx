@@ -24,7 +24,7 @@ const normalizeVideoSources = (sources, src) => {
 };
 
 // A high-quality static image of Allegiant Stadium to serve as the background poster
-const DEFAULT_POSTER = "https://media.base44.com/images/public/6a18d49a2b8f40f0f81cc26e/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg";
+const DEFAULT_POSTER = "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg";
 
 export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER }) {
   const videoRef = useRef(null);
