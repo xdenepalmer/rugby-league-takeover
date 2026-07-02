@@ -83,9 +83,38 @@ export function buildCheckoutLineItems(items, getProduct) {
   return { ok: true, lineItems, stripeLineItems };
 }
 
-export function calculateOrderTotalAud(lineItems) {
+export function calculateOrderTotalAud(lineItems, shippingCostAud = 0) {
   const cents = lineItems.reduce((total, item) => total + Math.round(Number(item.price_aud || 0) * 100) * Number(item.quantity || 0), 0);
-  return Number((cents / 100).toFixed(2));
+  return Number(((cents + Math.round(Number(shippingCostAud || 0) * 100)) / 100).toFixed(2));
+}
+
+// A priced AusPost shipping selection (from the auspostRates function) is
+// required before checkout — this builds its order-record fields and, when
+// the price is non-zero, the Stripe line item that charges for it.
+export function buildShippingLineItem(shipping) {
+  const code = toTrimmedString(shipping?.code);
+  const name = toTrimmedString(shipping?.name) || "Shipping";
+  const postcode = toTrimmedString(shipping?.postcode);
+  const price = Number(shipping?.price_aud);
+  if (!code || !postcode || !Number.isFinite(price) || price < 0) return null;
+
+  const unitAmount = Math.round(price * 100);
+  return {
+    code,
+    name,
+    postcode,
+    price_aud: Number((unitAmount / 100).toFixed(2)),
+    stripeLineItem: unitAmount > 0
+      ? {
+          quantity: 1,
+          price_data: {
+            currency: CHECKOUT_CURRENCY,
+            unit_amount: unitAmount,
+            product_data: { name: `Shipping — ${name} (AusPost)` },
+          },
+        }
+      : null,
+  };
 }
 
 export function resolveCheckoutOrigin(originHeader, allowlistEnv, fallback = DEFAULT_CHECKOUT_ORIGIN) {
@@ -113,7 +142,7 @@ export function resolveCheckoutCustomer({ customerName = "", customerEmail = "",
 
 export function buildOrderMetadata({ appId, orderId, totalAud }) {
   return {
-    base44_app_id: toTrimmedString(appId),
+    rlt_app_id: toTrimmedString(appId),
     order_id: toTrimmedString(orderId),
     expected_total_aud: Number(totalAud || 0).toFixed(2),
   };
@@ -124,7 +153,7 @@ export function isPaidSessionForOrder(session, order, expectedAppId = "") {
   if (session.payment_status !== "paid") return { ok: false, error: "Checkout session is not paid" };
   if (order.stripe_session_id && session.id !== order.stripe_session_id) return { ok: false, error: "Checkout session does not match order" };
   if (session.metadata?.order_id && session.metadata.order_id !== order.id) return { ok: false, error: "Session order metadata does not match order" };
-  if (expectedAppId && session.metadata?.base44_app_id && session.metadata.base44_app_id !== expectedAppId) return { ok: false, error: "Session app metadata does not match this app" };
+  if (expectedAppId && session.metadata?.rlt_app_id && session.metadata.rlt_app_id !== expectedAppId) return { ok: false, error: "Session app metadata does not match this app" };
   if (String(session.currency || "").toLowerCase() !== CHECKOUT_CURRENCY) return { ok: false, error: "Checkout currency does not match" };
 
   const expectedCents = Math.round(Number(order.total_aud || 0) * 100);

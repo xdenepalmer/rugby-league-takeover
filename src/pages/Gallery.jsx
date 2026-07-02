@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
 import { ArrowLeft, Images, Play, ExternalLink, X, ChevronLeft, ChevronRight, Camera, Film } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
 
 function getYoutubeId(url) {
   const match = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/);
@@ -270,9 +272,19 @@ export default function Gallery() {
     queryKey: ["gallery"],
     queryFn: () => base44.entities.GalleryItem.filter({ is_published: true }, "sort_order", 500),
   });
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
 
   const eventLabels = [ALL, ...Array.from(new Set(items.map(i => i.event_label).filter(Boolean)))];
   const availableTypes = new Set(items.map(i => i.media_type));
+  const videoSources = settingsRecords[0]?.background_video_urls?.length
+    ? settingsRecords[0].background_video_urls
+    : DEFAULT_BACKGROUND_VIDEO_SOURCES;
 
   const filtered = items.filter(i => {
     const matchEvent = filterEvent === ALL || i.event_label === filterEvent;
@@ -291,6 +303,8 @@ export default function Gallery() {
 
   return (
     <main className="relative min-h-dvh bg-background text-foreground">
+      <BackgroundVideo sources={videoSources} />
+      <div className="relative z-10">
       {/* Hero header */}
       <div className="relative overflow-hidden border-b border-border/60 bg-gradient-to-b from-card/60 to-background pt-[calc(7.25rem+env(safe-area-inset-top,0px))] pb-10">
         <div className="cmd-grid-bg absolute inset-0 opacity-20 pointer-events-none" />
@@ -395,7 +409,10 @@ export default function Gallery() {
           </motion.div>
         )}
       </div>
+      </div>
 
+      {/* Rendered outside the z-10 content wrapper: its own z-[500] must escape
+          to cover the fixed nav/tab bar, which a nested stacking context would trap. */}
       {lightboxIndex !== null && (
         <MediaLightbox
           items={filtered}

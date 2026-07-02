@@ -19,7 +19,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1 };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null };
 
 /* ── Product Card ── */
 function ProductCard({ product, onUpdate, onDelete, index, saving }) {
@@ -138,6 +138,17 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
             <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Description</label>
             <Textarea value={draft.description || ""} onChange={(e) => setDraft({ ...draft, description: e.target.value })} className="min-h-16 rounded-none text-sm border-border/40 resize-none" />
             <p className="text-[8px] text-muted-foreground/40">Line breaks and blank lines are preserved on the store page.</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping — weight &amp; dimensions (AusPost)</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+            </div>
+            <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel.</p>
           </div>
 
           <div className="space-y-1">
@@ -346,6 +357,16 @@ export default function ProductsManager({ products, loading }) {
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sort Order</label>
                     <Input type="number" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping — weight &amp; dimensions (AusPost)</label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                  </div>
+                  <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

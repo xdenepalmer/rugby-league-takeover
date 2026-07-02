@@ -26,6 +26,14 @@ const normalizeVideoSources = (sources, src) => {
 // A high-quality static image of Allegiant Stadium to serve as the background poster
 const DEFAULT_POSTER = "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg";
 
+// Fallback stadium footage used across every public page when SiteSettings has
+// no admin-uploaded background_video_urls. Keep in sync with the list Home.jsx
+// falls back to.
+export const DEFAULT_BACKGROUND_VIDEO_SOURCES = [
+  "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
+  "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/bf55ac1e7_allegiantstadiumparadisenevadaclaytonhaamallegiantallegiantstadiumparadis.mp4",
+];
+
 export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER }) {
   const videoRef = useRef(null);
   const isAdvancingRef = useRef(false);

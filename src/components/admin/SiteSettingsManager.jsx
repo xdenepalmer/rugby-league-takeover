@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Save, Timer, Film, Newspaper, Users, PanelBottom,
   Image as ImageIcon, Type, FileText,
-  Plane, ShoppingBag, Quote, Captions, ChevronLeft, LayoutGrid, Settings,
+  Plane, ShoppingBag, Quote, Captions, ChevronLeft, LayoutGrid, Settings, Truck,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,13 @@ const defaults = {
   merch_eyebrow: "Merch",
   merch_title: "Wear the takeover",
   merch_description: "Browse official Rugby League Takeover merch and checkout securely in AUD.",
+  shipping_sender_name: "",
+  shipping_sender_business_name: "",
+  shipping_sender_address_line1: "",
+  shipping_sender_address_line2: "",
+  shipping_sender_suburb: "",
+  shipping_sender_state: "",
+  shipping_sender_postcode: "",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
   footer_powered_by: "DENEO.AI",
   contact_email: "",
@@ -194,6 +201,13 @@ export default function SiteSettingsManager({ settings }) {
       desc: "Edit about statements, captions, imagery uploads, and registry descriptions.",
       icon: Users,
       summary: `Headline: "${draft.about_title || ""}"`,
+    },
+    {
+      id: "shipping",
+      title: "Shipping (AusPost)",
+      desc: "Sender/return address AusPost uses to calculate rates and generate labels.",
+      icon: Truck,
+      summary: draft.shipping_sender_postcode ? "Configured" : "Not set up",
     },
     {
       id: "footer",
@@ -551,6 +565,48 @@ export default function SiteSettingsManager({ settings }) {
                       <LabeledField label="Registration Description" fullWidth>
                         <Textarea placeholder="Leave your details and the team will contact you..." value={draft.registration_description || ""} onChange={(e) => update("registration_description", e.target.value)} />
                       </LabeledField>
+                    </div>
+                  )}
+
+                  {activeCategory === "shipping" && (
+                    <div className="space-y-4">
+                      <div className="border-b border-border/30 pb-2 mb-2">
+                        <h3 className="font-display text-lg uppercase text-primary">Shipping (AusPost)</h3>
+                        <p className="text-[10px] text-muted-foreground">
+                          The sender/return address AusPost uses to calculate live shipping rates and generate labels. Domestic AU shipments only.
+                        </p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <LabeledField label="Sender name" help="Shown on the label as the return-to contact.">
+                          <Input placeholder="e.g. Dene Palmer" value={draft.shipping_sender_name || ""} onChange={(e) => update("shipping_sender_name", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Business name (optional)">
+                          <Input placeholder="Rugby League Takeover" value={draft.shipping_sender_business_name || ""} onChange={(e) => update("shipping_sender_business_name", e.target.value)} />
+                        </LabeledField>
+                      </div>
+                      <LabeledField label="Address line 1" fullWidth>
+                        <Input placeholder="Street address" value={draft.shipping_sender_address_line1 || ""} onChange={(e) => update("shipping_sender_address_line1", e.target.value)} />
+                      </LabeledField>
+                      <LabeledField label="Address line 2 (optional)" fullWidth>
+                        <Input placeholder="Unit, suite, etc." value={draft.shipping_sender_address_line2 || ""} onChange={(e) => update("shipping_sender_address_line2", e.target.value)} />
+                      </LabeledField>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <LabeledField label="Suburb">
+                          <Input placeholder="e.g. Brisbane" value={draft.shipping_sender_suburb || ""} onChange={(e) => update("shipping_sender_suburb", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="State">
+                          <Input placeholder="e.g. QLD" value={draft.shipping_sender_state || ""} onChange={(e) => update("shipping_sender_state", e.target.value)} />
+                        </LabeledField>
+                        <LabeledField label="Postcode" help="Used as the origin postcode for all rate calculations.">
+                          <Input placeholder="e.g. 4000" inputMode="numeric" maxLength={4} value={draft.shipping_sender_postcode || ""} onChange={(e) => update("shipping_sender_postcode", e.target.value.replace(/\D/g, "").slice(0, 4))} />
+                        </LabeledField>
+                      </div>
+                      <div className="flex items-start gap-2 border border-amber-500/25 bg-amber-500/5 p-3">
+                        <Truck className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <p className="text-[10px] leading-relaxed text-slate-300">
+                          Live rates on the store page and label creation both fail until a sender postcode is set here. The AusPost account credentials themselves (API key, account number) are configured as Supabase Edge Function secrets, not here.
+                        </p>
+                      </div>
                     </div>
                   )}
 

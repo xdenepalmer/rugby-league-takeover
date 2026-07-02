@@ -6,6 +6,7 @@ import { appParams } from "@/lib/app-params";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
 
 const fallbackFaqs = [
   {
@@ -38,12 +39,23 @@ export default function Faq() {
     retry: false,
     meta: { silent: true },
   });
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
 
   const visibleFaqs = faqs.filter((faq) => faq.is_published !== false && faq.question);
   const items = visibleFaqs.length ? visibleFaqs : fallbackFaqs;
+  const videoSources = settingsRecords[0]?.background_video_urls?.length
+    ? settingsRecords[0].background_video_urls
+    : DEFAULT_BACKGROUND_VIDEO_SOURCES;
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-background px-5 pb-20 pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8">
+      <BackgroundVideo sources={videoSources} />
       <div className="absolute inset-0 cmd-grid-bg opacity-25 pointer-events-none" />
       <div className="absolute left-1/2 top-24 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
 

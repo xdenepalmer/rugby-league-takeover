@@ -17,6 +17,7 @@ import { FORUM_CATEGORIES, buildForumThreads, buildPendingForumPost } from "@/li
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
+import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
 import ReplyTree from "@/components/forum/ReplyTree";
 import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
@@ -832,6 +833,16 @@ export default function Forum() {
     enabled: appParams.hasBase44Config,
     refetchInterval: 30000,
   });
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    enabled: appParams.hasBase44Config,
+    retry: false,
+    meta: { silent: true },
+  });
+  const videoSources = settingsRecords[0]?.background_video_urls?.length
+    ? settingsRecords[0].background_video_urls
+    : DEFAULT_BACKGROUND_VIDEO_SOURCES;
 
   // Current avatars by user id, so changing a profile photo updates that
   // member's existing threads/replies. Falls back to the per-post snapshot, then
@@ -1142,6 +1153,8 @@ export default function Forum() {
 
   return (
     <main className="forum-mobile-shell relative min-h-dvh overflow-x-hidden bg-background text-foreground">
+      <BackgroundVideo sources={videoSources} />
+      <div className="relative z-10">
       {/* ━━━ HERO SECTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <section className="forum-mobile-hero relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 cmd-grid-bg opacity-40" />
@@ -1672,7 +1685,12 @@ export default function Forum() {
           </div>
         </div>
       </div>
+      </div>
 
+      {/* Rendered outside the z-10 content wrapper — the thread modal, mobile
+          compose sheet, FAB and delete confirmation are fixed overlays whose
+          z-index must escape to cover the fixed nav/tab bar, which a nested
+          stacking context would trap. */}
       {/* ━━━ THREAD DETAIL MODAL ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <AnimatePresence>
         {threadModalPost && (

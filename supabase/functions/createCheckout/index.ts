@@ -1,7 +1,7 @@
 // Stripe checkout session creation. The canonical, unit-tested copy of these
 // rules lives in tests/checkout-rules.mjs — keep the two in sync when editing.
 import Stripe from 'npm:stripe@22.2.0';
-import { json, preflight, serviceClient, getCaller, isEmail } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, isEmail, getStripeSecretKey } from './shared.ts';
 
 const MAX_CHECKOUT_QUANTITY = 20;
 const CHECKOUT_CURRENCY = 'aud';
@@ -112,9 +112,36 @@ function buildCheckoutLineItems(items: any[], getProduct: (id: string) => any) {
 }
 
 // deno-lint-ignore no-explicit-any
-function calculateOrderTotalAud(lineItems: any[]) {
+function calculateOrderTotalAud(lineItems: any[], shippingCostAud = 0) {
   const cents = lineItems.reduce((total, item) => total + Math.round(Number(item.price_aud || 0) * 100) * Number(item.quantity || 0), 0);
-  return Number((cents / 100).toFixed(2));
+  return Number(((cents + Math.round(Number(shippingCostAud || 0) * 100)) / 100).toFixed(2));
+}
+
+// deno-lint-ignore no-explicit-any
+function buildShippingLineItem(shipping: any) {
+  const code = toTrimmedString(shipping?.code);
+  const name = toTrimmedString(shipping?.name) || 'Shipping';
+  const postcode = toTrimmedString(shipping?.postcode);
+  const price = Number(shipping?.price_aud);
+  if (!code || !postcode || !Number.isFinite(price) || price < 0) return null;
+
+  const unitAmount = Math.round(price * 100);
+  return {
+    code,
+    name,
+    postcode,
+    price_aud: Number((unitAmount / 100).toFixed(2)),
+    stripeLineItem: unitAmount > 0
+      ? {
+          quantity: 1,
+          price_data: {
+            currency: CHECKOUT_CURRENCY,
+            unit_amount: unitAmount,
+            product_data: { name: `Shipping — ${name} (AusPost)` },
+          },
+        }
+      : null, // free shipping: nothing to charge, still recorded on the order
+  };
 }
 
 function resolveCheckoutOrigin(originHeader: unknown, allowlistEnv: unknown, fallback = DEFAULT_CHECKOUT_ORIGIN) {
@@ -154,8 +181,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
   try {
     const svc = serviceClient();
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
-    const { items, customerName = '', customerEmail = '' } = await req.json();
+    const stripe = new Stripe(getStripeSecretKey());
+    const { items, customerName = '', customerEmail = '', shipping } = await req.json();
     const normalizedItems = normalizeCheckoutItems(items);
 
     const user = await getCaller(req, svc);
@@ -163,6 +190,14 @@ Deno.serve(async (req) => {
 
     if (!normalizedItems.length || !isEmail(resolvedEmail)) {
       return json({ error: 'Cart items and a valid email are required' }, 400);
+    }
+
+    // A priced shipping selection (from auspostRates) is required — the order
+    // total must include real shipping cost before we send the customer to
+    // Stripe. Domestic (AU) only, matching the AusPost rate-calc scope.
+    const shippingSelection = buildShippingLineItem(shipping);
+    if (!shippingSelection) {
+      return json({ error: 'A shipping option is required — please choose a shipping method.' }, 400);
     }
 
     const productsById = new Map();
@@ -189,12 +224,15 @@ Deno.serve(async (req) => {
     }
 
     const { lineItems, stripeLineItems } = lineItemResult;
-    const totalAud = calculateOrderTotalAud(lineItems);
+    const totalAud = calculateOrderTotalAud(lineItems, shippingSelection.price_aud);
     const origin = resolveCheckoutOrigin(
       req.headers.get('origin'),
       Deno.env.get('CHECKOUT_ALLOWED_ORIGINS'),
       Deno.env.get('CHECKOUT_DEFAULT_ORIGIN') || DEFAULT_CHECKOUT_ORIGIN
     );
+    const allStripeLineItems = shippingSelection.stripeLineItem
+      ? [...stripeLineItems, shippingSelection.stripeLineItem]
+      : stripeLineItems;
 
     const { data: order, error: orderError } = await svc
       .from('store_orders')
@@ -206,6 +244,10 @@ Deno.serve(async (req) => {
         line_items: lineItems,
         user_email: user?.email || '',
         user_id: user?.id || '',
+        customer_postcode: shippingSelection.postcode,
+        shipping_service_code: shippingSelection.code,
+        shipping_service_name: shippingSelection.name,
+        shipping_cost_aud: shippingSelection.price_aud,
       })
       .select('id')
       .single();
@@ -216,9 +258,11 @@ Deno.serve(async (req) => {
       customer_email: resolvedEmail,
       success_url: `${origin}/store?success=true`,
       cancel_url: `${origin}/store?cancelled=true`,
-      line_items: stripeLineItems,
+      line_items: allStripeLineItems,
       phone_number_collection: { enabled: true },
-      shipping_address_collection: { allowed_countries: ['AU', 'NZ', 'US'] },
+      // Domestic AU only — matches the AusPost rate calc, which only quotes
+      // Australian postcodes.
+      shipping_address_collection: { allowed_countries: ['AU'] },
       metadata: buildOrderMetadata({
         appId: Deno.env.get('RLT_APP_ID') || 'rugby-league-takeover',
         orderId: order.id,
