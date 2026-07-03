@@ -2,7 +2,7 @@
 // and flags oversells for admin review. The canonical, unit-tested copy of
 // these rules lives in tests/checkout-rules.mjs — keep the two in sync.
 import Stripe from 'npm:stripe@22.2.0';
-import { json, serviceClient, getStripeSecretKey, getStripeWebhookSecret } from './shared.ts';
+import { json, serviceClient, getStripeSecretKey, getStripeWebhookSecret, sendBrandedEmail, siteUrl, escapeHtml } from './shared.ts';
 
 const CHECKOUT_CURRENCY = 'aud';
 
@@ -116,6 +116,50 @@ Deno.serve(async (req) => {
 
         for (const update of stockUpdates) {
           await svc.from('products').update({ stock_quantity: update.stock_quantity }).eq('id', update.id);
+        }
+
+        // Branded order confirmation via Resend. Best-effort: a failed email
+        // must never fail the webhook (Stripe would retry and re-process).
+        const confirmationEmail = session.customer_details?.email || session.customer_email || order.customer_email;
+        if (confirmationEmail) {
+          const orderNumber = String(order.id).slice(-6).toUpperCase();
+          const money = (value: unknown) => `$${Number(value || 0).toFixed(2)}`;
+          // deno-lint-ignore no-explicit-any
+          const itemRows = (order.line_items || []).map((item: any) => {
+            const label = item.size ? `${item.name} — Size ${item.size}` : item.name;
+            return `<tr>
+              <td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;">${escapeHtml(label)} <span style="color:#64748b;">× ${Number(item.quantity || 1)}</span></td>
+              <td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;text-align:right;white-space:nowrap;">${money(Number(item.price_aud || 0) * Number(item.quantity || 1))}</td>
+            </tr>`;
+          }).join('');
+          const shippingRow = order.shipping_service_name
+            ? `<tr><td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;">Shipping — ${escapeHtml(order.shipping_service_name)} (AusPost)</td>
+                 <td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;text-align:right;">${Number(order.shipping_cost_aud) > 0 ? money(order.shipping_cost_aud) : 'FREE'}</td></tr>`
+            : '';
+          const itemsText = (order.line_items || [])
+            // deno-lint-ignore no-explicit-any
+            .map((item: any) => `${item.quantity}x ${item.size ? `${item.name} (Size ${item.size})` : item.name} — ${money(Number(item.price_aud || 0) * Number(item.quantity || 1))}`)
+            .join('\n');
+
+          await sendBrandedEmail(confirmationEmail, `Order confirmed — #${orderNumber}`, {
+            text: `Thanks for your order!\n\nOrder #${orderNumber}\n\n${itemsText}\n${order.shipping_service_name ? `Shipping (${order.shipping_service_name}): ${Number(order.shipping_cost_aud) > 0 ? money(order.shipping_cost_aud) : 'FREE'}\n` : ''}Total: ${money(order.total_aud)} AUD\n\nTrack your order: ${siteUrl()}/account\n\nRugby League Takeover`,
+            preheader: `Order #${orderNumber} confirmed — ${money(order.total_aud)} AUD`,
+            heading: 'Order confirmed',
+            bodyHtml: `<p style="margin:0 0 14px;">Thanks${order.customer_name ? ` ${escapeHtml(String(order.customer_name).split(/\s+/)[0])}` : ''} — your payment is in and the crew is on it.</p>
+              <p style="margin:0 0 18px;color:#94a3b8;">Order <strong style="color:#f97316;">#${orderNumber}</strong></p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;">
+                ${itemRows}
+                ${shippingRow}
+                <tr>
+                  <td style="padding:12px 0 0;color:#ffffff;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total</td>
+                  <td style="padding:12px 0 0;color:#f97316;font-weight:bold;text-align:right;font-size:16px;">${money(order.total_aud)} AUD</td>
+                </tr>
+              </table>
+              <p style="margin:20px 0 0;color:#94a3b8;">We'll email again when it ships. You can follow every step from your account.</p>`,
+            ctaLabel: 'Track my order',
+            ctaUrl: `${siteUrl()}/account`,
+            footerNote: `Sent to ${confirmationEmail} because an order was placed in the Vegas Takeover Store.`,
+          });
         }
       }
     }

@@ -79,6 +79,81 @@ export function getStripeWebhookSecret() {
   return secret;
 }
 
+// ---------------------------------------------------------------------------
+// Branded transactional email (Resend). One template so every email the
+// platform sends looks like the site: dark background, orange accent, logo.
+// Auth emails (signup code / reset / invite) are branded separately via the
+// Supabase dashboard templates — see supabase/auth-email-templates/.
+// ---------------------------------------------------------------------------
+export function siteUrl() {
+  return (Deno.env.get('SITE_URL') || 'https://www.rugbyleaguetakeover.com').replace(/\/+$/, '');
+}
+
+export const escapeHtml = (value: unknown) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+// deno-lint-ignore no-explicit-any
+export function brandedEmailHtml({ preheader = '', heading, bodyHtml, ctaLabel, ctaUrl, footerNote }: any) {
+  const base = siteUrl();
+  const logo = `${base}/icons/icon-192.png`;
+  const cta = ctaLabel && ctaUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 4px;"><tr><td style="background:#f97316;">
+         <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:14px 34px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${escapeHtml(ctaLabel)}</a>
+       </td></tr></table>`
+    : '';
+  return `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><title>${escapeHtml(heading)}</title></head>
+<body style="margin:0;padding:0;background-color:#030712;">
+  <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(preheader)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#030712;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <tr><td align="center" style="padding:8px 0 24px;">
+          <a href="${base}" style="text-decoration:none;">
+            <img src="${logo}" width="72" height="72" alt="Rugby League Takeover" style="display:block;border:0;">
+          </a>
+        </td></tr>
+        <tr><td style="height:3px;background:linear-gradient(90deg,#f97316,#d97706);font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background-color:#0b1220;border:1px solid #1f2937;border-top:0;padding:36px 32px;">
+          <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#f97316;">Rugby League Takeover · Las Vegas</p>
+          <h1 style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.2;text-transform:uppercase;letter-spacing:1px;color:#ffffff;">${escapeHtml(heading)}</h1>
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#cbd5e1;">${bodyHtml}</div>
+          ${cta}
+        </td></tr>
+        <tr><td style="padding:22px 8px 0;" align="center">
+          <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#64748b;">
+            ${footerNote ? `${escapeHtml(footerNote)}<br>` : ''}
+            Rugby League Takeover Las Vegas · <a href="${base}" style="color:#94a3b8;">rugbyleaguetakeover.com</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// Sends via Resend. Returns false (never throws) when unconfigured or on
+// failure — transactional email must not break the calling flow.
+export async function sendBrandedEmail(to: string, subject: string, { text, ...template }: { text: string } & Record<string, unknown>) {
+  try {
+    const key = Deno.env.get('RESEND_API_KEY');
+    if (!key || !to) return false;
+    const from = Deno.env.get('EMAIL_FROM') || 'Rugby League Takeover <onboarding@resend.dev>';
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ from, to, subject, text, html: brandedEmailHtml(template) }),
+    });
+    if (!res.ok) console.error('Resend send failed:', res.status, await res.text().catch(() => ''));
+    return res.ok;
+  } catch (error) {
+    console.error('sendBrandedEmail error:', error);
+    return false;
+  }
+}
+
 export const trimToLength = (value: unknown, maxLength: number) =>
   String(value ?? '').trim().slice(0, maxLength);
 

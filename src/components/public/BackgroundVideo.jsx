@@ -1,4 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Pause, Play } from "lucide-react";
+
+// WCAG 2.2.2 (Pause, Stop, Hide): the user's choice to pause the ambient
+// background video persists across pages and visits.
+const PAUSE_STORAGE_KEY = "rlt_bg_video_paused";
+
+const readStoredPause = () => {
+  try {
+    return localStorage.getItem(PAUSE_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 
 const extOf = (url) => String(url).split("?")[0].split(".").pop()?.toLowerCase();
 const mimeFor = (url) => ({ mp4: "video/mp4", webm: "video/webm", ogg: "video/ogg", mov: "video/quicktime" }[extOf(url)] || "");
@@ -40,6 +53,10 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [userPaused, setUserPaused] = useState(readStoredPause);
+  // Whether the environment (data-saver / reduced-motion) already suppresses
+  // the video — when it does, nothing is moving, so no pause control is shown.
+  const [envBlocked, setEnvBlocked] = useState(false);
 
   const ordered = useMemo(() => {
     const list = normalizeVideoSources(sources, src);
@@ -62,12 +79,25 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     // (muted+playsInline autoplay is expected on mobile by design).
     const isSaveData = !!(navigator.connection && navigator.connection.saveData);
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (isSaveData || prefersReducedMotion) {
+    setEnvBlocked(isSaveData || prefersReducedMotion);
+    if (isSaveData || prefersReducedMotion || userPaused) {
       setShouldPlayVideo(false);
       return;
     }
     setShouldPlayVideo(true);
-  }, [key]);
+  }, [key, userPaused]);
+
+  const togglePaused = () => {
+    setUserPaused((paused) => {
+      const next = !paused;
+      try {
+        localStorage.setItem(PAUSE_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* private browsing — the choice just won't persist */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!shouldPlayVideo) return undefined;
@@ -150,6 +180,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
   }, [shouldPlayVideo, activeVideo, ordered.length]);
 
   return (
+    <>
     <div aria-hidden="true" className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-background">
       {/* Fallback Static Poster Image (always rendered under video, or as main background) */}
       <img
@@ -210,5 +241,23 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       {/* Dark Vegas neon-supporting vignette overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-background/15 via-background/25 to-background/85" />
     </div>
+
+    {/* WCAG 2.2.2 pause/play control. A sibling of the aria-hidden layer so it
+        stays reachable by keyboard and screen readers. Hidden when data-saver
+        or reduced-motion already stops the video (nothing moving to pause).
+        Sits bottom-left, clear of the cart/scroll FABs on the right, above the
+        mobile tab bar. */}
+    {!envBlocked && (
+      <button
+        type="button"
+        onClick={togglePaused}
+        aria-label={userPaused ? "Play background video" : "Pause background video"}
+        aria-pressed={userPaused}
+        className="fixed bottom-[calc(5.5rem+var(--safe-bottom))] left-4 z-30 flex h-11 w-11 items-center justify-center border border-border/60 bg-background/60 text-slate-300 backdrop-blur-sm transition-colors hover:border-primary/50 hover:text-white focus-visible:ring-2 focus-visible:ring-primary lg:bottom-[calc(1.5rem+var(--safe-bottom))]"
+      >
+        {userPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+      </button>
+    )}
+    </>
   );
 }

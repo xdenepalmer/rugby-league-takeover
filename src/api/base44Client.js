@@ -207,7 +207,7 @@ const auth = {
 
   async resetPasswordRequest(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password?token=supabase`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) throw new Error(error.message || 'Failed to send reset email');
     return { ok: true };
