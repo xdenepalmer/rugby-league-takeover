@@ -14,7 +14,9 @@ export default function StoreFaq() {
     meta: { silent: true },
   });
 
-  const visible = faqs.filter((f) => f.is_published !== false);
+  // Store page shows the "store" FAQs (legacy rows with no category count as
+  // store, since that was the original default). Website FAQs live on /faq.
+  const visible = faqs.filter((f) => f.is_published !== false && (f.category === "store" || !f.category));
   if (visible.length === 0) return null;
 
   return (
