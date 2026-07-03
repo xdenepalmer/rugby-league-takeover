@@ -8,6 +8,11 @@ const NAVIGATION_TIMEOUT_MS = 2500;
 const isBypassedRequest = (request) => {
   const url = new URL(request.url);
   if (request.method !== "GET") return true;
+  // Cross-origin requests (Supabase media, pasted image URLs, fonts) go
+  // straight from the page, not through the worker — the page's CSP
+  // (img-src/media-src/font-src) governs them, and the worker's stricter
+  // connect-src never has to allow arbitrary hosts.
+  if (url.origin !== self.location.origin) return true;
   if (request.headers.has("authorization")) return true;
   if (url.pathname.startsWith("/api/")) return true;
   if (url.pathname.includes("createCheckout")) return true;
