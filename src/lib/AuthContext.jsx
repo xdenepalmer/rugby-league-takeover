@@ -84,7 +84,15 @@ export const AuthProvider = ({ children }) => {
     // Keep local state in sync with Supabase session changes (OAuth redirects,
     // token refresh failures, sign-out in another tab).
     const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+      if (event === 'PASSWORD_RECOVERY') {
+        // The user arrived from a reset-password email. Supabase may have
+        // dropped them on any page (it falls back to the Site URL when the
+        // redirect isn't allow-listed) — always take them to the form.
+        checkUserAuth();
+        if (!window.location.pathname.startsWith('/reset-password')) {
+          window.location.replace('/reset-password');
+        }
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         checkUserAuth();
       } else if (event === 'SIGNED_OUT') {
         setUser(null);

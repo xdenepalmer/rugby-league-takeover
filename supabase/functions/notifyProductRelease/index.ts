@@ -1,22 +1,10 @@
 // Notify release-list subscribers when a product goes live. Called by an admin
 // (or automation) with { data: { id: productId } }. Emails send via Resend when
 // RESEND_API_KEY is configured; in-app notifications are always created.
-import { json, preflight, serviceClient } from './shared.ts';
+import { json, preflight, serviceClient, sendBrandedEmail, siteUrl, escapeHtml } from './shared.ts';
 
 const clean = (v: unknown) => String(v ?? '').trim();
 const nowIso = () => new Date().toISOString();
-
-async function sendEmail(to: string, subject: string, body: string) {
-  const key = Deno.env.get('RESEND_API_KEY');
-  if (!key) return false;
-  const from = Deno.env.get('EMAIL_FROM') || 'Rugby League Takeover <onboarding@resend.dev>';
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ from, to, subject, text: body }),
-  });
-  return res.ok;
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
@@ -44,14 +32,22 @@ Deno.serve(async (req) => {
 
     const pending = (subscribers || []).filter((sub) => !sub.notified_at && clean(sub.email));
     const productName = clean(product.name) || 'Your merch item';
-    const storeUrl = Deno.env.get('SITE_URL') ? `${Deno.env.get('SITE_URL')}/store` : 'https://rugbyleaguetakeover.com/store';
+    const storeUrl = `${siteUrl()}/store`;
     let sent = 0;
 
     for (const sub of pending) {
       const firstName = clean(sub.name).split(/\s+/)[0] || 'legend';
-      const body = `Hey ${firstName},\n\n${productName} is now live in the Vegas Takeover Store.\n\nGrab it here: ${storeUrl}\n\nThanks for joining the release list.\n\nRugby League Takeover`;
-
-      await sendEmail(sub.email, `${productName} is now live`, body).catch(() => false);
+      await sendBrandedEmail(sub.email, `${productName} is now live`, {
+        text: `Hey ${firstName},\n\n${productName} is now live in the Vegas Takeover Store.\n\nGrab it here: ${storeUrl}\n\nThanks for joining the release list.\n\nRugby League Takeover`,
+        preheader: `${productName} just dropped in the Vegas Takeover Store.`,
+        heading: 'It just dropped',
+        bodyHtml: `<p style="margin:0 0 14px;">Hey ${escapeHtml(firstName)},</p>
+          <p style="margin:0 0 14px;"><strong style="color:#ffffff;">${escapeHtml(productName)}</strong> is now live in the Vegas Takeover Store — you asked us to let you know the moment it landed.</p>
+          <p style="margin:0;">Stock moves fast on release day. Good luck out there.</p>`,
+        ctaLabel: 'Shop the drop',
+        ctaUrl: storeUrl,
+        footerNote: "You're receiving this because you joined this product's release list.",
+      });
 
       if (clean(sub.user_id)) {
         await svc.from('notifications').insert({
