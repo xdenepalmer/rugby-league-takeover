@@ -103,10 +103,27 @@ export function brandedEmailHtml({ preheader = '', heading, bodyHtml, ctaLabel, 
     : '';
   return `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><title>${escapeHtml(heading)}</title></head>
-<body style="margin:0;padding:0;background-color:#030712;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>${escapeHtml(heading)}</title>
+<style>
+  :root { color-scheme: dark; supported-color-schemes: dark; }
+  a[x-apple-data-detectors]{ color:inherit !important; text-decoration:none !important; }
+  /* Re-assert the brand palette if Gmail (data-ogsc/ogsb) tries to invert it */
+  [data-ogsb] .bg-page{ background-color:#030712 !important; }
+  [data-ogsb] .bg-card{ background-color:#0b1220 !important; }
+  [data-ogsc] .t-white{ color:#ffffff !important; }
+  [data-ogsc] .t-body{ color:#cbd5e1 !important; }
+  [data-ogsc] .t-orange{ color:#f97316 !important; }
+  [data-ogsc] .t-muted{ color:#94a3b8 !important; }
+</style>
+</head>
+<body class="bg-page" bgcolor="#030712" style="margin:0;padding:0;background-color:#030712;">
   <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(preheader)}</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#030712;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-page" bgcolor="#030712" style="background-color:#030712;">
     <tr><td align="center" style="padding:32px 16px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
         <tr><td align="center" style="padding:8px 0 24px;">
@@ -114,17 +131,17 @@ export function brandedEmailHtml({ preheader = '', heading, bodyHtml, ctaLabel, 
             <img src="${logo}" width="72" height="72" alt="Rugby League Takeover" style="display:block;border:0;">
           </a>
         </td></tr>
-        <tr><td style="height:3px;background:linear-gradient(90deg,#f97316,#d97706);font-size:0;line-height:0;">&nbsp;</td></tr>
-        <tr><td style="background-color:#0b1220;border:1px solid #1f2937;border-top:0;padding:36px 32px;">
-          <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#f97316;">Rugby League Takeover · Las Vegas</p>
-          <h1 style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.2;text-transform:uppercase;letter-spacing:1px;color:#ffffff;">${escapeHtml(heading)}</h1>
-          <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#cbd5e1;">${bodyHtml}</div>
+        <tr><td style="height:3px;background-color:#f97316;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td class="bg-card" bgcolor="#0b1220" style="background-color:#0b1220;border:1px solid #1f2937;border-top:0;padding:36px 32px;">
+          <p class="t-orange" style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#f97316;">Rugby League Takeover · Las Vegas</p>
+          <h1 class="t-white" style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.2;text-transform:uppercase;letter-spacing:1px;color:#ffffff;">${escapeHtml(heading)}</h1>
+          <div class="t-body" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#cbd5e1;">${bodyHtml}</div>
           ${cta}
         </td></tr>
         <tr><td style="padding:22px 8px 0;" align="center">
-          <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#64748b;">
+          <p class="t-muted" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#64748b;">
             ${footerNote ? `${escapeHtml(footerNote)}<br>` : ''}
-            Rugby League Takeover Las Vegas · <a href="${base}" style="color:#94a3b8;">rugbyleaguetakeover.com</a>
+            Rugby League Takeover Las Vegas · <a href="${base}" class="t-muted" style="color:#94a3b8;">rugbyleaguetakeover.com</a>
           </p>
         </td></tr>
       </table>
