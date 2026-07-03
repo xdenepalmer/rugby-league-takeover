@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, HelpCircle, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -8,31 +8,55 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
-const emptyFaq = { question: "", answer: "", category: "store", sort_order: 1, is_published: true };
+// Copy per scope. "store" drives the merch-store FAQ block; "general" drives
+// the public /faq page. Legacy rows with no category are treated as "store"
+// (that was the old default), so nothing disappears from the store.
+const SCOPES = {
+  store: {
+    title: "Store FAQs",
+    description: "Shown in the merch store FAQ section — returns, shipping, sizing, anything.",
+    placeholder: "Question (e.g. What's your returns policy?)",
+    matches: (f) => f.category === "store" || !f.category,
+  },
+  general: {
+    title: "Website FAQs",
+    description: "Shown on the public FAQ page (/faq) — travel, events, community, general questions.",
+    placeholder: "Question (e.g. What is Rugby League Takeover?)",
+    matches: (f) => f.category === "general",
+  },
+};
 
-export default function FaqManager({ faqs = [] }) {
+export default function FaqManager({ faqs = [], category = "store", title, description }) {
+  const scope = SCOPES[category] || SCOPES.store;
+  const emptyFaq = { question: "", answer: "", category, sort_order: 1, is_published: true };
+
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(emptyFaq);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["faqs"] });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Faq.create(data),
+    mutationFn: (data) => base44.entities.Faq.create({ ...data, category }),
     onSuccess: () => { refresh(); setDraft(emptyFaq); toast({ title: "FAQ added" }); },
   });
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Faq.update(id, data), onSuccess: refresh });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Faq.delete(id), onSuccess: () => { refresh(); toast({ title: "FAQ removed" }); } });
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const sorted = [...faqs].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+
+  // Only this scope's FAQs — so the Store and Website managers stay separate.
+  const sorted = useMemo(
+    () => faqs.filter(scope.matches).sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
+    [faqs, scope]
+  );
 
   return (
     <section id="faq-admin" className="scroll-mt-28 border border-border bg-card p-6">
-      <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><HelpCircle className="h-6 w-6 text-primary" /> Store FAQs</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Free-format questions &amp; answers shown on the merch store — returns, shipping, sizing, anything. Add as many as you like.</p>
+      <h2 className="flex items-center gap-2 font-display text-3xl uppercase"><HelpCircle className="h-6 w-6 text-primary" /> {title || scope.title}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">{description || scope.description} Add as many as you like.</p>
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a question</p>
-        <Input placeholder="Question (e.g. What's your returns policy?)" value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} className="h-11 rounded-none" />
+        <Input placeholder={scope.placeholder} value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} className="h-11 rounded-none" />
         <Textarea placeholder="Answer" value={draft.answer} onChange={(e) => setDraft({ ...draft, answer: e.target.value })} className="min-h-24 rounded-none" />
         <div className="flex flex-wrap items-center gap-4">
           <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 w-32 rounded-none" />

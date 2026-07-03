@@ -47,7 +47,9 @@ export default function Faq() {
     meta: { silent: true },
   });
 
-  const visibleFaqs = faqs.filter((faq) => faq.is_published !== false && faq.question);
+  // The public FAQ page shows the "general" (website) FAQs, managed under
+  // Admin → Content → FAQs. Store-only FAQs live on the merch page instead.
+  const visibleFaqs = faqs.filter((faq) => faq.is_published !== false && faq.question && faq.category === "general");
   const items = visibleFaqs.length ? visibleFaqs : fallbackFaqs;
   const videoSources = settingsRecords[0]?.background_video_urls?.length
     ? settingsRecords[0].background_video_urls

@@ -149,7 +149,7 @@ export default function ContentPanel() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
             >
-              <FaqManager faqs={faqs} />
+              <FaqManager faqs={faqs} category="general" />
             </motion.div>
           )}
 
