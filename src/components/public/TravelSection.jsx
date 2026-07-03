@@ -176,8 +176,10 @@ export default function TravelSection({ packages, settings = {} }) {
           {settings.travel_description || "Premium flights, tickets, accommodation packages are dropping soon. Register your interest below to secure your spot."}
         </SectionHeader>
         
-        {/* Packages Grid with detailed Lead Cards */}
-        <div className="grid gap-6 md:grid-cols-3 mt-12">
+        {/* Packages Grid with detailed Lead Cards. items-start so each card
+            sizes to its own content instead of stretching to the tallest one
+            (which left big empty gaps above the buttons on shorter cards). */}
+        <div className="grid gap-6 md:grid-cols-3 mt-12 items-start">
           {richPackages.map((pkg, index) => (
             <motion.div 
               key={pkg.id || index}
