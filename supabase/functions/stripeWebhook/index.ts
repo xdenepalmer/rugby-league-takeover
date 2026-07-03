@@ -128,13 +128,13 @@ Deno.serve(async (req) => {
           const itemRows = (order.line_items || []).map((item: any) => {
             const label = item.size ? `${item.name} — Size ${item.size}` : item.name;
             return `<tr>
-              <td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;">${escapeHtml(label)} <span style="color:#64748b;">× ${Number(item.quantity || 1)}</span></td>
-              <td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;text-align:right;white-space:nowrap;">${money(Number(item.price_aud || 0) * Number(item.quantity || 1))}</td>
+              <td class="t-body" style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;">${escapeHtml(label)} <span class="t-muted" style="color:#64748b;">× ${Number(item.quantity || 1)}</span></td>
+              <td class="t-body" style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;text-align:right;white-space:nowrap;">${money(Number(item.price_aud || 0) * Number(item.quantity || 1))}</td>
             </tr>`;
           }).join('');
           const shippingRow = order.shipping_service_name
-            ? `<tr><td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;">Shipping — ${escapeHtml(order.shipping_service_name)} (AusPost)</td>
-                 <td style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;text-align:right;">${Number(order.shipping_cost_aud) > 0 ? money(order.shipping_cost_aud) : 'FREE'}</td></tr>`
+            ? `<tr><td class="t-body" style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;">Shipping — ${escapeHtml(order.shipping_service_name)} (AusPost)</td>
+                 <td class="t-body" style="padding:9px 0;border-bottom:1px solid #1f2937;color:#cbd5e1;text-align:right;">${Number(order.shipping_cost_aud) > 0 ? money(order.shipping_cost_aud) : 'FREE'}</td></tr>`
             : '';
           const itemsText = (order.line_items || [])
             // deno-lint-ignore no-explicit-any
@@ -146,16 +146,16 @@ Deno.serve(async (req) => {
             preheader: `Order #${orderNumber} confirmed — ${money(order.total_aud)} AUD`,
             heading: 'Order confirmed',
             bodyHtml: `<p style="margin:0 0 14px;">Thanks${order.customer_name ? ` ${escapeHtml(String(order.customer_name).split(/\s+/)[0])}` : ''} — your payment is in and the crew is on it.</p>
-              <p style="margin:0 0 18px;color:#94a3b8;">Order <strong style="color:#f97316;">#${orderNumber}</strong></p>
+              <p class="t-muted" style="margin:0 0 18px;color:#94a3b8;">Order <strong class="t-orange" style="color:#f97316;">#${orderNumber}</strong></p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;">
                 ${itemRows}
                 ${shippingRow}
                 <tr>
-                  <td style="padding:12px 0 0;color:#ffffff;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total</td>
-                  <td style="padding:12px 0 0;color:#f97316;font-weight:bold;text-align:right;font-size:16px;">${money(order.total_aud)} AUD</td>
+                  <td class="t-white" style="padding:12px 0 0;color:#ffffff;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total</td>
+                  <td class="t-orange" style="padding:12px 0 0;color:#f97316;font-weight:bold;text-align:right;font-size:16px;">${money(order.total_aud)} AUD</td>
                 </tr>
               </table>
-              <p style="margin:20px 0 0;color:#94a3b8;">We'll email again when it ships. You can follow every step from your account.</p>`,
+              <p class="t-muted" style="margin:20px 0 0;color:#94a3b8;">We'll email again when it ships. You can follow every step from your account.</p>`,
             ctaLabel: 'Track my order',
             ctaUrl: `${siteUrl()}/account`,
             footerNote: `Sent to ${confirmationEmail} because an order was placed in the Vegas Takeover Store.`,
