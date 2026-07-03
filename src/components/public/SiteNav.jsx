@@ -286,9 +286,9 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     <header className={`fixed top-0 left-0 right-0 z-[200] w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${scrolled ? "bg-background/85 backdrop-blur-xl" : ""}`}>
       <div 
         className={`pointer-events-auto mx-auto flex items-center justify-between transition-[background-color,border-color,box-shadow,padding] duration-300 ${
-          scrolled 
-            ? "max-w-7xl border-b border-primary/30 bg-background/85 backdrop-blur-xl shadow-[0_4px_30px_rgba(3,5,18,0.4)] h-16 px-5 md:px-8" 
-            : "max-w-7xl border-b border-border/10 bg-background/20 backdrop-blur-md h-20 px-5 md:px-8"
+          scrolled
+            ? "max-w-[88rem] border-b border-primary/30 bg-background/85 backdrop-blur-xl shadow-[0_4px_30px_rgba(3,5,18,0.4)] h-16 px-5 md:px-8"
+            : "max-w-[88rem] border-b border-border/10 bg-background/20 backdrop-blur-md h-20 px-5 md:px-8"
         }`}
       >
         <Link
@@ -311,7 +311,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
         </Link>
         
         {/* Desktop Nav links with HUD bracket hover and glowing indicator */}
-        <nav className="hidden items-center gap-1.5 xl:gap-3 2xl:gap-5 lg:flex" aria-label="Site navigation">
+        <nav className="hidden items-center gap-1.5 xl:gap-3 2xl:gap-5 xl:flex" aria-label="Site navigation">
           {links.map((link) => {
             const active = isLinkActive(link.href);
             return (
@@ -410,7 +410,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden border border-border rounded-none h-11 w-11 cursor-pointer bg-secondary/40 text-slate-300 hover:text-foreground hover:border-primary transition-all duration-300" 
+            className="xl:hidden border border-border rounded-none h-11 w-11 cursor-pointer bg-secondary/40 text-slate-300 hover:text-foreground hover:border-primary transition-all duration-300"
             onClick={() => setOpen(!open)}
             aria-label={open ? "Close menu" : "Open menu"}
           >
@@ -433,7 +433,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               onClick={() => setOpen(false)}
               role="button"
               aria-label="Close menu"
-              className="fixed inset-0 z-[210] bg-black/80 lg:hidden pointer-events-auto"
+              className="fixed inset-0 z-[210] bg-black/80 xl:hidden pointer-events-auto"
             />
  
             <motion.nav 
@@ -445,7 +445,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               exit={{ x: "100%" }}
               transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.28 }}
               style={{ willChange: "transform" }}
-              className="fixed bottom-0 right-0 top-0 z-[220] flex w-72 max-w-[86vw] flex-col justify-between overflow-y-auto overscroll-contain border-l border-border bg-[#030712] px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto lg:hidden"
+              className="fixed bottom-0 right-0 top-0 z-[220] flex w-72 max-w-[86vw] flex-col justify-between overflow-y-auto overscroll-contain border-l border-border bg-[#030712] px-6 py-6 pb-safe pt-safe shadow-2xl pointer-events-auto xl:hidden"
             >
               {/* Technical Grid background decoration */}
               <div 
