@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -30,6 +30,48 @@ function TextWithLinks({ text, className }) {
         ) : part
       )}
     </p>
+  );
+}
+
+// Long package itineraries get clamped to a tidy preview with a Read more
+// toggle, so the cards stay a uniform, readable height. The toggle only
+// appears when the text actually overflows the collapsed height.
+const COLLAPSED_MAX_PX = 168;
+
+function ClampedDescription({ text, className }) {
+  const ref = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+  const [clampable, setClampable] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // scrollHeight is the full content height even while overflow is hidden.
+    setClampable(el.scrollHeight > COLLAPSED_MAX_PX + 12);
+  }, [text]);
+
+  return (
+    <div className="mt-3">
+      <div
+        ref={ref}
+        style={{ maxHeight: expanded ? "none" : `${COLLAPSED_MAX_PX}px`, overflow: "hidden" }}
+        className="relative"
+      >
+        <TextWithLinks text={text} className={className} />
+        {clampable && !expanded && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent" />
+        )}
+      </div>
+      {clampable && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary hover:text-accent transition-colors cursor-pointer"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -217,7 +259,7 @@ export default function TravelSection({ packages, settings = {} }) {
                   <h3 className="font-display text-2xl uppercase leading-none text-foreground group-hover:text-primary transition-colors duration-300">
                     {pkg.name}
                   </h3>
-                  <TextWithLinks text={pkg.description} className="mt-3 text-xs leading-relaxed text-muted-foreground whitespace-pre-line" />
+                  <ClampedDescription text={pkg.description} className="text-xs leading-relaxed text-muted-foreground whitespace-pre-line" />
 
 
                 </div>
