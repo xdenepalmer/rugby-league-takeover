@@ -3,23 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
 <title>Your sign-in link</title>
 <style>
-  :root { color-scheme: dark; supported-color-schemes: dark; }
+  :root { color-scheme: light; supported-color-schemes: light; }
   a[x-apple-data-detectors]{ color:inherit !important; text-decoration:none !important; }
-  [data-ogsb] .bg-page{ background-color:#030712 !important; }
-  [data-ogsb] .bg-card{ background-color:#0b1220 !important; }
-  [data-ogsc] .t-white{ color:#ffffff !important; }
-  [data-ogsc] .t-body{ color:#cbd5e1 !important; }
-  [data-ogsc] .t-orange{ color:#f97316 !important; }
-  [data-ogsc] .t-muted{ color:#94a3b8 !important; }
 </style>
 </head>
-<body class="bg-page" bgcolor="#030712" style="margin:0;padding:0;background-color:#030712;">
+<body bgcolor="#f2f4f7" style="margin:0;padding:0;background-color:#f2f4f7;">
   <div style="display:none;max-height:0;overflow:hidden;">Your one-tap Rugby League Takeover sign-in link</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-page" bgcolor="#030712" style="background-color:#030712;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f2f4f7" style="background-color:#f2f4f7;">
     <tr><td align="center" style="padding:32px 16px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
         <tr><td align="center" style="padding:8px 0 24px;">
@@ -27,18 +21,18 @@
             <img src="{{ .SiteURL }}/icons/icon-192.png" width="72" height="72" alt="Rugby League Takeover" style="display:block;border:0;">
           </a>
         </td></tr>
-        <tr><td style="height:3px;background-color:#f97316;font-size:0;line-height:0;">&nbsp;</td></tr>
-        <tr><td class="bg-card" bgcolor="#0b1220" style="background-color:#0b1220;border:1px solid #1f2937;border-top:0;padding:36px 32px;">
-          <p class="t-orange" style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#f97316;">Rugby League Takeover &middot; Las Vegas</p>
-          <h1 class="t-white" style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.2;text-transform:uppercase;letter-spacing:1px;color:#ffffff;">Sign in with one tap</h1>
-          <div class="t-body" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#cbd5e1;"><p style="margin:0;">Use the button below to sign in to Rugby League Takeover as <strong class="t-white" style="color:#ffffff;">{{ .Email }}</strong>. The link is single-use and expires shortly.</p><table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 4px;"><tr><td bgcolor="#f97316" style="background-color:#f97316;">
+        <tr><td style="height:4px;background-color:#f97316;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #e2e8f0;border-top:0;padding:36px 32px;">
+          <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#ea580c;">Rugby League Takeover &middot; Las Vegas</p>
+          <h1 style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.2;text-transform:uppercase;letter-spacing:1px;color:#0b1220;">Sign in with one tap</h1>
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#334155;"><p style="margin:0;">Use the button below to sign in to Rugby League Takeover as <strong style="color:#0b1220;">{{ .Email }}</strong>. The link is single-use and expires shortly.</p><table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 4px;"><tr><td bgcolor="#f97316" style="background-color:#f97316;">
   <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 34px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;">Sign me in</a>
-</td></tr></table><p class="t-muted" style="margin:20px 0 0;color:#94a3b8;">If you didn't ask for this link, you can safely ignore this email.</p></div>
+</td></tr></table><p style="margin:20px 0 0;color:#64748b;">If you didn't ask for this link, you can safely ignore this email.</p></div>
         </td></tr>
         <tr><td style="padding:22px 8px 0;" align="center">
-          <p class="t-muted" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#64748b;">
+          <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#64748b;">
             Sent to {{ .Email }} following a sign-in request.<br>
-            Rugby League Takeover Las Vegas &middot; <a href="{{ .SiteURL }}" class="t-muted" style="color:#94a3b8;">rugbyleaguetakeover.com</a>
+            Rugby League Takeover Las Vegas &middot; <a href="{{ .SiteURL }}" style="color:#64748b;">rugbyleaguetakeover.com</a>
           </p>
         </td></tr>
       </table>

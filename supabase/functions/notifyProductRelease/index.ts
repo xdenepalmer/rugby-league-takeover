@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
         preheader: `${productName} just dropped in the Vegas Takeover Store.`,
         heading: 'It just dropped',
         bodyHtml: `<p style="margin:0 0 14px;">Hey ${escapeHtml(firstName)},</p>
-          <p style="margin:0 0 14px;"><strong class="t-white" style="color:#ffffff;">${escapeHtml(productName)}</strong> is now live in the Vegas Takeover Store — you asked us to let you know the moment it landed.</p>
+          <p style="margin:0 0 14px;"><strong style="color:#0b1220;">${escapeHtml(productName)}</strong> is now live in the Vegas Takeover Store — you asked us to let you know the moment it landed.</p>
           <p style="margin:0;">Stock moves fast on release day. Good luck out there.</p>`,
         ctaLabel: 'Shop the drop',
         ctaUrl: storeUrl,
