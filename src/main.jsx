@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import RootErrorBoundary from '@/components/RootErrorBoundary'
 import { registerServiceWorker } from '@/lib/register-service-worker'
+import { injectSpeedInsights } from '@vercel/speed-insights'
 import '@/index.css'
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
 
 // Last-resort fallback if React never mounts anything (e.g. a broken/partial
 // publish, or a hung boot). Renders a recoverable message into #root rather
