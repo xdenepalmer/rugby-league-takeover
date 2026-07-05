@@ -133,6 +133,14 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       });
     };
 
+    // Full recovery for a stalled/errored/frozen media pipeline: play() alone
+    // cannot fix a broken buffer — re-load the source, then play.
+    const recover = () => {
+      if (cancelled) return;
+      try { video.load(); } catch { /* ignore */ }
+      playVideo();
+    };
+
     video.load();
     window.setTimeout(playVideo, 80);
 
@@ -147,10 +155,34 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       if (!cancelled && video.paused) playVideo();
     }, 8000);
 
-    // Periodic keep-alive: every 10s, if the video has mysteriously stopped, restart it
+    // Self-healing keep-alive. Desktop browsers pause OR silently FREEZE a
+    // background video (tab-switch throttle, GPU/power saving, a network stall on
+    // the remote asset). A frozen video is NOT `paused` — it plays a stuck frame
+    // with currentTime not advancing — so checking `paused` alone misses it and
+    // it "never comes back". Detect not-advancing / low-readyState and fully
+    // recover (reload the buffer, not just play()).
+    let lastTime = -1;
     const keepAlive = window.setInterval(() => {
-      if (!cancelled && !document.hidden && video.paused) playVideo();
-    }, 10000);
+      if (cancelled || document.hidden) return;
+      const v = videoRef.current;
+      if (!v) return;
+      if (v.paused) {
+        playVideo();
+      } else if (v.currentTime === lastTime || v.readyState < 2) {
+        recover();
+      }
+      lastTime = v.currentTime;
+    }, 5000);
+
+    // Recover from media stalls/errors (common with remote-hosted video on
+    // desktop). Debounced so ordinary buffering does not thrash a reload.
+    let recoverTimer = null;
+    const scheduleRecover = () => {
+      if (recoverTimer || cancelled) return;
+      recoverTimer = window.setTimeout(() => { recoverTimer = null; recover(); }, 1500);
+    };
+    video.addEventListener("stalled", scheduleRecover);
+    video.addEventListener("error", scheduleRecover);
 
     window.addEventListener("touchstart", playVideo, { once: true });
     window.addEventListener("click", playVideo, { once: true });
@@ -173,6 +205,9 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       window.clearTimeout(watchdog2);
       window.clearTimeout(watchdog3);
       window.clearInterval(keepAlive);
+      window.clearTimeout(recoverTimer);
+      video.removeEventListener("stalled", scheduleRecover);
+      video.removeEventListener("error", scheduleRecover);
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
       document.removeEventListener("visibilitychange", handleVisibility);

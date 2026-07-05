@@ -53,3 +53,17 @@ test("sources are ordered so mp4 wins over mov (QuickTime unplayable in most bro
   assert.equal(extOf(ordered[0]), "mp4", "mp4 must be the first source");
   assert.equal(extOf(ordered[1]), "mov", "mov must be ranked last");
 });
+
+test("keep-alive self-heals a FROZEN video, not just a paused one (desktop 'never returns')", () => {
+  // The bug: desktop pauses OR silently freezes the bg video (tab throttle,
+  // power saving, network stall). A frozen video is not `paused`, and play()
+  // alone can't fix a broken buffer. Guard the frozen-detection + reload recovery
+  // so a future auto-sync rewrite can't reintroduce the "never comes back" bug.
+  assert.match(src, /v\.currentTime === lastTime|currentTime === lastTime/, "keep-alive must detect a not-advancing (frozen) video");
+  assert.match(src, /const recover = \(\) =>/, "must have a full recover() helper");
+  assert.match(src, /recover\(\)/, "keep-alive must call recover() when frozen/stalled");
+  // recover must re-load the media buffer, not merely call play().
+  const recoverBlock = src.slice(src.indexOf("const recover = () =>"), src.indexOf("const recover = () =>") + 160);
+  assert.match(recoverBlock, /video\.load\(\)/, "recover() must re-load the source buffer");
+  assert.match(src, /addEventListener\("stalled"/, "must recover on media 'stalled' events");
+});
