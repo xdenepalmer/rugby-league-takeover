@@ -50,7 +50,13 @@ export default function Faq() {
   // The public FAQ page shows the "general" (website) FAQs, managed under
   // Admin → Content → FAQs. Store-only FAQs live on the merch page instead.
   const visibleFaqs = faqs.filter((faq) => faq.is_published !== false && faq.question && faq.category === "general");
-  const items = visibleFaqs.length ? visibleFaqs : fallbackFaqs;
+  // The DB is the source of truth: the default website FAQs are seeded as real,
+  // editable "general" rows (migration 0009), so the admin can add/edit/delete
+  // them freely. Only fall back to the hard-coded copy when there is no backend
+  // to read from — otherwise deleting a FAQ in the admin would "come back".
+  const items = visibleFaqs.length
+    ? visibleFaqs
+    : (appParams.hasBase44Config ? [] : fallbackFaqs);
   const videoSources = settingsRecords[0]?.background_video_urls?.length
     ? settingsRecords[0].background_video_urls
     : DEFAULT_BACKGROUND_VIDEO_SOURCES;
@@ -87,6 +93,11 @@ export default function Faq() {
         </div>
 
         <section className="mt-8 border border-border bg-card/35 p-4 cmd-glass md:p-6" aria-label="Frequently asked questions">
+          {items.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No FAQs published yet. Check back soon or register your travel interest below.
+            </p>
+          )}
           <Accordion type="single" collapsible className="w-full">
             {items.map((faq, index) => (
               <AccordionItem key={faq.id || index} value={String(faq.id || index)} className="border-border/70">
