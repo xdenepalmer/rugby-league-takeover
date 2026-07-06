@@ -1,0 +1,22 @@
+{
+  "appId": "com.rugbyleaguetakeover.app",
+  "appName": "Rugby League Takeover",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#0a0a0a",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0a0a0a",
+      "showSpinner": false,
+      "iosSpinnerStyle": "small"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a0a0a"
+    }
+  }
+}

@@ -11,11 +11,19 @@
     "lint:fix": "eslint . --fix",
     "test": "node --test",
     "typecheck": "tsc -p ./jsconfig.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ios:add": "cap add ios",
+    "ios:sync": "vite build && cap sync ios",
+    "ios:open": "cap open ios"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.35",
     "@base44/vite-plugin": "^1.0.24",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/haptics": "^6.0.3",
+    "@capacitor/splash-screen": "^6.0.4",
+    "@capacitor/status-bar": "^6.0.3",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
     "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -65,6 +73,8 @@
     "web-vitals": "^5.3.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@eslint/js": "^9.19.0",
     "@types/node": "^22.13.5",
     "@types/react": "^18.2.66",

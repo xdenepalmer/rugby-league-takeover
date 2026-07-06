@@ -10,6 +10,7 @@ A public, account-optional web app. Anonymous visitors can browse and (where all
 - **Supabase** (`@supabase/supabase-js`) for data (Postgres + RLS), auth, Edge Functions, and Storage — wrapped by the compat client in `src/api/base44Client.js` which preserves the original `base44.*` call surface.
 - **Stripe** hosted checkout (PCI SAQ A — no card data touches the app).
 - **PWA**: service worker (`public/sw.js`) + web manifest.
+- **Native iOS app**: [Capacitor](https://capacitorjs.com) wraps the same web build into a self-contained iOS app (bundled assets, live Supabase data). Build the web app on any OS, sign it on a Mac — see **[`BUILD-iOS.md`](BUILD-iOS.md)**.
 - **Tests**: Node's built-in test runner (`node --test`). **Typecheck**: `tsc` against `jsconfig.json`. **Lint**: ESLint.
 
 ## 3. Local setup
@@ -34,6 +35,8 @@ No secrets belong in the repo. Stripe/Resend secret keys live only in Supabase E
 - `npm run typecheck` — `tsc -p ./jsconfig.json`.
 - `npm test` — run the `tests/**/*.test.mjs` suite.
 - `npm run preview` — preview the production build.
+- `npm run ios:sync` — build the web app and bundle it into the native iOS project (`ios/`).
+- `npm run ios:open` — open the iOS project in Xcode (macOS only). See `BUILD-iOS.md`.
 
 ## 6. Deploy flow
 1. Make code changes locally on a branch.
