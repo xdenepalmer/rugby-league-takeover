@@ -71,9 +71,10 @@ is generated and gitignored.
   `NotificationCenter`) are **already in place** — nothing else native is
   needed for token registration once the capability is enabled.
 - **Associated Domains**: add `applinks:rugbyleaguetakeover.com`.
-  Then replace `TEAMID` in `public/.well-known/apple-app-site-association`
-  with the real Team ID and redeploy the website (Vercel serves the file with
-  `Content-Type: application/json` — rule already in `vercel.json`).
+  The AASA file `public/.well-known/apple-app-site-association` already carries
+  the real Team ID (`25R438YK9F.com.rugbyleaguetakeover.app`); just add the
+  capability + entitlement and redeploy the website (Vercel serves the file
+  with `Content-Type: application/json` — rule already in `vercel.json`).
 - **Info.plist usage strings** (the forum/admin upload pickers can offer the
   camera; missing strings crash the app when a user taps "Take Photo"):
   - `NSCameraUsageDescription` — "Take a photo or video to attach to your forum post or profile."
@@ -139,6 +140,12 @@ and matches the site's anti-white-flash background.
   normal migration flow when the push story starts.
 - No send pipeline exists. Do not enable the Push capability messaging claims
   in App Store Connect until delivery is actually implemented.
+- **Credentials (for the future push story — NOT in this repo):** an APNs auth
+  key (`.p8`) is team-wide, so one key covers every app under Team
+  `25R438YK9F`. When the send pipeline is built, the key + Key ID + Team ID go
+  into **Supabase Edge Function secrets** (or Codemagic env), never git, and
+  the **`apns-topic` MUST be `com.rugbyleaguetakeover.app`** — not any other
+  app's bundle ID.
 
 ## Validation gate (run before every commit)
 

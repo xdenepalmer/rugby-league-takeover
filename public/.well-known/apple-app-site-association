@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appIDs": ["TEAMID.com.rugbyleaguetakeover.app"],
+        "appIDs": ["25R438YK9F.com.rugbyleaguetakeover.app"],
         "components": [
           { "/": "/*" }
         ]

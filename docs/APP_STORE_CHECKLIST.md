@@ -16,9 +16,11 @@ Status legend: ✅ done in repo · 🔧 manual Mac/portal step · ⏳ deferred s
 - 🔧 Push Notifications capability + APNs key (do NOT submit push marketing
   claims while delivery is unimplemented). ✅ AppDelegate token-forwarding
   hooks are already committed
-- 🔧 Associated Domains `applinks:rugbyleaguetakeover.com`; replace `TEAMID` in
+- ✅ AASA Team ID filled: `25R438YK9F.com.rugbyleaguetakeover.app` in
   `public/.well-known/apple-app-site-association` (served correctly by
-  `vercel.json` already ✅)
+  `vercel.json` already ✅). 🔧 Still needs: Associated Domains capability
+  `applinks:rugbyleaguetakeover.com` on the App ID + entitlement, and the
+  website redeployed so Apple can fetch the file.
 - 🔧 Info.plist usage strings: `NSCameraUsageDescription`,
   `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription`
   (upload pickers in forum/account/admin can invoke the camera)
