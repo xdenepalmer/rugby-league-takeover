@@ -51,7 +51,7 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
           <motion.div
             animate={{ opacity: [0.4, 0.8, 0.4] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="absolute top-0.5 right-0.5 z-20 px-1 py-px text-[6px] font-black uppercase tracking-wider bg-amber-400 text-black rounded-sm shadow-[0_0_8px_rgba(251,191,36,0.6)]"
+            className="absolute top-0.5 right-0.5 z-20 px-1 py-px text-[8px] font-black uppercase tracking-wider bg-amber-400 text-black rounded-sm shadow-[0_0_8px_rgba(251,191,36,0.6)]"
           >
             NEW
           </motion.div>

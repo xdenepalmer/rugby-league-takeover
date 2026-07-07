@@ -18,7 +18,7 @@ export default function LuckyMeter({ spinsSinceWin }) {
         <span className="text-[8px] font-mono uppercase tracking-wider text-amber-300/60 flex items-center gap-1">
           <Sparkles className="h-2.5 w-2.5" /> Lucky Meter
         </span>
-        <span className="text-[7px] font-bold text-amber-200/70">{label}</span>
+        <span className="text-[9px] font-bold text-amber-200/70">{label}</span>
       </div>
       <div className="h-2 w-full overflow-hidden bg-black/60 border border-amber-500/10">
         <motion.div
@@ -29,7 +29,7 @@ export default function LuckyMeter({ spinsSinceWin }) {
           style={{ boxShadow: fill > 0.6 ? "0 0 12px rgba(251,191,36,0.5)" : "none" }}
         />
       </div>
-      <p className="mt-1 text-[7px] text-amber-300/40">{spinsSinceWin} spins since last badge win</p>
+      <p className="mt-1 text-[9px] text-amber-300/60">{spinsSinceWin} spins since last badge win</p>
     </motion.div>
   );
 }

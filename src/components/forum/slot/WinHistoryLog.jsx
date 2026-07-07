@@ -45,9 +45,9 @@ export default function WinHistoryLog() {
                     <span className="text-lg">{badge.emoji}</span>
                     <div className="flex-1 min-w-0">
                       <p className={`text-[9px] font-bold truncate ${tier.text}`}>{badge.label}</p>
-                      <p className="text-[7px] text-purple-300/40">{badge.tier}</p>
+                      <p className="text-[9px] text-purple-300/60">{badge.tier}</p>
                     </div>
-                    <span className="text-[7px] text-purple-300/40 shrink-0">{agoText}</span>
+                    <span className="text-[9px] text-purple-300/60 shrink-0">{agoText}</span>
                   </div>
                 );
               })}

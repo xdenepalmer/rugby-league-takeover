@@ -41,7 +41,7 @@ export default function StatsPanel({ totalSpins, ownedCount, totalBadges, streak
                 { label: "Rarest Badge", value: topBadge ? `${topBadge.emoji} ${topBadge.tier}` : "—" },
               ].map((s) => (
                 <div key={s.label} className="bg-black/60 p-2 text-center">
-                  <p className="text-[7px] font-mono uppercase tracking-wider text-purple-300/40">{s.label}</p>
+                  <p className="text-[9px] font-mono uppercase tracking-wider text-purple-300/60">{s.label}</p>
                   <p className="text-[10px] font-bold text-purple-100/80 mt-0.5">{s.value}</p>
                 </div>
               ))}

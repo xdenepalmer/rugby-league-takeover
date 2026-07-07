@@ -72,12 +72,15 @@ export default function ReelWindow({ track, index, spinning, stopped, highlight,
         <motion.div
           key={`reel-${index}-${track.join("")}`}
           initial={{ y: 0 }}
-          animate={{ y: spinning ? targetY : 0 }}
+          animate={{ y: spinning ? [0, targetY - 14, targetY] : 0 }}
           transition={
             spinning
               ? {
+                  // Mechanical overshoot: run 14px past the payline, then snap
+                  // back — reads as the reel physically catching its stop.
                   duration: REEL_DURATIONS[index],
-                  ease: [0.08, 0.82, 0.17, 1],
+                  times: [0, 0.94, 1],
+                  ease: [[0.08, 0.82, 0.17, 1], "easeOut"],
                 }
               : { duration: 0 }
           }

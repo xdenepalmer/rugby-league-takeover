@@ -23,6 +23,9 @@ import {
 } from "@/components/forum/tipping/tipHelpers";
 import { playLockSound, playSelectSound } from "@/components/forum/tipping/audio";
 import { useCountdown } from "@/components/forum/tipping/hooks";
+import { successImpact, selectionChanged, warningImpact } from "@/lib/native/haptics";
+import { enqueueTip, removeTipFromQueue, prunedTipQueue } from "@/lib/tip-sync-queue";
+import { toast } from "@/components/ui/use-toast";
 import ConfettiBurst from "@/components/forum/tipping/ConfettiBurst";
 import PointsPopup from "@/components/forum/tipping/PointsPopup";
 import HeroStats from "@/components/forum/tipping/HeroStats";
@@ -154,10 +157,13 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
     }
     setShowConfetti(true);
     setShowStamp(true);
+    successImpact();
     playLockSound();
-    // Screen shake effect
+    // Screen shake effect (skipped under prefers-reduced-motion)
     try {
-      const el = e.currentTarget?.closest('article');
+      const el = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+        ? null
+        : e.currentTarget?.closest('article');
       if (el) {
         el.style.animation = 'none';
         el.offsetHeight; // force reflow
@@ -417,7 +423,7 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
                     key={m}
                     type="button"
                     disabled={!canInteract}
-                    onClick={(e) => { e.stopPropagation(); setMargin(m); }}
+                    onClick={(e) => { e.stopPropagation(); selectionChanged(); setMargin(m); }}
                     className={`flex-1 min-h-[28px] text-[10px] font-bold font-mono border transition-all ${
                       margin === m
                         ? "border-primary/50 bg-primary/20 text-primary"
@@ -791,29 +797,57 @@ export default function ScorePredictor({ onSharePrediction }) {
       window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "tip_locked" } }));
     } catch { /* ignore */ }
 
+    const serverPayload = {
+      game_id: game.id,
+      game_label: game.label || "NRL Fixture",
+      home_team: game.home_team,
+      away_team: game.away_team,
+      selected_team: tip.selected_team,
+      predicted_home_score: tip.predicted_home_score,
+      predicted_away_score: tip.predicted_away_score,
+      margin: tip.margin,
+      tipper_name: tipperName,
+      kickoff: game.kickoff,
+    };
     if (queriesEnabled) {
       createTip.mutate(
+        serverPayload,
         {
-          game_id: game.id,
-          game_label: game.label || "NRL Fixture",
-          home_team: game.home_team,
-          away_team: game.away_team,
-          selected_team: tip.selected_team,
-          predicted_home_score: tip.predicted_home_score,
-          predicted_away_score: tip.predicted_away_score,
-          margin: tip.margin,
-          tipper_name: tipperName,
-          kickoff: game.kickoff,
-        },
-        {
+          onSuccess: () => removeTipFromQueue(game.id),
           onError: (err) => {
-            // Don't lose the local tip — warn but keep state
+            // Don't lose the tip: queue it for retry on reconnect/next visit.
             console.warn('[RLT] Failed to sync tip to server:', err);
+            enqueueTip(serverPayload);
+            warningImpact();
+            toast({
+              title: "Tip locked on this device",
+              description: "We couldn't reach the server — it will sync automatically before kickoff.",
+            });
           },
         }
       );
     }
   }, [tips, queriesEnabled, createTip, tipperName]);
+
+  // Flush tips that failed to sync (offline lock-ins) — on mount + reconnect.
+  // prunedTipQueue drops entries whose kickoff has passed (server would reject).
+  useEffect(() => {
+    if (!queriesEnabled) return undefined;
+    const flush = () => {
+      prunedTipQueue().forEach((payload) => {
+        base44.functions
+          .invoke("submitTip", payload)
+          .then(() => {
+            removeTipFromQueue(payload.game_id);
+            queryClient.invalidateQueries({ queryKey: ["tippingEntries"] });
+          })
+          .catch(() => { /* still unreachable — stays queued */ });
+      });
+    };
+    flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [queriesEnabled, queryClient]);
 
   // Reset handler (for corruption recovery)
   const handleResetTips = useCallback(() => {

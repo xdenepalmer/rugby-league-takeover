@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { lightImpact, mediumImpact, successImpact, warningImpact } from "@/lib/native/haptics";
 import { Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthContext";
@@ -52,6 +53,7 @@ import TierGroupHeader from "./slot/TierGroupHeader";
    ═══════════════════════════════════════════════════ */
 export default function SlotMachineBadgeUnlock() {
   const { user, isAuthenticated, updateProfile } = useAuth();
+  const reducedMotion = useReducedMotion();
   const [loading, setLoading] = useState(true);
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
   const [tracks, setTracks] = useState(() => reels.map((emoji) => [emoji]));
@@ -288,6 +290,7 @@ export default function SlotMachineBadgeUnlock() {
 
     const result = evaluateReels(finalSymbols);
     if (result.type === "win") {
+      successImpact();
       const isNew = awardBadge(result.badge);
       setIsWin(true);
       setIsNewBadgeWin(isNew);
@@ -301,7 +304,7 @@ export default function SlotMachineBadgeUnlock() {
 
       if (isNew) {
         // Dramatic delay for new badge reveal
-        const t1 = setTimeout(() => playJackpotVictory(), 200);
+        const t1 = setTimeout(() => { playJackpotVictory(); mediumImpact(); }, 200);
         timersRef.current.push(t1);
       } else {
         playVictory();
@@ -317,6 +320,7 @@ export default function SlotMachineBadgeUnlock() {
       const t2 = setTimeout(() => setScreenShake(false), 600);
       timersRef.current.push(t2);
     } else if (result.type === "near") {
+      warningImpact();
       playNearMiss();
       setMessageType("near");
       setMessage(`So close! 😩 Two ${result.symbol.emoji} on the line — one reel away from the ${result.symbol.key} badge!`);
@@ -357,6 +361,7 @@ export default function SlotMachineBadgeUnlock() {
     // Lock immediately
     spinLockRef.current = true;
 
+    mediumImpact();
     initAudio();
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
@@ -412,6 +417,7 @@ export default function SlotMachineBadgeUnlock() {
     REEL_DURATIONS.forEach((duration, index) => {
       timersRef.current.push(setTimeout(() => {
         playReelClick();
+        lightImpact();
         // Indicate this reel has stopped (for bounce-back visual)
         setReelsStopped((prev) => {
           const next = [...prev];
@@ -473,13 +479,13 @@ export default function SlotMachineBadgeUnlock() {
   return (
     <motion.div
       ref={containerRef}
-      animate={screenShake ? { x: [0, -6, 6, -4, 4, -2, 2, 0], y: [0, -3, 3, -2, 2, 0] } : { x: 0, y: 0 }}
+      animate={screenShake && !reducedMotion ? { x: [0, -6, 6, -4, 4, -2, 2, 0], y: [0, -3, 3, -2, 2, 0] } : { x: 0, y: 0 }}
       transition={{ duration: 0.6 }}
       className="relative overflow-hidden border border-purple-500/20 bg-[linear-gradient(145deg,rgba(88,28,135,0.3),rgba(3,0,15,0.98)_40%,rgba(30,0,50,0.95))] shadow-[0_0_50px_rgba(88,28,135,0.12)]"
     >
       {/* Ambient glow effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.15),transparent_40%),radial-gradient(circle_at_5%_25%,rgba(236,72,153,0.10),transparent_30%),radial-gradient(circle_at_95%_20%,rgba(251,191,36,0.10),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(88,28,135,0.12),transparent_40%)]" />
-      <AmbientParticles />
+      <AmbientParticles reduced={reducedMotion} />
       <NeonGlow spinning={spinning} isWin={isWin} />
 
       {/* Top neon bar */}
@@ -650,7 +656,7 @@ export default function SlotMachineBadgeUnlock() {
           </div>
 
           {/* Win celebration overlay */}
-          <WinCelebration show={isWin} isJackpot={isNewBadgeWin} />
+          <WinCelebration show={isWin} isJackpot={isNewBadgeWin} reduced={reducedMotion} />
         </div>
 
         {/* ─── Message ─── */}

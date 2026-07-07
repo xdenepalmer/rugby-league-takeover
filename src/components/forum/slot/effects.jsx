@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── Ambient Particles ─── */
-export function AmbientParticles() {
+export function AmbientParticles({ reduced = false }) {
   const particles = useMemo(() =>
     Array.from({ length: 30 }, (_, i) => ({
       id: i,
@@ -13,6 +13,7 @@ export function AmbientParticles() {
       delay: Math.random() * 4,
     })), []);
 
+  if (reduced) return null;
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {particles.map((p) => (
@@ -69,7 +70,7 @@ export function NeonGlow({ spinning, isWin }) {
 }
 
 /* ─── Win Celebration: massive golden explosion ─── */
-export function WinCelebration({ show, isJackpot }) {
+export function WinCelebration({ show, isJackpot, reduced = false }) {
   const coins = useMemo(() =>
     Array.from({ length: isJackpot ? 60 : 40 }, (_, i) => ({
       id: i,
@@ -115,6 +116,7 @@ export function WinCelebration({ show, isJackpot }) {
             />
           )}
 
+          {!reduced && (<>
           {/* Radial burst rings */}
           {(isJackpot ? [0, 0.1, 0.2, 0.35, 0.5] : [0, 0.15, 0.3]).map((delay, i) => (
             <motion.div
@@ -161,6 +163,8 @@ export function WinCelebration({ show, isJackpot }) {
               {c.emoji}
             </motion.div>
           ))}
+
+          </>)}
 
           {/* JACKPOT text — bigger and more dramatic for new wins */}
           <motion.div
