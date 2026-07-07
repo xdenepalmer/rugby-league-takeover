@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Download, Plus, Share, Smartphone, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getInstallPromptMode, shouldShowInstallNudge } from "@/lib/install-prompt";
+import { isNativeApp } from "@/lib/native/native-env";
 
 const DISMISS_KEY = "rlt_install_prompt_dismissed_at";
 
@@ -32,6 +33,7 @@ export default function InstallAppPrompt() {
       displayModeStandalone: window.matchMedia?.("(display-mode: standalone)")?.matches,
       navigatorStandalone: navigator.standalone,
       hasBeforeInstallPrompt: Boolean(deferredPrompt),
+      isNativeShell: isNativeApp(),
     });
   }, [deferredPrompt, ready]);
 

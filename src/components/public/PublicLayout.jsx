@@ -9,6 +9,8 @@ import { useAuth } from "@/lib/AuthContext";
 import SiteNav from "./SiteNav";
 import ScrollProgressBar from "./ScrollProgressBar";
 import AdSlot from "@/components/ads/AdSlot";
+import PublicOfflineBanner from "@/components/PublicOfflineBanner";
+import { selectionChanged } from "@/lib/native/haptics";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
@@ -104,6 +106,9 @@ export default function PublicLayout() {
       {/* Top Site Navigation */}
       <SiteNav settings={settingsRecords[0] || {}} settingsLoading={isLoadingSettings} />
 
+      {/* Offline indicator — sticky, renders nothing while online */}
+      <PublicOfflineBanner />
+
       {/* Sponsored Ad Slot — banner top, above content, all pages. The wrapper
           collapses (empty:hidden) when there's no ad so it never leaves a gap;
           nav clearance lives on the ad itself so it sits below the fixed header. */}
@@ -158,6 +163,7 @@ export default function PublicLayout() {
             aria-label="Home"
             onMouseEnter={() => prefetchRoute("/")}
             onTouchStart={() => prefetchRoute("/")}
+            onClick={() => selectionChanged()}
             className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
@@ -173,7 +179,7 @@ export default function PublicLayout() {
 
           <button
             type="button"
-            onClick={() => setIsPlanOpen(true)}
+            onClick={() => { selectionChanged(); setIsPlanOpen(true); }}
             aria-label="Plan Trip"
             aria-haspopup="dialog"
             className={`${bottomTabBase} border-accent/20 bg-accent/10 text-accent shadow-[0_0_16px_rgba(217,119,6,0.14)] hover:bg-accent/15`}
@@ -187,6 +193,7 @@ export default function PublicLayout() {
             aria-label="Shop"
             onMouseEnter={() => prefetchRoute("/store")}
             onTouchStart={() => prefetchRoute("/store")}
+            onClick={() => selectionChanged()}
             className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
@@ -210,6 +217,7 @@ export default function PublicLayout() {
             aria-label="Forum"
             onMouseEnter={() => prefetchRoute("/forum")}
             onTouchStart={() => prefetchRoute("/forum")}
+            onClick={() => selectionChanged()}
             className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
@@ -228,6 +236,7 @@ export default function PublicLayout() {
             aria-label="Account"
             onMouseEnter={() => prefetchRoute("/account")}
             onTouchStart={() => prefetchRoute("/account")}
+            onClick={() => selectionChanged()}
             className={({ isActive }) => bottomTabClass(isActive)}
           >
             {({ isActive }) => (
@@ -258,6 +267,7 @@ export default function PublicLayout() {
               aria-label="Admin dashboard"
               onMouseEnter={() => prefetchRoute("/admin")}
               onTouchStart={() => prefetchRoute("/admin")}
+              onClick={() => selectionChanged()}
               className={({ isActive }) => adminBottomTabClass(isActive)}
             >
               {({ isActive }) => (

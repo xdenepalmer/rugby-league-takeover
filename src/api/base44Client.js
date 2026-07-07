@@ -7,6 +7,15 @@
 // Keeping the interface identical means the ~80 importing components did not
 // need to change during the Base44 → Supabase migration.
 import { supabase } from '@/api/supabaseClient';
+import { CANONICAL_WEB_ORIGIN, isNativeApp } from '@/lib/native/native-env';
+
+// Base origin for Supabase auth redirect links (email confirm, password
+// reset, OAuth). Inside the Capacitor shell window.location.origin is
+// capacitor://localhost — not a valid public URL and not in Supabase's
+// redirect allow-list — so native builds send users to the canonical web
+// domain instead. In-app deep-link return for these flows is a follow-up
+// story (requires Associated Domains + Supabase allow-list changes).
+const redirectBase = () => (isNativeApp() ? CANONICAL_WEB_ORIGIN : window.location.origin);
 
 // Entity name → table. Reads for tables with admin-only fields (ip addresses,
 // linked emails) go through sanitising views that mask those columns for
@@ -33,6 +42,9 @@ const WRITE_TABLES = {
   Testimonial: 'testimonials',
   TippingEntry: 'tipping_entries',
   TravelPackage: 'travel_packages',
+  // Own-row RLS only (see supabase/migrations/0009_user_push_tokens.sql);
+  // used by the native push-token registration foundation.
+  UserPushToken: 'user_push_tokens',
 };
 
 const READ_TABLES = {
@@ -180,7 +192,7 @@ const auth = {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/account` },
+      options: { emailRedirectTo: `${redirectBase()}/account` },
     });
     if (error) throw new Error(error.message || 'Registration failed');
     return data;
@@ -207,7 +219,7 @@ const auth = {
 
   async resetPasswordRequest(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${redirectBase()}/reset-password`,
     });
     if (error) throw new Error(error.message || 'Failed to send reset email');
     return { ok: true };
@@ -250,7 +262,7 @@ const auth = {
     const next = typeof nextUrl === 'string' && nextUrl.startsWith('/') ? nextUrl : '/account';
     return supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}${next}` },
+      options: { redirectTo: `${redirectBase()}${next}` },
     });
   },
 

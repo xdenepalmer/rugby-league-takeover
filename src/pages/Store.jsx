@@ -34,6 +34,8 @@ import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { openExternalUrl } from "@/lib/native/open-external";
+import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -738,6 +740,7 @@ export default function Store() {
     }
     if (maxQuantity <= 0) return;
 
+    lightImpact();
     const cartItemId = product.id + (size ? "-" + size : "");
 
     setCart((curr) => {
@@ -875,7 +878,10 @@ export default function Store() {
 
       if (response?.data?.url) {
         new URL(response.data.url);
-        window.location.href = response.data.url;
+        // Native shell: hand off to the system browser sheet so the WebView
+        // stays on the local app; web keeps the full-page Stripe redirect.
+        mediumImpact();
+        await openExternalUrl(response.data.url, { fallback: "navigate" });
       } else {
         throw new Error("Failed to create checkout session.");
       }

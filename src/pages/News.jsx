@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Newspaper } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { getRecentNews, saveRecentNews } from "@/lib/recent-news";
 
 const NewsSection = lazy(() => import("@/components/public/NewsSection"));
 
@@ -36,12 +37,17 @@ const fallbackNews = [
 export default function News() {
   const { data: articles = [], isLoading } = useQuery({
     queryKey: ["news"],
-    queryFn: () => base44.entities.NewsArticle.list("-published_date", 50),
+    queryFn: async () => {
+      const fetched = await base44.entities.NewsArticle.list("-published_date", 50);
+      saveRecentNews(fetched);
+      return fetched;
+    },
     enabled: appParams.hasBase44Config,
   });
 
   const visibleArticles = useMemo(() => {
-    const source = articles.length ? articles : fallbackNews;
+    // Offline/error fallback order: last successful fetch, then static copy.
+    const source = articles.length ? articles : (getRecentNews().length ? getRecentNews() : fallbackNews);
     return source.filter((article) => article.is_published !== false);
   }, [articles]);
 

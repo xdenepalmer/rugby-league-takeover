@@ -8,7 +8,10 @@ export function getInstallPromptMode({
   displayModeStandalone = false,
   navigatorStandalone = false,
   hasBeforeInstallPrompt = false,
+  isNativeShell = false,
 } = {}) {
+  // Never nudge "Add to Home Screen" inside the installed native app.
+  if (isNativeShell) return "hidden";
   if (displayModeStandalone || navigatorStandalone) return "hidden";
   if (hasBeforeInstallPrompt) return "native";
 
