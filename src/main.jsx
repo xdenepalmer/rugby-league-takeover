@@ -3,6 +3,17 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import RootErrorBoundary from '@/components/RootErrorBoundary'
 import { registerServiceWorker } from '@/lib/register-service-worker'
+// Self-hosted brand fonts (were Google-CDN): woff2 files become hashed assets,
+// so typography survives offline launches and the native shell needs no network.
+// Weights match the old CDN link: Inter 400-800, Oswald 500-700.
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/inter/800.css'
+import '@fontsource/oswald/500.css'
+import '@fontsource/oswald/600.css'
+import '@fontsource/oswald/700.css'
 import '@/index.css'
 
 // Last-resort fallback if React never mounts anything (e.g. a broken/partial

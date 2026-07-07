@@ -42,5 +42,8 @@ export function errorImpact() {
 }
 
 export function selectionChanged() {
-  return withHaptics(({ Haptics }) => Haptics.selectionStart().then(() => Haptics.selectionEnd()));
+  // A bare selectionStart/selectionEnd pair produces no perceptible tick on
+  // iOS (the tick fires on selectionChanged between them). A light impact is
+  // the standard tab-tap feel and is what UIKit tab bars use.
+  return withHaptics(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Light }));
 }

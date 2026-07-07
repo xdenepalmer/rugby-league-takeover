@@ -1,0 +1,42 @@
+# Codemagic CI/CD — builds the Capacitor iOS app on Codemagic's macOS runners,
+# so no local Mac is needed (works from Windows). STARTER CONFIG: before the
+# first green build you must, in the Codemagic UI:
+#   1. Connect the repo and create an App Store Connect API key integration
+#      named "app_store_connect" (Teams > Integrations), or rename below.
+#   2. Enable automatic code signing (ios_signing) — Codemagic creates/fetches
+#      certs + profiles for bundle id com.rugbyleaguetakeover.app.
+#   3. In the Apple Developer portal, add Push Notifications and Associated
+#      Domains capabilities to the App ID (see docs/iOS_RUNBOOK.md).
+# The project is SPM-based (no CocoaPods): build the .xcodeproj directly.
+workflows:
+  ios-capacitor:
+    name: iOS build (Capacitor shell)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rugbyleaguetakeover.app
+    integrations:
+      app_store_connect: app_store_connect
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Validation gate (same as GitHub CI)
+        script: npm run lint && npm run typecheck && npm test
+      - name: Build web assets and sync into the iOS shell
+        script: npm run build && npx cap sync ios
+      - name: Build signed IPA
+        script: |
+          xcode-project use-profiles
+          xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integrations
+        submit_to_testflight: true
+        submit_to_app_store: false

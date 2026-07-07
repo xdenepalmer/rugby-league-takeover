@@ -55,6 +55,15 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined
 
           const normalized = id.replace(/\\/g, '/')
+          // Capacitor is only ever dynamically imported (src/lib/native/*).
+          // Exempt it from the vendor-misc catch-all so Rollup splits it into
+          // naturally lazy chunks; forcing a named chunk here backfires (the
+          // preload helper gets colocated into it and every chunk then imports
+          // it statically), and the catch-all would put it in vendor-misc,
+          // which index.html preloads for every web visitor.
+          if (normalized.includes('/node_modules/@capacitor/')) {
+            return undefined
+          }
           if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-router-dom/') || normalized.includes('/node_modules/scheduler/') || normalized.includes('/node_modules/react-is/')) {
             return 'vendor-react'
           }

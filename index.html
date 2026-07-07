@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <!-- Load fonts in parallel with CSS instead of blocking via @import -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" />
+    <!-- Inter/Oswald are self-hosted via @fontsource (imported in src/main.jsx):
+         no CDN dependency, so the brand type works offline and inside the
+         native iOS shell. Font files ship as hashed /assets and are cached by
+         the service worker's static-asset strategy. -->
     <!-- Preload the home hero poster (LCP image) so it paints immediately -->
     <link rel="preload" as="image" href="https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/4d882498b_57895bb2-6bf0-4062-bbf3-78c2b309651a.jpeg" />
     <!-- Preload the hero logo so it appears with the first paint -->
