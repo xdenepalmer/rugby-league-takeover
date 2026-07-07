@@ -53,6 +53,7 @@ export default function News() {
 
   return (
     <main className="min-h-screen bg-background pt-24 text-foreground">
+      <h1 className="sr-only">Rugby League Takeover — Latest News</h1>
       {isLoading ? (
         <section className="px-5 py-24 md:px-8">
           <div className="mx-auto max-w-7xl">

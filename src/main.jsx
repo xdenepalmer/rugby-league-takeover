@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from '@/App.jsx'
 import RootErrorBoundary from '@/components/RootErrorBoundary'
 import { registerServiceWorker } from '@/lib/register-service-worker'
+import { isNativeApp } from '@/lib/native/native-env'
 // Self-hosted brand fonts (were Google-CDN): woff2 files become hashed assets,
 // so typography survives offline launches and the native shell needs no network.
 // Weights match the old CDN link: Inter 400-800, Oswald 500-700.
@@ -56,6 +57,19 @@ const scheduleServiceWorkerRegistration = () => {
 };
 
 scheduleServiceWorkerRegistration()
+
+// Native splash safety floor: NativeAppBootstrap hides the splash once React
+// mounts, but capacitor.config sets launchAutoHide:false, so if the bundle
+// throws before that effect runs the splash would hang forever (a stuck launch
+// to an App Review reviewer). Hide it after a short floor as a fallback. Guarded
+// + dynamic-import so it is a strict no-op on web.
+if (isNativeApp()) {
+  setTimeout(() => {
+    import('@capacitor/splash-screen')
+      .then(({ SplashScreen }) => SplashScreen.hide())
+      .catch(() => {});
+  }, 2500);
+}
 
 const rootEl = document.getElementById('root');
 try {

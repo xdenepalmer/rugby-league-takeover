@@ -12,6 +12,7 @@ import { appParams } from "@/lib/app-params";
 import SectionHeader from "./SectionHeader";
 import { motion } from "framer-motion";
 import { Heart, Loader2, Plane, ShieldCheck, ArrowRight, ArrowLeft, CheckCircle2, Info } from "lucide-react";
+import { hideBrokenImage } from "@/lib/img-fallback";
 
 const teams = ["Eels", "Tigers", "Titans", "Storm", "Leopards", "Bulls", "Other"];
 
@@ -239,6 +240,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     src={pkg.image_url} 
                     alt={pkg.name} 
                     loading="lazy"
+                    onError={hideBrokenImage}
                     className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/95 via-transparent to-transparent opacity-60" />

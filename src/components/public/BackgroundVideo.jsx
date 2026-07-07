@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
+import { hideBrokenImage } from "@/lib/img-fallback";
 
 // WCAG 2.2.2 (Pause, Stop, Hide): the user's choice to pause the ambient
 // background video persists across pages and visits.
@@ -222,6 +223,7 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
         src={poster}
         alt=""
         decoding="async"
+        onError={hideBrokenImage}
         fetchPriority="high"
         className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
           videoReady ? "opacity-0" : "opacity-60"

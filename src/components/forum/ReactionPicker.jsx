@@ -38,6 +38,14 @@ export default function ReactionPicker({ reactions = {}, legacyLikes = 0, curren
 
   useEffect(() => { setLocal(normalizeReactions(reactions)); }, [reactions]);
 
+  // Keyboard dismiss for the reactors modal (matches the app's other sheets).
+  useEffect(() => {
+    if (!showReactors) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setShowReactors(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showReactors]);
+
   const currentId = String(currentUserId || "");
   const chips = useMemo(() => {
     const reactionChips = REACTIONS.map((r) => {
@@ -143,7 +151,7 @@ export default function ReactionPicker({ reactions = {}, legacyLikes = 0, curren
 
       {showReactors && (
         <div className="fixed inset-0 z-[120] flex items-end bg-black/60 p-3 sm:items-center sm:justify-center" onClick={() => setShowReactors(false)}>
-          <div className="w-full max-w-sm border border-border/70 bg-card shadow-2xl shadow-black/40" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Reactions" className="w-full max-w-sm border border-border/70 bg-card shadow-2xl shadow-black/40" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-border/40 p-4">
               <div>
                 <p className="font-display text-lg uppercase tracking-wide text-foreground">Reactions</p>

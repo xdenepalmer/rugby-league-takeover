@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { openExternalUrl } from "@/lib/native/open-external";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
+import { hideBrokenImage } from "@/lib/img-fallback";
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -134,6 +135,7 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
             src={product.image_url} 
             alt={product.name} 
             loading="lazy"
+            onError={hideBrokenImage}
             decoding="async"
             className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-hover:rotate-1" 
           />
@@ -308,7 +310,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
               <div>
                 <div className="aspect-square bg-muted/10 border border-border/40 overflow-hidden relative">
                   {activeImg ? (
-                    <img src={activeImg} alt={product.name} decoding="async" className="h-full w-full object-cover" />
+                    <img src={activeImg} alt={product.name} decoding="async" onError={hideBrokenImage} className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-slate-400">
                       <ShoppingBag className="h-12 w-12 stroke-1" />
@@ -325,7 +327,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                         className={`h-16 w-16 shrink-0 overflow-hidden border transition-colors ${activeImg === img ? "border-primary" : "border-border/40 hover:border-border"}`}
                         aria-label="View product photo"
                       >
-                        <img src={img} alt="" decoding="async" className="h-full w-full object-cover" />
+                        <img src={img} alt="" decoding="async" onError={hideBrokenImage} className="h-full w-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -693,7 +695,7 @@ export default function Store() {
   }, [visibleProducts, selectedCategory]);
 
   useEffect(() => {
-    localStorage.setItem("rlt_cart", JSON.stringify(cart));
+    try { localStorage.setItem("rlt_cart", JSON.stringify(cart)); } catch { /* private mode / quota — cart stays in memory */ }
     window.dispatchEvent(new CustomEvent("rlt_cart_changed", { detail: { count: cart.reduce((s, i) => s + i.quantity, 0) } }));
   }, [cart]);
 
@@ -902,7 +904,7 @@ export default function Store() {
 
   useEffect(() => {
     if (!isSuccess) return;
-    localStorage.removeItem("rlt_cart");
+    try { localStorage.removeItem("rlt_cart"); } catch { /* private mode / quota */ }
     setCart([]);
   }, [isSuccess]);
 

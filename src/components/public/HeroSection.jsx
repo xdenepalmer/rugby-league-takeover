@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, UserPlus, Calendar, ShoppingBag, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import CursorSpotlight from "./CursorSpotlight";
+import { hideBrokenImage } from "@/lib/img-fallback";
 
 const logoUrl = "/icons/icon-192.png";
 
@@ -95,6 +96,7 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
             alt="Rugby League Takeover Las Vegas"
             fetchPriority="high"
             decoding="async"
+            onError={hideBrokenImage}
             initial={{ opacity: 0, y: -80, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}

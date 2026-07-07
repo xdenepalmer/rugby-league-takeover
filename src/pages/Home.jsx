@@ -13,6 +13,7 @@ import LazySection from "@/components/public/LazySection";
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { hideBrokenImage } from "@/lib/img-fallback";
 
 function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, onClick, tone = "primary" }) {
   const toneClass = {
@@ -536,6 +537,7 @@ export default function Home() {
                   <img
                     src="https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/830b4f67c_deneoailq.png"
                     alt="DENEO.AI"
+                    onError={hideBrokenImage}
                     className="h-5 w-auto object-contain sm:h-6"
                     loading="lazy"
                   />

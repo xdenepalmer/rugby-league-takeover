@@ -121,7 +121,7 @@ export default function PublicLayout() {
       </div>
 
       {/* Content wrapper with page transition animation */}
-      <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] lg:pb-0">
+      <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] xl:pb-0">
         {/* Instant native-style tab switching: new page mounts immediately with a
             quick fade-in — no exit-animation wait between routes. */}
         <motion.div
@@ -156,7 +156,7 @@ export default function PublicLayout() {
       )}
 
       {/* iOS-Style Public Mobile Bottom Tab Bar */}
-      <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 lg:hidden pointer-events-auto" aria-label="Main navigation">
+      <nav className="ios-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border/70 xl:hidden pointer-events-auto" aria-label="Main navigation">
         <div className="mx-auto flex w-full max-w-md items-center justify-around px-1.5 pt-1.5">
           <NavLink
             to="/"

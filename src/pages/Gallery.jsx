@@ -6,6 +6,7 @@ import { appParams } from "@/lib/app-params";
 import { ArrowLeft, Images, Play, ExternalLink, X, ChevronLeft, ChevronRight, Camera, Film } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
+import { hideBrokenImage } from "@/lib/img-fallback";
 
 function getYoutubeId(url) {
   const match = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/);
@@ -60,6 +61,7 @@ function GalleryCard({ item, onClick }) {
             src={thumb}
             alt={item.title || ""}
             loading="lazy"
+            onError={hideBrokenImage}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : item.media_type === "video" && item.media_url ? (
