@@ -28,6 +28,7 @@ import {
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { openExternal } from "@/lib/native";
 import { useAuth } from "@/lib/AuthContext";
 import StoreFaq from "@/components/public/StoreFaq";
 import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
@@ -875,7 +876,9 @@ export default function Store() {
 
       if (response?.data?.url) {
         new URL(response.data.url);
-        window.location.href = response.data.url;
+        // On the native app this opens Stripe in an in-app Safari view and
+        // returns to the app on dismiss; on the web it navigates normally.
+        await openExternal(response.data.url);
       } else {
         throw new Error("Failed to create checkout session.");
       }

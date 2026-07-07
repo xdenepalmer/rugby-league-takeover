@@ -132,11 +132,38 @@ Then `npx cap sync ios` and rebuild.
 
 ---
 
-## Known limitations
+## Native behaviour (already wired up)
 
-- **Social login (Google/Apple OAuth)** redirects to the website and won't return
-  cleanly into the native shell yet. **Email + password sign-in works normally**
-  inside the app. (Native deep-link OAuth can be added later if you want it.)
+The web app detects when it's running inside the iOS shell and adjusts itself —
+you don't need to do anything for these, they're in the code:
+
+- **No service worker** in the app (the web assets are already bundled, so the
+  PWA cache + "update available" prompts are disabled on device).
+- **Splash + status bar** are handled natively (dark status bar, splash hides
+  once the app has painted).
+- **Stripe checkout** opens in an in-app Safari view and returns to the app when
+  dismissed, instead of navigating away.
+- **Photo / camera uploads** (avatar, forum media) work — the required
+  permission prompts are declared in `Info.plist`. iOS shows your usage strings
+  the first time; edit them in `Info.plist` if you want different wording.
+
+## Google sign-in (one-time Supabase setup)
+
+Native Google sign-in is wired up (in-app browser + deep link back into the
+app via the `com.rugbyleaguetakeover.app://` URL scheme, registered in
+`Info.plist`). **Email + password already works with no setup.** To turn on the
+Google button in the app, add the app's redirect URL to Supabase:
+
+1. Supabase dashboard → **Authentication → URL Configuration → Redirect URLs**.
+2. Add: `com.rugbyleaguetakeover.app://auth/callback`
+3. Save. (Google itself is already configured for the website, so nothing to
+   change in Google Cloud.)
+
+Until that URL is added, the Google button will fail on device — email/password
+is the fallback. Web sign-in is unaffected either way.
+
+## Remaining limitation
+
 - Email links (verification / password reset) open in the phone's browser, then
   you return to the app — same as any web-backed app.
 
@@ -151,3 +178,10 @@ Then `npx cap sync ios` and rebuild.
 | Blank white screen on launch | You skipped `npx cap sync ios` after pulling — run it, then rebuild |
 | Bundle ID already in use | Change it in Xcode **and** `capacitor.config.json` to something unique |
 | Data won't load on device | The device needs internet — data comes live from Supabase |
+| Google sign-in fails on device | Add `com.rugbyleaguetakeover.app://auth/callback` to Supabase → Auth → Redirect URLs (see above) |
+| Photo picker does nothing / app closes | Old build — rebuild after `npx cap sync ios` so the `Info.plist` permission strings are included |
+
+> **Changed the bundle ID?** Also update the URL scheme: `capacitor.config.json`
+> doesn't hold it, but `ios/App/App/Info.plist` (`CFBundleURLSchemes`) and
+> `AUTH_CALLBACK_URL` in `src/lib/native.js` must match your new ID, and so must
+> the Supabase redirect URL.

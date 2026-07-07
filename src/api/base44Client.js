@@ -7,6 +7,7 @@
 // Keeping the interface identical means the ~80 importing components did not
 // need to change during the Base44 → Supabase migration.
 import { supabase } from '@/api/supabaseClient';
+import { isNative, openExternal, AUTH_CALLBACK_URL } from '@/lib/native';
 
 // Entity name → table. Reads for tables with admin-only fields (ip addresses,
 // linked emails) go through sanitising views that mask those columns for
@@ -246,8 +247,21 @@ const auth = {
     return { ok: true };
   },
 
-  loginWithProvider(provider, nextUrl) {
+  async loginWithProvider(provider, nextUrl) {
     const next = typeof nextUrl === 'string' && nextUrl.startsWith('/') ? nextUrl : '/account';
+    if (isNative()) {
+      // Native app: get the provider URL, open it in an in-app browser, and let
+      // the deep-link handler (src/lib/native.js) turn the redirect back into a
+      // session. Requires the custom scheme to be in Supabase's redirect allow
+      // list — see BUILD-iOS.md.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: AUTH_CALLBACK_URL, skipBrowserRedirect: true },
+      });
+      if (error) throw new Error(error.message || 'Sign-in failed');
+      if (data?.url) await openExternal(data.url);
+      return data;
+    }
     return supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}${next}` },

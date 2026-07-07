@@ -41,6 +41,14 @@ export function shouldEnablePwaForEnvironment({ href, mode, hasServiceWorker }) 
 
 export function shouldEnablePwa() {
   if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  // Inside the native (Capacitor) shell the web assets are already bundled in
+  // the app — a service worker would only add a second cache layer and surface
+  // "update available" prompts that make no sense there. Keep it web-only.
+  try {
+    if (window.Capacitor?.isNativePlatform?.()) return false;
+  } catch {
+    /* not native */
+  }
   return shouldEnablePwaForEnvironment({
     href: window.location.href,
     mode: import.meta.env.MODE,
