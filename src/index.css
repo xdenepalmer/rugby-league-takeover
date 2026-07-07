@@ -28,6 +28,21 @@
     --accent-foreground: 0 0% 0%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 20% 98%;
+    /* Semantic state tokens — added so success/warning/info stop being spelled
+       as ad-hoc emerald/amber/sky literals across the app. */
+    --success: 152 76% 44%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    --info: 213 94% 68%;
+    --info-foreground: 0 0% 100%;
+    --brand-facebook: 214 89% 52%;
+    /* Scoped casino sub-palette (decorative tiers only — not semantic state). */
+    --casino-jackpot: 45 93% 47%;
+    --casino-rare: 258 90% 66%;
+    --casino-legendary: 322 84% 60%;
+    --casino-common: 213 94% 68%;
+    --casino-felt: 158 64% 18%;
     --border: 217 33% 15%;
     --input: 217 33% 15%;
     --ring: 45 93% 47%;

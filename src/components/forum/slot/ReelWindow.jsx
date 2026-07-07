@@ -46,7 +46,7 @@ export default function ReelWindow({ track, index, spinning, stopped, highlight,
               animate={{ opacity: [0.3, 0.6, 0.3] }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1, repeat: 3 }}
-              className="pointer-events-none absolute inset-0 z-25 border-2 border-emerald-400/60"
+              className="pointer-events-none absolute inset-0 z-[35] border-2 border-emerald-400/60"
               style={{ boxShadow: "inset 0 0 30px rgba(52,211,153,0.3), 0 0 20px rgba(52,211,153,0.3)" }}
             />
           )}
@@ -60,7 +60,7 @@ export default function ReelWindow({ track, index, spinning, stopped, highlight,
               animate={{ opacity: [0.2, 0.6, 0.2] }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, repeat: 5 }}
-              className="pointer-events-none absolute inset-0 z-25 border-2 border-red-400/60"
+              className="pointer-events-none absolute inset-0 z-[35] border-2 border-red-400/60"
               style={{ boxShadow: "inset 0 0 30px rgba(248,113,113,0.3), 0 0 20px rgba(248,113,113,0.3)" }}
             />
           )}
@@ -110,7 +110,7 @@ export default function ReelWindow({ track, index, spinning, stopped, highlight,
               animate={{ opacity: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="pointer-events-none absolute inset-0 z-25 bg-amber-200/8"
+              className="pointer-events-none absolute inset-0 z-[35] bg-amber-200/8"
             />
           )}
         </AnimatePresence>

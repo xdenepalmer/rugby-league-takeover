@@ -45,6 +45,9 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
   const stock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
+  // Apparel with size variants must not blind-add a sizeless line item from the
+  // card — route to quick-view so the buyer picks a size (fulfillment-safe).
+  const productHasSizes = normalizeSizeVariants(product?.sizes).length > 0;
   const inCart = cart.find(item => item.id === product.id);
   const [releaseEmail, setReleaseEmail] = useState(user?.email || "");
   const [releaseSubscribed, setReleaseSubscribed] = useState(false);
@@ -208,13 +211,13 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
           <span className="text-xl font-bold font-mono tracking-tight text-accent drop-shadow-[0_0_8px_rgba(217,119,6,0.3)]">
             ${Number(product.price_aud || 0).toFixed(2)} <span className="text-xs text-slate-400 font-sans font-semibold">AUD</span>
           </span>
-          <Button 
-            onClick={() => addToCart(product)}
+          <Button
+            onClick={() => (productHasSizes ? onOpenQuickView(product) : addToCart(product))}
             disabled={soldOut || comingSoon}
             className="rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-wider text-xs px-4 py-2 flex items-center gap-1.5 relative overflow-hidden transition-all duration-300 disabled:bg-muted disabled:text-slate-400"
           >
             {comingSoon ? <Sparkles className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-            <span>{comingSoon ? "Soon" : soldOut ? "Sold Out" : inCart ? `In Cart (${inCart.quantity})` : "Add"}</span>
+            <span>{comingSoon ? "Soon" : soldOut ? "Sold Out" : productHasSizes ? "Select size" : inCart ? `In Cart (${inCart.quantity})` : "Add"}</span>
           </Button>
         </div>
       </div>
@@ -345,7 +348,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                   <h2 className="font-display text-2xl uppercase tracking-wide text-foreground mt-2">{product.name}</h2>
                   <p className="text-xl font-bold font-mono text-accent mt-1">${Number(product.price_aud || 0).toFixed(2)} AUD</p>
                   {/* whitespace-pre-line preserves the line breaks/paragraphs entered in admin */}
-                  <p className="text-xs text-slate-250 leading-relaxed mt-4 whitespace-pre-line">{product.description}</p>
+                  <p className="text-xs text-slate-300 leading-relaxed mt-4 whitespace-pre-line">{product.description}</p>
                   {product.details && (
                     <p className="text-xs text-slate-300/90 leading-relaxed mt-3 whitespace-pre-line border-t border-border/30 pt-3">{product.details}</p>
                   )}

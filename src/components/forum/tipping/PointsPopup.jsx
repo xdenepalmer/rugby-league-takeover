@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 
 // ── Points display ──────────────────────────────────────────────────
-export default function PointsPopup({ points, show }) {
-  if (!show || !points) return null;
+// Always renders the motion element when mounted; the parent controls
+// presence via AnimatePresence + a conditional mount so the exit runs.
+export default function PointsPopup({ points }) {
+  if (!points) return null;
   return (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.8 }}

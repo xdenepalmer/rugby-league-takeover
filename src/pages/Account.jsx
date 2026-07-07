@@ -92,7 +92,7 @@ function StatCard({ label, value, icon: Icon, color }) {
   );
 }
 
-const VALID_TABS = ["fanhub", "profile", "orders", "posts", "interest", "security"];
+const VALID_TABS = ["fanhub", "achievements", "leaderboard", "profile", "orders", "posts", "interest", "security"];
 
 export default function Account() {
   const { user, isAdmin } = useAuth();

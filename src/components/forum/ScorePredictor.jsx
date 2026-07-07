@@ -205,7 +205,9 @@ function FixtureCard({ game, tip, onTip, entries, active, onSelect }) {
       <ConfettiBurst active={showConfetti} />
       <LockedStamp show={showStamp} />
       <AnimatePresence>
-        <PointsPopup points={tipResult?.points} show={showPoints} />
+        {showPoints && tipResult?.points > 0 && (
+          <PointsPopup key="pts" points={tipResult.points} />
+        )}
       </AnimatePresence>
 
       {/* Top accent bar */}

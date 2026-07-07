@@ -1,5 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { QueryClientProvider } from '@tanstack/react-query'
+import { MotionConfig } from 'framer-motion'
 import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PublicLayout from '@/components/public/PublicLayout';
@@ -149,18 +150,23 @@ function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <NativeAppBootstrap />
-          <AuthenticatedApp />
-          {showDeferredUi && (
-            <Suspense fallback={null}>
-              <InstallAppPrompt />
-              <PwaUpdatePrompt />
-              <DeferredToaster />
-            </Suspense>
-          )}
-        </Router>
+        {/* reducedMotion="user" makes every framer-motion component honour the
+            OS "Reduce Motion" setting — framer animates via inline transforms
+            that bypass the CSS reduced-motion reset, so this is required. */}
+        <MotionConfig reducedMotion="user">
+          <Router>
+            <ScrollToTop />
+            <NativeAppBootstrap />
+            <AuthenticatedApp />
+            {showDeferredUi && (
+              <Suspense fallback={null}>
+                <InstallAppPrompt />
+                <PwaUpdatePrompt />
+                <DeferredToaster />
+              </Suspense>
+            )}
+          </Router>
+        </MotionConfig>
       </QueryClientProvider>
     </AuthProvider>
   )

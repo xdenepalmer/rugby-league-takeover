@@ -13,9 +13,34 @@ module.exports = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		fontSize: {
+  			/* Additive only — existing Tailwind sizes are unchanged. `2xs` is the
+  			   11px floor for real text; migrate sub-11px text-[Npx] literals up. */
+  			'2xs': ['0.6875rem', { lineHeight: '0.9rem' }],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				foreground: 'hsl(var(--success-foreground))'
+  			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				foreground: 'hsl(var(--warning-foreground))'
+  			},
+  			info: {
+  				DEFAULT: 'hsl(var(--info))',
+  				foreground: 'hsl(var(--info-foreground))'
+  			},
+  			'brand-facebook': 'hsl(var(--brand-facebook))',
+  			casino: {
+  				jackpot: 'hsl(var(--casino-jackpot))',
+  				rare: 'hsl(var(--casino-rare))',
+  				legendary: 'hsl(var(--casino-legendary))',
+  				common: 'hsl(var(--casino-common))',
+  				felt: 'hsl(var(--casino-felt))'
+  			},
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
