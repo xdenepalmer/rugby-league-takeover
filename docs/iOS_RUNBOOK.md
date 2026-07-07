@@ -13,7 +13,30 @@ behind `isNativeApp()` guards in `src/lib/native/`.
 | `npx cap sync ios` (copy dist → shell, update SPM plugin list) | ✅ | ✅ |
 | Resolve SPM packages, build, sign, run, archive | ❌ | ✅ |
 
-## Mac prerequisites
+## Building without a Mac — Codemagic (recommended for Windows)
+
+A starter `codemagic.yaml` at the repo root builds the iOS app on Codemagic's
+macOS runners and can push straight to TestFlight — no local Mac required.
+One-time setup in the Codemagic UI:
+
+1. Connect this GitHub repo to a Codemagic app.
+2. Create an **App Store Connect API key** integration named
+   `app_store_connect` (or edit the name in `codemagic.yaml`).
+3. Automatic signing (`ios_signing`) will create/fetch the certificate and
+   provisioning profile for `com.rugbyleaguetakeover.app`.
+4. In the Apple Developer portal, add **Push Notifications** and
+   **Associated Domains** capabilities to the App ID — with cloud builds
+   there is no Xcode UI, so capabilities live on the App ID + entitlements
+   (`ios/App/App` target) rather than being clicked in Xcode.
+5. Info.plist usage strings and PrivacyInfo.xcprivacy (below) must be added
+   to the committed `ios/` project since every build starts from git.
+
+The `codemagic.yaml` runs the same validation gate as GitHub CI, then
+`vite build && cap sync ios`, then `xcode-project build-ipa` on the SPM-based
+`App.xcodeproj`. The first Codemagic build has NOT been run yet — expect a
+signing/integration round-trip on the first attempt.
+
+## Mac prerequisites (only if building locally instead of Codemagic)
 
 - macOS with **Xcode 15+** (16+ recommended) and command-line tools
 - Node 22 + npm (`nvm use 22`)
@@ -43,7 +66,10 @@ is generated and gitignored.
 
 - **Push Notifications** capability + **Background Modes → Remote notifications**.
   Create an APNs key in the Apple Developer portal (needed later for the send
-  pipeline — see Push status below).
+  pipeline — see Push status below). The APNs token-forwarding hooks in
+  `AppDelegate.swift` (`didRegisterForRemoteNotificationsWithDeviceToken` →
+  `NotificationCenter`) are **already in place** — nothing else native is
+  needed for token registration once the capability is enabled.
 - **Associated Domains**: add `applinks:rugbyleaguetakeover.com`.
   Then replace `TEAMID` in `public/.well-known/apple-app-site-association`
   with the real Team ID and redeploy the website (Vercel serves the file with
@@ -56,6 +82,12 @@ is generated and gitignored.
 - **PrivacyInfo.xcprivacy**: add an app privacy manifest declaring
   UserDefaults (CA92.1), file timestamp (C617.1) and system boot time (35F9.1)
   accessed-API reasons; Capacitor's SPM packages ship their own manifests.
+
+## Fonts
+
+Inter and Oswald are **self-hosted** via `@fontsource` (imported in
+`src/main.jsx`); the woff2 files ship as hashed `/assets`, so brand typography
+works offline and in the shell with no Google CDN dependency.
 
 ## Icons & splash
 
@@ -77,11 +109,16 @@ and matches the site's anti-white-flash background.
 - **Service worker / install / update prompts**: disabled in the shell
   (`shouldEnablePwaForEnvironment` + `getInstallPromptMode` guards). Web/PWA
   unchanged.
-- **Auth emails & Google OAuth**: redirect links are built from the canonical
-  web origin (`redirectBase()` in `src/api/base44Client.js`), so email
-  confirmation / password reset / OAuth land on the **website**, not back in
-  the app. Full in-app return requires Associated Domains + Supabase Auth
-  redirect allow-list entries — deferred, see APP_STORE_CHECKLIST.
+- **Auth emails**: redirect links are built from the canonical web origin
+  (`redirectBase()` in `src/api/base44Client.js`), so email confirmation /
+  password reset land on the **website**, not back in the app. Full in-app
+  return requires Associated Domains + Supabase Auth redirect allow-list
+  entries — deferred, see APP_STORE_CHECKLIST.
+- **Google OAuth is hidden inside the shell** (`canUseGoogleOAuth` guard in
+  Login/Register): Google blocks WebView logins (disallowed_useragent) and the
+  session would land on the web origin anyway. Email/password sign-in works
+  natively today; a Capacitor Browser + deep-link OAuth flow is the deferred
+  fix. Web OAuth is unchanged.
 - **Stripe checkout**: opens in the system browser sheet
   (`openExternalUrl`); Stripe's success/cancel return lands on the website.
   Orders are webhook-authoritative (`stripeWebhook`), so a missed redirect
@@ -89,8 +126,8 @@ and matches the site's anti-white-flash background.
 - **External links** (tickets, sponsors, user-posted links): a global
   interceptor in `NativeAppBootstrap` opens foreign hosts in the system
   browser and turns absolute links to our own domain into router navigations.
-  `mailto:` links are left to WKWebView defaults (known gap — may be inert on
-  some devices).
+  `mailto:`/`tel:`/`sms:` links are routed to the OS handler via
+  `@capacitor/app-launcher` (WKWebView ignores them from in-page navigation).
 
 ## Push notifications — status: token foundation only
 
@@ -109,9 +146,11 @@ and matches the site's anti-white-flash background.
 npm run lint && npm run typecheck && npm test && npm run build && npx cap sync ios
 ```
 
-All of this runs on Linux/CI. 106 tests at time of writing; the new
+All of this runs on Linux/CI. 113 tests at time of writing; the new
 native-specific guards are covered by `tests/native-env.test.mjs`,
-`tests/native-guards.test.mjs`, `tests/capacitor-config.test.mjs`.
+`tests/native-guards.test.mjs`, `tests/capacitor-config.test.mjs`,
+`tests/native-shell-polish.test.mjs` (chunking, OAuth guard, link classification,
+fonts, AppDelegate hooks).
 
 ## Common failures
 
