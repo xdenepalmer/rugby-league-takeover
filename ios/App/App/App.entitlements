@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal links. The App ID has the Associated Domains capability
+	     enabled, and public/.well-known/apple-app-site-association carries
+	     25R438YK9F.com.rugbyleaguetakeover.app. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:rugbyleaguetakeover.com</string>
+	</array>
+	<!-- NOTE: aps-environment (Push) is intentionally NOT claimed here yet.
+	     Push delivery is a separate story; adding it now would force a
+	     dev/prod environment choice before the send pipeline exists. The
+	     App ID already has Push enabled, so it can be added later without
+	     re-provisioning. -->
+</dict>
+</plist>

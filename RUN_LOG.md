@@ -214,3 +214,15 @@ Append-only chronological log of BMAD agent actions, commands, and results.
 - **Docs:** runbook (Codemagic section, AppDelegate status, OAuth status, mailto/tel, fonts) + checklist (hooks ✅, OAuth interim ✅, fonts deferred item removed, smoke items updated).
 - Validation: **npm test 113/113 · lint 0 · typecheck 0 · build 0 · `npx cap sync ios` clean (10 plugins).** Headless Chromium smoke of the built web app: home + login render correctly at 390×844, Oswald/Inter self-hosted rendering confirmed, tab bar + brand intact.
 - Still deferred: Xcode/simulator/device validation (Codemagic first build), 1024px icon + 2732px splash masters, in-app auth/OAuth + Stripe return deep links, APNs delivery + permission UI (RLT-IOS-004).
+
+## RLT-IOS-003 — First-build iOS prerequisites (Claude)
+- Branch `claude/new-session-p5p9zs`. In-repo prep so the first Codemagic build can sign + pass App Review basics without a Mac or design assets. Apple side was provisioned externally (AGY): App ID registered w/ Push + Associated Domains, ASC app record created (SKU RLT-IOS-001), Team ID **25R438YK9F confirmed**.
+- **AASA:** `TEAMID` → `25R438YK9F.com.rugbyleaguetakeover.app` (done earlier this session; guarded by test now).
+- **Entitlements:** new `ios/App/App/App.entitlements` claiming `com.apple.developer.associated-domains → applinks:rugbyleaguetakeover.com`; wired via `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` on BOTH Debug and Release. aps-environment (Push) deliberately omitted — deferred to the push story to avoid a dev/prod choice before delivery exists; App ID already has Push enabled so it can be added later without re-provisioning.
+- **Info.plist:** added `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription` (upload pickers can invoke the camera → crash without strings).
+- **Privacy manifest:** new `ios/App/App/PrivacyInfo.xcprivacy` (NSPrivacyTracking false; required-reason APIs UserDefaults CA92.1, FileTimestamp C617.1, SystemBootTime 35F9.1); fully wired into pbxproj (PBXFileReference + PBXBuildFile + App group + Resources build phase) with non-colliding UUIDs AA0001…01/02/03. Verified reference counts + that `cap sync ios` preserves everything.
+- **Tests:** new `tests/ios-project-config.test.mjs` (usage strings, associated-domains present + aps-environment absent, privacy reasons, 2× CODE_SIGN_ENTITLEMENTS, privacy manifest in Resources, AASA real Team ID / no placeholder).
+- **Docs:** runbook (in-repo config now committed; first-build capability notes) + checklist (Info.plist/privacy/entitlements ✅).
+- Validation: **npm test 118/118 · lint 0 · typecheck 0 · build 0 · npx cap sync ios clean.** Cannot compile in Xcode here (Linux) — pbxproj wiring validated by UUID-consistency + plist well-formedness; first real compile happens on Codemagic.
+- Secrets: none committed. APNs key (ZT4QQWTC56) and Codemagic ASC API key (HX3GX68S4S, issuer 05b5e87a-…) stay in Codemagic/Supabase env only.
+- Deferred: run the first Codemagic build → TestFlight (owner, Windows); 1024px icon + 2732px splash masters; push delivery (RLT-IOS-004); in-app auth/checkout deep-link return.

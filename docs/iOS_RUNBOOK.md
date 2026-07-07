@@ -28,8 +28,11 @@ One-time setup in the Codemagic UI:
    **Associated Domains** capabilities to the App ID — with cloud builds
    there is no Xcode UI, so capabilities live on the App ID + entitlements
    (`ios/App/App` target) rather than being clicked in Xcode.
-5. Info.plist usage strings and PrivacyInfo.xcprivacy (below) must be added
-   to the committed `ios/` project since every build starts from git.
+5. Info.plist usage strings, `App.entitlements` (Associated Domains), and
+   `PrivacyInfo.xcprivacy` are **already committed and wired into the pbxproj**
+   — cloud builds pick them up automatically. The App ID must have matching
+   capabilities enabled (Push + Associated Domains — done via App Store
+   Connect) so automatic signing generates a profile that includes them.
 
 The `codemagic.yaml` runs the same validation gate as GitHub CI, then
 `vite build && cap sync ios`, then `xcode-project build-ipa` on the SPM-based
@@ -158,6 +161,17 @@ native-specific guards are covered by `tests/native-env.test.mjs`,
 `tests/native-guards.test.mjs`, `tests/capacitor-config.test.mjs`,
 `tests/native-shell-polish.test.mjs` (chunking, OAuth guard, link classification,
 fonts, AppDelegate hooks).
+
+## First-build capability notes (cloud / Codemagic)
+
+- `ios/App/App/App.entitlements` claims `applinks:rugbyleaguetakeover.com`.
+  Automatic signing needs the App ID to have **Associated Domains** enabled
+  (done) so the generated provisioning profile includes it — otherwise the
+  build fails with a provisioning error pointing right at the entitlement.
+- Push is NOT claimed in entitlements yet (deferred), so the first build does
+  not need the APNs environment resolved.
+- `PrivacyInfo.xcprivacy` ships in the app bundle (Resources build phase) — no
+  Xcode step needed.
 
 ## Common failures
 

@@ -21,11 +21,15 @@ Status legend: ✅ done in repo · 🔧 manual Mac/portal step · ⏳ deferred s
   `vercel.json` already ✅). 🔧 Still needs: Associated Domains capability
   `applinks:rugbyleaguetakeover.com` on the App ID + entitlement, and the
   website redeployed so Apple can fetch the file.
-- 🔧 Info.plist usage strings: `NSCameraUsageDescription`,
-  `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription`
-  (upload pickers in forum/account/admin can invoke the camera)
-- 🔧 `PrivacyInfo.xcprivacy` privacy manifest (UserDefaults CA92.1, file
-  timestamp C617.1, boot time 35F9.1)
+- ✅ Info.plist usage strings committed (`NSCameraUsageDescription`,
+  `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription`) —
+  `ios/App/App/Info.plist`
+- ✅ `PrivacyInfo.xcprivacy` privacy manifest committed + wired into the
+  Resources build phase (UserDefaults CA92.1, file timestamp C617.1, boot
+  time 35F9.1). App Privacy questionnaire in App Store Connect still 🔧
+- ✅ `App.entitlements` committed with Associated Domains; wired via
+  `CODE_SIGN_ENTITLEMENTS` on Debug + Release. Push entitlement (aps-environment)
+  deferred to the push story
 - 🔧 App Privacy questionnaire: account data (name, email), user content
   (posts, photos), purchase history (Stripe — **physical merch, so external
   payment is allowed**; no IAP required for physical goods)
