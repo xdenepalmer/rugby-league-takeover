@@ -8,6 +8,8 @@ import { LogIn, Mail, Lock, Loader2, Eye, EyeOff, AlertCircle } from "lucide-rea
 import { AnimatePresence, motion } from "framer-motion";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+import { canUseGoogleOAuth } from "@/lib/native/auth-guards";
+import { isNativeApp } from "@/lib/native/native-env";
 import { useAuth } from "@/lib/AuthContext";
 
 // Framer motion variants
@@ -56,6 +58,7 @@ export default function Login() {
     }
   };
 
+  const googleAvailable = canUseGoogleOAuth({ isNative: isNativeApp() });
   const handleGoogle = () => {
     base44.auth.loginWithProvider("google", nextUrl);
   };
@@ -80,30 +83,35 @@ export default function Login() {
         animate="show"
         className="space-y-6"
       >
-        {/* Google Button */}
-        <motion.div variants={itemVariants}>
-          <Button
-            variant="outline"
-            type="button"
-            className="w-full h-12 text-sm font-bold uppercase tracking-wider rounded-none border-border bg-background/40 hover:bg-card hover:border-primary/40 relative overflow-hidden group/btn transition-all duration-300"
-            onClick={handleGoogle}
-          >
-            {/* Shimmer Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
-            <GoogleIcon className="w-5 h-5 mr-3" />
-            <span>Continue with Google</span>
-          </Button>
-        </motion.div>
+        {/* Google Button — web only: inside the native shell Google blocks
+            WebView logins, so email/password is the app sign-in path */}
+        {googleAvailable && (
+          <>
+            <motion.div variants={itemVariants}>
+              <Button
+                variant="outline"
+                type="button"
+                className="w-full h-12 text-sm font-bold uppercase tracking-wider rounded-none border-border bg-background/40 hover:bg-card hover:border-primary/40 relative overflow-hidden group/btn transition-all duration-300"
+                onClick={handleGoogle}
+              >
+                {/* Shimmer Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
+                <GoogleIcon className="w-5 h-5 mr-3" />
+                <span>Continue with Google</span>
+              </Button>
+            </motion.div>
 
-        {/* Separator Divider */}
-        <motion.div variants={itemVariants} className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border/80" />
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold">
-            <span className="bg-card px-4 text-muted-foreground">or email login</span>
-          </div>
-        </motion.div>
+            {/* Separator Divider */}
+            <motion.div variants={itemVariants} className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/80" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold">
+                <span className="bg-card px-4 text-muted-foreground">or email login</span>
+              </div>
+            </motion.div>
+          </>
+        )}
 
         {/* Error Notification Banner */}
         <AnimatePresence mode="wait">

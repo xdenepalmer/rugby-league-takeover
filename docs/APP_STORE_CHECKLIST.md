@@ -14,7 +14,8 @@ Status legend: ✅ done in repo · 🔧 manual Mac/portal step · ⏳ deferred s
 ## Capabilities & privacy
 
 - 🔧 Push Notifications capability + APNs key (do NOT submit push marketing
-  claims while delivery is unimplemented)
+  claims while delivery is unimplemented). ✅ AppDelegate token-forwarding
+  hooks are already committed
 - 🔧 Associated Domains `applinks:rugbyleaguetakeover.com`; replace `TEAMID` in
   `public/.well-known/apple-app-site-association` (served correctly by
   `vercel.json` already ✅)
@@ -44,11 +45,10 @@ Implemented native behavior to list in the review notes:
   migration 0009; UI toggle in Account notification preferences)
 - ⏳ In-app return for Supabase auth links + Google OAuth (Associated Domains
   + Supabase redirect allow-list + `detectSessionInUrl` handling of the
-  returned URL)
+  returned URL). ✅ Interim: Google OAuth is hidden in the shell
+  (`canUseGoogleOAuth`); email/password works natively
 - ⏳ In-app return from Stripe checkout (add native return URL to
   `CHECKOUT_ALLOWED_ORIGINS`)
-- ⏳ Self-hosted Oswald/Inter fonts (brand type currently needs network on
-  first native launch)
 
 ## TestFlight smoke test (per build)
 
@@ -57,12 +57,14 @@ Routes (from `src/App.jsx`):
 2. `/store` — products render; add to cart (haptic tap); checkout opens the
    **system browser sheet**, not the webview; cancel returns to a working app
 3. `/forum` — feed loads; composer opens keyboard-safe; post succeeds (success
-   haptic); share opens the **native share sheet** with an `https://` link
+   haptic); share opens the **native share sheet** with an `https://` link;
+   a `mailto:` link in a post opens the Mail sheet
 4. `/news` — loads; then enable Airplane Mode, relaunch: recent articles still
    render + offline banner shows
 5. `/gallery` — lightbox opens, swipes, shares
 6. `/faq`, `/terms`, `/privacy` — render
-7. `/login` → sign in → `/account` loads; sign out returns cleanly
+7. `/login` → **no Google button in the shell** (email/password only); sign in
+   → `/account` loads; sign out returns cleanly
 8. `/admin` — non-admin blocked; admin account sees dashboard
 9. **No PWA prompts anywhere** ("Add to home screen" / "Update available" must
    never appear in the shell)

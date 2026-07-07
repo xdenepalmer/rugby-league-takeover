@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { isNativeApp } from "@/lib/native/native-env";
 import { initDeepLinks, mapUrlToRoute } from "@/lib/native/deep-links";
-import { openExternalUrl } from "@/lib/native/open-external";
+import { classifyHref, openExternalUrl, openSystemUrl } from "@/lib/native/open-external";
 
 /**
  * Single home for native-shell startup behavior. Renders nothing and does
@@ -36,23 +36,30 @@ export default function NativeAppBootstrap() {
 
     const removeDeepLinks = initDeepLinks(navigate);
 
-    // Inside the shell, absolute http(s) links (ticket vendors, sponsor sites,
-    // user-authored forum links) must open in the system browser sheet, and
-    // absolute links to our own domain must become router navigations —
-    // neither may navigate the WebView off the local app.
+    // Inside the shell: absolute http(s) links (ticket vendors, sponsor sites,
+    // user-authored forum links) must open in the system browser sheet,
+    // absolute links to our own domain must become router navigations, and
+    // mailto:/tel:/sms: must go to the OS handler (WKWebView silently ignores
+    // them). Nothing may navigate the WebView off the local app.
     const handleClick = (event) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
       const anchor = event.target?.closest?.("a[href]");
       if (!anchor) return;
       const href = anchor.getAttribute("href") || "";
-      if (!/^https?:\/\//i.test(href)) return; // relative/mailto/tel: leave to defaults
-      const route = mapUrlToRoute(href);
-      event.preventDefault();
-      if (route) {
-        navigate(route);
-      } else {
-        openExternalUrl(href);
+      const kind = classifyHref(href);
+      if (kind === "http") {
+        const route = mapUrlToRoute(href);
+        event.preventDefault();
+        if (route) {
+          navigate(route);
+        } else {
+          openExternalUrl(href);
+        }
+      } else if (kind === "mailto" || kind === "tel" || kind === "sms") {
+        event.preventDefault();
+        openSystemUrl(href);
       }
+      // relative links: leave to the router/anchor defaults
     };
     document.addEventListener("click", handleClick, true);
 
