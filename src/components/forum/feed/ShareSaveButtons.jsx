@@ -5,24 +5,17 @@ import React, { useState } from "react";
 import { Share2, Bookmark } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { threadUrl } from "./forumHelpers";
+import { shareUrl } from "@/lib/native/share";
 
 export async function shareThread(post) {
   const url = threadUrl(post);
   const title = post?.title || "Rugby League Takeover forum";
-  try {
-    if (navigator.share) {
-      await navigator.share({ title, text: title, url });
-      return;
-    }
-    await navigator.clipboard.writeText(url);
+  // Native: iOS share sheet. Web: navigator.share, then clipboard fallback.
+  const result = await shareUrl({ title, text: title, url });
+  if (result === "copied") {
     toast({ title: "Link copied", description: "Thread link copied to your clipboard." });
-  } catch {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied", description: "Thread link copied to your clipboard." });
-    } catch {
-      toast({ title: "Couldn't share", description: url });
-    }
+  } else if (result === "failed") {
+    toast({ title: "Couldn't share", description: url });
   }
 }
 

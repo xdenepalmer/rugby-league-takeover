@@ -9,6 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
+import NativeAppBootstrap from '@/components/NativeAppBootstrap';
 
 // Lazy-loaded pages
 const Home = lazy(() => import("./pages/Home"));
@@ -150,6 +151,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ScrollToTop />
+          <NativeAppBootstrap />
           <AuthenticatedApp />
           {showDeferredUi && (
             <Suspense fallback={null}>

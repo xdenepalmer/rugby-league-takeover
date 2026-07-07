@@ -114,6 +114,22 @@ function HomeContent({ onNavigate, onClose, settings = {} }) {
           <span>Join Forum</span>
           <ArrowRight className="h-3.5 w-3.5 text-primary" />
         </Link>
+        <Link
+          to="/news"
+          onClick={onClose}
+          className="flex items-center justify-between p-3 border border-border/40 hover:border-primary/30 hover:bg-muted/5 text-[10.5px] font-bold uppercase tracking-widest text-slate-300 hover:text-foreground transition-all shrink-0"
+        >
+          <span>Latest News</span>
+          <ArrowRight className="h-3.5 w-3.5 text-primary" />
+        </Link>
+        <Link
+          to="/gallery"
+          onClick={onClose}
+          className="flex items-center justify-between p-3 border border-border/40 hover:border-primary/30 hover:bg-muted/5 text-[10.5px] font-bold uppercase tracking-widest text-slate-300 hover:text-foreground transition-all shrink-0"
+        >
+          <span>Gallery</span>
+          <ArrowRight className="h-3.5 w-3.5 text-primary" />
+        </Link>
       </div>
     </>
   );

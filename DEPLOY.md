@@ -1,49 +1,46 @@
-# Deploy / Publish checklist
+# Deploy checklist
 
-This app is **GitHub-synced to the Base44 Builder**. Code and the `base44/` schema
-in this repo are reflected in the Builder; clicking **Publish** on Base44.com makes
-them live. New entity fields, new entities, RLS, and functions only take effect
-after publishing — until then the UI silently drops unknown fields (e.g. a saved
-countdown date or profile change won't persist).
+> The Base44 Builder flow this file used to describe is **dead** — the app was
+> fully migrated to Supabase + Vercel (see `MIGRATION-SUPABASE.md`). The
+> `base44/` directory is archived reference only (a schema test reads it).
 
-## How to deploy
-1. Push to `main` (already done by the build).
-2. Open **Base44.com → your app** ("Rugby League Takeover", id `6a18d49a2b8f40f0f81cc26e`).
-3. If prompted, **sync/pull from GitHub** so the Builder has the latest.
-4. Click **Publish**.
-5. Hard-refresh the live site + `/admin`.
+## Web (Vercel)
 
-If a field/permission didn't apply from the synced schema, set it in the Builder's
-**Data → Entities** panel (fields) and each entity's **permissions/security** panel
-(RLS), then Publish again.
+1. Merge to `main`. Vercel builds `npm run build` and deploys `dist/`
+   automatically (SPA rewrites, cache headers, CSP all in `vercel.json`).
+2. Hard-refresh the live site + `/admin` after deploy; the service worker
+   update prompt handles returning visitors.
 
-## Entities — fields to ensure exist
-- **Ban** (new): `ban_type` (enum ip/email/user), `value`, `reason`, `banned_by`, `expires_at` (date-time), `is_active` (bool, default true)
-- **User**: `phone`, `postcode`, `favourite_team`, `avatar_url`, `marketing_opt_in` (bool)
-- **EventContent**: `event_date` (date-time), `start_time`, `location`, `address`, `ticket_url`, `tickets` (array of objects: name, price_aud, url, note, sold_out), `is_published`, `sort_order`, `is_coming_soon`
-- **TravelPackage**: `image_url`
-- **StoreOrder**: `user_email`, `user_id`, `stripe_payment_status`, `payment_verified_at`
-- **ForumPost**: `user_email`, `user_id`, `ip_address`
-- **InterestRegistration**: `user_email`, `user_id`, `ip_address`
-- **SiteSettings**: `countdown_enabled` (bool), `countdown_title`, `countdown_subtitle`, `countdown_date` (date-time), `countdown_cta_label`, `countdown_cta_url`
+Env vars (Vercel project settings): `VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY` (safe client-side defaults ship in
+`src/api/supabaseClient.js`).
 
-## Entities — permissions (RLS)
-- **User**: read = role `admin` OR own record; update = role `admin`.
-- **Ban**: admin only (read/create/update/delete).
-- **InterestRegistration**, **StoreOrder**: public create; read restricted to owner (`user_email == me`) or admin. Never public-listable (PII).
-- **ForumPost**: public read only where `is_published == true`; users read their own; admin full.
-- `ip_address` fields: admin-only.
-- **EventContent**, **SiteSettings**: already carry RLS in their `.jsonc` (admin write, public read of published).
+## Backend (Supabase)
 
-## Functions — deploy + secrets
-- `createCheckout`, `stripeWebhook`, `submitForumPost`, `submitRegistration` (all self-contained — no shared imports).
-- Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `BASE44_APP_ID`; optional `CHECKOUT_ALLOWED_ORIGINS`, `CHECKOUT_DEFAULT_ORIGIN`.
+- **Migrations**: files in `supabase/migrations/` are the source of truth;
+  apply new ones with `supabase db push` (or the SQL editor, in order).
+  ⚠️ `0009_user_push_tokens.sql` is committed but **not yet applied** — apply
+  it when the push-notification story starts.
+- **Edge functions**: deploy changed functions from `supabase/functions/` with
+  `supabase functions deploy <name>`.
+- **Secrets** (functions): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `SITE_URL`; optional `CHECKOUT_ALLOWED_ORIGINS`, `CHECKOUT_DEFAULT_ORIGIN`,
+  AusPost keys.
+- **Auth**: redirect allow-list must contain the production domain routes
+  (`/account`, `/reset-password`). Native in-app auth return will add entries
+  in a later story.
 
-## Post-publish smoke test
-- Set countdown date in Settings → Save → homepage counts down.
-- Edit profile name/phone → Save → persists after refresh.
-- Post in the forum (logged in or guest) → succeeds, appears as pending.
-- `/admin/people` Users list + Bans panel load without errors.
-- Create an event with ticket tiers → tiers show as external "Buy" buttons.
+## iOS (Capacitor)
 
-Docs: https://docs.base44.com/Integrations/Using-GitHub
+The native shell in `ios/` ships separately through Xcode → TestFlight →
+App Store. See `docs/iOS_RUNBOOK.md` (build/run) and
+`docs/APP_STORE_CHECKLIST.md` (submission). Web deploys do NOT update
+installed apps — ship a new build via `npm run ios:build` + Xcode archive.
+
+## Post-deploy smoke test
+
+- Homepage countdown + background video play.
+- Profile edit persists after refresh.
+- Forum post succeeds and appears.
+- `/admin` panels load for an admin account.
+- Store checkout reaches Stripe and the webhook records the order.

@@ -17,7 +17,7 @@ A public, account-optional web app. Anonymous visitors can browse and (where all
 npm install
 npm run dev      # http://localhost:5173
 ```
-Node 18+ recommended. The app connects to the Supabase project out of the box (the publishable key ships as a safe client-side default); override via env vars below.
+Node 22 recommended (CI pins 22; the Capacitor CLI requires 22+). The app connects to the Supabase project out of the box (the publishable key ships as a safe client-side default); override via env vars below.
 
 ## 4. Environment variables
 Optional `.env.local` overrides (see `.env.example`):
@@ -34,6 +34,8 @@ No secrets belong in the repo. Stripe/Resend secret keys live only in Supabase E
 - `npm run typecheck` — `tsc -p ./jsconfig.json`.
 - `npm test` — run the `tests/**/*.test.mjs` suite.
 - `npm run preview` — preview the production build.
+- `npm run ios:build` — web build + sync into the iOS shell (`vite build && cap sync ios`).
+- `npm run ios:sync` / `npm run ios:open` / `npm run ios:run` — Capacitor sync / open in Xcode / run (Mac only for open/run).
 
 ## 6. Deploy flow
 1. Make code changes locally on a branch.
@@ -41,6 +43,7 @@ No secrets belong in the repo. Stripe/Resend secret keys live only in Supabase E
 3. Frontend: `npm run build` → deploy `dist/` to your static host.
 4. Database schema changes: add a migration under `supabase/migrations/` and apply it to the project.
 5. Edge Functions: edit `supabase/functions/<name>/index.ts` (shared helpers live in `supabase/functions/_shared/shared.ts`; run `node scripts/sync-shared.mjs` after editing them) and deploy to Supabase.
+6. iOS: the Capacitor shell in `ios/` ships via Xcode/TestFlight — see `docs/iOS_RUNBOOK.md` and `docs/APP_STORE_CHECKLIST.md`. Web deploys do not update the installed app.
 
 ## 7. BMAD workflow rules
 - **No code without a story.** One story = one bounded change.

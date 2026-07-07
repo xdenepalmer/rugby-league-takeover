@@ -10,6 +10,8 @@
  *   this does NOT imply offline support — it's a convenience shortcut only.
  * - Preview/development: PWA disabled to avoid stale cache issues during dev.
  */
+import { isNativeApp } from "./native/native-env.js";
+
 const PREVIEW_HOST_PATTERNS = [
   /(^|\.)base44\.app$/i,
   /preview/i,
@@ -28,7 +30,13 @@ export function isPreviewLikeUrl(urlString) {
   }
 }
 
-export function shouldEnablePwaForEnvironment({ href, mode, hasServiceWorker }) {
+export function shouldEnablePwaForEnvironment({ href, mode, hasServiceWorker, isNative = false }) {
+  // Inside the Capacitor native shell the app is served from local assets —
+  // a service worker would only fight the native bridge. (The localhost
+  // preview pattern above also catches capacitor://localhost, but the guard
+  // must not depend on that coincidence.)
+  if (isNative) return false;
+
   try {
     const url = new URL(href);
     if (url.pathname.startsWith("/admin")) return false;
@@ -45,5 +53,6 @@ export function shouldEnablePwa() {
     href: window.location.href,
     mode: import.meta.env.MODE,
     hasServiceWorker: "serviceWorker" in navigator,
+    isNative: isNativeApp(),
   });
 }

@@ -7,6 +7,7 @@
 import {
   MessageSquare, Globe, Flame, Zap, Plane, MapPin,
 } from "lucide-react";
+import { canonicalizeShareUrl } from "@/lib/native/share";
 
 export const CATEGORY_META = {
   All:      { label: "All Topics",       icon: Globe,        gradient: "from-slate-400/25 to-slate-500/5",  accent: "text-slate-300",   dot: "bg-slate-300",   ring: "ring-slate-400/20",   hue: 220, glow: "rgba(148,163,184,0.15)" },
@@ -83,5 +84,7 @@ export function nameHash(name) {
 /* ━━━ Share / Save helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export const threadUrl = (post) => {
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}/forum?thread=${post?.id}`;
+  // canonicalizeShareUrl rewrites the capacitor://localhost origin of the
+  // native shell to the public https domain so shared links stay openable.
+  return canonicalizeShareUrl(`${window.location.origin}/forum?thread=${post?.id}`);
 };

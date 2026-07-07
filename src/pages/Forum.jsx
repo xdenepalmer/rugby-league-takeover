@@ -45,6 +45,7 @@ import OnlineUsersWidget from "@/components/forum/feed/OnlineUsersWidget";
 import CollapsibleGuidelines from "@/components/forum/feed/CollapsibleGuidelines";
 import FanRankCard from "@/components/forum/feed/FanRankCard";
 import { hasUnreadReplies, getUnreadReplyCount, getReadTimestamps, markThreadRead } from "@/lib/forum-read-tracker";
+import { successImpact, errorImpact } from "@/lib/native/haptics";
 
 // Lazy-loaded feature islands to trim the initial bundle footprint
 const StadiumSeatPlanner = lazy(() => import("@/components/forum/StadiumSeatPlanner"));
@@ -898,6 +899,7 @@ export default function Forum() {
       return { ...response.data, parent_id: post.parent_id };
     },
     onSuccess: (data) => {
+      successImpact();
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] });
       setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false); setDraftRecovered(false);
       if (!data?.parent_id) { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); setUserFilter("all"); setMobileTab("feed"); }
@@ -911,6 +913,7 @@ export default function Forum() {
       }
     },
     onError: (error) => {
+      errorImpact();
       toast({ title: "Post failed", description: error?.response?.data?.error || error?.message || "Please try again." });
     },
   });
