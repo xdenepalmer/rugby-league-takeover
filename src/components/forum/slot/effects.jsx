@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── Ambient Particles ─── */
@@ -79,6 +80,8 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
       size: 6 + Math.random() * (isJackpot ? 14 : 10),
       delay: Math.random() * 0.3,
       emoji: ["🪙", "💰", "⭐", "✨", "🎉"][Math.floor(Math.random() * 5)],
+      spin: Math.random() > 0.5 ? 1 : -1,
+      drop: 60 + Math.random() * 160,
     })), [isJackpot]);
 
   const bursts = useMemo(() =>
@@ -89,14 +92,18 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
       delay: i * 0.02,
     })), [isJackpot]);
 
-  return (
+  // Portal the celebration to the body so it fills the viewport instead of
+  // being clipped to the ~270px reel window (both the machine body and the
+  // outer card are overflow-hidden). This is the app's biggest "Vegas moment".
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <AnimatePresence>
       {show && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.5 } }}
-          className="pointer-events-none absolute inset-0 z-40 overflow-hidden"
+          className="pointer-events-none fixed inset-0 z-[100] overflow-hidden"
         >
           {/* Golden flash — more dramatic for jackpot */}
           <motion.div
@@ -124,7 +131,7 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
               initial={{ scale: 0, opacity: 0.8 }}
               animate={{ scale: isJackpot ? 4 : 3, opacity: 0 }}
               transition={{ duration: isJackpot ? 1.5 : 1.2, delay }}
-              className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full border-4 border-amber-300/50"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full border-4 border-amber-300/50"
             />
           ))}
 
@@ -132,10 +139,10 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
           {bursts.map((b) => (
             <motion.div
               key={b.id}
-              initial={{ x: "50%", y: "33%", scale: 0, opacity: 1 }}
+              initial={{ x: "50%", y: "50%", scale: 0, opacity: 1 }}
               animate={{
                 x: `calc(50% + ${Math.cos(b.angle) * b.dist}px)`,
-                y: `calc(33% + ${Math.sin(b.angle) * b.dist}px)`,
+                y: `calc(50% + ${Math.sin(b.angle) * b.dist}px)`,
                 scale: [0, 1.5, 0],
                 opacity: [1, 1, 0],
               }}
@@ -148,13 +155,13 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
           {coins.map((c) => (
             <motion.div
               key={c.id}
-              initial={{ x: "50%", y: "33%", scale: 0, opacity: 1 }}
+              initial={{ x: "50%", y: "50%", scale: 0, opacity: 1 }}
               animate={{
                 x: `calc(50% + ${Math.cos(c.angle) * c.dist}px)`,
-                y: `calc(33% + ${Math.sin(c.angle) * c.dist + 100}px)`,
+                y: `calc(50% + ${Math.sin(c.angle) * c.dist + c.drop}px)`,
                 scale: [0, 1.3, 0.8],
                 opacity: [1, 1, 0],
-                rotate: [0, 360 * (Math.random() > 0.5 ? 1 : -1)],
+                rotate: [0, 360 * c.spin],
               }}
               transition={{ duration: 1.8, delay: c.delay, ease: "easeOut" }}
               className="absolute text-lg select-none"
@@ -171,7 +178,7 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: [0, 1.5, 1.1, 1.2, 1], opacity: [0, 1, 1, 1, 1] }}
             transition={{ duration: isJackpot ? 0.8 : 0.5, delay: 0.2, ease: "backOut" }}
-            className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
           >
             <div className="relative">
               <motion.div
@@ -193,6 +200,7 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

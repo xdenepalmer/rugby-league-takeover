@@ -576,15 +576,18 @@ function Leaderboard({ entries, tips, totalPoints, myName }) {
       curr.tips += 1;
       totals.set(name, curr);
     });
+    // Rank by tips locked (participation) — the only metric verifiable for
+    // every fan here (per-rival correctness needs finished-fixture results
+    // that this component isn't given). "You" additionally carries real points.
     const yours = { name: "You", tips: Object.keys(tips).length, points: totalPoints, me: true };
-    return [yours, ...Array.from(totals.values()).map((r) => ({ ...r, points: r.tips * 2 }))]
+    return [yours, ...Array.from(totals.values())]
       .filter((r) => r.tips > 0)
-      .sort((a, b) => (b.points || 0) - (a.points || 0))
+      .sort((a, b) => (b.tips || 0) - (a.tips || 0))
       .slice(0, 8);
   }, [entries, tips, totalPoints, myName]);
 
   const medals = ["🥇", "🥈", "🥉"];
-  const maxPts = Math.max(1, ...community.map((r) => r.points || 0));
+  const maxTips = Math.max(1, ...community.map((r) => r.tips || 0));
 
   return (
     <div className="border border-border/30 bg-black/30 p-3">
@@ -597,7 +600,7 @@ function Leaderboard({ entries, tips, totalPoints, myName }) {
       </div>
       <div className="space-y-1.5">
         {community.length ? community.map((row, i) => {
-          const barWidth = maxPts > 0 ? Math.max(8, ((row.points || 0) / maxPts) * 100) : 0;
+          const barWidth = Math.max(8, ((row.tips || 0) / maxTips) * 100);
           return (
           <motion.div
             key={`${row.name}-${i}`}
@@ -633,10 +636,13 @@ function Leaderboard({ entries, tips, totalPoints, myName }) {
               <p className="text-[9px] text-slate-500">{row.tips} tip{row.tips !== 1 ? 's' : ''} locked</p>
             </div>
             <div className="relative flex items-center gap-2">
+              {row.me && row.points > 0 && (
+                <span className="text-2xs font-bold tabular-nums text-primary">{row.points} pts</span>
+              )}
               <span className={`text-[11px] font-bold tabular-nums ${
                 row.me ? "text-primary" : i === 0 ? "text-amber-300" : "text-foreground/80"
-              }`}>{row.points || 0}</span>
-              <span className="text-[9px] text-slate-500">pts</span>
+              }`}>{row.tips}</span>
+              <span className="text-2xs text-slate-500">tips</span>
             </div>
           </motion.div>
           );
