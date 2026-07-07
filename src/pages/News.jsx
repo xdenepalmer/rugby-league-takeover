@@ -4,6 +4,7 @@ import { Newspaper } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { getRecentNews, saveRecentNews } from "@/lib/recent-news";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const NewsSection = lazy(() => import("@/components/public/NewsSection"));
 
@@ -52,7 +53,8 @@ export default function News() {
   }, [articles]);
 
   return (
-    <main className="min-h-screen bg-background pt-24 text-foreground">
+    <PullToRefresh queryKeys={[["news"]]}>
+    <main className="min-h-screen bg-background pt-[calc(6rem+env(safe-area-inset-top,0px))] text-foreground">
       <h1 className="sr-only">Rugby League Takeover — Latest News</h1>
       {isLoading ? (
         <section className="px-5 py-24 md:px-8">
@@ -73,5 +75,6 @@ export default function News() {
         </Suspense>
       )}
     </main>
+    </PullToRefresh>
   );
 }

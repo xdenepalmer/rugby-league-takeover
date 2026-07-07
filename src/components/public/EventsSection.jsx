@@ -122,7 +122,7 @@ function EventCard({ event, featured, index, onClick }) {
       <div className="h-[2px] w-full origin-left scale-x-0 bg-gradient-to-r from-primary via-accent to-primary transition-transform duration-500 group-hover:scale-x-100" />
       <div className={`relative overflow-hidden bg-secondary ${featured ? "lg:w-1/2" : ""}`}>
         {photo ? (
-          <img src={photo} alt={event.title} loading="lazy" className={`w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105 ${featured ? "h-64 lg:h-full" : "h-52"}`} />
+          <img src={photo} alt={event.title} loading="lazy" className={`w-full object-cover md:grayscale md:group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105 ${featured ? "h-64 lg:h-full" : "h-52"}`} />
         ) : (
           <div className={`flex items-center justify-center ${featured ? "h-64 lg:h-full" : "h-52"}`}><CalendarDays className="h-10 w-10 text-muted-foreground" /></div>
         )}

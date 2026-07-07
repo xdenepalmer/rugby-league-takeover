@@ -155,7 +155,7 @@ export default function PartnersSection({ settings = {} }) {
               alt={partner.name}
               loading="lazy"
               onError={() => setImgError(true)}
-              className="h-16 w-full max-w-[160px] object-contain grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
+              className="h-16 w-full max-w-[160px] object-contain md:grayscale transition-all duration-300 md:group-hover:grayscale-0 group-hover:scale-105"
             />
           ) : (
             <PartnerLogoPlaceholder name={partner.name} id={partner.id} />

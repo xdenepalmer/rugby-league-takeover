@@ -44,7 +44,7 @@ export default function FeaturedNewsCard({ article, onClick }) {
             alt={article.title}
             loading="lazy"
             onError={() => setImgError(true)}
-            className="h-full w-full object-cover grayscale opacity-80 transition duration-700 ease-out group-hover:scale-105 group-hover:grayscale-0 group-hover:opacity-100"
+            className="h-full w-full object-cover md:grayscale opacity-90 md:opacity-80 transition duration-700 ease-out group-hover:scale-105 md:group-hover:grayscale-0 group-hover:opacity-100"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030512]/80 via-transparent to-transparent opacity-70" />

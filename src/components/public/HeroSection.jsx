@@ -166,7 +166,7 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
           <a
             href="#travel-registration"
             onClick={handleTravelInterestClick}
-            className="group flex items-center justify-center gap-2.5 border border-primary bg-primary/20 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-foreground hover:bg-primary hover:text-white hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all duration-300 lg:hover:-translate-y-0.5 cursor-pointer text-center"
+            className="group flex items-center justify-center gap-2.5 border border-primary bg-primary px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-[0_8px_30px_rgba(249,115,22,0.35)] hover:bg-primary/90 hover:shadow-[0_10px_36px_rgba(249,115,22,0.5)] transition-all duration-300 lg:hover:-translate-y-0.5 cursor-pointer text-center"
           >
             <UserPlus className="h-4 w-4" />
             <span>Register Travel Interest</span>

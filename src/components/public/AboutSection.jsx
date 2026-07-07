@@ -196,7 +196,7 @@ export default function AboutSection({ settings = {} }) {
               }
               alt="Supporters celebrating"
               loading="lazy"
-              className="h-full w-full object-cover grayscale transition-[filter] duration-700 ease-out group-hover/img:grayscale-0"
+              className="h-full w-full object-cover md:grayscale transition-[filter] duration-700 ease-out md:group-hover/img:grayscale-0"
             />
           </motion.div>
 

@@ -19,8 +19,8 @@ function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, 
   const toneClass = {
     primary: "border-primary/25 bg-primary/[0.045] text-primary hover:border-primary/55 hover:bg-primary/[0.075]",
     accent: "border-accent/25 bg-accent/[0.045] text-accent hover:border-accent/55 hover:bg-accent/[0.075]",
-    emerald: "border-emerald-400/25 bg-emerald-400/[0.045] text-emerald-400 hover:border-emerald-400/55 hover:bg-emerald-400/[0.075]",
-    blue: "border-sky-400/25 bg-sky-400/[0.045] text-sky-300 hover:border-sky-400/55 hover:bg-sky-400/[0.075]",
+    emerald: "border-accent/25 bg-accent/[0.05] text-accent hover:border-accent/55 hover:bg-accent/[0.08]",
+    blue: "border-primary/20 bg-primary/[0.04] text-primary/90 hover:border-primary/50 hover:bg-primary/[0.07]",
   }[tone];
 
   const content = (

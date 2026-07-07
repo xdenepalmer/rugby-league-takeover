@@ -24,7 +24,7 @@ export default function LegalPage({ settingsKey, title, fallback }) {
 
   return (
     <main className="relative min-h-dvh bg-background text-foreground">
-      <div className="mx-auto max-w-3xl px-5 py-16 md:px-8 md:py-24">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(7.25rem+env(safe-area-inset-top,0px))] pb-20 md:px-8 md:pb-24">
         <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Rugby League Takeover</p>
         <h1 className="mt-3 font-display text-3xl uppercase leading-none tracking-wide text-foreground md:text-5xl">{title}</h1>
         <div className="mt-8 space-y-4">
