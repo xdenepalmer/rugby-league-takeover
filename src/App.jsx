@@ -5,7 +5,13 @@ import { NativeProvider } from '@/lib/native/NativeContext'
 import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PublicLayout from '@/components/public/PublicLayout';
+import { isNativeApp } from '@/lib/native/native-env';
 import PageNotFound from './lib/PageNotFound';
+
+// The native iOS app ships its own shell (native tab bar, push transitions, no
+// marketing chrome/ads). Lazy so the web bundle never pays for it. isNativeApp()
+// is fixed per session, so this can't change the layout element between renders.
+const NativeLayout = lazy(() => import('@/components/native/NativeLayout'));
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
@@ -70,7 +76,7 @@ const AuthenticatedApp = () => {
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
         {/* Add your page Route elements here */}
-        <Route element={<PublicLayout />}>
+        <Route element={isNativeApp() ? <NativeLayout /> : <PublicLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/store" element={<Store />} />
           <Route path="/forum" element={<Forum />} />
