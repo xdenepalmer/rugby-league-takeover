@@ -1,6 +1,7 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MotionConfig } from 'framer-motion'
+import { NativeProvider } from '@/lib/native/NativeContext'
 import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PublicLayout from '@/components/public/PublicLayout';
@@ -148,6 +149,7 @@ function App() {
   }, []);
 
   return (
+    <NativeProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         {/* reducedMotion="user" makes every framer-motion component honour the
@@ -169,6 +171,7 @@ function App() {
         </MotionConfig>
       </QueryClientProvider>
     </AuthProvider>
+    </NativeProvider>
   )
 }
 

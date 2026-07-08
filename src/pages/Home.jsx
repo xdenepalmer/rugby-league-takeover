@@ -14,6 +14,13 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { isNativeApp } from "@/lib/native/native-env";
+
+// The native iOS app ships its own home ("Takeover HQ") — a purpose-built
+// native surface rather than the web landing page. Lazy so the web bundle
+// never pays for it. isNativeApp() is fixed for the session, so the early
+// return below can't change hook order between renders.
+const NativeHome = lazy(() => import("@/components/native/NativeHome"));
 
 function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, onClick, tone = "primary" }) {
   const toneClass = {
@@ -260,6 +267,17 @@ const BulbRow = React.memo(function BulbRow({ isTop }) {
 });
 
 export default function Home() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeHome />
+      </Suspense>
+    );
+  }
+  return <WebHome />;
+}
+
+function WebHome() {
   const { isAuthenticated } = useAuth();
   // Pause the Vegas ticker's 80+ LED/marquee animations while it's off-screen
   // — a large iOS CPU/battery saving with zero visual change.

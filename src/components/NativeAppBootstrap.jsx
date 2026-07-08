@@ -63,9 +63,32 @@ export default function NativeAppBootstrap() {
     };
     document.addEventListener("click", handleClick, true);
 
+    // Keyboard: keep --keyboard-height in sync so composers/forms can lift a
+    // sticky footer above the on-screen keyboard (resize "none" — we control
+    // the lift via the CSS var rather than letting the WebView resize and
+    // fight framer/vaul transforms). useKeyboardInset() reads the same events.
+    let removeKbShow = null;
+    let removeKbHide = null;
+    import("@capacitor/keyboard")
+      .then(async ({ Keyboard }) => {
+        try { await Keyboard.setResizeMode({ mode: "none" }); } catch { /* ok */ }
+        try { await Keyboard.setScroll({ isDisabled: true }); } catch { /* ok */ }
+        removeKbShow = await Keyboard.addListener("keyboardWillShow", (info) => {
+          document.documentElement.style.setProperty("--keyboard-height", `${info?.keyboardHeight || 0}px`);
+          document.documentElement.classList.add("keyboard-open");
+        });
+        removeKbHide = await Keyboard.addListener("keyboardWillHide", () => {
+          document.documentElement.style.setProperty("--keyboard-height", "0px");
+          document.documentElement.classList.remove("keyboard-open");
+        });
+      })
+      .catch(() => {});
+
     return () => {
       removeDeepLinks();
       document.removeEventListener("click", handleClick, true);
+      removeKbShow?.remove?.().catch(() => {});
+      removeKbHide?.remove?.().catch(() => {});
     };
     // navigate identity is stable in react-router; run once per mount.
   }, [navigate]);
