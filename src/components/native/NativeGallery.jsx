@@ -79,10 +79,11 @@ export default function NativeGallery() {
                       key={key}
                       type="button"
                       onClick={() => { selectionChanged(); setFilterType(key); }}
-                      className={`ios-pressable flex shrink-0 items-center gap-1.5 whitespace-nowrap border px-3.5 py-2 nt-caption font-bold uppercase tracking-wider transition-colors ${
+                      aria-pressed={active}
+                      className={`ios-pressable flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border px-3.5 py-2 nt-caption font-bold uppercase tracking-wider transition-colors ${
                         active
                           ? "border-accent bg-accent/15 text-accent"
-                          : "border-border/70 bg-card/40 text-muted-foreground"
+                          : "border-border/70 bg-card/40 text-slate-300"
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5" /> {label}
@@ -102,10 +103,11 @@ export default function NativeGallery() {
                       key={label}
                       type="button"
                       onClick={() => { selectionChanged(); setFilterEvent(label); }}
-                      className={`ios-pressable shrink-0 whitespace-nowrap border px-3.5 py-1.5 nt-caption font-bold uppercase tracking-wider transition-colors ${
+                      aria-pressed={active}
+                      className={`ios-pressable inline-flex min-h-11 shrink-0 items-center whitespace-nowrap border px-3.5 py-1.5 nt-caption font-bold uppercase tracking-wider transition-colors ${
                         active
                           ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border/70 bg-card/40 text-muted-foreground"
+                          : "border-border/70 bg-card/40 text-slate-300"
                       }`}
                     >
                       {label}
@@ -135,7 +137,7 @@ export default function NativeGallery() {
                   <button
                     type="button"
                     onClick={() => { selectionChanged(); setFilterEvent(ALL); setFilterType(ALL); }}
-                    className="ios-pressable mt-4 border border-border/70 px-5 py-2 nt-caption font-bold uppercase tracking-wider text-muted-foreground"
+                    className="ios-pressable mt-4 inline-flex min-h-11 items-center border border-border/70 px-5 py-2 nt-caption font-bold uppercase tracking-wider text-slate-300"
                   >
                     Clear filters
                   </button>
@@ -181,6 +183,7 @@ function NativeGalleryTile({ item, onClick }) {
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.22 }}
       onClick={() => onClick(item)}
+      aria-label={item.title ? `View ${item.title}` : "View media"}
       className="ios-pressable group relative aspect-square overflow-hidden border border-border/60 bg-card/40 text-left"
     >
       {thumb ? (

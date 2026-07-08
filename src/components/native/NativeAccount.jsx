@@ -67,7 +67,7 @@ function StatTile({ icon: Icon, value, label, tint, iconClass }) {
 }
 
 export default function NativeAccount() {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
   // SAME query keys as web Account.jsx — the cache is shared, no duplicate layer.
@@ -100,6 +100,42 @@ export default function NativeAccount() {
   );
 
   const go = (tab) => navigate(`/account?tab=${tab}`, { replace: true });
+
+  // Unauthenticated fan card — a genuine sign-in empty state rather than a hero
+  // full of zeros (this native surface has no route-level auth guard).
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-dvh bg-background text-foreground nt-legible-floor pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
+        <div className="mx-auto w-full max-w-xl nt-gutter-x nt-stack">
+          <div className="pb-1">
+            <p className="nt-caption font-bold uppercase tracking-[0.22em] text-primary">Fan card</p>
+            <h1 className="nt-large-title mt-0.5 text-foreground">Account</h1>
+          </div>
+          <div className="nt-raised nt-e2 relative overflow-hidden border border-border/50 p-8 text-center">
+            <div className="cmd-accent-bar absolute inset-x-0 top-0 h-[2px]" />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center border border-accent/30 bg-accent/10 text-accent">
+              <Trophy className="h-6 w-6" />
+            </div>
+            <h2 className="nt-title mt-4 text-foreground">Sign in to your fan card</h2>
+            <p className="nt-footnote mt-1.5 text-slate-300">
+              Track XP, chips, streaks and your fan rank on the road to Vegas.
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <Link to="/login" onClick={() => lightImpact()} className="ios-pressable flex min-h-11 items-center justify-center bg-primary nt-footnote font-bold uppercase tracking-wider text-white">Sign in</Link>
+              <Link to="/register" onClick={() => lightImpact()} className="ios-pressable flex min-h-11 items-center justify-center border border-border/70 bg-card/50 nt-footnote font-bold uppercase tracking-wider text-foreground">Create account</Link>
+            </div>
+          </div>
+          <div>
+            <p className="nt-group-header">Explore</p>
+            <div className="nt-group">
+              <Row to="/store" icon={Store} tint="border-border bg-background/50 text-primary" label="Merch Store" />
+              <Row to="/forum" icon={MessageSquare} tint="border-border bg-background/50 text-primary" label="Forum" />
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <PullToRefresh queryKeys={[["myOrdersCount", user?.email], ["myPostsCount", user?.email], ["myInterestCount", user?.email]]}>

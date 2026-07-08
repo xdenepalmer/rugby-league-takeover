@@ -102,7 +102,7 @@ function NativePostCard({ post, isAuthenticated, user, resolveAvatar, reactionPr
               <button
                 type="button"
                 onClick={() => { selectionChanged(); setExpanded((v) => !v); }}
-                className="ios-pressable mt-1 nt-caption font-bold uppercase tracking-wider text-primary"
+                className="ios-pressable mt-1 inline-flex min-h-11 items-center nt-caption font-bold uppercase tracking-wider text-primary"
               >
                 {expanded ? "Show less" : "Read more"}
               </button>
@@ -162,7 +162,7 @@ function ComposerSheet({ open, onClose, draft, setDraft, people, onSubmit, isPen
                 <h2 id="native-forum-compose-title" className="nt-title uppercase tracking-wide text-foreground">New post</h2>
                 <button
                   type="button" onClick={onClose} aria-label="Close composer"
-                  className="ios-pressable flex h-9 w-9 items-center justify-center border border-border/50 text-muted-foreground"
+                  className="ios-pressable flex h-11 w-11 items-center justify-center border border-border/50 text-muted-foreground"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -189,7 +189,8 @@ function ComposerSheet({ open, onClose, draft, setDraft, people, onSubmit, isPen
                       <button
                         key={cat} type="button"
                         onClick={() => { selectionChanged(); setDraft({ ...draft, category: cat }); }}
-                        className={`ios-pressable inline-flex items-center gap-1 border px-2.5 py-1.5 nt-caption font-bold uppercase tracking-wider ${active ? `border-primary/50 bg-primary/10 ${m.accent}` : "border-border/40 text-muted-foreground"}`}
+                        aria-pressed={active}
+                        className={`ios-pressable inline-flex min-h-11 items-center gap-1 border px-2.5 py-1.5 nt-caption font-bold uppercase tracking-wider ${active ? `border-primary/50 bg-primary/10 ${m.accent}` : "border-border/40 text-muted-foreground"}`}
                       >
                         {m.label}
                       </button>
@@ -356,7 +357,7 @@ export default function NativeForum() {
           </div>
 
           {/* ② Segmented control: Feed / Games */}
-          <div className="nt-group grid grid-cols-2 gap-1 border border-border/50 p-1">
+          <div role="tablist" aria-label="Forum sections" className="nt-group grid grid-cols-2 gap-1 border border-border/50 p-1">
             {[
               { id: "feed", label: "Feed", icon: MessageSquare },
               { id: "games", label: "Play & Predict", icon: Dice5 },
@@ -365,7 +366,7 @@ export default function NativeForum() {
               const active = tab === t.id;
               return (
                 <button
-                  key={t.id} type="button"
+                  key={t.id} type="button" role="tab" aria-selected={active}
                   onClick={() => { selectionChanged(); setTab(t.id); }}
                   className={`ios-pressable relative flex min-h-11 items-center justify-center gap-1.5 nt-footnote font-bold uppercase tracking-wider ${active ? "text-foreground" : "text-muted-foreground"}`}
                 >
@@ -381,13 +382,13 @@ export default function NativeForum() {
           {tab === "games" ? (
             /* ③ Games surface — the same feature islands the web forum hosts */
             <div className="nt-stack">
-              <Suspense fallback={<div className="nt-raised nt-e1 h-24 animate-pulse border border-border/40" />}>
+              <Suspense fallback={<div className="nt-raised nt-e1 skeleton-shimmer h-24 border border-border/40" aria-hidden="true" />}>
                 <FanRankCard />
               </Suspense>
-              <Suspense fallback={<div className="nt-raised nt-e1 h-64 animate-pulse border border-border/40" />}>
+              <Suspense fallback={<div className="nt-raised nt-e1 skeleton-shimmer h-64 border border-border/40" aria-hidden="true" />}>
                 <ScorePredictor onSharePrediction={composeFromPrediction} />
               </Suspense>
-              <Suspense fallback={<div className="nt-raised nt-e1 h-28 animate-pulse border border-border/40" />}>
+              <Suspense fallback={<div className="nt-raised nt-e1 skeleton-shimmer h-28 border border-border/40" aria-hidden="true" />}>
                 <SlotMachineBadgeUnlock />
               </Suspense>
             </div>
@@ -409,12 +410,12 @@ export default function NativeForum() {
               </button>
 
               {isLoading && posts.length === 0 && [1, 2, 3].map((i) => (
-                <div key={i} className="nt-raised nt-e1 border border-border/40 p-4">
+                <div key={i} className="nt-raised nt-e1 border border-border/40 p-4" aria-hidden="true">
                   <div className="flex items-start gap-3">
-                    <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-muted/30" />
+                    <div className="skeleton-shimmer h-9 w-9 shrink-0 rounded-full" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 w-28 animate-pulse bg-muted/30" />
-                      <div className="h-5 w-3/4 animate-pulse bg-muted/20" />
+                      <div className="skeleton-shimmer h-3 w-28" />
+                      <div className="skeleton-shimmer h-5 w-3/4" />
                     </div>
                   </div>
                 </div>

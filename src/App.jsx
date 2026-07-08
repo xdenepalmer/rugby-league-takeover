@@ -18,6 +18,7 @@ import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import NativeAppBootstrap from '@/components/NativeAppBootstrap';
+import NativeOnboardingGate from '@/components/native/NativeOnboardingGate';
 
 // Lazy-loaded pages
 const Home = lazy(() => import("./pages/Home"));
@@ -165,6 +166,7 @@ function App() {
           <Router>
             <ScrollToTop />
             <NativeAppBootstrap />
+            <NativeOnboardingGate />
             <AuthenticatedApp />
             {showDeferredUi && (
               <Suspense fallback={null}>

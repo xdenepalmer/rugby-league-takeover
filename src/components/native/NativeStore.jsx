@@ -52,7 +52,7 @@ function NativeProductCard({ product, inCartQty, onAdd, onQuickView }) {
   const handlePrimary = () => {
     if (disabled) return;
     if (productHasSizes) {
-      selectionChanged();
+      lightImpact();
       onQuickView(product);
     } else {
       onAdd(product);
@@ -63,7 +63,7 @@ function NativeProductCard({ product, inCartQty, onAdd, onQuickView }) {
     <div className="nt-raised nt-e2 flex flex-col overflow-hidden border border-border/50">
       <button
         type="button"
-        onClick={() => { selectionChanged(); onQuickView(product); }}
+        onClick={() => { lightImpact(); onQuickView(product); }}
         className="ios-pressable relative block aspect-square w-full overflow-hidden border-b border-border/40 bg-muted/20 text-left"
         aria-label={`View ${product.name}`}
       >
@@ -108,7 +108,7 @@ function NativeProductCard({ product, inCartQty, onAdd, onQuickView }) {
             aria-label={
               comingSoon ? "Coming soon" : soldOut ? "Sold out" : productHasSizes ? `Select size for ${product.name}` : `Add ${product.name} to cart`
             }
-            className="ios-pressable flex h-9 min-w-9 items-center justify-center gap-1 border border-border bg-primary px-2.5 text-2xs font-black uppercase tracking-wider text-primary-foreground disabled:border-border/40 disabled:bg-muted disabled:text-muted-foreground"
+            className="ios-pressable flex min-h-11 min-w-11 items-center justify-center gap-1 border border-border bg-primary px-2.5 text-2xs font-black uppercase tracking-wider text-primary-foreground disabled:border-border/40 disabled:bg-muted disabled:text-muted-foreground"
           >
             {comingSoon ? (
               <Sparkles className="h-3.5 w-3.5" />
@@ -377,7 +377,7 @@ export default function NativeStore() {
                       role="tab"
                       aria-selected={active}
                       onClick={() => { selectionChanged(); setSelectedCategory(cat); }}
-                      className={`ios-pressable shrink-0 snap-start border px-3.5 py-2 text-2xs font-black uppercase tracking-wider ${
+                      className={`ios-pressable inline-flex min-h-11 shrink-0 snap-start items-center border px-3.5 py-2 text-2xs font-black uppercase tracking-wider ${
                         active
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border/70 bg-card/50 text-slate-300"
@@ -394,11 +394,11 @@ export default function NativeStore() {
             {isLoading ? (
               <div className="grid grid-cols-2 gap-3">
                 {[0, 1, 2, 3].map((n) => (
-                  <div key={n} className="nt-raised nt-e1 overflow-hidden border border-border/40">
-                    <div className="aspect-square w-full animate-pulse bg-muted/20" />
+                  <div key={n} className="nt-raised nt-e1 overflow-hidden border border-border/40" aria-hidden="true">
+                    <div className="skeleton-shimmer aspect-square w-full" />
                     <div className="space-y-2 p-3">
-                      <div className="h-3 w-3/4 animate-pulse bg-muted/20" />
-                      <div className="h-4 w-1/2 animate-pulse bg-muted/20" />
+                      <div className="skeleton-shimmer h-3 w-3/4" />
+                      <div className="skeleton-shimmer h-4 w-1/2" />
                     </div>
                   </div>
                 ))}

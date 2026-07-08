@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { supabase } from "@/api/supabaseClient";
@@ -7,8 +7,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { isNativeApp } from "@/lib/native/native-env";
+
+// The native iOS app ships its own set-new-password surface. Lazy so the web
+// bundle never pays for it. isNativeApp() is fixed for the session, so the
+// early return below can't change hook order between renders.
+const NativeResetPassword = lazy(() => import("@/components/native/NativeResetPassword"));
 
 export default function ResetPassword() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeResetPassword />
+      </Suspense>
+    );
+  }
+  return <WebResetPassword />;
+}
+
+function WebResetPassword() {
   // The reset email signs the user in via tokens in the URL hash, which
   // supabase-js consumes asynchronously (detectSessionInUrl). So: wait
   // briefly for a session instead of gating on a query param — the param

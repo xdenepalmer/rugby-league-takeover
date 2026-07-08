@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,11 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { canUseGoogleOAuth } from "@/lib/native/auth-guards";
 import { isNativeApp } from "@/lib/native/native-env";
 import { useAuth } from "@/lib/AuthContext";
+
+// The native iOS app ships its own sign-in surface. Lazy so the web bundle
+// never pays for it. isNativeApp() is fixed for the session, so the early
+// return below can't change hook order between renders.
+const NativeLogin = lazy(() => import("@/components/native/NativeLogin"));
 
 // Framer motion variants
 const containerVariants = {
@@ -30,6 +35,17 @@ const itemVariants = {
 };
 
 export default function Login() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeLogin />
+      </Suspense>
+    );
+  }
+  return <WebLogin />;
+}
+
+function WebLogin() {
   const { checkUserAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

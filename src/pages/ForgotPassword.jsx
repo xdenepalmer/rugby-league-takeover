@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,25 @@ import { Label } from "@/components/ui/label";
 import { Mail, ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import AuthLayout from "@/components/AuthLayout";
+import { isNativeApp } from "@/lib/native/native-env";
+
+// The native iOS app ships its own reset-request surface. Lazy so the web
+// bundle never pays for it. isNativeApp() is fixed for the session, so the
+// early return below can't change hook order between renders.
+const NativeForgotPassword = lazy(() => import("@/components/native/NativeForgotPassword"));
 
 export default function ForgotPassword() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeForgotPassword />
+      </Suspense>
+    );
+  }
+  return <WebForgotPassword />;
+}
+
+function WebForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);

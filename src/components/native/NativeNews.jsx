@@ -175,7 +175,7 @@ export default function NativeNews() {
                     <div className="p-4">
                       <h2 className="nt-title font-bold text-foreground">{lead.title}</h2>
                       {lead.body && (
-                        <p className="nt-subhead mt-1.5 line-clamp-2 text-muted-foreground">{lead.body}</p>
+                        <p className="nt-subhead mt-1.5 line-clamp-2 text-slate-300">{lead.body}</p>
                       )}
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 nt-footnote text-muted-foreground">
                         {safeFormatDate(lead.published_date) && (

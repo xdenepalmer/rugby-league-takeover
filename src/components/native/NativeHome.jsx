@@ -109,7 +109,7 @@ export default function NativeHome() {
               </div>
             ) : (
               <div className="flex shrink-0 gap-2">
-                <Link to="/login" onClick={() => lightImpact()} className="ios-pressable border border-border/70 bg-card/50 px-3 py-2 nt-caption font-bold uppercase tracking-wider text-foreground">Sign in</Link>
+                <Link to="/login" onClick={() => lightImpact()} className="ios-pressable inline-flex min-h-11 items-center border border-border/70 bg-card/50 px-3 py-2 nt-caption font-bold uppercase tracking-wider text-foreground">Sign in</Link>
               </div>
             )}
           </div>
@@ -192,7 +192,7 @@ export default function NativeHome() {
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-accent/30 bg-accent/10 text-accent"><Trophy className="h-5 w-5" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="nt-subhead font-bold text-foreground">Start earning</p>
-                  <p className="nt-footnote text-muted-foreground">Sign up to track XP, chips & your fan rank.</p>
+                  <p className="nt-footnote text-slate-300">Sign up to track XP, chips & your fan rank.</p>
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
               </Card>
@@ -224,7 +224,7 @@ export default function NativeHome() {
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <Eyebrow tone="text-slate-300"><span className="inline-flex items-center gap-1.5"><Newspaper className="h-3.5 w-3.5 text-primary" /> Latest news</span></Eyebrow>
-                <Link to="/news" onClick={() => lightImpact()} className="nt-caption font-bold uppercase tracking-wider text-primary">All →</Link>
+                <Link to="/news" onClick={() => lightImpact()} className="ios-pressable inline-flex min-h-11 items-center nt-caption font-bold uppercase tracking-wider text-primary">All →</Link>
               </div>
               <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 store-category-rail">
                 {visibleNews.map((a, i) => (
