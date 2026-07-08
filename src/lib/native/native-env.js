@@ -27,14 +27,34 @@ export function detectPlatform(capacitorGlobal) {
   }
 }
 
+// Native-ness is fixed for the lifetime of a session: the WKWebView bridge is
+// injected before any app JS and never disappears. We latch it on the first
+// positive detection so every consumer — the layout seam, per-page native
+// branches, bootstrap — reads one stable answer. Without this, a later reader
+// could momentarily disagree with an earlier one (e.g. @capacitor/core
+// re-initialising window.Capacitor between an eager and a lazily-loaded route),
+// which would render a web page inside the native shell. We never latch "web":
+// on a slow native boot window.Capacitor may not be ready on the very first
+// call, so web stays recomputed until the bridge appears.
+let latchedNative = false;
+let latchedPlatform = null;
+
 export function isNativeApp() {
+  if (latchedNative) return true;
   if (typeof window === "undefined") return false;
-  return detectNativePlatform(window.Capacitor);
+  if (detectNativePlatform(window.Capacitor)) latchedNative = true;
+  return latchedNative;
 }
 
 export function getPlatform() {
+  if (latchedPlatform) return latchedPlatform;
   if (typeof window === "undefined") return "web";
-  return detectPlatform(window.Capacitor);
+  const platform = detectPlatform(window.Capacitor);
+  if (platform !== "web") {
+    latchedNative = true;
+    latchedPlatform = platform;
+  }
+  return platform;
 }
 
 export function isIos() {

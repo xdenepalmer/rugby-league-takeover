@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
@@ -7,13 +7,18 @@ import { ArrowLeft, Images, Play, ExternalLink, X, ChevronLeft, ChevronRight, Ca
 import { motion, AnimatePresence } from "framer-motion";
 import BackgroundVideo, { DEFAULT_BACKGROUND_VIDEO_SOURCES } from "@/components/public/BackgroundVideo";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { isNativeApp } from "@/lib/native/native-env";
 
-function getYoutubeId(url) {
+// The native iOS app renders its own gallery surface. Lazy so the web bundle
+// never loads it. isNativeApp() is fixed per session — safe for an early return.
+const NativeGallery = lazy(() => import("@/components/native/NativeGallery"));
+
+export function getYoutubeId(url) {
   const match = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/);
   return match ? match[1] : null;
 }
 
-function getYoutubeThumbnail(url) {
+export function getYoutubeThumbnail(url) {
   const id = getYoutubeId(url);
   return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : null;
 }
@@ -24,7 +29,7 @@ const FacebookIcon = ({ className }) => <svg className={className} viewBox="0 0 
 const TYPE_ICONS = { photo: Camera, video: Film, youtube: YoutubeIcon, facebook: FacebookIcon };
 const TYPE_LABELS = { photo: "Photo", video: "Video", youtube: "YouTube", facebook: "Facebook" };
 
-function MediaBadge({ type }) {
+export function MediaBadge({ type }) {
   const Icon = TYPE_ICONS[type] || Images;
   return (
     <span className="flex items-center gap-1 border border-white/20 bg-black/60 px-1.5 py-0.5 backdrop-blur-sm text-[9px] font-bold uppercase tracking-wider text-white">
@@ -33,7 +38,7 @@ function MediaBadge({ type }) {
   );
 }
 
-function getThumb(item) {
+export function getThumb(item) {
   if (item.thumbnail_url) return item.thumbnail_url;
   if (item.media_type === "photo") return item.media_url;
   if (item.media_type === "youtube") return getYoutubeThumbnail(item.embed_url);
@@ -113,7 +118,7 @@ function GalleryCard({ item, onClick }) {
   );
 }
 
-function MediaLightbox({ items, index, onClose, onPrev, onNext }) {
+export function MediaLightbox({ items, index, onClose, onPrev, onNext }) {
   const item = items[index];
 
   useEffect(() => {
@@ -256,8 +261,8 @@ function MediaLightbox({ items, index, onClose, onPrev, onNext }) {
   );
 }
 
-const ALL = "All";
-const TYPE_FILTERS = [
+export const ALL = "All";
+export const TYPE_FILTERS = [
   { key: ALL, label: "All", icon: Images },
   { key: "photo", label: "Photos", icon: Camera },
   { key: "video", label: "Videos", icon: Film },
@@ -266,6 +271,17 @@ const TYPE_FILTERS = [
 ];
 
 export default function Gallery() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeGallery />
+      </Suspense>
+    );
+  }
+  return <WebGallery />;
+}
+
+function WebGallery() {
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [filterEvent, setFilterEvent] = useState(ALL);
   const [filterType, setFilterType] = useState(ALL);

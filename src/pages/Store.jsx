@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import AdSlot from "@/components/ads/AdSlot";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -37,6 +37,13 @@ import { toast } from "@/components/ui/use-toast";
 import { openExternalUrl } from "@/lib/native/open-external";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { isNativeApp } from "@/lib/native/native-env";
+
+// The native iOS app ships its own Store surface — a purpose-built native shop
+// rather than the web store page. Lazy so the web bundle never pays for it.
+// isNativeApp() is fixed for the session, so the early return below can't change
+// hook order between renders.
+const NativeStore = lazy(() => import("@/components/native/NativeStore"));
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -601,6 +608,17 @@ function StoreSizeGuide() {
 
 /* ── Main Store Component ── */
 export default function Store() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeStore />
+      </Suspense>
+    );
+  }
+  return <WebStore />;
+}
+
+function WebStore() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [cart, setCart] = useState(() => {
     try {

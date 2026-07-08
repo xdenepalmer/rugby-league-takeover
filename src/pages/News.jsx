@@ -4,9 +4,16 @@ import { Newspaper } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { getRecentNews, saveRecentNews } from "@/lib/recent-news";
+import { isNativeApp } from "@/lib/native/native-env";
 import PullToRefresh from "@/components/PullToRefresh";
 
 const NewsSection = lazy(() => import("@/components/public/NewsSection"));
+
+// The native iOS app ships its own News reader — a purpose-built native surface
+// rather than the web News page. Lazy so the web bundle never pays for it.
+// isNativeApp() is fixed for the session, so the early return in News() can't
+// change hook order between renders.
+const NativeNews = lazy(() => import("@/components/native/NativeNews"));
 
 const fallbackNews = [
   {
@@ -36,6 +43,17 @@ const fallbackNews = [
 ];
 
 export default function News() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeNews />
+      </Suspense>
+    );
+  }
+  return <WebNews />;
+}
+
+function WebNews() {
   const { data: articles = [], isLoading } = useQuery({
     queryKey: ["news"],
     queryFn: async () => {

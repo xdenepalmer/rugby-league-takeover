@@ -23,6 +23,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
+import { isNativeApp } from "@/lib/native/native-env";
+
+// The native iOS app ships its own Account surface ("Fan Card") — a native
+// profile hub rather than the web account console. Lazy so the web bundle never
+// pays for it. isNativeApp() is fixed for the session, so the early return in
+// Account() below can't change hook order between renders.
+const NativeAccount = lazy(() => import("@/components/native/NativeAccount"));
 
 const FanHubTab = lazy(() => import("@/components/account/FanHubTab"));
 const AchievementsTab = lazy(() => import("@/components/account/AchievementsTab"));
@@ -95,6 +102,17 @@ function StatCard({ label, value, icon: Icon, color }) {
 const VALID_TABS = ["fanhub", "achievements", "leaderboard", "profile", "orders", "posts", "interest", "security"];
 
 export default function Account() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeAccount />
+      </Suspense>
+    );
+  }
+  return <WebAccount />;
+}
+
+function WebAccount() {
   const { user, isAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = VALID_TABS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "fanhub";

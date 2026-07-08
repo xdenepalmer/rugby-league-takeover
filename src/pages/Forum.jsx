@@ -46,6 +46,13 @@ import CollapsibleGuidelines from "@/components/forum/feed/CollapsibleGuidelines
 import FanRankCard from "@/components/forum/feed/FanRankCard";
 import { hasUnreadReplies, getUnreadReplyCount, getReadTimestamps, markThreadRead } from "@/lib/forum-read-tracker";
 import { successImpact, errorImpact } from "@/lib/native/haptics";
+import { isNativeApp } from "@/lib/native/native-env";
+
+// The native iOS app ships its own Forum ("The Terrace") — a purpose-built
+// native surface rather than the web board. Lazy so the web bundle never pays
+// for it. isNativeApp() is fixed for the session, so the early return below
+// can't change hook order between renders.
+const NativeForum = lazy(() => import("@/components/native/NativeForum"));
 
 // Lazy-loaded feature islands to trim the initial bundle footprint
 const StadiumSeatPlanner = lazy(() => import("@/components/forum/StadiumSeatPlanner"));
@@ -719,6 +726,17 @@ function MobileFAB({ onClick }) {
 
 /* ━━━ MAIN FORUM COMPONENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function Forum() {
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+        <NativeForum />
+      </Suspense>
+    );
+  }
+  return <WebForum />;
+}
+
+function WebForum() {
   const { isAuthenticated, user, isAdmin, isModerator } = useAuth();
   const [draft, setDraft] = useState(() => {
     try {
