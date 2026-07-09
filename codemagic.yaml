@@ -33,12 +33,20 @@ workflows:
       # profiles found". `fetch-signing-files --create` generates the App Store
       # distribution certificate + provisioning profile via the API key on the
       # first run, then reuses them on later runs.
+      # CERTIFICATE_PRIVATE_KEY (secure env var, added in the Codemagic UI) is
+      # the RSA private key for the iOS Distribution certificate. It is required
+      # because the account already has a distribution certificate whose private
+      # key does not live on the fresh runner; passing the key lets fetch-signing
+      # -files reuse it (or create a new cert FROM this key on the first run) and
+      # import it into the keychain. Reusing the same key every build keeps a
+      # single certificate instead of hitting Apple's distribution-cert limit.
       - name: Set up code signing (create cert + profile if missing)
         script: |
           set -e
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
           keychain add-certificates
           xcode-project use-profiles
