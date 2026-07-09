@@ -4,6 +4,8 @@ import { Save } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
+import { isNativeApp } from "@/lib/native/native-env";
+import PushNotificationToggle from "@/components/account/PushNotificationToggle";
 import { ALL_TEAMS } from "@/lib/nrl-teams";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -207,13 +209,17 @@ export default function ProfileTab() {
             </div>
             <Switch checked={draft.forum_mentions_opt_in} onCheckedChange={(value) => update("forum_mentions_opt_in", value)} />
           </label>
-          <label className="flex items-center justify-between text-sm cursor-pointer select-none border-t border-border/10 pt-4">
-            <div className="space-y-0.5 pr-4">
-              <span className="font-semibold">Browser Push Notifications</span>
-              <p className="text-xs text-muted-foreground">Stay updated on match countdowns and ticket alerts even when you're offline.</p>
-            </div>
-            <Switch checked={draft.push_opt_in} onCheckedChange={(value) => update("push_opt_in", value)} />
-          </label>
+          {isNativeApp() ? (
+            <PushNotificationToggle />
+          ) : (
+            <label className="flex items-center justify-between text-sm cursor-pointer select-none border-t border-border/10 pt-4">
+              <div className="space-y-0.5 pr-4">
+                <span className="font-semibold">Browser Push Notifications</span>
+                <p className="text-xs text-muted-foreground">Stay updated on match countdowns and ticket alerts even when you're offline.</p>
+              </div>
+              <Switch checked={draft.push_opt_in} onCheckedChange={(value) => update("push_opt_in", value)} />
+            </label>
+          )}
         </div>
       </div>
 
