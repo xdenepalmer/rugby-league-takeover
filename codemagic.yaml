@@ -16,9 +16,9 @@ workflows:
     environment:
       node: 22
       xcode: latest
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.rugbyleaguetakeover.app
+      vars:
+        BUNDLE_ID: "com.rugbyleaguetakeover.app"
+        APP_STORE_CONNECT_TEAM_ID: "25R438YK9F"
     integrations:
       app_store_connect: app_store_connect
     scripts:
@@ -28,9 +28,21 @@ workflows:
         script: npm run lint && npm run typecheck && npm test
       - name: Build web assets and sync into the iOS shell
         script: npm run build && npx cap sync ios
+      # Explicit signing: the implicit `ios_signing:` block only *fetches* an
+      # existing profile, so the very first build fails with "No matching
+      # profiles found". `fetch-signing-files --create` generates the App Store
+      # distribution certificate + provisioning profile via the API key on the
+      # first run, then reuses them on later runs.
+      - name: Set up code signing (create cert + profile if missing)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Build signed IPA
         script: |
-          xcode-project use-profiles
           xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
     artifacts:
       - build/ios/ipa/*.ipa
