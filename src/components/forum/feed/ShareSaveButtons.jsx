@@ -5,19 +5,7 @@ import React, { useState } from "react";
 import { Share2, Bookmark } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { threadUrl } from "./forumHelpers";
-import { shareUrl } from "@/lib/native/share";
-
-export async function shareThread(post) {
-  const url = threadUrl(post);
-  const title = post?.title || "Rugby League Takeover forum";
-  // Native: iOS share sheet. Web: navigator.share, then clipboard fallback.
-  const result = await shareUrl({ title, text: title, url });
-  if (result === "copied") {
-    toast({ title: "Link copied", description: "Thread link copied to your clipboard." });
-  } else if (result === "failed") {
-    toast({ title: "Couldn't share", description: url });
-  }
-}
+import { useNativeShare } from "@/hooks/useNativeShare";
 
 const SAVED_KEY = "rlt_saved_posts";
 const getSavedPosts = () => {
@@ -32,8 +20,21 @@ const toggleSavedPost = (id) => {
 };
 
 export function ShareButton({ post }) {
+  const { share } = useNativeShare();
+
+  const handleShare = async () => {
+    const url = threadUrl(post);
+    const title = post?.title || "Rugby League Takeover forum";
+    const result = await share({ title, text: title, url });
+    if (result === "copied") {
+      toast({ title: "Link copied", description: "Thread link copied to your clipboard." });
+    } else if (result === "failed") {
+      toast({ title: "Couldn't share", description: url, variant: "destructive" });
+    }
+  };
+
   return (
-    <button type="button" onClick={() => shareThread(post)} title="Share / copy link" className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs text-slate-300 transition-colors hover:text-foreground">
+    <button type="button" onClick={handleShare} title="Share / copy link" className="forum-action-button flex min-h-11 items-center justify-center gap-1.5 border border-transparent px-3 py-2 text-xs text-slate-300 transition-colors hover:text-foreground">
       <Share2 className="h-3.5 w-3.5" />
     </button>
   );
