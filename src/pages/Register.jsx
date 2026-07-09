@@ -45,6 +45,10 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const requestedNext = searchParams.get("next");
   const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
+  // Supabase Auth emails an 8-digit confirmation code, so the input must accept
+  // all 8 — a 6-slot field silently truncated the code and every verification
+  // failed with "token invalid", blocking signup on web and iOS alike.
+  const OTP_LENGTH = 8;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,7 +128,7 @@ export default function Register() {
       <AuthLayout
         icon={Mail}
         title="Verify email"
-        subtitle={`We've sent a 6-digit code to ${email}`}
+        subtitle={`We've sent a ${OTP_LENGTH}-digit code to ${email}`}
       >
         <motion.div
           variants={containerVariants}
@@ -149,18 +153,18 @@ export default function Register() {
           <motion.div variants={itemVariants} className="flex flex-col items-center justify-center">
             <div className="flex justify-center select-none font-mono">
               <InputOTP
-                maxLength={6}
+                maxLength={OTP_LENGTH}
                 value={otpCode}
                 onChange={setOtpCode}
                 autoFocus
                 autoComplete="one-time-code"
               >
-                <InputOTPGroup className="gap-2.5">
-                  {[0, 1, 2, 3, 4, 5].map((idx) => (
-                    <InputOTPSlot 
+                <InputOTPGroup className="gap-1.5 sm:gap-2">
+                  {Array.from({ length: OTP_LENGTH }, (_, idx) => (
+                    <InputOTPSlot
                       key={idx}
-                      index={idx} 
-                      className="w-12 h-14 text-lg font-bold border border-border bg-background/40 hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-none transition-all duration-300"
+                      index={idx}
+                      className="w-9 h-12 sm:w-11 sm:h-14 text-base sm:text-lg font-bold border border-border bg-background/40 hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-none transition-all duration-300"
                     />
                   ))}
                 </InputOTPGroup>
@@ -173,7 +177,7 @@ export default function Register() {
             <Button
               className="w-full h-12 font-bold uppercase tracking-widest text-xs rounded-none bg-primary hover:bg-primary/95 text-primary-foreground shadow-[0_0_20px_rgba(249,115,22,0.25)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2"
               onClick={handleVerify}
-              disabled={loading || otpCode.length < 6}
+              disabled={loading || otpCode.length < OTP_LENGTH}
             >
               {loading ? (
                 <>
