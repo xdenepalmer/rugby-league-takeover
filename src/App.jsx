@@ -3,7 +3,8 @@ import { LoadingFallback } from "@/components/ui/LoadingFallback";
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MotionConfig } from 'framer-motion'
 import { queryClientInstance } from '@/lib/query-client';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { App as CapApp } from '@capacitor/app';
 import PublicLayout from '@/components/public/PublicLayout';
 
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -49,6 +50,39 @@ const AppStoreReviewPrompt = lazy(() => import("@/components/AppStoreReviewPromp
     </span>
   </div>
 );
+
+const DeepLinkHandler = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let listener = null;
+
+    const setupListener = async () => {
+      try {
+        listener = await CapApp.addListener('appUrlOpen', (event) => {
+          try {
+            const url = new URL(event.url);
+            navigate(url.pathname + url.search + url.hash);
+          } catch (err) {
+            console.error('Error handling deep link URL:', err);
+          }
+        });
+      } catch (err) {
+        console.error('Error setting up deep link listener:', err);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+    };
+  }, [navigate]);
+
+  return null;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingPublicSettings, authError } = useAuth();
