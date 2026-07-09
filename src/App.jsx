@@ -33,6 +33,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const DeferredToaster = lazy(() => import("@/components/ui/toaster").then((module) => ({ default: module.Toaster })));
 const InstallAppPrompt = lazy(() => import("@/components/InstallAppPrompt"));
 const PwaUpdatePrompt = lazy(() => import("@/components/PwaUpdatePrompt"));
+const AppStoreReviewPrompt = lazy(() => import("@/components/AppStoreReviewPrompt"));
 
 // Sleek, theme-responsive loading spinner for route chunk loading
 /* replaced */ const OLD_LoadingFallback = () => (
@@ -172,6 +173,7 @@ function App() {
               <Suspense fallback={null}>
                 <InstallAppPrompt />
                 <PwaUpdatePrompt />
+                <AppStoreReviewPrompt />
                 <DeferredToaster />
               </Suspense>
             )}
