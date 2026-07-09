@@ -159,12 +159,12 @@ export default function Register() {
                 autoFocus
                 autoComplete="one-time-code"
               >
-                <InputOTPGroup className="gap-1.5 sm:gap-2">
+                <InputOTPGroup className="gap-1 sm:gap-2">
                   {Array.from({ length: OTP_LENGTH }, (_, idx) => (
                     <InputOTPSlot
                       key={idx}
                       index={idx}
-                      className="w-9 h-12 sm:w-11 sm:h-14 text-base sm:text-lg font-bold border border-border bg-background/40 hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-none transition-all duration-300"
+                      className="w-7 h-11 sm:w-11 sm:h-14 text-base sm:text-lg font-bold border border-border bg-background/40 hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-none transition-all duration-300"
                     />
                   ))}
                 </InputOTPGroup>

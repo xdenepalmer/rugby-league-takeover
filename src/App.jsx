@@ -78,11 +78,13 @@ const AuthenticatedApp = () => {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
+        {/* Auth screens render standalone (full-screen AuthLayout) — no site
+            nav, ads, footer, or bottom tab bar overlaying the form. */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/*" element={<RequireAdmin><Admin /></RequireAdmin>} />
         <Route path="/account/*" element={<RequireAuth><Account /></RequireAuth>} />
         <Route path="*" element={<PageNotFound />} />

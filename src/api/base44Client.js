@@ -259,7 +259,9 @@ const auth = {
   },
 
   loginWithProvider(provider, nextUrl) {
-    const next = typeof nextUrl === 'string' && nextUrl.startsWith('/') ? nextUrl : '/account';
+    // Reject protocol-relative ("//evil.com") targets too — otherwise the
+    // redirect could resolve to another origin.
+    const next = typeof nextUrl === 'string' && nextUrl.startsWith('/') && !nextUrl.startsWith('//') ? nextUrl : '/account';
     return supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${redirectBase()}${next}` },

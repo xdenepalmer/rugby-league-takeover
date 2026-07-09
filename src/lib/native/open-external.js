@@ -9,7 +9,7 @@ import { isNativeApp } from "./native-env.js";
 /**
  * Classify an anchor href for the native link interceptor. Pure — testable
  * without a DOM or the Capacitor runtime.
- * @returns {"http" | "mailto" | "tel" | "sms" | "other"}
+ * @returns {"http" | "mailto" | "tel" | "sms" | "blocked" | "other"}
  */
 export function classifyHref(href) {
   const value = String(href || "").trim();
@@ -17,6 +17,11 @@ export function classifyHref(href) {
   if (/^mailto:/i.test(value)) return "mailto";
   if (/^tel:/i.test(value)) return "tel";
   if (/^sms:/i.test(value)) return "sms";
+  // Dangerous/unsupported schemes must never reach WKWebView from an in-app
+  // anchor: javascript: executes in the app origin, data:/blob:/file: can load
+  // arbitrary content, vbscript:/intent: are injection vectors. Any
+  // user-authored link (forum posts) is a potential source, so drop these.
+  if (/^(?:javascript|data|blob|file|vbscript|intent):/i.test(value)) return "blocked";
   return "other";
 }
 

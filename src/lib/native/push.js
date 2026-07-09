@@ -41,6 +41,23 @@ export async function requestPushPermission() {
 }
 
 /**
+ * Register with APNs WITHOUT prompting. Safe to call on launch when permission
+ * is already "granted" — it shows no dialog and makes APNs re-emit the current
+ * (possibly rotated) device token via the "registration" listener. Never call
+ * this when status is "prompt": use requestPushPermission() from a user action.
+ */
+export async function registerPush() {
+  if (!isNativeApp()) return false;
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    await PushNotifications.register();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Attach push listeners. Returns a cleanup function. `onToken` receives the
  * APNs device token string; persisting it (user_push_tokens) is the caller's
  * responsibility so auth context stays out of this module.

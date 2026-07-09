@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { isNativeApp } from "@/lib/native/native-env";
+import { useAuth } from "@/lib/AuthContext";
 import { initDeepLinks, mapUrlToRoute } from "@/lib/native/deep-links";
 import { classifyHref, openExternalUrl, openSystemUrl } from "@/lib/native/open-external";
+import { addPushListeners, getPushPermissionStatus, registerPush } from "@/lib/native/push";
+import { persistPushToken } from "@/lib/native/push-registration";
 
 /**
  * Single home for native-shell startup behavior. Renders nothing and does
@@ -10,6 +13,7 @@ import { classifyHref, openExternalUrl, openSystemUrl } from "@/lib/native/open-
  */
 export default function NativeAppBootstrap() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!isNativeApp()) return undefined;
@@ -58,6 +62,10 @@ export default function NativeAppBootstrap() {
       } else if (kind === "mailto" || kind === "tel" || kind === "sms") {
         event.preventDefault();
         openSystemUrl(href);
+      } else if (kind === "blocked") {
+        // javascript:/data:/blob:/file:/vbscript:/intent: — never let these
+        // reach WKWebView (script execution / content injection in the app).
+        event.preventDefault();
       }
       // relative links: leave to the router/anchor defaults
     };
@@ -69,6 +77,36 @@ export default function NativeAppBootstrap() {
     };
     // navigate identity is stable in react-router; run once per mount.
   }, [navigate]);
+
+  // Push notifications — attached app-wide (not just while the Account tab is
+  // open) so the APNs token is refreshed on every launch where permission is
+  // already granted, and a tapped notification can deep-link. Re-runs when the
+  // signed-in user changes so the token is persisted to the right account.
+  useEffect(() => {
+    if (!isNativeApp()) return undefined;
+
+    const remove = addPushListeners({
+      onToken: (token) => {
+        if (token && user?.id) persistPushToken(user.id, token).catch(() => {});
+      },
+      onActioned: (action) => {
+        const data = action?.notification?.data || {};
+        const target = data.url || data.link || data.route || data.path;
+        if (!target || typeof target !== "string") return;
+        const route = /^https?:\/\//i.test(target)
+          ? mapUrlToRoute(target)
+          : target.startsWith("/") && !target.startsWith("//") ? target : null;
+        if (route) navigate(route);
+      },
+    });
+
+    // Silent re-register when already granted — no prompt, refreshes the token.
+    getPushPermissionStatus()
+      .then((status) => { if (status === "granted") registerPush(); })
+      .catch(() => {});
+
+    return remove;
+  }, [navigate, user?.id]);
 
   return null;
 }
