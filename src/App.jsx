@@ -1,18 +1,21 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
+import { LoadingFallback } from "@/components/ui/LoadingFallback";
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MotionConfig } from 'framer-motion'
 import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PublicLayout from '@/components/public/PublicLayout';
-import PageNotFound from './lib/PageNotFound';
+
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+
 import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import NativeAppBootstrap from '@/components/NativeAppBootstrap';
 
 // Lazy-loaded pages
+const PageNotFound = lazy(() => import('./lib/PageNotFound'));
+const UserNotRegisteredError = lazy(() => import('@/components/UserNotRegisteredError'));
 const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Account = lazy(() => import("./pages/Account"));
@@ -32,7 +35,7 @@ const InstallAppPrompt = lazy(() => import("@/components/InstallAppPrompt"));
 const PwaUpdatePrompt = lazy(() => import("@/components/PwaUpdatePrompt"));
 
 // Sleek, theme-responsive loading spinner for route chunk loading
-const LoadingFallback = () => (
+/* replaced */ const OLD_LoadingFallback = () => (
   <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background text-foreground">
     <div className="relative flex items-center justify-center mb-4">
       {/* Outer pulsing neon circle */}
@@ -41,7 +44,7 @@ const LoadingFallback = () => (
       <div className="h-10 w-10 rounded-full border-t-2 border-r-2 border-primary animate-spin" />
     </div>
     <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-primary animate-pulse">
-      Loading Module...
+      Loading Module... */
     </span>
   </div>
 );
