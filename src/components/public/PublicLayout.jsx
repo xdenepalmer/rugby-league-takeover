@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
+import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { NavLink, Link, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
@@ -130,7 +131,7 @@ export default function PublicLayout() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
         >
-          {outlet}
+          <Suspense fallback={<LoadingFallback />}>{outlet}</Suspense>
         </motion.div>
       </div>
 
