@@ -35,12 +35,31 @@ workflows:
       # first run, then reuses them on later runs.
       - name: Set up code signing (create cert + profile if missing)
         script: |
+          set -e
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
           xcode-project use-profiles
+      # Read-only diagnostic: prints the entitlements Apple actually baked into
+      # the fetched provisioning profile. If `aps-environment` and
+      # `com.apple.developer.associated-domains` are absent here, the App ID
+      # capabilities are not propagating onto the profile (the real blocker);
+      # if they are present, the archive is failing for another reason. Runs
+      # before build-ipa so it is captured even when the archive fails.
+      - name: Diagnose provisioning profile capabilities
+        script: |
+          echo "=== App.entitlements requested by the target ==="
+          cat ios/App/App/App.entitlements || true
+          echo
+          echo "=== Entitlements embedded in each fetched provisioning profile ==="
+          shopt -s nullglob
+          for p in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+            echo "---- $p ----"
+            security cms -D -i "$p" 2>/dev/null | plutil -extract Entitlements xml1 -o - - 2>/dev/null || true
+            echo
+          done
       - name: Build signed IPA
         script: |
           xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
