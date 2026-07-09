@@ -28,10 +28,14 @@ export default function NativeAppBootstrap() {
       )
       .catch(() => {});
 
-    // capacitor.config.json sets launchAutoHide: false so the splash covers
-    // the WebView until React has painted; hide it now that we've mounted.
-    import("@capacitor/splash-screen")
-      .then(({ SplashScreen }) => SplashScreen.hide())
+    // iOS keyboard polish: prevent overlap and ensure smooth scrolling
+    import("@capacitor/keyboard")
+      .then(({ Keyboard }) => {
+        Promise.allSettled([
+          Keyboard.setAccessoryBarVisible({ isVisible: true }),
+          Keyboard.setScroll({ isDisabled: false })
+        ]);
+      })
       .catch(() => {});
 
     const removeDeepLinks = initDeepLinks(navigate);
