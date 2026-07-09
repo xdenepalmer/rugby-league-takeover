@@ -1,12 +1,24 @@
 # Codemagic CI/CD — builds the Capacitor iOS app on Codemagic's macOS runners,
-# so no local Mac is needed (works from Windows). STARTER CONFIG: before the
-# first green build you must, in the Codemagic UI:
-#   1. Connect the repo and create an App Store Connect API key integration
-#      named "app_store_connect" (Teams > Integrations), or rename below.
-#   2. Enable automatic code signing (ios_signing) — Codemagic creates/fetches
-#      certs + profiles for bundle id com.rugbyleaguetakeover.app.
-#   3. In the Apple Developer portal, add Push Notifications and Associated
-#      Domains capabilities to the App ID (see docs/iOS_RUNBOOK.md).
+# so no local Mac is needed (works from Windows).
+#
+# ── REFERENCE SIGNING TEMPLATE ────────────────────────────────────────────────
+# Every app in the account shares ONE distribution certificate. The RSA private
+# key lives once as the secured Codemagic variable CERTIFICATE_PRIVATE_KEY in the
+# 'appstore' variable group. Because all apps use the SAME key, fetch-signing
+# -files reuses the single existing certificate instead of minting a new one —
+# Apple caps distribution certs, so a key-per-app setup eventually wedges.
+#
+# To onboard a NEW app: copy the 'Set up code signing' step verbatim, set
+# BUNDLE_ID, attach the 'appstore' group, and reuse the App Store Connect API
+# key integration. NEVER run `openssl genrsa` for a new app — reuse the shared
+# key so the shared certificate is reused.
+#
+# One-time in the Codemagic UI before the first green build:
+#   1. App Store Connect API key integration named "app_store_connect".
+#   2. The 'appstore' variable group containing CERTIFICATE_PRIVATE_KEY (secure)
+#      — the shared distribution key.
+#   3. In the Apple Developer portal, enable Push Notifications + Associated
+#      Domains on the App ID (see docs/iOS_RUNBOOK.md).
 # The project is SPM-based (no CocoaPods): build the .xcodeproj directly.
 workflows:
   ios-capacitor:
@@ -15,17 +27,13 @@ workflows:
     max_build_duration: 60
     environment:
       groups:
-        # Shared, team-scoped group that already holds CERTIFICATE_PRIVATE_KEY
-        # (secure) — the RSA private key behind the account's existing iOS
-        # Distribution certificate, reused across all the team's apps. Because
-        # the key matches an existing cert, fetch-signing-files reuses that cert
-        # instead of minting a new one (Apple caps distribution certs at 3).
+        # Shared, team/app-scoped group holding CERTIFICATE_PRIVATE_KEY (secure)
+        # — the one distribution key reused across every app in the account.
         - appstore
       node: 22
       xcode: latest
       vars:
         BUNDLE_ID: "com.rugbyleaguetakeover.app"
-        APP_STORE_CONNECT_TEAM_ID: "25R438YK9F"
     integrations:
       app_store_connect: app_store_connect
     scripts:
@@ -35,19 +43,10 @@ workflows:
         script: npm run lint && npm run typecheck && npm test
       - name: Build web assets and sync into the iOS shell
         script: npm run build && npx cap sync ios
-      # Explicit signing: the implicit `ios_signing:` block only *fetches* an
-      # existing profile, so the very first build fails with "No matching
-      # profiles found". `fetch-signing-files --create` generates the App Store
-      # distribution certificate + provisioning profile via the API key on the
-      # first run, then reuses them on later runs.
-      # CERTIFICATE_PRIVATE_KEY (secure env var, added in the Codemagic UI) is
-      # the RSA private key for the iOS Distribution certificate. It is required
-      # because the account already has a distribution certificate whose private
-      # key does not live on the fresh runner; passing the key lets fetch-signing
-      # -files reuse it (or create a new cert FROM this key on the first run) and
-      # import it into the keychain. Reusing the same key every build keeps a
-      # single certificate instead of hitting Apple's distribution-cert limit.
-      - name: Set up code signing (create cert + profile if missing)
+      # Shared-certificate signing. --certificate-key points at the account-wide
+      # distribution key; --create only mints a certificate if none matches that
+      # key, so after the first app creates it, every app reuses the same one.
+      - name: Set up code signing
         script: |
           set -e
           keychain initialize
@@ -57,24 +56,6 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
-      # Read-only diagnostic: prints the entitlements Apple actually baked into
-      # the fetched provisioning profile. If `aps-environment` and
-      # `com.apple.developer.associated-domains` are absent here, the App ID
-      # capabilities are not propagating onto the profile (the real blocker);
-      # if they are present, the archive is failing for another reason. Runs
-      # before build-ipa so it is captured even when the archive fails.
-      - name: Diagnose provisioning profile capabilities
-        script: |
-          echo "=== App.entitlements requested by the target ==="
-          cat ios/App/App/App.entitlements || true
-          echo
-          echo "=== Entitlements embedded in each fetched provisioning profile ==="
-          shopt -s nullglob
-          for p in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
-            echo "---- $p ----"
-            security cms -D -i "$p" 2>/dev/null | plutil -extract Entitlements xml1 -o - - 2>/dev/null || true
-            echo
-          done
       - name: Build signed IPA
         script: |
           xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
