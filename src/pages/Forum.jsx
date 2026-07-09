@@ -44,6 +44,7 @@ import TopContributors from "@/components/forum/feed/TopContributors";
 import OnlineUsersWidget from "@/components/forum/feed/OnlineUsersWidget";
 import CollapsibleGuidelines from "@/components/forum/feed/CollapsibleGuidelines";
 import FanRankCard from "@/components/forum/feed/FanRankCard";
+import DailyMissions from "@/components/forum/feed/DailyMissions";
 import { hasUnreadReplies, getUnreadReplyCount, getReadTimestamps, markThreadRead } from "@/lib/forum-read-tracker";
 
 // Lazy-loaded feature islands to trim the initial bundle footprint
@@ -1321,6 +1322,7 @@ export default function Forum() {
             {mobileTab === "tools" ? (
               <div className="space-y-4 lg:hidden">
                 <FanRankCard />
+                <DailyMissions />
                 <Suspense fallback={<div className="h-64 bg-card/10 animate-pulse border border-border/10" />}>
                   <ScorePredictor
                     onSharePrediction={(matchup, homeScore, awayScore) => {
@@ -1628,8 +1630,9 @@ export default function Forum() {
           </div>
 
           {/* ━━━ RIGHT: Sidebar ━━━ */}
-          <div id="forum-compose-sidebar" className="hidden lg:block scroll-mt-28">
+          <div id="forum-compose-sidebar" className="hidden lg:block scroll-mt-28 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto cmd-scrollbar">
             <div className="mb-6"><FanRankCard /></div>
+            <div className="mb-6"><DailyMissions /></div>
             <AdSlot position="sidebar" size="medium-rectangle" className="mb-6 w-full" />
             <Suspense fallback={<div className="h-96 bg-card/10 animate-pulse border border-border/10" />}>
               <ComposeSidebar

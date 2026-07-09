@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
+import { Coins, Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthContext";
+import { base44 } from "@/api/base44Client";
 import {
   SLOT_BADGES,
+  SLOT_SYMBOLS,
   spinReels,
   evaluateReels,
   parseBadgeIds,
@@ -50,8 +52,15 @@ import TierGroupHeader from "./slot/TierGroupHeader";
 /* ═══════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
+const SYMBOL_BY_KEY = Object.fromEntries(SLOT_SYMBOLS.map((s) => [s.key, s]));
+const todayUtc = () => new Date().toISOString().slice(0, 10);
+const msToNextUtcMidnight = () => {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime();
+};
+
 export default function SlotMachineBadgeUnlock() {
-  const { user, isAuthenticated, updateProfile } = useAuth();
+  const { user, isAuthenticated, updateProfile, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
   const [tracks, setTracks] = useState(() => reels.map((emoji) => [emoji]));
@@ -75,6 +84,12 @@ export default function SlotMachineBadgeUnlock() {
   const [streak, setStreak] = useState(0);
   const [screenShake, setScreenShake] = useState(false);
   const [hasSpunToday, setHasSpunToday] = useState(false);
+
+  // Server-backed spin state (signed-in users): the daily limit, streak and
+  // chip payouts are decided by the slotSpin edge function, not the browser.
+  const [extraInfo, setExtraInfo] = useState(null); // { cost, remaining, affordable }
+  const serverSpinRef = useRef(null); // pending slotSpin response for finishSpin
+  const serverSpunDateRef = useRef(null); // UTC date of last server-recorded spin
 
   const audioCtxRef = useRef(null);
   const pendingSymbolsRef = useRef(null);
@@ -138,9 +153,34 @@ export default function SlotMachineBadgeUnlock() {
     }
   }, [user]);
 
+  // ─── Sync server slot state (spins/streak/daily usage follow the account) ───
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    const serverSpins = Number(user.slot_total_spins) || 0;
+    const serverStreak = Number(user.slot_streak) || 0;
+    if (serverSpins > 0) setTotalSpins((prev) => Math.max(prev, serverSpins));
+    if (serverStreak > 0) setStreak((prev) => Math.max(prev, serverStreak));
+    const lastDate = String(user.slot_last_spin_date || "");
+    if (lastDate) serverSpunDateRef.current = lastDate;
+    const today = todayUtc();
+    const extraUsed = String(user.slot_extra_date || "") === today ? Number(user.slot_extra_count) || 0 : 0;
+    setExtraInfo({
+      cost: 300,
+      remaining: Math.max(0, 3 - extraUsed),
+      affordable: (Number(user.casino_chips) || 0) >= 300,
+    });
+  }, [isAuthenticated, user]);
+
   // ─── Cooldown timer with visibility change re-check ───
   useEffect(() => {
     const tick = () => {
+      // Signed in: the server's daily gate (UTC day) is the authority.
+      if (isAuthenticated && serverSpunDateRef.current) {
+        const spunToday = serverSpunDateRef.current === todayUtc();
+        setHasSpunToday(spunToday);
+        setCooldownLeft(spunToday ? msToNextUtcMidnight() : 0);
+        return;
+      }
       const last = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
       const remaining = Math.max(0, last + SPIN_COOLDOWN_MS - Date.now());
       setCooldownLeft(remaining);
@@ -161,7 +201,7 @@ export default function SlotMachineBadgeUnlock() {
       clearInterval(id);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   /* ─── Persist mute preference ─── */
   const toggleSound = useCallback(() => {
@@ -286,9 +326,14 @@ export default function SlotMachineBadgeUnlock() {
     setLeverDown(false);
     setReelsStopped([false, false, false]);
 
+    const server = serverSpinRef.current; // slotSpin response (signed-in spins)
+    serverSpinRef.current = null;
+    const chipsNote = server?.chipsWon > 0 ? ` +${server.chipsWon} chips banked!` : "";
+
     const result = evaluateReels(finalSymbols);
     if (result.type === "win") {
-      const isNew = awardBadge(result.badge);
+      const localNew = awardBadge(result.badge);
+      const isNew = server ? !!server.isNewBadge : localNew;
       setIsWin(true);
       setIsNewBadgeWin(isNew);
       setScreenShake(true);
@@ -310,8 +355,8 @@ export default function SlotMachineBadgeUnlock() {
       setMessageType("win");
       setMessage(
         !isNew
-          ? `${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} Jackpot hit — you already hold the ${result.badge.label} badge.`
-          : `🎉 Jackpot! ${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} — unlocked the ${result.badge.label} badge!`
+          ? `${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} Jackpot hit — you already hold the ${result.badge.label} badge.${chipsNote}`
+          : `🎉 Jackpot! ${result.symbol.emoji}${result.symbol.emoji}${result.symbol.emoji} — unlocked the ${result.badge.label} badge!${chipsNote}`
       );
       window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "slot_win", badge: result.badge.id } }));
       const t2 = setTimeout(() => setScreenShake(false), 600);
@@ -319,7 +364,7 @@ export default function SlotMachineBadgeUnlock() {
     } else if (result.type === "near") {
       playNearMiss();
       setMessageType("near");
-      setMessage(`So close! 😩 Two ${result.symbol.emoji} on the line — one reel away from the ${result.symbol.key} badge!`);
+      setMessage(`So close! 😩 Two ${result.symbol.emoji} on the line — one reel away from the ${result.symbol.key} badge!${chipsNote}`);
       setLastWonBadgeId(null);
       // Determine which reels match and which is the odd one
       const keys = finalSymbols.map((s) => s.key);
@@ -331,50 +376,29 @@ export default function SlotMachineBadgeUnlock() {
     } else {
       playBuzzer();
       setMessageType("loss");
-      setMessage("No luck this time. One spin a day — try again tomorrow!");
+      setMessage(server
+        ? "No luck this time — grab an extra spin with chips or come back tomorrow!"
+        : "No luck this time. One spin a day — try again tomorrow! Sign in to bank chips and keep badges on your account.");
       setLastWonBadgeId(null);
       setNearMissResult(null);
+    }
+
+    // Server spin changed chips/badges on the profile — refresh so the rank
+    // card and FanHub pick it up.
+    if (server) {
+      setExtraInfo(server.extra || null);
+      try { Promise.resolve(refreshUser()).catch(() => {}); } catch { /* ignore */ }
     }
 
     // Release spin lock after all state is set
     const t3 = setTimeout(() => { spinLockRef.current = false; }, 100);
     timersRef.current.push(t3);
-  }, [awardBadge, playVictory, playJackpotVictory, playBuzzer, playNearMiss]);
+  }, [awardBadge, playVictory, playJackpotVictory, playBuzzer, playNearMiss, refreshUser]);
 
-  /* ─── Handle Spin ─── */
-  const handleSpin = useCallback(() => {
-    // Double-spin prevention: check BOTH state and ref
-    if (spinning || cooldownLeft > 0 || spinLockRef.current) return;
-
-    // Re-check cooldown from localStorage (in case tab was backgrounded)
-    const lastSpin = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
-    const actualCooldown = Math.max(0, lastSpin + SPIN_COOLDOWN_MS - Date.now());
-    if (actualCooldown > 0) {
-      setCooldownLeft(actualCooldown);
-      return;
-    }
-
-    // Lock immediately
-    spinLockRef.current = true;
-
-    initAudio();
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
-
-    const finalSymbols = spinReels();
+  /* ─── Shared reel animation (used by both guest + server spins) ─── */
+  const startSpinAnimation = useCallback((finalSymbols) => {
     const nextTracks = finalSymbols.map((symbol, index) => makeReelTrack(symbol.emoji, index));
     pendingSymbolsRef.current = finalSymbols;
-
-    safeSetItem(SLOT_LAST_SPIN_KEY, String(Date.now()));
-    setCooldownLeft(SPIN_COOLDOWN_MS);
-
-    // Increment total spins
-    const newSpins = totalSpins + 1;
-    setTotalSpins(newSpins);
-    safeSetItem(SPINS_KEY, String(newSpins));
-
-    // Update streak
-    updateStreak();
 
     setIsWin(false);
     setIsNewBadgeWin(false);
@@ -430,7 +454,70 @@ export default function SlotMachineBadgeUnlock() {
     });
 
     timersRef.current.push(setTimeout(finishSpin, Math.max(...REEL_DURATIONS) * 1000 + 120));
-  }, [spinning, cooldownLeft, totalSpins, updateStreak, initAudio, playBeep, playReelClick, finishSpin]);
+  }, [playBeep, playReelClick, finishSpin]);
+
+  /* ─── Handle Spin ───
+     Signed in → the slotSpin edge function rolls the reels, enforces the
+     daily limit and pays chips; we animate to ITS result. Guests keep the
+     local just-for-fun spin (no rewards). mode 'extra' buys a paid spin. */
+  const handleSpin = useCallback(async (modeArg) => {
+    const mode = modeArg === "extra" ? "extra" : "daily";
+    if (spinning || spinLockRef.current) return;
+    if (mode === "daily" && cooldownLeft > 0) return;
+
+    // Lock immediately
+    spinLockRef.current = true;
+    initAudio();
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    if (!isAuthenticated) {
+      // Guest: local RNG + local 24h cooldown, exactly as before.
+      const lastSpin = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
+      const actualCooldown = Math.max(0, lastSpin + SPIN_COOLDOWN_MS - Date.now());
+      if (actualCooldown > 0) {
+        setCooldownLeft(actualCooldown);
+        spinLockRef.current = false;
+        return;
+      }
+      safeSetItem(SLOT_LAST_SPIN_KEY, String(Date.now()));
+      setCooldownLeft(SPIN_COOLDOWN_MS);
+      const newSpins = totalSpins + 1;
+      setTotalSpins(newSpins);
+      safeSetItem(SPINS_KEY, String(newSpins));
+      updateStreak();
+      startSpinAnimation(spinReels());
+      return;
+    }
+
+    // Signed in: ask the house for the result first, then animate to it.
+    setMessageType("idle");
+    setMessage(mode === "extra" ? "Chips down — rolling an extra spin…" : "Rolling with the house…");
+    try {
+      const { data } = await base44.functions.invoke("slotSpin", { mode });
+      const symbols = (data?.reels || []).map((key) => SYMBOL_BY_KEY[key] || SLOT_SYMBOLS[0]);
+      if (symbols.length !== 3) throw new Error("Spin failed — please try again");
+
+      serverSpinRef.current = data;
+      serverSpunDateRef.current = todayUtc();
+      setHasSpunToday(true);
+      setCooldownLeft(msToNextUtcMidnight());
+      if (Number.isFinite(Number(data.totalSpins))) {
+        setTotalSpins(Number(data.totalSpins));
+        safeSetItem(SPINS_KEY, String(data.totalSpins));
+      }
+      if (Number.isFinite(Number(data.streak))) setStreak(Number(data.streak));
+      if (data.extra) setExtraInfo(data.extra);
+
+      startSpinAnimation(symbols);
+    } catch (err) {
+      spinLockRef.current = false;
+      const payload = err?.data || {};
+      if (payload.extra) setExtraInfo(payload.extra);
+      setMessageType("loss");
+      setMessage(payload.error || err?.message || "Spin failed — please try again.");
+    }
+  }, [spinning, cooldownLeft, totalSpins, isAuthenticated, updateStreak, initAudio, startSpinAnimation]);
 
   const canSpin = !spinning && cooldownLeft <= 0 && !spinLockRef.current;
   const earnedCount = ownedIds.length;
@@ -702,6 +789,29 @@ export default function SlotMachineBadgeUnlock() {
                 </motion.span>
               )}
             </Button>
+
+            {/* Extra spins — the chips sink. Only offered once today's free
+                spin is used, while the daily allowance (3) lasts. */}
+            {isAuthenticated && !spinning && cooldownLeft > 0 && extraInfo && extraInfo.remaining > 0 && (
+              <Button
+                type="button"
+                disabled={!extraInfo.affordable || spinLockRef.current}
+                onClick={() => handleSpin("extra")}
+                title={extraInfo.affordable ? `Buy an extra spin for ${extraInfo.cost} chips` : `You need ${extraInfo.cost} chips for an extra spin`}
+                className={`mt-2 h-11 min-h-[44px] w-full select-none rounded-none font-mono text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                  extraInfo.affordable
+                    ? "border border-amber-300/40 bg-gradient-to-r from-amber-500/20 via-amber-400/25 to-amber-500/20 text-amber-200 hover:shadow-[0_0_25px_rgba(251,191,36,0.35)] active:scale-[0.98]"
+                    : "border border-purple-500/20 bg-neutral-900 text-slate-500"
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Coins className="h-4 w-4" />
+                  {extraInfo.affordable
+                    ? `Extra spin · ${extraInfo.cost} chips (${extraInfo.remaining} left)`
+                    : `Extra spin needs ${extraInfo.cost} chips`}
+                </span>
+              </Button>
+            )}
 
             {/* Progress ring indicator below button */}
             <div className="mt-2 flex items-center justify-center gap-2">

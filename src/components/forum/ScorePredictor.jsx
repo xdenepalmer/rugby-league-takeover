@@ -553,27 +553,37 @@ function CommunityPulse({ game, entries, tip }) {
   );
 }
 
-function Leaderboard({ entries, tips, totalPoints, myName }) {
+function Leaderboard({ entries, tips, myName, myUserId }) {
+  // REAL points: summed from server-settled entries (settleTips awards them
+  // when a matchup goes final) — no fabricated numbers.
   const community = useMemo(() => {
     const totals = new Map();
     const seen = new Set();
+    let mine = { name: "You", tips: 0, points: 0, wins: 0, me: true };
     entries.forEach((entry) => {
-      const key = `${entry.game_id}-${entry.tipper_name || "Mystery Fan"}`;
+      const name = entry.tipper_name || "Mystery Fan";
+      const key = `${entry.game_id}-${name}`;
       if (seen.has(key)) return;
       seen.add(key);
-      const name = entry.tipper_name || "Mystery Fan";
-      // The signed-in tipper already appears as the "You" row
-      if (myName && name === myName) return;
-      const curr = totals.get(name) || { name, tips: 0 };
+      const pts = Number(entry.points) || 0;
+      const won = entry.result === "win" || entry.result === "perfect";
+      const isMine = (myUserId && entry.user_id === myUserId) || (myName && name === myName);
+      if (isMine) {
+        mine = { ...mine, tips: mine.tips + 1, points: mine.points + pts, wins: mine.wins + (won ? 1 : 0) };
+        return;
+      }
+      const curr = totals.get(name) || { name, tips: 0, points: 0, wins: 0 };
       curr.tips += 1;
+      curr.points += pts;
+      curr.wins += won ? 1 : 0;
       totals.set(name, curr);
     });
-    const yours = { name: "You", tips: Object.keys(tips).length, points: totalPoints, me: true };
-    return [yours, ...Array.from(totals.values()).map((r) => ({ ...r, points: r.tips * 2 }))]
+    if (mine.tips === 0) mine.tips = Object.keys(tips).length;
+    return [mine, ...Array.from(totals.values())]
       .filter((r) => r.tips > 0)
-      .sort((a, b) => (b.points || 0) - (a.points || 0))
+      .sort((a, b) => (b.points || 0) - (a.points || 0) || (b.wins || 0) - (a.wins || 0) || (b.tips || 0) - (a.tips || 0))
       .slice(0, 8);
-  }, [entries, tips, totalPoints, myName]);
+  }, [entries, tips, myName, myUserId]);
 
   const medals = ["🥇", "🥈", "🥉"];
   const maxPts = Math.max(1, ...community.map((r) => r.points || 0));
@@ -622,7 +632,7 @@ function Leaderboard({ entries, tips, totalPoints, myName }) {
               }`}>
                 {row.name}
               </p>
-              <p className="text-[9px] text-slate-500">{row.tips} tip{row.tips !== 1 ? 's' : ''} locked</p>
+              <p className="text-[9px] text-slate-500">{row.tips} tip{row.tips !== 1 ? 's' : ''} locked{row.wins > 0 ? ` · ${row.wins} won` : ""}</p>
             </div>
             <div className="relative flex items-center gap-2">
               <span className={`text-[11px] font-bold tabular-nums ${
@@ -735,6 +745,26 @@ export default function ScorePredictor({ onSharePrediction }) {
       writeJson(POINTS_KEY, pts);
     }
   }, [fixtures, tips]);
+
+  // Lazy tip settlement: when an admin matchup is final but tips for it are
+  // still unsettled, ask the server to settle (idempotent — safe if several
+  // viewers trigger it at once). Awards real points/chips/XP to winners.
+  const settleTriggeredRef = useRef(new Set());
+  useEffect(() => {
+    if (!isAuthenticated || !queriesEnabled) return;
+    const unsettledFinished = (matchups || []).filter((m) =>
+      (m.status === "final" || m.status === "finished") &&
+      m.home_score != null && m.away_score != null &&
+      !settleTriggeredRef.current.has(m.id) &&
+      (entries || []).some((e) => e.game_id === m.id && !e.settled_at)
+    );
+    unsettledFinished.forEach((m) => {
+      settleTriggeredRef.current.add(m.id);
+      base44.functions.invoke("settleTips", { gameId: m.id })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["tippingEntries"] }))
+        .catch(() => { /* another viewer may have settled it first */ });
+    });
+  }, [matchups, entries, isAuthenticated, queriesEnabled, queryClient]);
 
   // Group by round
   const groupedFixtures = useMemo(() => {
@@ -1148,7 +1178,7 @@ export default function ScorePredictor({ onSharePrediction }) {
 
         {/* Bottom panels */}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <Leaderboard entries={entries} tips={tips} totalPoints={totalPoints} myName={isAuthenticated ? tipperName : ""} />
+          <Leaderboard entries={entries} tips={tips} myName={isAuthenticated ? tipperName : ""} myUserId={isAuthenticated ? user?.id : ""} />
           <div className="border border-border/30 bg-black/30 p-3">
             <div className="flex items-center gap-2">
               <Zap className="h-3.5 w-3.5 text-primary" />

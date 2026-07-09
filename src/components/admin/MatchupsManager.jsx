@@ -99,7 +99,21 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Matchup.update(id, cleanPayload(data)),
-    onSuccess: () => { refresh(); setEditId(null); setEditDraft(null); },
+    onSuccess: (_res, { id, data }) => {
+      refresh(); setEditId(null); setEditDraft(null);
+      // Final score saved → settle footy tips straight away so the ladder
+      // and winners' chips update without waiting for a fan to open tipping.
+      const clean = cleanPayload(data);
+      if (clean.status === "final" && clean.home_score != null && clean.away_score != null) {
+        base44.functions.invoke("settleTips", { gameId: id })
+          .then((res) => {
+            const settled = res?.data?.settled ?? 0;
+            if (settled > 0) toast({ title: "Tips settled", description: `${settled} tip${settled === 1 ? "" : "s"} scored, ${res?.data?.winners ?? 0} winner${(res?.data?.winners ?? 0) === 1 ? "" : "s"} paid out.` });
+            queryClient.invalidateQueries({ queryKey: ["tippingEntries"] });
+          })
+          .catch(() => {});
+      }
+    },
   });
   const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Matchup.delete(id), onSuccess: () => { refresh(); toast({ title: "Matchup removed" }); } });
 
