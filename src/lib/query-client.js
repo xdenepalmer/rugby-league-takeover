@@ -1,14 +1,14 @@
-import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
+import { QueryClient, QueryCache, MutationCache, onlineManager } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
+import { subscribeNativeNetwork } from './native/network.js';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
 
 const messageFrom = (error, fallback) => {
 	const responseData = error?.response?.data;
 	return (typeof responseData === 'string' ? responseData : null) || responseData?.error || responseData?.message || responseData?.detail || error?.data?.error || error?.data?.message || error?.message || fallback;
 };
 
-// Errors that mean "this entity/function hasn't been deployed to the Base44 app
-// yet" are a transient platform-state issue, not something the user can act on.
-// We silence them so a pending deploy never spams error toasts.
 const isUndeployedSchemaError = (error) => /not found in app|schema .* not found/i.test(messageFrom(error, ''));
 
 const isRateLimitError = (error) => {
@@ -36,9 +36,40 @@ export const queryClientInstance = new QueryClient({
 	defaultOptions: {
 		queries: {
 			refetchOnWindowFocus: false,
-			staleTime: 60_000,
-			gcTime: 10 * 60_000,
+			refetchOnReconnect: true,
+			staleTime: 1000 * 60 * 15,
+			gcTime: 1000 * 60 * 60 * 24,
 			retry: 1,
 		},
 	},
 });
+
+onlineManager.setEventListener((setOnline) => {
+	const update = () => setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+	if (typeof window !== 'undefined') {
+		window.addEventListener('online', update);
+		window.addEventListener('offline', update);
+	}
+	
+	const unsubscribeNative = subscribeNativeNetwork(setOnline);
+	
+	return () => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('online', update);
+			window.removeEventListener('offline', update);
+		}
+		unsubscribeNative();
+	};
+});
+
+if (typeof window !== 'undefined') {
+	const localStoragePersister = createSyncStoragePersister({
+		storage: window.localStorage,
+	});
+
+	persistQueryClient({
+		queryClient: queryClientInstance,
+		persister: localStoragePersister,
+		maxAge: 1000 * 60 * 60 * 24,
+	});
+}
