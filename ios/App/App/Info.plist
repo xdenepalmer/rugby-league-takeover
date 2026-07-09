@@ -24,6 +24,16 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo or video to attach to your forum post or profile.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record video with sound for forum and gallery uploads.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos or videos to attach to posts and your profile.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
