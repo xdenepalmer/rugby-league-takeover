@@ -9,8 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
+import { isNativeApp } from '@/lib/native/native-env';
 
 export const REVIEW_PROMPT_EVENT = 'app_store_review_prompt';
 export const STORAGE_KEY = 'rlt_app_store_review_prompted';
@@ -42,8 +41,9 @@ export default function AppStoreReviewPrompt() {
     const itmsUrl = `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`;
     const webUrl = `https://apps.apple.com/app/id${APP_STORE_ID}`;
     
-    if (Capacitor.isNativePlatform()) {
+    if (isNativeApp()) {
       try {
+         const { Browser } = await import('@capacitor/browser');
          await Browser.open({ url: itmsUrl });
       } catch (e) {
          window.open(webUrl, '_blank');

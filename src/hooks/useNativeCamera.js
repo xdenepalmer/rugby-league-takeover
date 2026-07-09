@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { Capacitor } from '@capacitor/core';
+import { isNativeApp } from '@/lib/native/native-env.js';
 
 export function useNativeCamera() {
   const [isNativeCameraOpen, setIsNativeCameraOpen] = useState(false);
-  const isNative = Capacitor.isNativePlatform();
+  const isNative = isNativeApp();
 
   const pickMedia = async (options = {}) => {
     try {
       setIsNativeCameraOpen(true);
+      // Lazy-load the plugin so the web build never pulls in @capacitor/camera.
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       const photo = await Camera.getPhoto({
         resultType: CameraResultType.Uri,
         source: CameraSource.Prompt,

@@ -4,7 +4,6 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { MotionConfig } from 'framer-motion'
 import { queryClientInstance } from '@/lib/query-client';
 import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { App as CapApp } from '@capacitor/app';
 import PublicLayout from '@/components/public/PublicLayout';
 
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -59,6 +58,8 @@ const DeepLinkHandler = () => {
 
     const setupListener = async () => {
       try {
+        // Lazy-load so the web build never statically pulls in @capacitor/app.
+        const { App: CapApp } = await import('@capacitor/app');
         listener = await CapApp.addListener('appUrlOpen', (event) => {
           try {
             const url = new URL(event.url);

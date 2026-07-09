@@ -1,17 +1,10 @@
 import { useState, useCallback } from 'react';
-import { isNativeApp, CANONICAL_WEB_ORIGIN } from '@/lib/native/native-env.js';
+import { isNativeApp } from '@/lib/native/native-env.js';
 import { lightImpact } from '@/lib/native/haptics.js';
+import { canonicalizeShareUrl } from '@/lib/native/share.js';
 
-export function canonicalizeShareUrl(urlString, { canonicalOrigin = CANONICAL_WEB_ORIGIN } = {}) {
-  if (!urlString) return canonicalOrigin;
-  try {
-    const url = new URL(urlString, canonicalOrigin);
-    if (url.protocol === "http:" || url.protocol === "https:") return url.toString();
-    return `${canonicalOrigin}${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return canonicalOrigin;
-  }
-}
+// Re-exported for component call sites that import it from this hook module.
+export { canonicalizeShareUrl };
 
 export function useNativeShare() {
   const [isSharing, setIsSharing] = useState(false);

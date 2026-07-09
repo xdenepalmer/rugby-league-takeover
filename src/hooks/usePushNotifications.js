@@ -1,17 +1,24 @@
 ﻿import { useState, useEffect } from 'react';
-import { PushNotifications } from '@capacitor/push-notifications';
-import { Capacitor } from '@capacitor/core';
+import { isNativeApp } from '@/lib/native/native-env.js';
 
 export const usePushNotifications = () => {
   const [fcmToken, setFcmToken] = useState(null);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
-      return;
+    if (!isNativeApp()) {
+      return undefined;
     }
 
+    let cancelled = false;
+    let pushPlugin = null;
+
     const registerListeners = async () => {
+      // Lazy-load so the web build never pulls in @capacitor/push-notifications.
+      const { PushNotifications } = await import('@capacitor/push-notifications');
+      if (cancelled) return;
+      pushPlugin = PushNotifications;
+
       await PushNotifications.addListener('registration', (token) => {
         console.info('Registration token: ', token.value);
         setFcmToken(token.value);
@@ -33,19 +40,19 @@ export const usePushNotifications = () => {
     registerListeners();
 
     return () => {
-      if (Capacitor.isNativePlatform()) {
-        PushNotifications.removeAllListeners();
-      }
+      cancelled = true;
+      if (pushPlugin) pushPlugin.removeAllListeners();
     };
   }, []);
 
   const requestPermissions = async () => {
-    if (!Capacitor.isNativePlatform()) {
+    if (!isNativeApp()) {
       console.log('Push notifications are only available on native platforms.');
       return false;
     }
 
     try {
+      const { PushNotifications } = await import('@capacitor/push-notifications');
       let permStatus = await PushNotifications.checkPermissions();
 
       if (permStatus.receive === 'prompt') {
