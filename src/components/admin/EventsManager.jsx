@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import DateTimePicker from "./DateTimePicker";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
+import { useNativeCamera } from "@/hooks/useNativeCamera";
 
 const emptyEvent = {
   title: "", event_date: "", start_time: "", location: "", address: "", blurb: "",
@@ -32,6 +33,7 @@ function LabeledField({ label, help, children, span2 }) {
 function PhotoUploader({ onUploaded }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const { pickMedia, isNative } = useNativeCamera();
   const upload = async (file) => {
     if (!file) return;
     setUploading(true);
@@ -42,6 +44,15 @@ function PhotoUploader({ onUploaded }) {
       setUploading(false);
     }
   };
+
+  const handleNativeClick = async (e) => {
+    if (isNative) {
+      e.preventDefault();
+      if (uploading) return;
+      const file = await pickMedia();
+      if (file) upload(file);
+    }
+  };
   return (
     <div
       className={`relative border-2 border-dashed transition-colors p-4 text-center cursor-pointer ${
@@ -50,8 +61,13 @@ function PhotoUploader({ onUploaded }) {
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { e.preventDefault(); setDragOver(false); upload(e.dataTransfer.files?.[0]); }}
+      onClick={(e) => { if (isNative) handleNativeClick(e); }}
     >
-      <input type="file" accept="image/*" disabled={uploading} onChange={(e) => upload(e.target.files?.[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
+      {!isNative ? (
+        <input type="file" accept="image/*" disabled={uploading} onChange={(e) => upload(e.target.files?.[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
+      ) : (
+        <div className="absolute inset-0 cursor-pointer" />
+      )}
       <div className="flex flex-col items-center gap-1">
         <div className="p-2 bg-muted/10 border border-border/20">
           {uploading ? <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Image className="h-4 w-4 text-muted-foreground/30" />}

@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from "react";
 import { FileImage, FileVideo, File, CheckCircle, AlertCircle, CloudUpload } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNativeCamera } from "@/hooks/useNativeCamera";
 
 function getFileIcon(accept) {
   if (accept?.includes("video")) return FileVideo;
@@ -17,6 +18,7 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
   const [fileName, setFileName] = useState("");
   const inputRef = useRef(null);
   const FileIcon = getFileIcon(accept);
+  const { pickMedia, isNative } = useNativeCamera();
 
   const upload = useCallback(async (file) => {
     if (!file) return;
@@ -66,6 +68,15 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
     setDragOver(false);
   }, []);
 
+  const handleNativeClick = async (e) => {
+    if (isNative) {
+      e.preventDefault();
+      if (uploading) return;
+      const file = await pickMedia({ accept });
+      if (file) upload(file);
+    }
+  };
+
   return (
     <div className="grid gap-2">
       {label && (
@@ -79,7 +90,14 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={(e) => {
+          if (uploading) return;
+          if (isNative) {
+            handleNativeClick(e);
+          } else {
+            inputRef.current?.click();
+          }
+        }}
         className={`
           relative overflow-hidden cursor-pointer border-2 border-dashed transition-all duration-300
           cmd-glass
@@ -175,14 +193,16 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
           </div>
         </div>
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          disabled={uploading}
-          onChange={(e) => upload(e.target.files?.[0])}
-          className="hidden"
-        />
+        {!isNative && (
+          <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            disabled={uploading}
+            onChange={(e) => upload(e.target.files?.[0])}
+            className="hidden"
+          />
+        )}
       </div>
     </div>
   );
