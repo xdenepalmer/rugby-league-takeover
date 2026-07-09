@@ -56,6 +56,16 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
+      # App Store Connect rejects a re-used CFBundleVersion ("must be higher than
+      # the previously uploaded version"). Stamp every build with Codemagic's
+      # ever-incrementing $BUILD_NUMBER via CURRENT_PROJECT_VERSION (Info.plist
+      # maps CFBundleVersion to it), so each upload is unique and monotonic.
+      - name: Set a unique build number
+        script: |
+          set -e
+          BN="${BUILD_NUMBER:-$(date +%s)}"
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = ${BN};/g" ios/App/App.xcodeproj/project.pbxproj
+          echo "CFBundleVersion (CURRENT_PROJECT_VERSION) set to ${BN}"
       - name: Build signed IPA
         script: |
           xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
