@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, ImageIcon, ZoomIn } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
+import { useNativeCamera } from "@/hooks/useNativeCamera";
 
 // Unified image control used everywhere a picture is set: paste a URL OR upload
 // a file, with a live thumbnail and clear button. Commits the value via onChange
@@ -15,6 +16,7 @@ export default function ImageField({ value, onChange, label = "Image", className
   const [hovered, setHovered] = useState(false);
   const inputId = useId();
   const progressRef = useRef(null);
+  const { pickMedia, isNative } = useNativeCamera();
 
   useEffect(() => { setUrl(value || ""); }, [value]);
 
@@ -54,6 +56,15 @@ export default function ImageField({ value, onChange, label = "Image", className
 
   const handleDragOver = (e) => { e.preventDefault(); setDragOver(true); };
   const handleDragLeave = () => setDragOver(false);
+
+  const handleNativeClick = async (e) => {
+    if (isNative) {
+      e.preventDefault();
+      if (uploading) return;
+      const file = await pickMedia();
+      if (file) upload(file);
+    }
+  };
 
   return (
     <div className={`grid gap-2 ${className}`}>
@@ -121,7 +132,13 @@ export default function ImageField({ value, onChange, label = "Image", className
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
-              onClick={() => document.getElementById(inputId)?.click()}
+              onClick={(e) => {
+                if (isNative) {
+                  handleNativeClick(e);
+                } else {
+                  document.getElementById(inputId)?.click();
+                }
+              }}
               className={`relative flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 border-2 border-dashed transition-all duration-300 ${
                 dragOver
                   ? "border-primary bg-primary/10 scale-105"
@@ -176,16 +193,19 @@ export default function ImageField({ value, onChange, label = "Image", className
             )}
           </AnimatePresence>
 
-          <input
-            id={inputId}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => upload(e.target.files?.[0])}
-          />
+          {!isNative && (
+            <input
+              id={inputId}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => upload(e.target.files?.[0])}
+            />
+          )}
           <label
-            htmlFor={inputId}
+            htmlFor={!isNative ? inputId : undefined}
+            onClick={(e) => { if (isNative) handleNativeClick(e); }}
             className={`inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 border cmd-glass sm:w-fit ${
               uploading
                 ? "pointer-events-none opacity-60 border-border/40"
