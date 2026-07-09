@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +39,8 @@ export default function AppStoreReviewPrompt() {
     setOpen(false);
     
     const APP_STORE_ID = 'id123456789';
-    const itmsUrl = itms-apps://itunes.apple.com/app/?action=write-review;
-    const webUrl = https://apps.apple.com/app/;
+    const itmsUrl = `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`;
+    const webUrl = `https://apps.apple.com/app/id${APP_STORE_ID}`;
     
     if (Capacitor.isNativePlatform()) {
       try {
