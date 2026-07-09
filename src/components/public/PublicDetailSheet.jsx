@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Share2, Calendar, Clock, User, Check } from "lucide-react";
-import { shareUrl as nativeShareUrl } from "@/lib/native/share";
+import { useNativeShare } from "@/hooks/useNativeShare";
 
 export default function PublicDetailSheet({ isOpen, onClose, title, category, date, author, image, body, readingTime, shareUrl, ctaLabel, onCtaClick, extraContent }) {
   const [copied, setCopied] = useState(false);
+  const { share } = useNativeShare();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -20,8 +21,7 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
 
   const handleShare = async (e) => {
     e.preventDefault();
-    // Native share sheet in the iOS shell; navigator.share / clipboard on web.
-    const result = await nativeShareUrl({
+    const result = await share({
       title: title,
       text: body ? body.slice(0, 100) + "..." : "",
       url: shareUrl || window.location.href,
