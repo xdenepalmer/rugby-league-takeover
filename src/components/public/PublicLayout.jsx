@@ -3,7 +3,7 @@ import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { NavLink, Link, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
@@ -125,14 +125,17 @@ export default function PublicLayout() {
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] xl:pb-0">
         {/* Instant native-style tab switching: new page mounts immediately with a
             quick fade-in — no exit-animation wait between routes. */}
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-        >
-          <Suspense fallback={<LoadingFallback />}>{outlet}</Suspense>
-        </motion.div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, x: 15 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -15 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Suspense fallback={<LoadingFallback />}>{outlet}</Suspense>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Sponsored Ad Slot — above footer, all pages */}
