@@ -59,6 +59,13 @@ const AuthenticatedApp = () => {
     return <LoadingFallback />;
   }
 
+  // Hide the native splash screen once the critical blocking data has loaded
+  if (typeof window !== "undefined") {
+    import("@capacitor/splash-screen")
+      .then(({ SplashScreen }) => SplashScreen.hide())
+      .catch(() => {});
+  }
+
   // A gated-app "not registered" error only matters on protected routes.
   if (authError?.type === 'user_not_registered' && isProtectedRoute) {
     return <UserNotRegisteredError />;
