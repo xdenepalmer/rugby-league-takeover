@@ -15,9 +15,12 @@ workflows:
     max_build_duration: 60
     environment:
       groups:
-        # Codemagic UI > Environment variables. Must contain CERTIFICATE_PRIVATE_KEY
-        # (secure) — the RSA private key for the iOS Distribution certificate.
-        - ios_signing
+        # Shared, team-scoped group that already holds CERTIFICATE_PRIVATE_KEY
+        # (secure) — the RSA private key behind the account's existing iOS
+        # Distribution certificate, reused across all the team's apps. Because
+        # the key matches an existing cert, fetch-signing-files reuses that cert
+        # instead of minting a new one (Apple caps distribution certs at 3).
+        - appstore
       node: 22
       xcode: latest
       vars:
