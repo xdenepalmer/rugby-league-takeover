@@ -6,8 +6,9 @@ import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
-import AdminConfirmSheet from "@/components/admin/shared/AdminConfirmSheet";
+import { Input } from "@/components/ui/input";
 import BanDialog from "@/components/admin/BanDialog";
+import MobileActionDrawer from "@/components/admin/MobileActionDrawer";
 import PullToRefresh from "@/components/PullToRefresh";
 import UserAvatar from "@/components/forum/feed/UserAvatar";
 import { timeAgo } from "@/components/forum/feed/forumHelpers";
@@ -22,6 +23,7 @@ import {
   buildSoftDeletePayload,
   buildRestorePayload,
   fanThreadPath,
+  emitAdminLog,
 } from "./workflow-helpers.js";
 
 /**
@@ -35,7 +37,8 @@ export default function NativeModerationQueue() {
   const queryClient = useQueryClient();
   const [queue, setQueue] = useState("pending");
   const [query, setQuery] = useState("");
-  const [confirm, setConfirm] = useState(null); // { post, action }
+  const [confirm, setConfirm] = useState(null); // { post, action: "hide" | "remove" }
+  const [reason, setReason] = useState(""); // optional moderation_reason for the open sheet
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["forumPosts"],
@@ -45,10 +48,13 @@ export default function NativeModerationQueue() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ForumPost.update(id, data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       emitHaptic("save.success");
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
       queryClient.invalidateQueries({ queryKey: ["adminAttention"] });
+      // Same audit trail the web ForumManager dispatches.
+      const keyChanged = Object.keys(variables.data)[0];
+      emitAdminLog("info", `[FORUM-MOD] Thread/Post ID ${variables.id} updated: ${keyChanged} set to ${String(variables.data[keyChanged])}`);
     },
     onError: (error) => {
       emitHaptic("mutation.error");
@@ -57,19 +63,20 @@ export default function NativeModerationQueue() {
   });
 
   const banMutation = useMutation({
-    mutationFn: ({ ban_type, value, reason, expiresAt }) =>
+    mutationFn: ({ ban_type, value, reason: banReason, expiresAt }) =>
       base44.entities.Ban.create({
         ban_type,
         value: String(value).toLowerCase(),
-        reason: reason || "Banned from forum moderation",
+        reason: banReason || "Banned from forum moderation",
         banned_by: user?.email || "",
         expires_at: expiresAt || "",
         is_active: true,
       }),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       emitHaptic("mutation.warning");
       queryClient.invalidateQueries({ queryKey: ["bans"] });
       toast({ title: "Ban applied" });
+      emitAdminLog("warn", `[BAN-ACTION] Forum mod block registered on ${variables.ban_type}: ${variables.value}`);
     },
     onError: (error) => {
       emitHaptic("mutation.error");
@@ -96,9 +103,33 @@ export default function NativeModerationQueue() {
 
   const act = (post, action) => {
     if (action === "publish") updateMutation.mutate({ id: post.id, data: { is_published: true } });
-    if (action === "hide") updateMutation.mutate({ id: post.id, data: { is_published: false } });
     if (action === "pin") updateMutation.mutate({ id: post.id, data: { is_pinned: post.is_pinned !== true } });
-    if (action === "restore") updateMutation.mutate({ id: post.id, data: buildRestorePayload() });
+    if (action === "restore") {
+      updateMutation.mutate({ id: post.id, data: buildRestorePayload() });
+      emitAdminLog("info", `[FORUM-MOD] Thread/Post ID ${post.id} was RESTORED by ${user?.email || "unknown"}`);
+    }
+  };
+
+  // Hide/remove capture an optional moderation_reason (web parity: the
+  // ForumManager prompts for a reason and writes it with the update).
+  const openReasonSheet = (post, action) => {
+    setReason("");
+    setConfirm({ post, action });
+  };
+
+  const confirmReasonAction = () => {
+    if (!confirm) return;
+    const trimmed = reason.trim();
+    if (confirm.action === "hide") {
+      updateMutation.mutate({
+        id: confirm.post.id,
+        data: { is_published: false, ...(trimmed ? { moderation_reason: trimmed } : {}) },
+      });
+    } else {
+      updateMutation.mutate({ id: confirm.post.id, data: buildSoftDeletePayload(user?.email, trimmed || undefined) });
+      emitAdminLog("warn", `[FORUM-MOD] Thread/Post ID ${confirm.post.id} was SOFT-DELETED by ${user?.email || "unknown"}`);
+    }
+    setConfirm(null);
   };
 
   return (
@@ -177,7 +208,7 @@ export default function NativeModerationQueue() {
                     </button>
                   )}
                   {!removed && post.is_published === true && (
-                    <button type="button" disabled={updateMutation.isPending} onClick={() => act(post, "hide")} className="ios-pressable flex min-h-10 items-center gap-1.5 border border-border px-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
+                    <button type="button" disabled={updateMutation.isPending} onClick={() => openReasonSheet(post, "hide")} className="ios-pressable flex min-h-10 items-center gap-1.5 border border-border px-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40">
                       <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> Hide
                     </button>
                   )}
@@ -187,7 +218,7 @@ export default function NativeModerationQueue() {
                     </button>
                   )}
                   {!removed ? (
-                    <button type="button" onClick={() => { emitHaptic("mutation.warning"); setConfirm({ post }); }} className="ios-pressable flex min-h-10 items-center gap-1.5 border border-red-500/40 px-3 text-[10px] font-bold uppercase tracking-widest text-red-400">
+                    <button type="button" onClick={() => { emitHaptic("mutation.warning"); openReasonSheet(post, "remove"); }} className="ios-pressable flex min-h-10 items-center gap-1.5 border border-red-500/40 px-3 text-[10px] font-bold uppercase tracking-widest text-red-400">
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
                     </button>
                   ) : (
@@ -198,15 +229,21 @@ export default function NativeModerationQueue() {
                   <button type="button" onClick={() => { emitHaptic("tab.select"); navigate(fanThreadPath(post)); }} className="ios-pressable flex min-h-10 items-center gap-1.5 border border-border px-3 text-[10px] font-bold uppercase tracking-widest">
                     <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /> View thread
                   </button>
-                  {(post.user_email || post.author_name) && (
+                  {!removed && post.user_email && (
                     <BanDialog
                       title={`Ban ${post.author_name || post.user_email}`}
                       description="Blocks this author from posting. Applies immediately."
                       confirmLabel="Ban author"
                       pending={banMutation.isPending}
-                      onConfirm={({ reason, expiresAt }) =>
-                        banMutation.mutate({ ban_type: "email", value: post.user_email || post.author_name, reason, expiresAt })
-                      }
+                      onConfirm={async ({ reason: banReason, expiresAt }) => {
+                        // Web parity (ForumManager.onBanEmail): ban the email
+                        // AND, when known, the user id — an email change must
+                        // not evade the ban.
+                        await banMutation.mutateAsync({ ban_type: "email", value: post.user_email, reason: banReason, expiresAt });
+                        if (post.user_id) {
+                          await banMutation.mutateAsync({ ban_type: "user", value: post.user_id, reason: banReason, expiresAt });
+                        }
+                      }}
                       trigger={
                         <button type="button" className="ios-pressable flex min-h-10 items-center gap-1.5 border border-red-500/40 px-3 text-[10px] font-bold uppercase tracking-widest text-red-400">
                           <BanIcon className="h-3.5 w-3.5" aria-hidden="true" /> Ban author
@@ -214,14 +251,14 @@ export default function NativeModerationQueue() {
                       }
                     />
                   )}
-                  {post.ip_address && (
+                  {!removed && post.ip_address && (
                     <BanDialog
                       title={`Ban IP ${post.ip_address}`}
                       description="Blocks this IP address from posting."
                       confirmLabel="Ban IP"
                       pending={banMutation.isPending}
-                      onConfirm={({ reason, expiresAt }) =>
-                        banMutation.mutate({ ban_type: "ip", value: post.ip_address, reason, expiresAt })
+                      onConfirm={({ reason: banReason, expiresAt }) =>
+                        banMutation.mutateAsync({ ban_type: "ip", value: post.ip_address, reason: banReason, expiresAt })
                       }
                       trigger={
                         <button type="button" className="ios-pressable flex min-h-10 items-center gap-1.5 border border-red-500/40 px-3 text-[10px] font-bold uppercase tracking-widest text-red-400">
@@ -238,19 +275,37 @@ export default function NativeModerationQueue() {
         {!done && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
       </PullToRefresh>
 
-      <AdminConfirmSheet
+      <MobileActionDrawer
         open={!!confirm}
-        title="Remove this post?"
-        description="Soft-removes the post from the forum (restorable from the Removed queue). The author is recorded."
-        confirmLabel="Remove post"
-        variant="destructive"
-        loading={updateMutation.isPending}
-        onConfirm={() => {
-          updateMutation.mutate({ id: confirm.post.id, data: buildSoftDeletePayload(user?.email, "Removed via native moderation") });
-          setConfirm(null);
-        }}
-        onCancel={() => setConfirm(null)}
-      />
+        onOpenChange={(open) => { if (!open) setConfirm(null); }}
+        title={confirm?.action === "hide" ? "Hide this post?" : "Remove this post?"}
+        description={
+          confirm?.action === "hide"
+            ? "Unpublishes the post (it returns to the Pending queue)."
+            : "Soft-removes the post from the forum (restorable from the Removed queue). The author is recorded."
+        }
+      >
+        <div className="grid gap-2 py-2">
+          <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground" htmlFor="native-moderation-reason">
+            Reason (optional)
+          </label>
+          <Input
+            id="native-moderation-reason"
+            placeholder="e.g. Spam, abuse, off-topic"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="h-11 rounded-none border-border bg-background"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-3">
+          <button type="button" disabled={updateMutation.isPending} onClick={() => setConfirm(null)} className="ios-pressable flex min-h-11 items-center justify-center border border-border text-xs font-bold uppercase tracking-widest disabled:opacity-40">
+            Cancel
+          </button>
+          <button type="button" disabled={updateMutation.isPending} onClick={confirmReasonAction} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/60 bg-red-500/15 text-xs font-bold uppercase tracking-widest text-red-300 disabled:opacity-40">
+            {confirm?.action === "hide" ? "Hide post" : "Remove post"}
+          </button>
+        </div>
+      </MobileActionDrawer>
     </div>
   );
 }

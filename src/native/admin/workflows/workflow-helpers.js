@@ -1,9 +1,26 @@
 /**
  * Pure logic for the native admin workflows (Orders, Moderation,
- * Registrations). Mirrors the web managers' rules exactly — statuses,
- * pipeline filters, timeline entry shape, moderation queues — so the native
- * screens write byte-identical payloads through the same entities.
+ * Registrations). Mirrors the web managers' rules — statuses, pipeline
+ * filters, timeline entry shape, shipping/refund payload fields, moderation
+ * queues — so the native screens write payload-parity updates through the
+ * same entities.
  */
+import { addBusinessDays, format } from "date-fns";
+
+/**
+ * Web parity: the admin managers dispatch `rlt_admin_log` CustomEvents on
+ * moderation/ban/settings writes. Nothing in the app listens for the event
+ * today (write-only bus), but native dispatches the same events so any
+ * future consumer sees identical trails from both surfaces. No-op outside a
+ * browser (pure-logic tests import this module under node).
+ */
+export function emitAdminLog(type, text) {
+  try {
+    window.dispatchEvent(new CustomEvent("rlt_admin_log", { detail: { type, text } }));
+  } catch {
+    // non-browser context
+  }
+}
 
 // ── Orders ───────────────────────────────────────────────────────────────
 export const ORDER_STATUSES = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded"];
@@ -65,8 +82,29 @@ export function nextOrderActions(status) {
   }
 }
 
-export function canCancelOrRefund(status) {
+export function canCancelOrder(status) {
   return !["completed", "cancelled", "refunded"].includes(status || "pending");
+}
+
+/** Web parity: refunds are offered for any order that isn't already refunded
+ *  (including delivered orders — OrdersManager shows Issue Refund whenever
+ *  status !== "refunded"). */
+export function canRefundOrder(status) {
+  return (status || "pending") !== "refunded";
+}
+
+/** Shipping-method config mirrored from the web OrdersManager. */
+export const SHIPPING_METHODS = {
+  standard: { label: "Standard (7–10 business days)", days: 10 },
+  express: { label: "Express (3–5 business days)", days: 5 },
+  priority: { label: "Priority (1–2 business days)", days: 2 },
+};
+
+/** Same estimated-delivery calculation the web manager writes on ship. */
+export function calcEstimatedDelivery(shippedAt, shippingMethod) {
+  if (!shippedAt) return null;
+  const method = SHIPPING_METHODS[shippingMethod] || SHIPPING_METHODS.standard;
+  return format(addBusinessDays(new Date(shippedAt), method.days), "yyyy-MM-dd");
 }
 
 /** Build the exact update payload the web manager writes for a transition. */
@@ -77,6 +115,14 @@ export function buildOrderStatusPayload(order, newStatus, { actorEmail, tracking
     data.tracking_url = tracking?.url || order.tracking_url || "";
     data.carrier = tracking?.carrier || order.carrier || "";
     if (!order.shipped_at) data.shipped_at = new Date().toISOString();
+    // Customer-facing: both web ship paths write estimated_delivery unless
+    // an override already exists (OrdersManager executeAction/handleStatusChange).
+    if (!order.estimated_delivery) {
+      data.estimated_delivery = calcEstimatedDelivery(
+        data.shipped_at || order.shipped_at,
+        order.shipping_method || "standard"
+      );
+    }
   }
   if (newStatus === "completed" && !order.delivered_at) {
     data.delivered_at = new Date().toISOString();
@@ -84,6 +130,24 @@ export function buildOrderStatusPayload(order, newStatus, { actorEmail, tracking
   const label = orderStatusMeta(newStatus).label;
   data.timeline = [...(order.timeline || []), makeTimelineEntry(`Status changed to ${label}`, actorEmail)];
   return data;
+}
+
+/** Full refund payload the web manager writes (OrdersManager.handleRefundConfirm). */
+export function buildRefundPayload(order, { actorEmail, amount, reason } = {}) {
+  return {
+    status: "refunded",
+    refund_amount: Number(amount),
+    refund_reason: reason || "",
+    refunded_at: new Date().toISOString(),
+    timeline: [
+      ...(order.timeline || []),
+      makeTimelineEntry(
+        "Status changed to Refunded",
+        actorEmail,
+        `Refund $${Number(amount).toFixed(2)} AUD — ${reason || "No reason provided"}`
+      ),
+    ],
+  };
 }
 
 // ── Forum moderation ─────────────────────────────────────────────────────

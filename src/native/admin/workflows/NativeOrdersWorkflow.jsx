@@ -29,8 +29,10 @@ import {
   orderStatusMeta,
   filterOrders,
   nextOrderActions,
-  canCancelOrRefund,
+  canCancelOrder,
+  canRefundOrder,
   buildOrderStatusPayload,
+  buildRefundPayload,
   makeTimelineEntry,
 } from "./workflow-helpers.js";
 
@@ -173,6 +175,7 @@ export function NativeOrderDetail() {
 
   const [tracking, setTracking] = useState(null); // lazily seeded from order
   const [confirm, setConfirm] = useState(null); // { to, label, destructive }
+  const [refundForm, setRefundForm] = useState(null); // { amount, reason } | null
   const trackingState = tracking ?? {
     number: order?.tracking_number || "",
     url: order?.tracking_url || "",
@@ -227,6 +230,18 @@ export function NativeOrderDetail() {
     });
     updateMutation.mutate({ id: order.id, data: payload });
     setConfirm(null);
+  };
+
+  const confirmRefund = () => {
+    updateMutation.mutate({
+      id: order.id,
+      data: buildRefundPayload(order, {
+        actorEmail: user?.email || "admin",
+        amount: refundForm?.amount,
+        reason: (refundForm?.reason || "").trim(),
+      }),
+    });
+    setRefundForm(null);
   };
 
   const saveTracking = () => {
@@ -353,7 +368,7 @@ export function NativeOrderDetail() {
         </div>
 
         {/* Fulfilment transitions */}
-        {(actions.length > 0 || canCancelOrRefund(order.status)) && (
+        {(actions.length > 0 || canCancelOrder(order.status) || canRefundOrder(order.status)) && (
           <div className="border border-border/60 bg-card/50 p-3">
             <p className="pb-2 text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">Fulfilment</p>
             <div className="grid gap-2">
@@ -374,14 +389,56 @@ export function NativeOrderDetail() {
               {actions.some((a) => shippedBlocked(a.to)) && (
                 <p className="text-[10px] uppercase tracking-widest text-amber-300">Add a tracking number before marking shipped</p>
               )}
-              {canCancelOrRefund(order.status) && (
+              {(canCancelOrder(order.status) || canRefundOrder(order.status)) && !refundForm && (
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => { emitHaptic("mutation.warning"); setConfirm({ to: "cancelled", label: "Cancel this order", destructive: true }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
-                    Cancel order
-                  </button>
-                  <button type="button" onClick={() => { emitHaptic("mutation.warning"); setConfirm({ to: "refunded", label: "Mark as refunded", destructive: true }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
-                    Mark refunded
-                  </button>
+                  {canCancelOrder(order.status) && (
+                    <button type="button" onClick={() => { emitHaptic("mutation.warning"); setConfirm({ to: "cancelled", label: "Cancel this order", destructive: true }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
+                      Cancel order
+                    </button>
+                  )}
+                  {canRefundOrder(order.status) && (
+                    <button type="button" onClick={() => { emitHaptic("mutation.warning"); setRefundForm({ amount: Number(order.total_aud || 0), reason: "" }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
+                      Issue refund
+                    </button>
+                  )}
+                </div>
+              )}
+              {refundForm && (
+                <div className="border border-red-500/40 bg-red-500/5 p-3">
+                  <p className="pb-2 text-[10px] font-black uppercase tracking-widest text-red-300">Issue refund</p>
+                  <div className="grid gap-2">
+                    <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground" htmlFor="native-refund-amount">
+                      Refund amount (AUD)
+                    </label>
+                    <Input
+                      id="native-refund-amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      inputMode="decimal"
+                      value={refundForm.amount}
+                      onChange={(e) => setRefundForm({ ...refundForm, amount: e.target.value })}
+                      className="h-11 rounded-none border-border bg-background font-mono"
+                    />
+                    <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground" htmlFor="native-refund-reason">
+                      Reason
+                    </label>
+                    <Input
+                      id="native-refund-reason"
+                      placeholder="Reason for refund…"
+                      value={refundForm.reason}
+                      onChange={(e) => setRefundForm({ ...refundForm, reason: e.target.value })}
+                      className="h-11 rounded-none border-border bg-background"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-3">
+                    <button type="button" disabled={updateMutation.isPending} onClick={() => setRefundForm(null)} className="ios-pressable flex min-h-11 items-center justify-center border border-border text-xs font-bold uppercase tracking-widest disabled:opacity-40">
+                      Cancel
+                    </button>
+                    <button type="button" disabled={updateMutation.isPending} onClick={() => { emitHaptic("mutation.warning"); confirmRefund(); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/60 bg-red-500/15 text-xs font-bold uppercase tracking-widest text-red-300 disabled:opacity-40">
+                      Confirm refund
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

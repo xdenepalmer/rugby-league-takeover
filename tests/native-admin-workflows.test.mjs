@@ -6,8 +6,12 @@ import {
   ORDER_STATUSES,
   filterOrders,
   nextOrderActions,
-  canCancelOrRefund,
+  canCancelOrder,
+  canRefundOrder,
+  SHIPPING_METHODS,
+  calcEstimatedDelivery,
   buildOrderStatusPayload,
+  buildRefundPayload,
   MOD_QUEUES,
   moderationQueue,
   moderationCounts,
@@ -45,9 +49,12 @@ test("fulfilment transitions follow paid → packing → shipped → delivered",
   assert.deepEqual(nextOrderActions("shipped").map((a) => a.to), ["completed"]);
   assert.deepEqual(nextOrderActions("completed"), []);
   assert.ok(nextOrderActions("packing")[0].requiresTracking, "shipping requires tracking");
-  assert.equal(canCancelOrRefund("paid"), true);
-  assert.equal(canCancelOrRefund("completed"), false);
-  assert.equal(canCancelOrRefund("refunded"), false);
+  assert.equal(canCancelOrder("paid"), true);
+  assert.equal(canCancelOrder("completed"), false);
+  assert.equal(canCancelOrder("refunded"), false);
+  assert.equal(canRefundOrder("paid"), true);
+  assert.equal(canRefundOrder("completed"), true, "delivered orders can still be refunded (web parity)");
+  assert.equal(canRefundOrder("refunded"), false);
 });
 
 test("status payloads match the web manager's writes", () => {
@@ -60,6 +67,7 @@ test("status payloads match the web manager's writes", () => {
   assert.equal(shipped.tracking_number, "AP1");
   assert.equal(shipped.carrier, "AusPost");
   assert.ok(shipped.shipped_at, "shipped_at stamped");
+  assert.match(shipped.estimated_delivery, /^\d{4}-\d{2}-\d{2}$/, "estimated_delivery written on ship (customer-facing)");
   assert.equal(shipped.timeline.length, 2);
   assert.equal(shipped.timeline[1].actor, "admin@rlt.com");
   assert.match(shipped.timeline[1].action, /Status changed to Shipped/);
@@ -67,6 +75,44 @@ test("status payloads match the web manager's writes", () => {
   const delivered = buildOrderStatusPayload({ ...order, status: "shipped" }, "completed", { actorEmail: "a" });
   assert.ok(delivered.delivered_at, "delivered_at stamped");
   assert.ok(!("tracking_number" in delivered), "non-shipping transitions don't touch tracking");
+});
+
+test("estimated delivery mirrors the web calculation and respects overrides", () => {
+  assert.equal(calcEstimatedDelivery(null, "standard"), null);
+  const shippedAt = "2026-07-06T00:00:00.000Z"; // a Monday
+  const standard = calcEstimatedDelivery(shippedAt, "standard");
+  const express = calcEstimatedDelivery(shippedAt, "express");
+  const priority = calcEstimatedDelivery(shippedAt, "priority");
+  assert.ok(standard > express && express > priority, "faster methods land earlier");
+  assert.equal(calcEstimatedDelivery(shippedAt, "unknown"), standard, "unknown methods fall back to standard");
+  assert.deepEqual(Object.keys(SHIPPING_METHODS), ["standard", "express", "priority"]);
+
+  const withOverride = buildOrderStatusPayload(
+    { id: "o2", status: "packing", timeline: [], estimated_delivery: "2026-08-01" },
+    "shipped",
+    { actorEmail: "a", tracking: { number: "AP2" } }
+  );
+  assert.ok(!("estimated_delivery" in withOverride), "manual estimated_delivery override is never clobbered");
+
+  const express2 = buildOrderStatusPayload(
+    { id: "o3", status: "packing", timeline: [], shipping_method: "express" },
+    "shipped",
+    { actorEmail: "a", tracking: { number: "AP3" } }
+  );
+  assert.equal(express2.estimated_delivery, calcEstimatedDelivery(express2.shipped_at, "express"), "order's shipping method drives the estimate");
+});
+
+test("refund payload carries the full web field set", () => {
+  const order = { id: "o1", status: "completed", timeline: [{ action: "created" }], total_aud: 129.5 };
+  const refund = buildRefundPayload(order, { actorEmail: "admin@rlt.com", amount: "129.50", reason: "damaged in transit" });
+  assert.equal(refund.status, "refunded");
+  assert.equal(refund.refund_amount, 129.5);
+  assert.equal(refund.refund_reason, "damaged in transit");
+  assert.ok(refund.refunded_at, "refunded_at stamped");
+  assert.equal(refund.timeline.length, 2);
+  assert.match(refund.timeline[1].note, /Refund \$129\.50 AUD — damaged in transit/);
+  const noReason = buildRefundPayload(order, { actorEmail: "a", amount: 10 });
+  assert.match(noReason.timeline[1].note, /No reason provided/);
 });
 
 // ── Moderation: queues + payload parity ─────────────────────────────────
@@ -145,6 +191,40 @@ test("native workflows reuse existing write authority, no new rules", () => {
   assert.ok(mod.includes("fanThreadPath"), "can open the fan thread");
   const regs = read("../src/native/admin/workflows/NativeRegistrationsWorkflow.jsx");
   assert.ok(!regs.includes(".update(") && !regs.includes(".delete("), "registrations stay read-only");
+});
+
+test("ban author matches the web dual-ban and only targets real emails", () => {
+  const mod = read("../src/native/admin/workflows/NativeModerationWorkflow.jsx");
+  assert.ok(mod.includes('ban_type: "email", value: post.user_email'), "email ban uses the real user_email, never author_name");
+  assert.ok(!mod.includes("post.user_email || post.author_name"), "author_name must never be submitted as a ban value");
+  assert.ok(mod.includes('ban_type: "user", value: post.user_id'), "second ban record on the user id (web parity)");
+  assert.ok(mod.includes("banMutation.mutateAsync"), "ban dialogs await settlement (pending guard is live)");
+  assert.ok(mod.includes("!removed && post.user_email &&"), "author ban offered only for posts with an email, not on removed posts");
+  assert.ok(mod.includes("!removed && post.ip_address &&"), "IP ban hidden on removed posts");
+});
+
+test("moderation hide/remove capture an optional reason (web parity)", () => {
+  const mod = read("../src/native/admin/workflows/NativeModerationWorkflow.jsx");
+  assert.ok(mod.includes("moderation_reason"), "hide writes moderation_reason when given");
+  assert.ok(!mod.includes('"Removed via native moderation"'), "remove reason comes from the moderator, not a hardcoded string");
+  assert.ok(mod.includes("openReasonSheet"), "hide and remove flow through the reason sheet");
+});
+
+test("moderation dispatches the web admin-log audit events", () => {
+  const helpers = read("../src/native/admin/workflows/workflow-helpers.js");
+  assert.ok(helpers.includes('"rlt_admin_log"'), "emitAdminLog dispatches the shared event");
+  const mod = read("../src/native/admin/workflows/NativeModerationWorkflow.jsx");
+  for (const marker of ["[FORUM-MOD]", "[BAN-ACTION]", "SOFT-DELETED", "RESTORED"]) {
+    assert.ok(mod.includes(marker), `moderation logs ${marker} like the web manager`);
+  }
+});
+
+test("native refund flow writes the full payload and reaches delivered orders", () => {
+  const orders = read("../src/native/admin/workflows/NativeOrdersWorkflow.jsx");
+  assert.ok(orders.includes("buildRefundPayload"), "refund goes through the shared payload builder");
+  assert.ok(orders.includes("canRefundOrder"), "refund availability uses the web rule (status !== refunded)");
+  assert.ok(orders.includes("Refund amount"), "refund sheet captures an amount");
+  assert.ok(orders.includes("Reason for refund"), "refund sheet captures a reason");
 });
 
 test("native workflows have no hover-only affordances", () => {
