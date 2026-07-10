@@ -110,30 +110,48 @@ test("verifyCheckoutReturn verifies server-side and leaks nothing", () => {
   assert.ok(!fn.includes("update("), "read-only — the webhook stays the only writer");
 });
 
-// ── Screen contract ─────────────────────────────────────────────────────
-test("native return screen never trusts the URL", () => {
-  const screen = read("../src/native/screens/store/NativeCheckoutReturnScreen.jsx");
-  assert.ok(screen.includes('invoke("verifyCheckoutReturn"'), "verification is mandatory");
-  assert.ok(screen.includes("resolveCheckoutConfirmation"), "shared policy applied");
-  assert.ok(screen.includes("shouldClearCart"), "cart clearing goes through the policy");
-  assert.ok(screen.includes("wasCartClearedFor") && screen.includes("markCartClearedFor"), "exactly-once across remounts");
-  assert.ok(screen.includes("Confirming your payment"), "confirming state exists");
-  assert.ok(!screen.includes("Payment received"), "no unconditional success copy");
-  const clears = screen.split("writeCart([])").length - 1;
-  assert.equal(clears, 1, "a single, guarded cart-clear call site");
+// ── Shared verification hook (one policy for web + native) ───────────────
+test("the shared checkout-return hook never trusts the URL", () => {
+  const hook = read("../src/hooks/use-checkout-return.js");
+  assert.ok(hook.includes('invoke("verifyCheckoutReturn"'), "verification is mandatory");
+  assert.ok(hook.includes("resolveCheckoutConfirmation"), "shared policy applied");
+  assert.ok(hook.includes("shouldClearCart"), "cart clearing goes through the policy");
+  assert.ok(hook.includes("wasCartClearedFor") && hook.includes("markCartClearedFor"), "exactly-once across remounts");
+  const clears = hook.split("writeCart([])").length - 1;
+  assert.equal(clears, 1, "a single, guarded cart-clear call site for BOTH platforms");
 });
 
 test("a missing session id is deploy skew, not a failure", () => {
-  const screen = read("../src/native/screens/store/NativeCheckoutReturnScreen.jsx");
-  assert.ok(screen.includes("confirming_offline"), "soft state exists for returns without a session id");
-  const missingIdx = screen.indexOf("if (!sessionId)");
-  const invalidIdx = screen.indexOf("if (!isValidStripeSessionId(sessionId))");
+  const hook = read("../src/hooks/use-checkout-return.js");
+  assert.ok(hook.includes("confirming_offline"), "soft state exists for returns without a session id");
+  const missingIdx = hook.indexOf("if (!sessionId)");
+  const invalidIdx = hook.indexOf("if (!isValidStripeSessionId(sessionId))");
   assert.ok(missingIdx > -1 && invalidIdx > -1 && missingIdx < invalidIdx,
     "missing session id (old createCheckout deploy) is checked before invalid → soft copy, never red");
 });
 
-test("web keeps its legacy banner flow via the alias routes", () => {
+test("both return screens drive their UI from the shared hook", () => {
+  const nativeScreen = read("../src/native/screens/store/NativeCheckoutReturnScreen.jsx");
+  const webPage = read("../src/pages/CheckoutReturn.jsx");
+  for (const [name, src] of [["native screen", nativeScreen], ["web page", webPage]]) {
+    assert.ok(src.includes("useCheckoutReturn"), `${name} uses the shared hook`);
+    assert.ok(src.includes("Confirming your payment"), `${name} has the confirming state`);
+    assert.ok(!src.includes("Payment received"), `${name} has no unconditional success copy`);
+    // The screens are presentation only — the single guarded cart-clear lives
+    // in the hook, never re-implemented per screen.
+    assert.ok(!src.includes("writeCart(["), `${name} does not clear the cart itself`);
+  }
+});
+
+test("the web checkout return is verified, not a URL-trusting banner", () => {
   const app = read("../src/App.jsx");
-  assert.ok(app.includes('path="/store/checkout/success"'));
-  assert.ok(app.includes('to="/store?success=true"'), "web alias → existing banner behavior");
+  assert.ok(app.includes('element={<CheckoutReturn status="success" />}'), "success route renders the verified page");
+  assert.ok(app.includes('element={<CheckoutReturn status="cancel" />}'), "cancel route renders the verified page");
+  assert.ok(!app.includes('to="/store?success=true"'), "legacy URL-trust success alias removed");
+
+  // Store.jsx must no longer clear the cart or claim success from the URL.
+  const store = read("../src/pages/Store.jsx");
+  assert.ok(!store.includes('searchParams.get("success")'), "store no longer reads a trusted success flag");
+  assert.ok(!store.includes("Order Placed Successfully"), "store no longer shows an unverified success banner");
+  assert.ok(!store.includes('removeItem("rlt_cart")'), "store no longer clears the cart from the URL");
 });

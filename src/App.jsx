@@ -20,6 +20,7 @@ const NewsArticle = lazy(() => import("./pages/NewsArticle"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Account = lazy(() => import("./pages/Account"));
 const Store = lazy(() => import("./pages/Store"));
+const CheckoutReturn = lazy(() => import("./pages/CheckoutReturn"));
 const Forum = lazy(() => import("./pages/Forum"));
 const News = lazy(() => import("./pages/News"));
 const Faq = lazy(() => import("./pages/Faq"));
@@ -104,8 +105,8 @@ const AuthenticatedApp = () => {
           <Route path="/" element={<Home />} />
           <Route path="/store" element={<Store />} />
           <Route path="/store/product/:id" element={<StoreProductRedirect />} />
-          <Route path="/store/checkout/success" element={<Navigate to="/store?success=true" replace />} />
-          <Route path="/store/checkout/cancel" element={<Navigate to="/store?cancelled=true" replace />} />
+          <Route path="/store/checkout/success" element={<CheckoutReturn status="success" />} />
+          <Route path="/store/checkout/cancel" element={<CheckoutReturn status="cancel" />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/forum/thread/:id" element={<ForumThreadRedirect />} />
           <Route path="/news" element={<News />} />

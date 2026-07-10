@@ -135,9 +135,11 @@ test("checkout return routes exist on both platforms", () => {
 test("native checkout return defers payment truth to the webhook", () => {
   const screen = read("../src/native/screens/store/NativeCheckoutReturnScreen.jsx");
   assert.ok(screen.includes("webhook"), "must document webhook authority");
-  assert.ok(screen.includes('["myOrders"]'), "refreshes webhook-written orders");
   assert.ok(screen.includes("closeInAppBrowser"), "closes the lingering browser sheet");
   assert.ok(!screen.includes("status: \"paid\""), "must not write payment state client-side");
+  // The order-refresh is owned by the shared hook both screens drive from.
+  const hook = read("../src/hooks/use-checkout-return.js");
+  assert.ok(hook.includes('["myOrders"]'), "refreshes webhook-written orders");
 });
 
 // ── Chunking discipline for the persist packages ────────────────────────

@@ -1,10 +1,6 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, XCircle, Clock3, HelpCircle, Loader2 } from "lucide-react";
 import { useCheckoutReturn } from "@/hooks/use-checkout-return";
-import { closeInAppBrowser } from "@/lib/native/open-external";
-import { emitHaptic } from "@/lib/native/haptic-events";
-import NativeTopBar from "../../components/NativeTopBar.jsx";
 
 const COPY = {
   confirming: {
@@ -17,7 +13,7 @@ const COPY = {
     icon: CheckCircle2,
     tone: "text-emerald-400",
     title: "Payment confirmed",
-    body: "You're locked in. Your order is in the books and will appear in your order history.",
+    body: "You're locked in. We've emailed your receipt, and your order now appears in your order history.",
   },
   pending: {
     icon: Clock3,
@@ -49,60 +45,50 @@ const COPY = {
 };
 
 /**
- * Universal-link landing for Stripe checkout returns. The URL proves only
- * navigation — payment truth comes from verifyCheckoutReturn (a server-side
- * Stripe session check) with the webhook remaining the sole writer of order
- * state. All of that policy lives in the shared useCheckoutReturn hook, which
- * this screen and the web CheckoutReturn page both drive their UI from; the
- * cart is cleared exactly once, and only after verification says the session
- * is paid. This screen adds the native-only trimmings: closing the lingering
- * in-app browser sheet and haptic feedback.
+ * Verified web landing for Stripe checkout returns (routed from
+ * /store/checkout/success and /store/checkout/cancel). This replaces the old
+ * URL-trusting `/store?success=true` banner: the URL proves navigation only,
+ * and every claim here is driven by the shared useCheckoutReturn hook, which
+ * asks verifyCheckoutReturn server-side before confirming anything or clearing
+ * the cart. The webhook remains the sole writer of order state.
  */
-export default function NativeCheckoutReturnScreen({ status }) {
-  const { state, cancelled } = useCheckoutReturn({ status });
-
-  // The system-browser sheet may still be open under the app.
-  useEffect(() => {
-    closeInAppBrowser();
-    if (cancelled) emitHaptic("mutation.warning");
-  }, [cancelled]);
-
-  // Payment-confirmed haptic, fired when the shared hook lands on "confirmed".
-  useEffect(() => {
-    if (state === "confirmed") emitHaptic("save.success");
-  }, [state]);
-
+export default function CheckoutReturn({ status }) {
+  const { state } = useCheckoutReturn({ status });
   const copy = COPY[state];
   const Icon = copy.icon;
+  const showOrdersLink =
+    state === "confirmed" || state === "pending" || state === "unverified" || state === "confirming_offline";
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <NativeTopBar title="Checkout" fallback="/store" />
-      <div className="mx-auto flex w-full max-w-md flex-col items-center px-6 pt-16 text-center">
-        <Icon className={`h-14 w-14 ${copy.tone} ${state === "confirming" ? "animate-spin" : ""}`} aria-hidden="true" />
+    <main className="relative min-h-dvh bg-background px-5 pb-24 pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground">
+      <div className="mx-auto flex w-full max-w-md flex-col items-center px-1 text-center">
+        <Icon
+          className={`h-14 w-14 ${copy.tone} ${state === "confirming" ? "animate-spin" : ""}`}
+          aria-hidden="true"
+        />
         <h1 className="pt-4 font-display text-2xl font-bold uppercase tracking-widest" role="status">
           {copy.title}
         </h1>
         <p className="pt-2 text-sm text-muted-foreground">{copy.body}</p>
         {state !== "confirming" && (
           <div className="grid w-full gap-2 pt-6">
-            {(state === "confirmed" || state === "pending" || state === "unverified" || state === "confirming_offline") && (
+            {showOrdersLink && (
               <Link
-                to="/account/orders"
-                className="ios-pressable flex min-h-12 items-center justify-center bg-primary text-sm font-black uppercase tracking-widest text-primary-foreground"
+                to="/account"
+                className="flex min-h-12 items-center justify-center bg-primary text-sm font-black uppercase tracking-widest text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 View my orders
               </Link>
             )}
             <Link
               to="/store"
-              className="ios-pressable flex min-h-12 items-center justify-center border border-border text-sm font-bold uppercase tracking-widest"
+              className="flex min-h-12 items-center justify-center border border-border text-sm font-bold uppercase tracking-widest transition-colors hover:border-primary hover:text-primary"
             >
               Back to the store
             </Link>
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

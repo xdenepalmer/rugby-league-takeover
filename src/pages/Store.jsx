@@ -917,18 +917,11 @@ export default function Store() {
     }
   };
 
-  const isSuccess = searchParams.get("success") === "true";
-  const isCancelled = searchParams.get("cancelled") === "true";
-
-  useEffect(() => {
-    if (!isSuccess) return;
-    try { localStorage.removeItem("rlt_cart"); } catch { /* private mode / quota */ }
-    setCart([]);
-  }, [isSuccess]);
-
-  const clearAlerts = () => {
-    setSearchParams({});
-  };
+  // Checkout returns are handled server-authoritatively by the dedicated
+  // /store/checkout/success + /store/checkout/cancel pages (CheckoutReturn,
+  // which verifies with Stripe before confirming or clearing the cart). The
+  // store page deliberately no longer trusts a `?success=true` URL to clear
+  // the cart or claim a completed order — the URL proves nothing.
 
   return (
     <main className="relative min-h-dvh bg-background px-5 pb-[calc(5rem+var(--safe-bottom))] pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8 overflow-hidden">
@@ -983,55 +976,6 @@ export default function Store() {
             </Button>
           </div>
         </div>
-
-        {/* Success/Cancel Banners */}
-        <AnimatePresence>
-          {isSuccess && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mt-6 border border-emerald-500/30 bg-emerald-500/10 p-6 cmd-glass shadow-lg text-emerald-400 space-y-4"
-            >
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-display text-xl uppercase tracking-wider text-foreground">Order Placed Successfully!</h3>
-                  <p className="text-sm text-slate-200 mt-1">Thank you for your purchase. We've sent a detailed receipt to your email address.</p>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3 pt-2">
-                <Link to="/account" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
-                  <span>Track in My Orders</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-                <Link to="/forum" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
-                  <span>Join the Forum</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-                <button onClick={clearAlerts} className="flex items-center justify-between border border-border bg-card/25 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-foreground hover:bg-card transition-colors cursor-pointer">
-                  <span>Continue Shopping</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {isCancelled && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mt-6 flex items-center justify-between border border-primary/30 bg-primary/10 p-4 text-primary cmd-glass shadow-lg"
-            >
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5" />
-                <p className="text-sm font-semibold">Checkout cancelled. Your items are safe in your cart.</p>
-              </div>
-              <button onClick={clearAlerts} className="min-h-[44px] min-w-[44px] p-3 text-xs uppercase tracking-wider font-bold hover:text-white transition-colors underline cursor-pointer">Dismiss</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <StoreExperienceRail
           productCount={visibleProducts.length}
