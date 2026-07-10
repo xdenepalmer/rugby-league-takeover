@@ -67,3 +67,28 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false
+
+  # Build-verify only: runs the validation gate + web build + iOS sync with
+  # NO signing and NO TestFlight upload. Safe to run on any branch — use it
+  # to smoke-check changes on a real macOS runner without shipping anything.
+  # Only the ios-capacitor workflow above publishes, and only when started
+  # deliberately (no triggering: block anywhere in this file).
+  ios-build-verify:
+    name: iOS build verify (no publishing)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: 22
+      xcode: latest
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Validation gate (same as GitHub CI)
+        script: npm run lint && npm run typecheck && npm test
+      - name: Build web assets and sync into the iOS shell
+        script: npm run build && npx cap sync ios
+      - name: Compile the iOS app (unsigned)
+        script: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

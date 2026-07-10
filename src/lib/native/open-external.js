@@ -64,3 +64,19 @@ export async function openExternalUrl(url, { fallback = "newtab" } = {}) {
   }
   return true;
 }
+
+/**
+ * Close the in-app browser sheet if one is open (e.g. after a checkout
+ * universal link returns to the app while the Stripe sheet is still up).
+ * No-op on web and when nothing is open.
+ */
+export async function closeInAppBrowser() {
+  if (!isNativeApp()) return false;
+  try {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.close();
+    return true;
+  } catch {
+    return false;
+  }
+}

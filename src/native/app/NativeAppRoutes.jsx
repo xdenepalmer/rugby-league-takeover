@@ -4,6 +4,7 @@ import RequireAuth from "@/components/RequireAuth";
 import RequireAdmin from "@/components/RequireAdmin";
 import PageNotFound from "@/lib/PageNotFound";
 import NativePublicShell from "./NativePublicShell.jsx";
+import NativeRuntime from "./NativeRuntime.jsx";
 import NativeSubScreen from "../components/NativeSubScreen.jsx";
 import NativeAccountSection from "../screens/account/NativeAccountSection.jsx";
 
@@ -15,6 +16,7 @@ const NativeForumScreen = lazy(() => import("../screens/forum/NativeForumScreen.
 const NativeThreadScreen = lazy(() => import("../screens/forum/NativeThreadScreen.jsx"));
 const NativeStoreScreen = lazy(() => import("../screens/store/NativeStoreScreen.jsx"));
 const NativeProductScreen = lazy(() => import("../screens/store/NativeProductScreen.jsx"));
+const NativeCheckoutReturnScreen = lazy(() => import("../screens/store/NativeCheckoutReturnScreen.jsx"));
 const NativeGalleryScreen = lazy(() => import("../screens/gallery/NativeGalleryScreen.jsx"));
 const NativeAccountScreen = lazy(() => import("../screens/account/NativeAccountScreen.jsx"));
 const NativeNotificationsScreen = lazy(() => import("../screens/account/NativeNotificationsScreen.jsx"));
@@ -38,7 +40,9 @@ const NativeAdminRoutes = lazy(() => import("../admin/NativeAdminRoutes.jsx"));
  */
 export default function NativeAppRoutes() {
   return (
-    <Routes>
+    <>
+      <NativeRuntime />
+      <Routes>
       <Route element={<NativePublicShell />}>
         <Route path="/" element={<NativeHomeScreen />} />
         <Route path="/news" element={<NativeNewsScreen />} />
@@ -47,6 +51,8 @@ export default function NativeAppRoutes() {
         <Route path="/forum/thread/:id" element={<NativeThreadScreen />} />
         <Route path="/store" element={<NativeStoreScreen />} />
         <Route path="/store/product/:id" element={<NativeProductScreen />} />
+        <Route path="/store/checkout/success" element={<NativeCheckoutReturnScreen status="success" />} />
+        <Route path="/store/checkout/cancel" element={<NativeCheckoutReturnScreen status="cancel" />} />
         <Route path="/gallery" element={<NativeGalleryScreen />} />
 
         <Route path="/account" element={<RequireAuth><NativeAccountScreen /></RequireAuth>} />
@@ -93,6 +99,7 @@ export default function NativeAppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/admin/*" element={<RequireAdmin><NativeAdminRoutes /></RequireAdmin>} />
       <Route path="*" element={<PageNotFound />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

@@ -147,6 +147,9 @@ export default function NativeMoreSheet({ open, onClose, onOpenPlan }) {
               </div>
             )}
 
+            <p className="pb-1 pt-2 text-center text-[9px] uppercase tracking-[0.3em] text-muted-foreground/50">
+              Rugby League Takeover · Build {String(import.meta.env.VITE_BUILD_ID || "dev").slice(-8)}
+            </p>
             <div className="pb-[max(1rem,var(--safe-bottom))]" />
           </motion.section>
         </div>

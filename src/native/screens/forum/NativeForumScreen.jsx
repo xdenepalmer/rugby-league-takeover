@@ -6,6 +6,7 @@ import UserAvatar from "@/components/forum/feed/UserAvatar";
 import { timeAgo, getEngagement, getRecencyScore, getCategoryMeta } from "@/components/forum/feed/forumHelpers";
 import { buildForumThreads, countReplies, FORUM_CATEGORIES } from "@/lib/public-forms";
 import { hasUnreadReplies } from "@/lib/forum-read-tracker";
+import { useWindowedList } from "@/hooks/use-windowed-list";
 import { useForumPosts, useForumAvatars } from "@/hooks/data/use-fan-data";
 import { emitHaptic } from "@/lib/native/haptic-events";
 import { NativeSkeleton, NativeEmptyState, NativeSponsorCard } from "../../components/NativePrimitives.jsx";
@@ -131,6 +132,9 @@ export default function NativeForumScreen() {
     return sortThreads(list, sort);
   }, [threads, category, search, sort]);
 
+  // Feeds can hold 100+ threads — render progressively instead of all at once.
+  const { visible: windowed, sentinelRef, done } = useWindowedList(visible, { initial: 12, step: 12 });
+
   return (
     <PullToRefresh queryKeys={[["forumPosts"], ["forumAvatars"]]}>
       <div className="mx-auto w-full max-w-2xl pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
@@ -240,7 +244,7 @@ export default function NativeForumScreen() {
           </div>
         ) : (
           <div className="pt-1">
-            {visible.slice(0, 6).map((thread) => (
+            {windowed.slice(0, 6).map((thread) => (
               <ThreadCard
                 key={thread.id}
                 thread={thread}
@@ -248,10 +252,12 @@ export default function NativeForumScreen() {
                 onOpen={() => navigate(`/forum/thread/${encodeURIComponent(thread.id)}`)}
               />
             ))}
-            <div className="px-4 py-2">
-              <NativeSponsorCard />
-            </div>
-            {visible.slice(6).map((thread) => (
+            {windowed.length > 6 && (
+              <div className="px-4 py-2">
+                <NativeSponsorCard />
+              </div>
+            )}
+            {windowed.slice(6).map((thread) => (
               <ThreadCard
                 key={thread.id}
                 thread={thread}
@@ -259,6 +265,7 @@ export default function NativeForumScreen() {
                 onOpen={() => navigate(`/forum/thread/${encodeURIComponent(thread.id)}`)}
               />
             ))}
+            {!done && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ShoppingBag } from "lucide-react";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useProducts } from "@/hooks/data/use-fan-data";
@@ -41,9 +41,18 @@ function ProductCard({ product }) {
  * real /store/product/:id route, and the persistent cart sheet.
  */
 export default function NativeStoreScreen() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: products = [], isLoading } = useProducts();
   const [category, setCategory] = useState("All");
   const [cartOpen, setCartOpen] = useState(false);
+
+  // Stripe returns land on /store?success|cancelled (the web contract);
+  // in the shell they resolve to the native confirmation screens.
+  useEffect(() => {
+    if (searchParams.get("success") === "true") navigate("/store/checkout/success", { replace: true });
+    else if (searchParams.get("cancelled") === "true") navigate("/store/checkout/cancel", { replace: true });
+  }, [searchParams, navigate]);
 
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category).filter(Boolean));

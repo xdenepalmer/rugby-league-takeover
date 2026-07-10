@@ -103,6 +103,8 @@ const AuthenticatedApp = () => {
           <Route path="/" element={<Home />} />
           <Route path="/store" element={<Store />} />
           <Route path="/store/product/:id" element={<StoreProductRedirect />} />
+          <Route path="/store/checkout/success" element={<Navigate to="/store?success=true" replace />} />
+          <Route path="/store/checkout/cancel" element={<Navigate to="/store?cancelled=true" replace />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/forum/thread/:id" element={<ForumThreadRedirect />} />
           <Route path="/news" element={<News />} />

@@ -7,6 +7,7 @@ import { saveRecentNews, getRecentNews } from "@/lib/recent-news";
 import { articlePath, readingTimeMinutes, getSavedArticleIds } from "@/lib/news-articles";
 import { timeAgo } from "@/components/forum/feed/forumHelpers";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { useWindowedList } from "@/hooks/use-windowed-list";
 import { NativeSkeleton, NativeEmptyState, NativeSponsorCard } from "../../components/NativePrimitives.jsx";
 
 function LeadCard({ article }) {
@@ -73,6 +74,7 @@ export default function NativeNewsScreen() {
 
   const visible = categoryFilter === "All" ? articles : articles.filter((a) => a.category === categoryFilter);
   const [lead, ...rest] = visible;
+  const { visible: windowedRest, sentinelRef, done } = useWindowedList(rest, { initial: 10, step: 10 });
   const savedIds = useMemo(() => new Set(getSavedArticleIds()), []);
   const offline = !isLoading && fetched.length === 0 && articles.length > 0;
 
@@ -123,17 +125,20 @@ export default function NativeNewsScreen() {
           <>
             <div className="px-4 pt-2">{lead && <LeadCard article={lead} />}</div>
             <div className="px-0 pt-2">
-              {rest.slice(0, 4).map((article) => (
+              {windowedRest.slice(0, 4).map((article) => (
                 <ArticleRow key={article.id} article={article} saved={savedIds.has(String(article.id))} />
               ))}
             </div>
-            <div className="px-4 py-2">
-              <NativeSponsorCard />
-            </div>
+            {windowedRest.length > 0 && (
+              <div className="px-4 py-2">
+                <NativeSponsorCard />
+              </div>
+            )}
             <div>
-              {rest.slice(4).map((article) => (
+              {windowedRest.slice(4).map((article) => (
                 <ArticleRow key={article.id} article={article} saved={savedIds.has(String(article.id))} />
               ))}
+              {!done && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
             </div>
           </>
         )}

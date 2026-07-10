@@ -64,6 +64,16 @@ export default defineConfig({
           if (normalized.includes('/node_modules/@capacitor/')) {
             return undefined
           }
+          // Query persistence is native-shell-only and loaded via a dynamic
+          // import; exempting it keeps it out of the web-preloaded
+          // vendor-misc chunk (same reasoning as @capacitor above).
+          if (
+            normalized.includes('/node_modules/@tanstack/react-query-persist-client/') ||
+            normalized.includes('/node_modules/@tanstack/query-persist-client-core/') ||
+            normalized.includes('/node_modules/@tanstack/query-sync-storage-persister/')
+          ) {
+            return undefined
+          }
           if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-router-dom/') || normalized.includes('/node_modules/scheduler/') || normalized.includes('/node_modules/react-is/')) {
             return 'vendor-react'
           }
