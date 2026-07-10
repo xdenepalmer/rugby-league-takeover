@@ -1,6 +1,6 @@
 # Native iOS Product Architecture (RLT-IOS-003)
 
-_Last updated: 2026-07-10 · branch `rlt-ios-003-native-product` (incl. Architect corrections 003F–003H)_
+_Last updated: 2026-07-10 · branch `rlt-ios-003-native-product` (incl. Architect corrections 003F–003H and adversarial-review corrections 003I–003M)_
 
 The Capacitor shell no longer mirrors the website. Web/PWA and native iOS are
 **two presentation layers over one shared system**:
@@ -23,9 +23,13 @@ pages, so both platforms share one cache.
 
 ## Platform split
 
-`src/App.jsx → AuthenticatedApp` renders the web `<Routes>` (byte-identical
-to pre-003) or a lazy `NativeAppRoutes` when `isNativeApp()`. The native
-chunk is never modulepreloaded on web (verified per build).
+`src/App.jsx → AuthenticatedApp` renders the web `<Routes>` (unchanged from
+pre-003 apart from the checkout-return alias routes) or a lazy
+`NativeAppRoutes` when `isNativeApp()`. The native chunk is never
+modulepreloaded on web (verified per build). For scale context: the web
+entry chunk itself is small (~71KB), but TOTAL preloaded web JS (entry +
+modulepreloaded vendor chunks) is ~1.0MB raw / ~320KB gzipped — quote the
+total, not just the entry, when talking about web payload.
 
 `isNativeApp()`/`getPlatform()` **latch their first answer**
 (`src/lib/native/native-env.js`): the platform cannot change mid-session, and
@@ -113,14 +117,22 @@ shortcuts, breadcrumbs) is not carried onto the phone.
     `/admin/store/orders/:orderId` detail: customer contact actions
     (email/call/copy address), line items, tracking editor + copy, AusPost
     label/track via the existing edge functions, confirmed status
-    transitions writing payload-identical updates (timeline entries,
-    shipped/delivered stamps, tracking-required shipping, destructive
-    cancel/refund). Payment state is labeled webhook-authoritative.
+    transitions with **payload parity** for packing/shipped (incl.
+    `estimated_delivery`)/delivered/cancel, and a refund sheet writing the
+    full web refund field set (amount/reason/refunded_at; available on any
+    non-refunded order, delivered included). The adversarial review found
+    the original 003G payloads dropped `estimated_delivery` and the refund
+    fields — fixed in 003K. Payment state is labeled webhook-authoritative.
   - **Forum moderation** — `/admin/community/forum` queues
     (pending/reported/live/removed with counts), search,
-    publish/hide/pin/remove/restore with the web manager's exact payloads,
-    author/IP bans via the shared `BanDialog` + `Ban.create` shape, and
-    open-fan-thread navigation.
+    publish/hide/pin/remove/restore with **payload parity** to the web
+    manager (hide/remove capture an optional `moderation_reason`),
+    author/IP bans via the shared `BanDialog` + `Ban.create` shape —
+    author bans write BOTH the email and (when known) user-id records like
+    the web, and are only offered when a real `user_email` exists — plus
+    the web's `rlt_admin_log` audit events and open-fan-thread navigation.
+    The original 003G build had single-record email bans, an
+    `author_name` ban fallback and no reason capture — fixed in 003K.
   - **Registrations** — `/admin/people/registrations` list →
     `/:regId` detail with contact actions and bulk BCC email; read-only.
 - **Remaining 19 modules:** the existing (card-based, functional) web
@@ -131,7 +143,10 @@ shortcuts, breadcrumbs) is not carried onto the phone.
 - Native-only URL addressability throughout (`/admin/store/orders/:orderId`,
   `/admin/community/forum`, `/admin/settings/settings`, …); web admin URLs
   still stop at the section (unchanged).
-- Attention badges (pending posts / paid orders) poll id-only projections.
+- Attention badges (pending posts / paid orders) poll `head:true` count
+  queries — no row payloads leave the database. (Before 003M this doc
+  claimed "id-only projections" while the query actually fetched full
+  rows; both the claim and the query are now fixed.)
 - Guards unchanged: `RequireAdmin` wraps the subtree; RLS/edge functions
   remain the enforcement.
 
@@ -140,10 +155,16 @@ shortcuts, breadcrumbs) is not carried onto the phone.
 - **Query persistence (native only):** `src/lib/native/query-persistence.js`
   — localStorage persister, 24h `maxAge`, build-id `buster`, loaded via
   dynamic import (persist packages are exempted from web-preloaded vendor
-  chunks in `vite.config.js`). **Denylist (never persisted):** `orders`,
-  `registrations`, `users`, `bans`, `invites`, `adminAttention`, `myOrders`
-  — enforced at dehydrate time; only successful queries persist. Sign-out
-  clears the store and the in-memory cache.
+  chunks in `vite.config.js`). **ALLOWLIST (only these ever persist):**
+  `siteSettings`, `news`, `products`, `gallery`, `matchups`, `events`,
+  `teams`, `partners`, `faqs` — public, non-PII content roots, enforced at
+  dehydrate time; only successful queries persist and mutations never
+  dehydrate. Everything else (forum posts — whose admin projections carry
+  `ip_address`/`user_email`/`reported_by` — notifications, orders, all
+  user-scoped and admin keys) never touches disk, secure by default. The
+  original 003D denylist model leaked those admin projections to
+  localStorage — inverted in 003I. Sign-out clears the store and the
+  in-memory cache.
 - **Lifecycle:** foreground resume invalidates only `notifications`,
   `forumPosts`, `adminAttention`.
 - **Windowed feeds:** `useWindowedList` (IntersectionObserver, no dependency)
@@ -165,18 +186,32 @@ the existing banner behavior; in the installed app the universal link lands on
 the native screens; legacy `/store?success=true` arrivals still redirect
 natively).
 
-**The URL proves navigation only.** The native return screen runs a
-verification state machine: it calls the read-only `verifyCheckoutReturn`
-edge function, which validates the session-id format, retrieves the session
-from Stripe server-side, rejects foreign apps via `rlt_app_id` metadata,
-double-binds to our order via the stored `stripe_session_id`, and returns a
-PII-free `{paymentStatus, sessionStatus, orderStatus}`. States:
-`confirming → confirmed | pending | cancelled | unverified`. Success copy and
-the single, guarded, exactly-once cart clear happen **only on verified
-payment**; pending polls politely (5×4s) and keeps the cart; unverified never
-claims success. Guest-safe: possession of the unguessable `cs_` session id
-delivered by Stripe's redirect is the return credential. The **webhook remains
-the only writer** of order state.
+**The URL proves navigation only (on native).** The native return screen
+runs a verification state machine: it calls the read-only
+`verifyCheckoutReturn` edge function, which (in order) validates the
+session-id format, looks up `store_orders` by that exact
+`stripe_session_id` — unknown ids 404 **before any Stripe call**
+(anti-amplification; bind #1) — then retrieves the session from Stripe
+server-side, rejects foreign apps via `rlt_app_id` metadata, and requires
+the session's own `metadata.order_id` to point back at the same order row
+(bind #2) before reporting a PII-free
+`{paymentStatus, sessionStatus, orderStatus}`. (The original 003F called
+Stripe first and its order bind only decorated `orderStatus`; the DB-first
+double-bind landed in 003I.) States: `confirming → confirmed | pending |
+cancelled | unverified`, plus a soft `confirming_offline` state when the
+return URL carries no `session_id` at all (deploy skew from an
+un-redeployed `createCheckout`) — that case defers to the webhook and never
+shows a red failure. Success copy and the single, guarded, exactly-once
+cart clear happen **only on verified payment**; pending polls politely
+(5×4s) and keeps the cart; unverified never claims success. Guest-safe:
+possession of the unguessable `cs_` session id delivered by Stripe's
+redirect is the return credential. The **webhook remains the only writer**
+of order state.
+
+**Honesty note (web, pre-existing):** the WEB `/store?success=true` banner
+flow still clears the cart on URL arrival without server verification —
+unchanged pre-003 behavior, kept deliberately to leave web/PWA intact. Only
+the native return is verification-gated.
 
 **Deployment required (not yet live):** `createCheckout` (changed) and
 `verifyCheckoutReturn` (new) must be deployed to Supabase. No new secrets
@@ -186,8 +221,11 @@ return is still outstanding.
 
 ## Push
 
-- Token registration: complete (explicit opt-in toggle → APNs token →
+- Token registration: code-complete (explicit opt-in toggle → APNs token →
   `user_push_tokens`; migration **not yet applied** to the remote DB).
+  RLS is own-row **with an admin override on select/update/delete**, and
+  the insert policy requires a resolved profile (003I fix — the original
+  coalesce fallback let anonymous callers insert `user_id=''` rows).
 - Tap routing: `src/lib/native/push-routing.js` maps sender payloads to
   screens — `forum_reply|forum_mention {thread_id}` → thread,
   `news {article_id}` → article, `product_drop {product_id}` → product,
@@ -237,7 +275,9 @@ codemagic_config_complete: yes         signed_ipa_build_verified: no
 testflight_upload_verified: no         testflight_install_verified: no
 
 oauth_return_complete: no (exact plan above; Google hidden natively)
-universal_links: code-complete, device-unverified
+universal_links: fixed in 003J (003A-H version was defective under
+  launch-URL re-entry: every navigation re-consumed getLaunchUrl and
+  yanked the user back to the launch route), device-unverified
 app_store_ready: no
 ```
 
@@ -245,11 +285,25 @@ app_store_ready: no
 
 - **Deploy** `createCheckout` + `verifyCheckoutReturn` to Supabase, then
   device-verify the universal-link checkout return.
+- **Moderator-native gap (accepted limitation, decide in a follow-up):**
+  non-admin moderators can moderate nothing natively. The web grants
+  moderators pin/delete through the `forumAction` edge function; the native
+  product only exposes moderation under `RequireAdmin`
+  (`/admin/community/forum`). Options: expose mod actions in the native
+  thread screen for `isModerator`, or keep this as a documented native
+  limitation. Until decided, moderators must use the web.
+- **Push shared-device reassignment (PUSH2 → RLT-IOS-004):** own-row SELECT
+  hides another user's row for the same device token, so after user A signs
+  out and user B opts in, B's `create` hits the `unique(token)` index, the
+  swallowed `.catch` hides the failure, and A's row keeps pointing at B's
+  device. Needs a `SECURITY DEFINER` upsert-by-token RPC that reassigns
+  ownership, plus disable-tokens-on-signout. Blocked into RLT-IOS-004 with
+  the send pipeline.
 - APNs **send** pipeline (RLT-IOS-004): JWT provider auth via Edge Function,
   enabled-token targeting, preferences, event types (reply/mention/drop/
   order/admin), deep-link payloads per `push-routing.js`, badge counts,
   delivery logs/rate limits, live-device verification. Apply the
-  `user_push_tokens` migration first.
+  `user_push_tokens` migration (with the 003I insert-policy fix) first.
 - Native OAuth + auth-email deep-link return (plan above).
 - Native presentation for the remaining 19 admin modules (wrapped web
   managers today — functional, not native).
@@ -261,9 +315,10 @@ app_store_ready: no
 
 ## Validation
 
-`npm test` (202) · `npm run lint` · `npm run typecheck` · `npm run build` ·
-`npx cap sync ios` — all green at each story commit (A–E and corrections
-F–H). Chromium smoke (iPhone viewport + Capacitor stub): native Home/News/
+`npm test` (220+) · `npm run lint` · `npm run typecheck` · `npm run build` ·
+`npx cap sync ios` — all green at each story commit (A–E, corrections F–H,
+and adversarial-review corrections I–M). Chromium smoke (iPhone viewport +
+Capacitor stub): native Home/News/
 Forum/Store/Gallery/Login render the native shell (5 tabs, no Admin tab, one
 Takeover trigger), web Home/Login keep their layout (SiteNav + Google button
 present, no page errors). Contract tests: `tests/native-app-shell.test.mjs`,

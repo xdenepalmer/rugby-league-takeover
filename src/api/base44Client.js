@@ -42,8 +42,9 @@ const WRITE_TABLES = {
   Testimonial: 'testimonials',
   TippingEntry: 'tipping_entries',
   TravelPackage: 'travel_packages',
-  // Own-row RLS only (see supabase/migrations/0009_user_push_tokens.sql);
-  // used by the native push-token registration foundation.
+  // Own-row RLS with an admin override on select/update/delete; insert
+  // requires a resolved profile (see supabase/migrations/0009_user_push_tokens.sql).
+  // Used by the native push-token registration foundation.
   UserPushToken: 'user_push_tokens',
 };
 

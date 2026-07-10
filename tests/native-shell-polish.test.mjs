@@ -48,9 +48,18 @@ test("vite config exempts @capacitor from the vendor-misc catch-all", () => {
 
 test("no static @capacitor imports anywhere in src (dynamic-only contract)", () => {
   // A static import would drag the Capacitor runtime into the preloaded
-  // entry graph. Scan every js/jsx source file.
+  // entry graph. Scan every js/jsx source file for every STATIC edge form —
+  // named/default imports, bare side-effect imports, and `export … from`
+  // re-exports. Only dynamic `import("@capacitor/…")` is allowed.
   const srcDir = fileURLToPath(new URL("../src", import.meta.url));
   const offenders = [];
+  const staticEdge = new RegExp(
+    [
+      String.raw`import\s[^;]*from\s+["']@capacitor\/`, // import x / { x } from "@capacitor/…"
+      String.raw`import\s+["']@capacitor\/`, // side-effect: import "@capacitor/…"
+      String.raw`export\s[^;]*from\s+["']@capacitor\/`, // re-export: export … from "@capacitor/…"
+    ].join("|")
+  );
   const walk = (dir) => {
     for (const name of readdirSync(dir)) {
       const path = join(dir, name);
@@ -58,7 +67,7 @@ test("no static @capacitor imports anywhere in src (dynamic-only contract)", () 
         walk(path);
       } else if (/\.(js|jsx|mjs)$/.test(name)) {
         const source = readFileSync(path, "utf8");
-        if (/import\s[^;]*from\s+["']@capacitor\//.test(source)) offenders.push(path);
+        if (staticEdge.test(source)) offenders.push(path);
       }
     }
   };

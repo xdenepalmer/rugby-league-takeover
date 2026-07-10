@@ -101,3 +101,11 @@ test("web admin layout is untouched by the native shell", () => {
   assert.ok(adminPage.includes("AdminLayout"), "web admin keeps AdminLayout");
   assert.ok(!adminPage.includes("NativeAdmin"), "web admin does not import native admin");
 });
+
+test("attention badges are head:true counts, never row payloads", () => {
+  const shell = read("../src/native/admin/NativeAdminShell.jsx");
+  assert.equal((shell.match(/head: true/g) || []).length, 2, "both attention queries are head-only counts");
+  assert.ok(shell.includes('count: "exact"'), "counts come from the database");
+  assert.ok(!shell.includes("ForumPost.filter"), "no full-row fetch for the community badge");
+  assert.ok(!shell.includes("StoreOrder.filter"), "no full-row fetch for the store badge");
+});

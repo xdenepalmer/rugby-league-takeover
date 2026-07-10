@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck, Undo2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { appParams } from "@/lib/app-params";
 import AdminOfflineBanner from "@/components/admin/AdminOfflineBanner";
 import { emitHaptic } from "@/lib/native/haptic-events";
@@ -20,15 +20,18 @@ export default function NativeAdminShell() {
   const { pathname } = useLocation();
 
   // Attention badges: pending moderation + orders needing fulfilment.
-  // Id-only projections, silent, polled — mirrors the web layout's counts.
+  // head:true count queries — no row payloads leave the database, so the
+  // badge poll can never serialize post/order contents anywhere.
   const { data: attention = { community: 0, store: 0 } } = useQuery({
     queryKey: ["adminAttention"],
     queryFn: async () => {
-      const [pendingPosts, pendingOrders] = await Promise.all([
-        base44.entities.ForumPost.filter({ is_published: false }, "-created_date", 100),
-        base44.entities.StoreOrder.filter({ status: "paid" }, "-created_date", 100),
+      const [posts, orders] = await Promise.all([
+        supabase.from("forum_posts_view").select("*", { count: "exact", head: true }).eq("is_published", false),
+        supabase.from("store_orders").select("*", { count: "exact", head: true }).eq("status", "paid"),
       ]);
-      return { community: pendingPosts.length, store: pendingOrders.length };
+      if (posts.error) throw posts.error;
+      if (orders.error) throw orders.error;
+      return { community: posts.count || 0, store: orders.count || 0 };
     },
     enabled: appParams.hasBase44Config,
     refetchInterval: 60000,
