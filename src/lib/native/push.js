@@ -55,8 +55,16 @@ export function addPushListeners({ onToken, onError, onReceived, onActioned } = 
     .then(async ({ PushNotifications }) => {
       if (cancelled) return;
       const add = async (event, handler) => {
-        if (typeof handler !== "function") return;
-        listeners.push(await PushNotifications.addListener(event, handler));
+        // Re-check cancellation before AND after each awaited registration:
+        // cleanup can run between the sequential awaits, and a handle created
+        // after cancellation would otherwise leak (duplicate tap handlers).
+        if (typeof handler !== "function" || cancelled) return;
+        const handle = await PushNotifications.addListener(event, handler);
+        if (cancelled) {
+          handle.remove().catch(() => {});
+          return;
+        }
+        listeners.push(handle);
       };
       await add("registration", (token) => onToken?.(token?.value));
       await add("registrationError", (error) => onError?.(error));

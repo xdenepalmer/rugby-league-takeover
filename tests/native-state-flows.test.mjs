@@ -135,6 +135,38 @@ test("vite exempts the persist packages from web-preloaded vendor chunks", () =>
   assert.ok(config.includes("@tanstack/query-sync-storage-persister"), "persister exempted too");
 });
 
+// ── Native lifecycle hygiene (003J) ─────────────────────────────────────
+test("launch URL is latched — consumed at most once per session", () => {
+  const src = read("../src/lib/native/deep-links.js");
+  assert.ok(src.includes("launchUrlConsumed"), "module-scope latch must exist");
+  const latchIdx = src.indexOf("if (launchUrlConsumed) return;");
+  const consumeIdx = src.indexOf("App.getLaunchUrl()");
+  assert.ok(latchIdx > -1 && consumeIdx > -1 && latchIdx < consumeIdx,
+    "latch must guard getLaunchUrl so re-inits never re-navigate to the launch route");
+});
+
+test("bootstrap and runtime effects register listeners once, not per navigation", () => {
+  const bootstrap = read("../src/components/NativeAppBootstrap.jsx");
+  assert.ok(!bootstrap.includes("}, [navigate])"), "bootstrap must not re-run on navigate identity churn");
+  assert.ok(bootstrap.includes("navigateRef"), "bootstrap reads the latest navigate via a ref");
+  const runtime = read("../src/native/app/NativeRuntime.jsx");
+  assert.ok(!runtime.includes("}, [navigate])"), "runtime must not re-register push listeners per navigation");
+  assert.ok(runtime.includes("navigateRef"), "runtime reads the latest navigate via a ref");
+});
+
+test("awaited listener registration never orphans handles after cleanup", () => {
+  for (const path of ["../src/lib/native/deep-links.js", "../src/lib/native/app-lifecycle.js", "../src/lib/native/push.js"]) {
+    const src = read(path);
+    assert.ok(src.includes("handle.remove()"), `${path} must remove handles created after cancellation`);
+  }
+});
+
+test("persister unsubscribe is captured and called on cleanup", () => {
+  const src = read("../src/lib/native/query-persistence.js");
+  assert.ok(src.includes("const [stopPersistence, restorePromise]"), "unsubscribe must not be discarded");
+  assert.ok(src.includes("stopPersistence?.()"), "cleanup must stop the persister subscription");
+});
+
 // ── Runtime wiring ──────────────────────────────────────────────────────
 test("native runtime wires persistence, lifecycle and push-tap routing", () => {
   const runtime = read("../src/native/app/NativeRuntime.jsx");

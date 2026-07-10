@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { queryClientInstance } from "@/lib/query-client";
 import { initNativeLifecycle } from "@/lib/native/app-lifecycle";
@@ -12,7 +12,12 @@ import { resolvePushRoute } from "@/lib/native/push-routing";
  * exact screen a notification is about.
  */
 export default function NativeRuntime() {
+  // Under BrowserRouter, `navigate` changes identity on every navigation;
+  // Capacitor listeners must register once per mount, so handlers read the
+  // latest navigate via a ref instead of re-registering on every nav.
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
     let persistence = null;
@@ -35,11 +40,11 @@ export default function NativeRuntime() {
     const removePushListeners = addPushListeners({
       onActioned: (action) => {
         const route = resolvePushRoute(action?.notification?.data);
-        navigate(route);
+        navigateRef.current(route);
       },
     });
     return removePushListeners;
-  }, [navigate]);
+  }, []);
 
   return null;
 }

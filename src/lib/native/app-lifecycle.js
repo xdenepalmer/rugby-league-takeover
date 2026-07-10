@@ -18,12 +18,18 @@ export function initNativeLifecycle(queryClient) {
   import("@capacitor/app")
     .then(async ({ App }) => {
       if (cancelled) return;
-      listener = await App.addListener("appStateChange", ({ isActive }) => {
+      const handle = await App.addListener("appStateChange", ({ isActive }) => {
         if (!isActive) return;
         for (const key of FOREGROUND_REFRESH_KEYS) {
           queryClient.invalidateQueries({ queryKey: key });
         }
       });
+      if (cancelled) {
+        // Cleanup ran while addListener was in flight — don't orphan it.
+        handle.remove().catch(() => {});
+        return;
+      }
+      listener = handle;
     })
     .catch(() => {});
 

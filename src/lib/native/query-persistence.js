@@ -64,7 +64,7 @@ export function initNativeQueryPersistence(queryClient) {
     throttleTime: 2000,
   });
 
-  const [, restorePromise] = persistQueryClient({
+  const [stopPersistence, restorePromise] = persistQueryClient({
     queryClient,
     persister,
     maxAge: QUERY_CACHE_MAX_AGE_MS,
@@ -87,6 +87,9 @@ export function initNativeQueryPersistence(queryClient) {
 
   return {
     restorePromise,
-    cleanup: () => authSub?.subscription?.unsubscribe?.(),
+    cleanup: () => {
+      stopPersistence?.();
+      authSub?.subscription?.unsubscribe?.();
+    },
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { isNativeApp } from "@/lib/native/native-env";
 import { initDeepLinks, mapUrlToRoute } from "@/lib/native/deep-links";
@@ -9,7 +9,13 @@ import { classifyHref, openExternalUrl, openSystemUrl } from "@/lib/native/open-
  * nothing on the web. Must be mounted inside the Router (deep links navigate).
  */
 export default function NativeAppBootstrap() {
+  // Under BrowserRouter, `navigate` changes identity on every navigation.
+  // Startup wiring (status bar, splash, deep links, click interceptor) must
+  // run once per mount, so the effect reads the latest navigate via a ref
+  // instead of depending on it.
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
     if (!isNativeApp()) return undefined;
@@ -34,7 +40,7 @@ export default function NativeAppBootstrap() {
       .then(({ SplashScreen }) => SplashScreen.hide())
       .catch(() => {});
 
-    const removeDeepLinks = initDeepLinks(navigate);
+    const removeDeepLinks = initDeepLinks((route) => navigateRef.current(route));
 
     // Inside the shell: absolute http(s) links (ticket vendors, sponsor sites,
     // user-authored forum links) must open in the system browser sheet,
@@ -51,7 +57,7 @@ export default function NativeAppBootstrap() {
         const route = mapUrlToRoute(href);
         event.preventDefault();
         if (route) {
-          navigate(route);
+          navigateRef.current(route);
         } else {
           openExternalUrl(href);
         }
@@ -67,8 +73,8 @@ export default function NativeAppBootstrap() {
       removeDeepLinks();
       document.removeEventListener("click", handleClick, true);
     };
-    // navigate identity is stable in react-router; run once per mount.
-  }, [navigate]);
+    // Run once per mount — navigation goes through navigateRef.
+  }, []);
 
   return null;
 }
