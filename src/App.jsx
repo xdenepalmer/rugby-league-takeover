@@ -11,6 +11,8 @@ import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import NativeAppBootstrap from '@/components/NativeAppBootstrap';
+import { isNativeApp } from '@/lib/native/native-env';
+import { THEME_ACCENTS } from '@/lib/theme-accents';
 
 // Lazy-loaded pages
 const Home = lazy(() => import("./pages/Home"));
@@ -30,6 +32,10 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const DeferredToaster = lazy(() => import("@/components/ui/toaster").then((module) => ({ default: module.Toaster })));
 const InstallAppPrompt = lazy(() => import("@/components/InstallAppPrompt"));
 const PwaUpdatePrompt = lazy(() => import("@/components/PwaUpdatePrompt"));
+// The native iOS shell renders its own route tree (five-tab app shell,
+// native screens). Lazy so the web bundle never fetches native-only chunks —
+// the element only renders when Capacitor injected isNativePlatform().
+const NativeAppRoutes = lazy(() => import("@/native/app/NativeAppRoutes.jsx"));
 
 // Sleek, theme-responsive loading spinner for route chunk loading
 const LoadingFallback = () => (
@@ -64,6 +70,18 @@ const AuthenticatedApp = () => {
     return <UserNotRegisteredError />;
   }
 
+  // Platform presentation split: same backend, auth and query cache — the
+  // native shell gets an app-grade route tree, the web keeps this one
+  // byte-for-byte. isNativeApp() is stable for the app's lifetime (the
+  // Capacitor bridge is injected before any script runs).
+  if (isNativeApp()) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <NativeAppRoutes />
+      </Suspense>
+    );
+  }
+
   // Render the main app with route code-splitting suspense
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -92,13 +110,9 @@ const AuthenticatedApp = () => {
 };
 
 
-const themeConfigs = {
-  sincity: { primary: "15 95% 55%", foreground: "0 0% 100%" },
-  flamingo: { primary: "330 95% 60%", foreground: "0 0% 100%" },
-  highroller: { primary: "280 80% 55%", foreground: "0 0% 100%" },
-  emerald: { primary: "140 75% 45%", foreground: "0 0% 100%" },
-  jackpot: { primary: "45 93% 47%", foreground: "0 0% 0%" },
-};
+// Accent registry lives in src/lib/theme-accents.js (single source shared
+// with the native Takeover sheet's picker, which dispatches rlt_theme_change).
+const themeConfigs = THEME_ACCENTS;
 
 function App() {
   const [showDeferredUi, setShowDeferredUi] = useState(false);
@@ -155,7 +169,8 @@ function App() {
             that bypass the CSS reduced-motion reset, so this is required. */}
         <MotionConfig reducedMotion="user">
           <Router>
-            <ScrollToTop />
+            {/* Web-only: the native shell has its own per-tab scroll memory. */}
+            {!isNativeApp() && <ScrollToTop />}
             <NativeAppBootstrap />
             <AuthenticatedApp />
             {showDeferredUi && (

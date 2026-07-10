@@ -23,6 +23,10 @@ export function mediumImpact() {
   return withHaptics(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Medium }));
 }
 
+export function heavyImpact() {
+  return withHaptics(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Heavy }));
+}
+
 export function successImpact() {
   return withHaptics(({ Haptics, NotificationType }) =>
     Haptics.notification({ type: NotificationType.Success })
