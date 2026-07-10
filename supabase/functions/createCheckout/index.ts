@@ -256,8 +256,13 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       customer_email: resolvedEmail,
-      success_url: `${origin}/store?success=true`,
-      cancel_url: `${origin}/store?cancelled=true`,
+      // Canonical return routes (valid on web AND in the app via universal
+      // links). {CHECKOUT_SESSION_ID} is substituted by Stripe and lets the
+      // return screen verify the session server-side (verifyCheckoutReturn)
+      // instead of trusting the URL. The web tree aliases these back to the
+      // legacy /store?success banner flow.
+      success_url: `${origin}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/store/checkout/cancel`,
       line_items: allStripeLineItems,
       phone_number_collection: { enabled: true },
       // Domestic AU only — matches the AusPost rate calc, which only quotes
