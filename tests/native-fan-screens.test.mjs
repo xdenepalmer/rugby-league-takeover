@@ -151,12 +151,55 @@ test("zoom clamp + pinch distance + prefetch neighbours", () => {
 test("native aliases normalize legacy query-param URLs", () => {
   assert.equal(nativeAliasFor({ pathname: "/forum", search: "?thread=abc" }), "/forum/thread/abc");
   assert.equal(nativeAliasFor({ pathname: "/forum", search: "" }), null);
+  assert.equal(nativeAliasFor({ pathname: "/store", search: "?product=p1" }), "/store/product/p1");
+  assert.equal(nativeAliasFor({ pathname: "/store", search: "?success=true" }), null, "checkout params are not aliases");
   assert.equal(nativeAliasFor({ pathname: "/account", search: "?tab=orders" }), "/account/orders");
   assert.equal(nativeAliasFor({ pathname: "/account", search: "?tab=fanhub" }), null, "hub tab stays on the hub");
   assert.equal(nativeAliasFor({ pathname: "/account", search: "?tab=bogus" }), null);
   for (const route of Object.values(ACCOUNT_TAB_ROUTES)) {
     assert.ok(route.startsWith("/account"), `${route} under /account`);
   }
+});
+
+test("alias resolution is centralized in the shell (one live implementation)", () => {
+  const shell = read("../src/native/app/NativePublicShell.jsx");
+  assert.ok(shell.includes("nativeAliasFor"), "NativePublicShell resolves aliases at runtime");
+  const forum = read("../src/native/screens/forum/NativeForumScreen.jsx");
+  assert.ok(!forum.includes('get("thread")'), "forum screen has no inline alias effect");
+  const account = read("../src/native/screens/account/NativeAccountScreen.jsx");
+  assert.ok(!account.includes('get("tab")'), "account screen has no inline alias effect");
+});
+
+// ── Native auth escape hatch ────────────────────────────────────────────
+test("auth screens carry a native close affordance back to home", () => {
+  const routes = read("../src/native/app/NativeAppRoutes.jsx");
+  for (const page of ["<Login />", "<Register />", "<ForgotPassword />", "<ResetPassword />"]) {
+    assert.ok(routes.includes(`<NativeAuthFrame>${page}</NativeAuthFrame>`), `${page} wrapped in NativeAuthFrame`);
+  }
+  const frame = read("../src/native/components/NativeAuthFrame.jsx");
+  assert.ok(frame.includes('navigate("/")'), "close returns to the home tab");
+  assert.ok(frame.includes("aria-label"), "close affordance is labelled");
+});
+
+// ── News deep-link parity ───────────────────────────────────────────────
+test("article screen falls back to a by-id fetch like the web page", () => {
+  const screen = read("../src/native/screens/news/NativeArticleScreen.jsx");
+  assert.ok(screen.includes("NewsArticle.get(id)"), "by-id fetch for articles beyond the newest-50 list");
+  assert.ok(screen.includes("!listArticle"), "by-id fetch only runs when the list misses");
+});
+
+// ── Notification links + reply titles ───────────────────────────────────
+test("notification taps only navigate canonical-host links", () => {
+  const screen = read("../src/native/screens/account/NativeNotificationsScreen.jsx");
+  assert.ok(screen.includes("mapUrlToRoute"), "same host policy as universal links");
+  assert.ok(!screen.includes("url.pathname"), "no raw pathname navigation for foreign URLs");
+});
+
+test("native replies carry thread context in the title (web parity)", () => {
+  const thread = read("../src/native/screens/forum/NativeThreadScreen.jsx");
+  assert.ok(thread.includes('`Re: ${thread.title || "Discussion Thread"}`'), "Re: <thread title> like Forum.jsx");
+  const mod = read("../src/native/admin/workflows/NativeModerationWorkflow.jsx");
+  assert.ok(mod.includes('/^(Reply$|Re: )/'), "moderation hides both native and web reply titles");
 });
 
 // ── Route/source contracts ──────────────────────────────────────────────

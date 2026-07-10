@@ -74,7 +74,7 @@ export default function NativeNewsScreen() {
 
   const visible = categoryFilter === "All" ? articles : articles.filter((a) => a.category === categoryFilter);
   const [lead, ...rest] = visible;
-  const { visible: windowedRest, sentinelRef, done } = useWindowedList(rest, { initial: 10, step: 10 });
+  const { visible: windowedRest, sentinelRef, done } = useWindowedList(rest, { initial: 10, step: 10, restoreKey: "news-feed" });
   const savedIds = useMemo(() => new Set(getSavedArticleIds()), []);
   const offline = !isLoading && fetched.length === 0 && articles.length > 0;
 

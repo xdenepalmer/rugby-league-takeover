@@ -9,9 +9,20 @@ import { tabForPath, tabRoot } from "../app/native-tabs.js";
 
 export const TAB_MEMORY_STORAGE_KEY = "rlt_native_tab_memory";
 
+/**
+ * Transient locations a tab must never restore to: checkout returns (pressing
+ * Store must not reopen a stale confirmation) and auth flows.
+ */
+const TRANSIENT_TAB_PATHS = [
+  /^\/store\/checkout(\/|$)/,
+  /^\/(login|register|forgot-password|reset-password)(\/|$)/,
+];
+
 /** Record `path` as the last location owned by its tab. Returns new memory. */
 export function rememberTabPath(memory, path) {
-  const owner = tabForPath(typeof path === "string" ? path.split("?")[0] : path);
+  const bare = typeof path === "string" ? path.split("?")[0] : "";
+  if (TRANSIENT_TAB_PATHS.some((re) => re.test(bare))) return memory || {};
+  const owner = tabForPath(bare);
   if (!owner) return memory || {};
   return { ...(memory || {}), [owner]: path };
 }

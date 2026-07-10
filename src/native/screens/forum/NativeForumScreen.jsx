@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MessageSquare, PenSquare, Search, Dice5, ChevronDown } from "lucide-react";
 import PullToRefresh from "@/components/PullToRefresh";
 import UserAvatar from "@/components/forum/feed/UserAvatar";
@@ -82,14 +82,8 @@ function ThreadCard({ thread, avatarUrl, onOpen }) {
  */
 export default function NativeForumScreen() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  // Legacy alias: /forum?thread=<id> (old share links, notifications) →
-  // the real native thread route.
-  useEffect(() => {
-    const thread = searchParams.get("thread");
-    if (thread) navigate(`/forum/thread/${encodeURIComponent(thread)}`, { replace: true });
-  }, [searchParams, navigate]);
+  // Legacy /forum?thread= links are normalized by NativePublicShell via
+  // nativeAliasFor — no per-screen alias handling here.
 
   const { data: posts = [], isLoading } = useForumPosts();
   const { avatars } = useForumAvatars();
@@ -132,8 +126,10 @@ export default function NativeForumScreen() {
     return sortThreads(list, sort);
   }, [threads, category, search, sort]);
 
-  // Feeds can hold 100+ threads — render progressively instead of all at once.
-  const { visible: windowed, sentinelRef, done } = useWindowedList(visible, { initial: 12, step: 12 });
+  // Feeds can hold 100+ threads — render progressively instead of all at
+  // once. restoreKey re-seeds the window after a remount so scroll
+  // restoration has enough rendered rows to land on.
+  const { visible: windowed, sentinelRef, done } = useWindowedList(visible, { initial: 12, step: 12, restoreKey: "forum-feed" });
 
   return (
     <PullToRefresh queryKeys={[["forumPosts"], ["forumAvatars"]]}>

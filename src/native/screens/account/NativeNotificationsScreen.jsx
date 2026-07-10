@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BellOff, CheckCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { mapUrlToRoute } from "@/lib/native/deep-links";
 import { useNotifications } from "@/hooks/data/use-fan-data";
 import { timeAgo } from "@/components/forum/feed/forumHelpers";
 import { emitHaptic } from "@/lib/native/haptic-events";
@@ -38,12 +39,11 @@ export default function NativeNotificationsScreen() {
     emitHaptic("tab.select");
     if (notification.is_read !== true) markRead.mutate(notification.id);
     if (notification.link) {
-      try {
-        const url = new URL(notification.link, window.location.origin);
-        navigate(`${url.pathname}${url.search}`);
-      } catch {
-        // Malformed link — stay put.
-      }
+      // Same host policy as universal links: only relative/canonical-host
+      // links become router navigations; foreign URLs are ignored rather
+      // than navigating the shell to PageNotFound.
+      const route = mapUrlToRoute(notification.link);
+      if (route) navigate(route);
     }
   };
 

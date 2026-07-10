@@ -10,6 +10,7 @@ import NativeTabBar from "./NativeTabBar.jsx";
 import NativeMoreSheet from "./NativeMoreSheet.jsx";
 import NativeScrollMemory from "../navigation/NativeScrollMemory.jsx";
 import { isTabRootPath } from "./native-tabs.js";
+import { nativeAliasFor } from "../navigation/native-aliases.js";
 import {
   loadTabMemory,
   saveTabMemory,
@@ -57,6 +58,13 @@ export default function NativePublicShell() {
   const currentPath = `${location.pathname}${location.search}`;
 
   useIdleTabPrefetch();
+
+  // Legacy query-param URLs (share links, notifications, web deep links)
+  // normalize onto the native stack's real routes — one central resolver.
+  const alias = nativeAliasFor(location);
+  useEffect(() => {
+    if (alias) navigate(alias, { replace: true });
+  }, [alias, navigate]);
 
   // Record every visited location against its owning tab.
   useEffect(() => {

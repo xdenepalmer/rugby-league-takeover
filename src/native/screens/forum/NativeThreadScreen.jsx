@@ -129,7 +129,8 @@ export default function NativeThreadScreen() {
       author_name: guestName,
       category: thread.category || "General",
       parent_id: replyTo?.id || thread.id,
-      title: "Reply",
+      // Web parity (Forum.jsx): replies carry the thread context in the title.
+      title: `Re: ${thread.title || "Discussion Thread"}`,
     });
   };
 

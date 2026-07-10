@@ -6,6 +6,7 @@ import PageNotFound from "@/lib/PageNotFound";
 import NativePublicShell from "./NativePublicShell.jsx";
 import NativeRuntime from "./NativeRuntime.jsx";
 import NativeSubScreen from "../components/NativeSubScreen.jsx";
+import NativeAuthFrame from "../components/NativeAuthFrame.jsx";
 import NativeAccountSection from "../screens/account/NativeAccountSection.jsx";
 
 // Native fan screens (lazy — each is its own chunk fetched inside the shell).
@@ -92,11 +93,12 @@ export default function NativeAppRoutes() {
         />
       </Route>
 
-      {/* Full-screen (no tab bar): auth flows and admin. */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Full-screen (no tab bar): auth flows and admin. Auth screens get a
+          native Close affordance so signed-out guests are never trapped. */}
+      <Route path="/login" element={<NativeAuthFrame><Login /></NativeAuthFrame>} />
+      <Route path="/register" element={<NativeAuthFrame><Register /></NativeAuthFrame>} />
+      <Route path="/forgot-password" element={<NativeAuthFrame><ForgotPassword /></NativeAuthFrame>} />
+      <Route path="/reset-password" element={<NativeAuthFrame><ResetPassword /></NativeAuthFrame>} />
       <Route path="/admin/*" element={<RequireAdmin><NativeAdminRoutes /></RequireAdmin>} />
       <Route path="*" element={<PageNotFound />} />
       </Routes>

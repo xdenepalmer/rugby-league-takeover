@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Share2, Bookmark, BookmarkCheck, ALargeSmall, WifiOff } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
 import ArticleReader from "@/components/news/ArticleReader";
 import NativeTopBar from "../../components/NativeTopBar.jsx";
 import { NativeSkeleton, NativeEmptyState } from "../../components/NativePrimitives.jsx";
@@ -46,13 +48,24 @@ export default function NativeArticleScreen() {
   const { data: articles = [], isLoading, isError } = useNewsArticles();
 
   // Live list → cached list (react-query) → bounded offline cache.
-  const article = useMemo(() => {
+  const listArticle = useMemo(() => {
     const live = findArticle(articles, id);
     if (live) return live;
     const cachedList = queryClient.getQueryData(["news"]);
     return findArticle(cachedList, id) || findCachedArticle(id);
   }, [articles, id, queryClient]);
 
+  // Deep-link parity with the web NewsArticle page: articles older than the
+  // newest-50 list still resolve via a by-id fetch (push/universal links).
+  const { data: byIdArticle, isFetching: byIdFetching } = useQuery({
+    queryKey: ["newsArticle", id],
+    queryFn: () => base44.entities.NewsArticle.get(id),
+    enabled: appParams.hasBase44Config && !!id && !isLoading && !listArticle,
+    retry: 1,
+  });
+
+  const article = listArticle || byIdArticle || null;
+  const loading = (isLoading || byIdFetching) && !article;
   const offlineOnly = !isLoading && !findArticle(articles, id) && !!article;
   const related = useMemo(() => relatedArticles(articles, article), [articles, article]);
   const [saved, setSaved] = useState(() => isArticleSaved(id));
@@ -102,7 +115,7 @@ export default function NativeArticleScreen() {
       <NativeTopBar title="Article" fallback="/news" right={article ? actions : null} />
       {article && <ReadingProgress />}
 
-      {isLoading && !article && (
+      {loading && (
         <div className="space-y-3 px-4 pt-4">
           <NativeSkeleton className="h-48 w-full" />
           <NativeSkeleton className="h-6 w-3/4" />
@@ -111,7 +124,7 @@ export default function NativeArticleScreen() {
         </div>
       )}
 
-      {!isLoading && !article && (
+      {!loading && !article && (
         <div className="px-4 pt-8">
           <NativeEmptyState
             icon={WifiOff}

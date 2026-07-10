@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Bell,
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useNotifications } from "@/hooks/data/use-fan-data";
-import { ACCOUNT_TAB_ROUTES } from "../../navigation/native-aliases.js";
 import { NativeListRow } from "../../components/NativePrimitives.jsx";
 import { emitHaptic } from "@/lib/native/haptic-events";
 import { hideBrokenImage } from "@/lib/img-fallback";
@@ -24,22 +22,13 @@ import { hideBrokenImage } from "@/lib/img-fallback";
  * Native Account hub: profile summary + list/detail navigation into the
  * existing account sections (each a full native sub-screen), notification
  * centre, gated Admin entry, sign out. Legacy /account?tab= links are
- * normalized onto the child routes.
+ * normalized by NativePublicShell via nativeAliasFor.
  */
 export default function NativeAccountScreen() {
   const navigate = useNavigate();
   const { user, isAdmin, logout } = useAuth();
-  const [searchParams] = useSearchParams();
   const { data: notifications = [] } = useNotifications(user?.id);
   const unread = notifications.filter((n) => n.is_read !== true).length;
-
-  // Legacy alias: /account?tab=orders → /account/orders
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab && ACCOUNT_TAB_ROUTES[tab] && ACCOUNT_TAB_ROUTES[tab] !== "/account") {
-      navigate(ACCOUNT_TAB_ROUTES[tab], { replace: true });
-    }
-  }, [searchParams, navigate]);
 
   const go = (to) => () => {
     emitHaptic("tab.select");

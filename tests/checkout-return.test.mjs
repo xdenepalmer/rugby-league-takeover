@@ -104,6 +104,15 @@ test("native return screen never trusts the URL", () => {
   assert.equal(clears, 1, "a single, guarded cart-clear call site");
 });
 
+test("a missing session id is deploy skew, not a failure", () => {
+  const screen = read("../src/native/screens/store/NativeCheckoutReturnScreen.jsx");
+  assert.ok(screen.includes("confirming_offline"), "soft state exists for returns without a session id");
+  const missingIdx = screen.indexOf("if (!sessionId)");
+  const invalidIdx = screen.indexOf("if (!isValidStripeSessionId(sessionId))");
+  assert.ok(missingIdx > -1 && invalidIdx > -1 && missingIdx < invalidIdx,
+    "missing session id (old createCheckout deploy) is checked before invalid → soft copy, never red");
+});
+
 test("web keeps its legacy banner flow via the alias routes", () => {
   const app = read("../src/App.jsx");
   assert.ok(app.includes('path="/store/checkout/success"'));

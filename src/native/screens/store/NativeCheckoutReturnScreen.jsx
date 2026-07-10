@@ -49,6 +49,15 @@ const COPY = {
     title: "We couldn't verify this payment",
     body: "This link didn't match a checkout we can confirm. If you completed payment, your order will still arrive via Stripe's confirmation — check your order history or email receipt. Your cart has not been changed.",
   },
+  // Deploy skew: an older createCheckout deployment returns without a
+  // session_id at all. That's not a failure signal — the webhook still
+  // confirms the order — so show a soft "confirming" state, never red.
+  confirming_offline: {
+    icon: Clock3,
+    tone: "text-amber-400",
+    title: "Order confirming",
+    body: "Your payment is being confirmed by Stripe. Check My Orders in a moment — the order appears there as soon as it's confirmed. Your cart has not been changed.",
+  },
 };
 
 /**
@@ -76,6 +85,13 @@ export default function NativeCheckoutReturnScreen({ status }) {
 
   useEffect(() => {
     if (cancelled) return undefined;
+    if (!sessionId) {
+      // No session id at all (older createCheckout still deployed): the
+      // webhook governs — soft state, refresh orders, never a red failure.
+      queryClient.invalidateQueries({ queryKey: ["myOrders"] });
+      setState("confirming_offline");
+      return undefined;
+    }
     if (!isValidStripeSessionId(sessionId)) {
       setState("unverified");
       return undefined;
@@ -142,7 +158,7 @@ export default function NativeCheckoutReturnScreen({ status }) {
         <p className="pt-2 text-sm text-muted-foreground">{copy.body}</p>
         {state !== "confirming" && (
           <div className="grid w-full gap-2 pt-6">
-            {(state === "confirmed" || state === "pending" || state === "unverified") && (
+            {(state === "confirmed" || state === "pending" || state === "unverified" || state === "confirming_offline") && (
               <Link
                 to="/account/orders"
                 className="ios-pressable flex min-h-12 items-center justify-center bg-primary text-sm font-black uppercase tracking-widest text-primary-foreground"

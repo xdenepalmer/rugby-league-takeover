@@ -99,6 +99,16 @@ test("window limit grows by step and clamps to total", () => {
   assert.equal(nextWindowLimit(NaN, 12, 100), 0);
 });
 
+test("windowed lists re-seed from restoreKey so scroll restoration can land", () => {
+  const hook = read("../src/hooks/use-windowed-list.js");
+  assert.ok(hook.includes("restoreKey"), "restoreKey option exists");
+  assert.ok(hook.includes("windowMemory"), "deepest window remembered per key");
+  const forum = read("../src/native/screens/forum/NativeForumScreen.jsx");
+  assert.ok(forum.includes('restoreKey: "forum-feed"'), "forum feed restores its window");
+  const news = read("../src/native/screens/news/NativeNewsScreen.jsx");
+  assert.ok(news.includes('restoreKey: "news-feed"'), "news feed restores its window");
+});
+
 // ── Scroll memory persistence is fail-safe in non-browser contexts ──────
 test("scroll memory works without sessionStorage", () => {
   clearScrollMemory();

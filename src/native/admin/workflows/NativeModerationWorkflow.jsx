@@ -193,7 +193,7 @@ export default function NativeModerationQueue() {
                   )}
                   {post.is_pinned === true && <Pin className="h-3.5 w-3.5 text-primary" aria-label="Pinned" />}
                 </div>
-                {post.title && post.title !== "Reply" && <p className="pt-2 text-sm font-bold leading-snug">{post.title}</p>}
+                {post.title && !/^(Reply$|Re: )/.test(post.title) && <p className="pt-2 text-sm font-bold leading-snug">{post.title}</p>}
                 <p className="line-clamp-3 pt-1 text-sm text-muted-foreground">{post.body}</p>
                 {removed && (
                   <p className="pt-1 text-[10px] uppercase tracking-widest text-red-300">

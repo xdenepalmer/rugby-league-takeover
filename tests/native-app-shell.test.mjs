@@ -100,6 +100,16 @@ test("rememberTabPath ignores paths no tab owns and keeps others", () => {
   assert.deepEqual(memory, { news: "/news" });
 });
 
+test("rememberTabPath skips transient checkout and auth locations", () => {
+  const before = { store: "/store/product/9" };
+  assert.deepEqual(rememberTabPath(before, "/store/checkout/success?session_id=cs_test_abc"), before, "pressing Store must not reopen a stale confirmation");
+  assert.deepEqual(rememberTabPath(before, "/store/checkout/cancel"), before);
+  for (const path of ["/login", "/register", "/forgot-password", "/reset-password"]) {
+    assert.deepEqual(rememberTabPath(before, path), before, `${path} never becomes a tab's memory`);
+  }
+  assert.deepEqual(rememberTabPath(before, "/store"), { store: "/store" }, "real store paths still remembered");
+});
+
 test("loadTabMemory tolerates corrupt storage", () => {
   const fake = { getItem: () => "{not json" };
   assert.deepEqual(loadTabMemory(fake), {});
