@@ -84,6 +84,18 @@ test("createCheckout builds canonical, verifiable return URLs", () => {
   assert.ok(fn.includes("buildOrderMetadata"), "order metadata retained for the webhook + verifier");
 });
 
+test("createCheckout fails closed when the session-id bind can't be written", () => {
+  const fn = read("../supabase/functions/createCheckout/index.ts");
+  // The update error must be inspected before the URL is returned.
+  assert.ok(/const \{ error: bindError \}[\s\S]*?\.update\(\{ stripe_session_id/.test(fn), "bind error is captured");
+  const bindIdx = fn.indexOf("bindError");
+  const returnUrlIdx = fn.indexOf("return json({ url: session.url })");
+  assert.ok(bindIdx > -1 && returnUrlIdx > -1 && bindIdx < returnUrlIdx, "bind error is checked before returning the URL");
+  // On failure the session is expired and no payable URL is returned.
+  assert.ok(fn.includes("sessions.expire(session.id)"), "unbound session is expired");
+  assert.ok(/if \(bindError\)[\s\S]*?return json\(\{ error:[\s\S]*?\}, 500\)/.test(fn), "bind failure returns an error, not a checkout URL");
+});
+
 test("verifyCheckoutReturn verifies server-side and leaks nothing", () => {
   const fn = read("../supabase/functions/verifyCheckoutReturn/index.ts");
   assert.ok(fn.includes("SESSION_ID_PATTERN"), "session id validated before any lookup");

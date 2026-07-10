@@ -275,7 +275,26 @@ Deno.serve(async (req) => {
       }),
     });
 
-    await svc.from('store_orders').update({ stripe_session_id: session.id }).eq('id', order.id);
+    // Bind the Stripe session to the order. This is a HARD precondition for a
+    // verifiable return: verifyCheckoutReturn looks the order up BY
+    // stripe_session_id, so an order missing this bind can never be confirmed
+    // on return. If the write fails, don't hand back a payable URL that leads
+    // to an unverifiable order — expire the session (best-effort) and fail
+    // closed. The webhook still can't create a phantom paid order because no
+    // one is ever sent to the (now-expiring) session.
+    const { error: bindError } = await svc
+      .from('store_orders')
+      .update({ stripe_session_id: session.id })
+      .eq('id', order.id);
+    if (bindError) {
+      console.error('createCheckout stripe_session_id bind failed:', bindError);
+      try {
+        await stripe.checkout.sessions.expire(session.id);
+      } catch (expireError) {
+        console.error('createCheckout could not expire the unbound session:', expireError);
+      }
+      return json({ error: 'Could not finalize checkout. Please try again.' }, 500);
+    }
     return json({ url: session.url });
   } catch (error) {
     console.error('createCheckout error:', error);
