@@ -56,6 +56,22 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
+      # App Store Connect rejects an IPA whose CFBundleVersion it has already
+      # seen ("attribute with a value that has already been used"). The Xcode
+      # project pins CURRENT_PROJECT_VERSION=1, so every upload after the
+      # first fails — bump the build number past the highest one TestFlight
+      # knows before archiving.
+      - name: Increment build number
+        script: |
+          set -e
+          cd ios/App
+          APP_APPLE_ID=$(app-store-connect list-apps \
+            --bundle-id-identifier "$BUNDLE_ID" \
+            --json | jq -r '.[0].id')
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" || echo "")
+          NEXT_BUILD_NUMBER=$(( ${LATEST_BUILD_NUMBER:-0} + 1 ))
+          echo "Latest TestFlight build: ${LATEST_BUILD_NUMBER:-none} → building $NEXT_BUILD_NUMBER"
+          agvtool new-version -all "$NEXT_BUILD_NUMBER"
       - name: Build signed IPA
         script: |
           xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
