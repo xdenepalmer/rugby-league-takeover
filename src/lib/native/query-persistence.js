@@ -1,15 +1,17 @@
 /**
- * Native-shell query-cache persistence: public content and the user's own
- * non-sensitive data survive an app relaunch, so tabs restore instantly
- * offline instead of flashing skeletons. Loaded ONLY via dynamic import
- * from the native branch — the web bundle never ships this module or the
- * @tanstack persist packages (vite manualChunks exempts them from the
- * preloaded vendor chunks).
+ * Native-shell query-cache persistence: public, non-PII content survives an
+ * app relaunch, so tabs restore instantly offline instead of flashing
+ * skeletons. Loaded ONLY via dynamic import from the native branch — the web
+ * bundle never ships this module or the @tanstack persist packages (vite
+ * manualChunks exempts them from the preloaded vendor chunks).
  *
  * Safety rules (locked by tests):
- * - denylisted query keys are never written to disk (admin PII: orders,
- *   registrations, users, bans, invites, admin attention counts; plus the
- *   admin users edge-fn response)
+ * - ALLOWLIST persistence: only public content roots are ever written to
+ *   disk. Everything else — forum posts (admin projections carry
+ *   ip_address/user_email/reported_by), notifications, orders, all
+ *   user-scoped and admin queries — is never persisted, secure by default.
+ * - mutations are never dehydrated (a paused offline mutation could carry
+ *   ban emails/IPs)
  * - bounded age, versioned buster (app build id) so a deploy invalidates
  * - the store is cleared on sign-out / account change
  * - corrupted payloads are dropped, never thrown
@@ -21,22 +23,30 @@ import { supabase } from "@/api/supabaseClient";
 export const QUERY_CACHE_STORAGE_KEY = "rlt_native_query_cache";
 export const QUERY_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 
-/** Query-key roots that must never be persisted (admin/PII surfaces). */
-export const PERSIST_DENYLIST = [
-  "orders",
-  "registrations",
-  "users",
-  "bans",
-  "invites",
-  "adminAttention",
-  "myOrders",
+/**
+ * Query-key roots that MAY be persisted: public, non-PII content only.
+ * Anything not on this list (forumPosts, testimonials, tippingEntries,
+ * notifications, orders, registrations, users, bans, invites,
+ * adminAttention, myOrders, myInterest, myPosts, fanRewardEvents, user, …)
+ * is never written to disk.
+ */
+export const PERSIST_ALLOWLIST = [
+  "siteSettings",
+  "news",
+  "products",
+  "gallery",
+  "matchups",
+  "events",
+  "teams",
+  "partners",
+  "faqs",
 ];
 
 /** Pure policy so tests can assert it without a QueryClient. */
 export function shouldPersistQuery(queryKey, state) {
-  if (state && state.status !== "success") return false;
+  if (!state || state.status !== "success") return false;
   const root = Array.isArray(queryKey) ? queryKey[0] : queryKey;
-  return !PERSIST_DENYLIST.includes(String(root));
+  return PERSIST_ALLOWLIST.includes(String(root));
 }
 
 export function clearPersistedQueryCache(storage) {
@@ -61,6 +71,9 @@ export function initNativeQueryPersistence(queryClient) {
     buster: String(import.meta.env.VITE_BUILD_ID || "dev"),
     dehydrateOptions: {
       shouldDehydrateQuery: (query) => shouldPersistQuery(query.queryKey, query.state),
+      // Never serialize mutations: a paused offline mutation (e.g. a ban)
+      // could carry emails/IPs to disk.
+      shouldDehydrateMutation: () => false,
     },
   });
 

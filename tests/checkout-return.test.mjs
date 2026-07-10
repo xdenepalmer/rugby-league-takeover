@@ -79,10 +79,14 @@ test("createCheckout builds canonical, verifiable return URLs", () => {
 
 test("verifyCheckoutReturn verifies server-side and leaks nothing", () => {
   const fn = read("../supabase/functions/verifyCheckoutReturn/index.ts");
-  assert.ok(fn.includes("SESSION_ID_PATTERN"), "session id validated before Stripe call");
+  assert.ok(fn.includes("SESSION_ID_PATTERN"), "session id validated before any lookup");
+  const dbBindIdx = fn.indexOf(".eq('stripe_session_id', id)");
+  const stripeIdx = fn.indexOf("sessions.retrieve");
+  assert.ok(dbBindIdx > -1, "order looked up by the exact session id (bind #1)");
+  assert.ok(stripeIdx > -1, "asks Stripe, not the client");
+  assert.ok(dbBindIdx < stripeIdx, "DB bind must precede the Stripe call (anti-amplification: unknown ids 404 for free)");
   assert.ok(fn.includes("rlt_app_id"), "foreign apps' sessions rejected");
-  assert.ok(fn.includes("stripe_session_id === id"), "order double-bound to the session");
-  assert.ok(fn.includes("sessions.retrieve"), "asks Stripe, not the client");
+  assert.ok(fn.includes("metadata?.order_id"), "session metadata must point back at the same order (bind #2)");
   assert.ok(!fn.includes("customer_email"), "no PII in the response");
   assert.ok(!fn.includes("update("), "read-only — the webhook stays the only writer");
 });

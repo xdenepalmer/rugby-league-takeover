@@ -156,7 +156,9 @@ test("native workflows have no hover-only affordances", () => {
 
 test("PII surfaces stay off the native persistence layer", () => {
   const persistence = read("../src/lib/native/query-persistence.js");
-  for (const key of ["orders", "registrations", "bans"]) {
-    assert.ok(persistence.includes(`"${key}"`), `${key} denylisted`);
+  const allowMatch = persistence.match(/export const PERSIST_ALLOWLIST = \[([\s\S]*?)\]/);
+  assert.ok(allowMatch, "persistence must be allowlist-based");
+  for (const key of ["orders", "registrations", "bans", "users", "invites", "adminAttention"]) {
+    assert.ok(!allowMatch[1].includes(`"${key}"`), `${key} must not be allowlisted`);
   }
 });

@@ -33,8 +33,14 @@ alter table public.user_push_tokens enable row level security;
 create policy "push_tokens_select_own" on public.user_push_tokens for select
   using ((select public.is_admin()) or user_id = coalesce((select public.current_profile_id()), ''));
 
+-- Insert requires a resolved profile: anonymous callers (current_profile_id()
+-- NULL) must not be able to insert rows with user_id = '' via a coalesce
+-- fallback.
 create policy "push_tokens_insert_own" on public.user_push_tokens for insert
-  with check (user_id = coalesce((select public.current_profile_id()), ''));
+  with check (
+    (select public.current_profile_id()) is not null
+    and user_id = (select public.current_profile_id())
+  );
 
 create policy "push_tokens_update_own" on public.user_push_tokens for update
   using ((select public.is_admin()) or user_id = coalesce((select public.current_profile_id()), ''))

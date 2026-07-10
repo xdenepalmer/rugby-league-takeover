@@ -33,12 +33,20 @@ test("malformed or hostile push payloads fall back to the notification centre", 
 });
 
 // ── Query-cache persistence policy ──────────────────────────────────────
-test("persistence denylist protects admin/PII surfaces", async () => {
+test("persistence allowlist admits only public, non-PII content roots", async () => {
   const src = read("../src/lib/native/query-persistence.js");
-  for (const key of ["orders", "registrations", "users", "bans", "invites", "adminAttention", "myOrders"]) {
-    assert.ok(src.includes(`"${key}"`), `denylist must include ${key}`);
+  for (const key of ["siteSettings", "news", "products", "gallery", "matchups", "events", "teams", "partners", "faqs"]) {
+    assert.ok(src.includes(`"${key}"`), `allowlist must include ${key}`);
   }
-  assert.ok(src.includes("shouldDehydrateQuery"), "denylist must be enforced at dehydrate time");
+  assert.ok(!src.includes("PERSIST_DENYLIST"), "denylist model must be gone — allowlist is the policy");
+  for (const key of ["forumPosts", "testimonials", "tippingEntries", "notifications", "orders"]) {
+    assert.ok(
+      !new RegExp(`PERSIST_ALLOWLIST[\\s\\S]*?"${key}"[\\s\\S]*?\\];`).test(src),
+      `${key} must never be allowlisted (PII/admin projections)`
+    );
+  }
+  assert.ok(src.includes("shouldDehydrateQuery"), "allowlist must be enforced at dehydrate time");
+  assert.ok(src.includes("shouldDehydrateMutation"), "mutations must never dehydrate");
   assert.ok(src.includes("SIGNED_OUT"), "sign-out must clear the persisted cache");
   assert.ok(src.includes("maxAge"), "persistence must be age-bounded");
   assert.ok(src.includes("buster"), "persistence must be version-busted");
@@ -50,20 +58,32 @@ test("shouldPersistQuery policy (pure)", async () => {
   const src = read("../src/lib/native/query-persistence.js");
   const match = src.match(/export function shouldPersistQuery[\s\S]*?\n\}/);
   assert.ok(match, "shouldPersistQuery must exist");
-  const denyMatch = src.match(/export const PERSIST_DENYLIST = \[([\s\S]*?)\]/);
-  const denylist = denyMatch[1].split(",").map((s) => s.trim().replace(/"/g, "")).filter(Boolean);
+  const allowMatch = src.match(/export const PERSIST_ALLOWLIST = \[([\s\S]*?)\]/);
+  assert.ok(allowMatch, "PERSIST_ALLOWLIST must exist");
+  const allowlist = allowMatch[1].split(",").map((s) => s.trim().replace(/"/g, "")).filter(Boolean);
   const shouldPersistQuery = new Function(
     "queryKey",
     "state",
-    `const PERSIST_DENYLIST = ${JSON.stringify(denylist)};
+    `const PERSIST_ALLOWLIST = ${JSON.stringify(allowlist)};
      ${match[0].replace("export function shouldPersistQuery", "function shouldPersistQuery")}
      return shouldPersistQuery(queryKey, state);`
   );
+  // Public content persists.
   assert.equal(shouldPersistQuery(["news"], { status: "success" }), true);
+  assert.equal(shouldPersistQuery(["products"], { status: "success" }), true);
+  // Admin/PII surfaces never persist.
   assert.equal(shouldPersistQuery(["orders"], { status: "success" }), false);
-  assert.equal(shouldPersistQuery(["notifications", "u1"], { status: "success" }), true);
-  assert.equal(shouldPersistQuery(["news"], { status: "error" }), false, "only successful queries persist");
+  assert.equal(shouldPersistQuery(["forumPosts"], { status: "success" }), false, "admin projections carry ip_address/user_email");
+  assert.equal(shouldPersistQuery(["testimonials"], { status: "success" }), false);
+  assert.equal(shouldPersistQuery(["tippingEntries"], { status: "success" }), false);
+  // User-scoped data never persists (secure by default: not allowlisted).
+  assert.equal(shouldPersistQuery(["notifications", "u1"], { status: "success" }), false);
   assert.equal(shouldPersistQuery(["myOrders", "a@b.c"], { status: "success" }), false);
+  assert.equal(shouldPersistQuery(["myInterest", "a@b.c"], { status: "success" }), false);
+  assert.equal(shouldPersistQuery(["user"], { status: "success" }), false);
+  // Only settled successes persist.
+  assert.equal(shouldPersistQuery(["news"], { status: "error" }), false, "only successful queries persist");
+  assert.equal(shouldPersistQuery(["news"], undefined), false, "no state means no persistence");
 });
 
 // ── Foreground refresh ──────────────────────────────────────────────────
