@@ -42,7 +42,16 @@ export function useCheckoutReturn({ status } = {}) {
   const timer = useRef(null);
 
   useEffect(() => {
-    if (cancelled) return undefined;
+    if (cancelled) {
+      setState("cancelled");
+      return undefined;
+    }
+    // Fresh verification run per (sessionId, cancelled): reset the retry
+    // budget and state so a second return processed by the same mounted SPA
+    // (e.g. another universal link) doesn't inherit a spent budget or briefly
+    // show the previous session's terminal state.
+    attempts.current = 0;
+    setState("confirming");
     if (!sessionId) {
       // No session id at all (older createCheckout still deployed): the
       // webhook governs — soft state, refresh orders, never a red failure.

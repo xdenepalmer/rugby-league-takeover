@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import AdSlot from "@/components/ads/AdSlot";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { 
   ShoppingCart, 
   ShoppingBag, 
@@ -602,6 +602,7 @@ function StoreSizeGuide() {
 /* ── Main Store Component ── */
 export default function Store() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [cart, setCart] = useState(() => {
     try {
       const stored = localStorage.getItem("rlt_cart");
@@ -922,6 +923,18 @@ export default function Store() {
   // which verifies with Stripe before confirming or clearing the cart). The
   // store page deliberately no longer trusts a `?success=true` URL to clear
   // the cart or claim a completed order — the URL proves nothing.
+  //
+  // Deploy-skew shim (same as the native shell's NativeStoreScreen): an OLDER
+  // createCheckout still returns paid customers to /store?success=true. Hand
+  // those returns to the verified page — with no session_id it shows the soft
+  // "Order confirming" state — instead of rendering the store with zero
+  // feedback, which reads as a failed payment and invites a re-purchase.
+  const legacySuccess = searchParams.get("success") === "true";
+  const legacyCancelled = searchParams.get("cancelled") === "true";
+  useEffect(() => {
+    if (legacySuccess) navigate("/store/checkout/success", { replace: true });
+    else if (legacyCancelled) navigate("/store/checkout/cancel", { replace: true });
+  }, [legacySuccess, legacyCancelled, navigate]);
 
   return (
     <main className="relative min-h-dvh bg-background px-5 pb-[calc(5rem+var(--safe-bottom))] pt-[calc(7.25rem+env(safe-area-inset-top,0px))] text-foreground md:px-8 overflow-hidden">

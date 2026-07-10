@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
+// Pure, platform-neutral refund validation shared with the native workflow
+// (rounds to cents first, requires ≥ $0.01, caps at the order total).
+import { validateRefundAmount } from "@/native/admin/workflows/workflow-helpers";
 
 const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded"];
 const paidLike = ["paid", "packing", "shipped", "completed"];
@@ -348,17 +351,14 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   // recorded amount must still be a real, positive figure no larger than what
   // the customer paid.
   const handleRefundConfirm = () => {
-    const amount = Number(refundAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setRefundError("Enter a refund amount greater than $0.");
+    // Shared validator (same one the native workflow uses) so the rules can
+    // never drift between surfaces.
+    const check = validateRefundAmount(refundAmount, order.total_aud);
+    if (!check.ok) {
+      setRefundError(check.error);
       return;
     }
-    const total = Number(order.total_aud);
-    if (Number.isFinite(total) && total > 0 && amount > total + 0.005) {
-      setRefundError(`Refund can't exceed the order total ($${total.toFixed(2)} AUD).`);
-      return;
-    }
-    const recorded = Number(amount.toFixed(2));
+    const recorded = check.amount;
     const existingTimeline = [...timeline];
     existingTimeline.push(makeTimelineEntry(
       "Refund recorded",

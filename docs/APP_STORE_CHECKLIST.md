@@ -73,7 +73,7 @@ Routes (from `src/App.jsx`):
     Notes → app opens on the thread (after Associated Domains is live)
 12. Theme accents (Account → accent picker) still apply and persist
 
-## Native product (RLT-IOS-003 + corrections 003F–003M) — status
+## Native product (RLT-IOS-003 + corrections 003F–003O) — status
 
 - ✅ Distinct native shell: five fan tabs, Takeover sheet, no web chrome in-app
 - ✅ Native fan screens (Home dashboard, News reader `/news/:id`, Forum feed +
@@ -90,8 +90,9 @@ Routes (from `src/App.jsx`):
   authority; the URL-trusting ?success=true flow is gone; bind failures in
   createCheckout fail closed) — 🔧 DEPLOY `createCheckout` (changed) +
   `verifyCheckoutReturn` (new) to Supabase, then 🔧 device-verify the
-  universal-link return. Until deployed, returns land on the soft
-  "Order confirming" notice (never a false success).
+  universal-link return. Until deployed, legacy `/store?success=true`
+  returns redirect into the verified return page's soft "Order confirming"
+  state on both platforms (never a false success).
 - ⏳ Push: token registration code-complete — 🔧 apply `0009_user_push_tokens`
   migration; live registration unverified; NO delivery pipeline (RLT-IOS-004)
 - ⏳ Native Google OAuth (exact plan in `docs/NATIVE_ARCHITECTURE.md`) — Google

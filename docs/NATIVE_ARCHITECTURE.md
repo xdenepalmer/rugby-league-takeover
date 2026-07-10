@@ -1,6 +1,6 @@
 # Native iOS Product Architecture (RLT-IOS-003)
 
-_Last updated: 2026-07-10 · branch `rlt-ios-003-native-product` (incl. Architect corrections 003F–003H and adversarial-review corrections 003I–003M)_
+_Last updated: 2026-07-10 · correction branch `claude/rlt-ios-003-corrections-ozfpqg` (base `rlt-ios-003-native-product`; incl. Architect corrections 003F–003H, adversarial-review corrections 003I–003N, and checkout-authority corrections 003O)_
 
 The Capacitor shell no longer mirrors the website. Web/PWA and native iOS are
 **two presentation layers over one shared system**:
@@ -65,7 +65,7 @@ Chromium smoke harness) and flip the route tree mid-flight.
 | `/forum/thread/:id` | native thread screen | redirect → `/forum?thread=` |
 | `/store/product/:id` | native product screen | redirect → `/store?product=` (opens quick view) |
 | `/gallery?item=:id` | opens native viewer | opens web lightbox |
-| `/store/checkout/success·cancel` | native confirmation screens | redirect → `/store?success·cancelled` |
+| `/store/checkout/success·cancel` | native verified return screens | verified `CheckoutReturn` page (same shared hook) |
 | `/account/<section>` | native list/detail (`notifications`, `fanhub`, `orders`, `posts`, `achievements`, `leaderboard`, `profile`, `interest`, `security`) | `?tab=` (unchanged) |
 
 Aliases: native `/forum?thread=` → `/forum/thread/:id`; native
@@ -221,10 +221,12 @@ writer** of order state.
 
 **Web URL-trust is GONE (003O):** the old `/store?success=true` flow that
 cleared the cart and showed "Order Placed Successfully!" on URL arrival alone
-has been removed. `/store/checkout/success|cancel` now route to the verified
-web return page, and a bare `?success=true` (hand-typed, or the deploy window
-before the new `createCheckout` ships) shows only a soft amber "Order
-confirming" notice — no success claim, cart untouched.
+has been removed. `/store/checkout/success|cancel` route to the verified
+return pages on both platforms, and a legacy `/store?success=true` arrival
+(hand-typed, or the deploy window before the new `createCheckout` ships)
+REDIRECTS into the verified return page on both platforms — with no
+session_id that page shows the soft amber "Order confirming" state. No
+success claim, cart untouched, single verification pipeline.
 
 **Admin refunds are RECORDED, not charged (003O):** the web and native
 "Record Refund" actions write refund fields onto the order (validated:
@@ -340,7 +342,7 @@ app_store_ready: no
 
 `npm test` (220+) · `npm run lint` · `npm run typecheck` · `npm run build` ·
 `npx cap sync ios` — all green at each story commit (A–E, corrections F–H,
-and adversarial-review corrections I–M). Chromium smoke (iPhone viewport +
+adversarial-review corrections I–N, and checkout-authority corrections O). Chromium smoke (iPhone viewport +
 Capacitor stub): native Home/News/
 Forum/Store/Gallery/Login render the native shell (5 tabs, no Admin tab, one
 Takeover trigger), web Home/Login keep their layout (SiteNav + Google button

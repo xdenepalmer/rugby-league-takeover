@@ -150,8 +150,8 @@ and matches the site's anti-white-flash background.
   lands on the verification-gated native return screen, and
   `verifyCheckoutReturn` checks the session server-side (see "Checkout-return
   deployment" below — the edge functions still need deploying; until then
-  returns show the soft "Order confirming" notice, since the URL-trusting
-  success banner was removed in 003O). Orders are
+  legacy returns redirect into the verified page's soft "Order confirming"
+  state, since 003O removed the URL-trusting success banner). Orders are
   webhook-authoritative (`stripeWebhook`), so a missed redirect never loses
   an order.
 - **External links** (tickets, sponsors, user-posted links): a global
@@ -177,7 +177,7 @@ and matches the site's anti-white-flash background.
 npm run lint && npm run typecheck && npm test && npm run build && npx cap sync ios
 ```
 
-All of this runs on Linux/CI. 221 tests at time of writing; the new
+All of this runs on Linux/CI. 225 tests at time of writing; the new
 native-specific guards are covered by `tests/native-env.test.mjs`,
 `tests/native-guards.test.mjs`, `tests/capacitor-config.test.mjs`,
 `tests/native-shell-polish.test.mjs` (chunking, OAuth guard, link classification,
@@ -214,6 +214,7 @@ The authoritative checkout return needs two Supabase Edge Function deploys:
 `createCheckout` (changed: canonical session-id return URLs) and
 `verifyCheckoutReturn` (new: read-only server-side session verification).
 No new secrets. Until both are deployed, live checkouts still return to
-`/store?success=true`, which now shows only a soft "Order confirming" notice
-(003O removed the URL-trusting success banner and cart clear); the verified
-return screens are reached once the new `createCheckout` ships.
+`/store?success=true`, which redirects into the verified return page's soft
+"Order confirming" state on both platforms (003O removed the URL-trusting
+success banner and cart clear); full session verification kicks in once the
+new `createCheckout` ships a `session_id`.

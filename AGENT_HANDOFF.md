@@ -59,8 +59,9 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
   when the `stripe_session_id` bind can't persist (session expired, no URL
   returned); WEB and native returns both verify via the single shared
   `useCheckoutReturn` hook (the URL-trusting `?success=true` cart clear +
-  success banner are gone — a bare `?success=true` shows a soft "Order
-  confirming" notice); admin refunds are honestly labelled "Record Refund"
+  success banner are gone — a legacy `?success=true` arrival redirects into
+  the verified return page's soft "Order confirming" state on both
+  platforms); admin refunds are honestly labelled "Record Refund"
   (order fields only, amount validated ≤ total; the Stripe refund is issued
   separately in the dashboard).
 - **State:** gate green (tests · lint · typecheck · build · cap sync ios)
@@ -86,7 +87,8 @@ Antigravity must work through **`ui-ux-pro-max`** specifications and an **approv
   before any push work) and `0010_store_orders_session_index.sql`
   (stripe_session_id unique index — apply with/before the
   verifyCheckoutReturn deploy); finish Apple signing → Codemagic
-  `ios-capacitor` (now auto-increments the build number) → TestFlight;
+  `ios` workflow (unique CFBundleVersion via Codemagic's incrementing
+  $BUILD_NUMBER sed into CURRENT_PROJECT_VERSION) → TestFlight;
   device-verify universal links + checkout return + VoiceOver/Dynamic Type.
 - → **Deferred / follow-up stories:** RLT-IOS-004 (APNs send pipeline +
   PUSH2 shared-device token reassignment via SECURITY DEFINER upsert RPC +

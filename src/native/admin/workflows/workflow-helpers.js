@@ -140,16 +140,22 @@ export function buildOrderStatusPayload(order, newStatus, { actorEmail, tracking
  * than the customer actually paid. Returns { ok, amount, error }.
  */
 export function validateRefundAmount(rawAmount, orderTotalAud) {
-  const amount = Number(rawAmount);
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const raw = Number(rawAmount);
+  if (!Number.isFinite(raw)) {
+    return { ok: false, amount: null, error: "Enter a refund amount greater than $0." };
+  }
+  // Round to cents FIRST, then validate the value that would be recorded —
+  // otherwise 0.001 passes ">0" but records $0.00, and a sub-cent overshoot
+  // could round to a recorded amount above the total.
+  const amount = Number(raw.toFixed(2));
+  if (amount < 0.01) {
     return { ok: false, amount: null, error: "Enter a refund amount greater than $0." };
   }
   const total = Number(orderTotalAud);
-  // 0.005 tolerance so an exact full refund isn't rejected by float rounding.
-  if (Number.isFinite(total) && total > 0 && amount > total + 0.005) {
+  if (Number.isFinite(total) && total > 0 && amount > Number(total.toFixed(2))) {
     return { ok: false, amount: null, error: `Refund can't exceed the order total ($${total.toFixed(2)} AUD).` };
   }
-  return { ok: true, amount: Number(amount.toFixed(2)), error: null };
+  return { ok: true, amount, error: null };
 }
 
 /**

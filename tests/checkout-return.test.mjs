@@ -149,9 +149,15 @@ test("the web checkout return is verified, not a URL-trusting banner", () => {
   assert.ok(app.includes('element={<CheckoutReturn status="cancel" />}'), "cancel route renders the verified page");
   assert.ok(!app.includes('to="/store?success=true"'), "legacy URL-trust success alias removed");
 
-  // Store.jsx must no longer clear the cart or claim success from the URL.
+  // Store.jsx hands legacy deploy-skew returns (?success=true from an older
+  // createCheckout) to the verified pipeline instead of rendering silence —
+  // and never clears the cart or claims success from the URL itself.
   const store = read("../src/pages/Store.jsx");
-  assert.ok(!store.includes('searchParams.get("success")'), "store no longer reads a trusted success flag");
+  assert.ok(store.includes('navigate("/store/checkout/success"'), "legacy ?success=true redirects into the verified return page");
+  assert.ok(store.includes('navigate("/store/checkout/cancel"'), "legacy ?cancelled=true redirects into the verified cancel page");
   assert.ok(!store.includes("Order Placed Successfully"), "store no longer shows an unverified success banner");
   assert.ok(!store.includes('removeItem("rlt_cart")'), "store no longer clears the cart from the URL");
+  // Native mirrors the same shim (NativeStoreScreen) — one pipeline everywhere.
+  const nativeStore = read("../src/native/screens/store/NativeStoreScreen.jsx");
+  assert.ok(nativeStore.includes('navigate("/store/checkout/success"'), "native store redirects legacy returns too");
 });

@@ -258,9 +258,11 @@ Deno.serve(async (req) => {
       customer_email: resolvedEmail,
       // Canonical return routes (valid on web AND in the app via universal
       // links). {CHECKOUT_SESSION_ID} is substituted by Stripe and lets the
-      // return screen verify the session server-side (verifyCheckoutReturn)
-      // instead of trusting the URL. The web tree aliases these back to the
-      // legacy /store?success banner flow.
+      // return screens verify the session server-side (verifyCheckoutReturn)
+      // instead of trusting the URL. Both platforms render verified return
+      // screens at these paths (web: pages/CheckoutReturn; native:
+      // NativeCheckoutReturnScreen) — the legacy /store?success banner flow
+      // was removed in 003O.
       success_url: `${origin}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/store/checkout/cancel`,
       line_items: allStripeLineItems,
@@ -297,7 +299,11 @@ Deno.serve(async (req) => {
     }
     return json({ url: session.url });
   } catch (error) {
+    // Unexpected failures (DB insert, Stripe create) are logged server-side
+    // but never echoed to the client — raw Postgres/Stripe messages can leak
+    // schema and configuration details. Actionable client errors (stock,
+    // shipping, validation) are returned explicitly above with real statuses.
     console.error('createCheckout error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return json({ error: 'Checkout could not be started. Please try again.' }, 500);
   }
 });

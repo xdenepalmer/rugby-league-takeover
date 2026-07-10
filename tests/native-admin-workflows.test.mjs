@@ -130,6 +130,14 @@ test("refund amount is validated: positive and never over the order total", () =
   assert.equal(validateRefundAmount("", total).ok, false, "empty rejected");
   assert.equal(validateRefundAmount("200", total).ok, false, "over-total rejected");
   assert.match(validateRefundAmount("200", total).error, /can't exceed the order total/);
+  assert.equal(validateRefundAmount("1e3", total).ok, false, "scientific notation is a number — capped like any other");
+  // Rounding happens BEFORE validation: a sub-cent amount must not record $0.00.
+  assert.equal(validateRefundAmount("0.001", total).ok, false, "sub-cent rounds to $0.00 → rejected");
+  assert.equal(validateRefundAmount("0.004", total).ok, false, "rounds to $0.00 → rejected");
+  assert.deepEqual(validateRefundAmount("0.01", total), { ok: true, amount: 0.01, error: null }, "one cent is the floor");
+  // The RECORDED (rounded) amount can never exceed the total.
+  const nearTotal = validateRefundAmount("0.025", 0.02);
+  assert.ok(!nearTotal.ok || nearTotal.amount <= 0.02, "recorded amount never rounds above the total");
   // With no known total we still enforce positivity but can't cap.
   assert.equal(validateRefundAmount("9999", 0).ok, true, "no total → positivity only");
 });
@@ -141,10 +149,9 @@ test("both refund UIs are relabelled record-only and clarify Stripe is separate"
     assert.ok(/Record\s*[Rr]efund/.test(src), `${name} button is relabelled record-only`);
     assert.ok(!/Issue\s*[Rr]efund/.test(src), `${name} drops the misleading "Issue refund" wording`);
     assert.ok(/Stripe/.test(src) && /separately/i.test(src), `${name} states the Stripe refund is separate`);
+    // ONE shared validator on both surfaces — no inline duplicate to drift.
+    assert.ok(src.includes("validateRefundAmount"), `${name} validates via the shared helper`);
   }
-  // Web validates inline; native delegates to the shared helper — both cap.
-  assert.ok(/exceed the order total/.test(web), "web validates the amount against the order total");
-  assert.ok(native.includes("validateRefundAmount"), "native validates via the shared helper");
 });
 
 // ── Moderation: queues + payload parity ─────────────────────────────────

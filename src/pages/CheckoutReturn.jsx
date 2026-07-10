@@ -25,7 +25,7 @@ const COPY = {
     icon: XCircle,
     tone: "text-amber-400",
     title: "Checkout cancelled",
-    body: "No charge was made. Your cart is exactly as you left it whenever you're ready.",
+    body: "This checkout was closed before payment was completed, and your cart is exactly as you left it. If you did complete a payment, check your order history or email receipt.",
   },
   unverified: {
     icon: HelpCircle,
