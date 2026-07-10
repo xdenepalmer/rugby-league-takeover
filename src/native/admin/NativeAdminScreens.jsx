@@ -110,7 +110,10 @@ export function NativeAdminModuleScreen({ section }) {
   const allowed = (ADMIN_SECTION_MODULES[section] || []).includes(moduleId);
   const module = allowed ? ADMIN_MODULES[moduleId] : null;
   if (!module) return <Navigate to={hubPath} replace />;
-  const { title, Component } = module;
+  const { title, Component, selfChrome } = module;
+  // Native workflows (orders/moderation/registrations) ship their own top
+  // bar and layout — render them bare.
+  if (selfChrome) return <Component />;
   return (
     <div>
       <NativeTopBar title={title} fallback={hubPath} />

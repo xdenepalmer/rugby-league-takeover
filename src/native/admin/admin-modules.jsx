@@ -32,6 +32,11 @@ const CampaignCalendar = lazy(() => import("@/components/admin/CampaignCalendar"
 const AdRevenueTracker = lazy(() => import("@/components/admin/AdRevenueTracker"));
 const DataExporter = lazy(() => import("@/components/admin/DataExporter"));
 
+// True native workflows (003G) — these ship their own top bar/chrome.
+const NativeOrdersList = lazy(() => import("./workflows/NativeOrdersWorkflow.jsx"));
+const NativeModerationQueue = lazy(() => import("./workflows/NativeModerationWorkflow.jsx"));
+const NativeRegistrationsList = lazy(() => import("./workflows/NativeRegistrationsWorkflow.jsx"));
+
 const Fallback = () => <NativeSkeleton className="h-72 w-full" />;
 const wrap = (node) => <Suspense fallback={<Fallback />}>{node}</Suspense>;
 
@@ -73,10 +78,17 @@ function ProductsModule() {
   return wrap(<ProductsManager products={products} loading={isLoading} />);
 }
 function OrdersModule() {
+  return wrap(<NativeOrdersList />);
+}
+function ForumModule() {
+  return wrap(<NativeModerationQueue />);
+}
+/** Classic web managers, retained for capability escape hatches. */
+export function ClassicOrdersModule() {
   const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200) });
   return wrap(<OrdersManager orders={orders} />);
 }
-function ForumModule() {
+export function ClassicForumModule() {
   const { data: forumPosts = [] } = useQuery({ queryKey: ["forumPosts"], queryFn: () => base44.entities.ForumPost.list("-created_date", 200) });
   return wrap(<ForumManager posts={forumPosts} />);
 }
@@ -84,6 +96,9 @@ function UsersModule() {
   return wrap(<UsersManager />);
 }
 function RegistrationsModule() {
+  return wrap(<NativeRegistrationsList />);
+}
+export function ClassicRegistrationsModule() {
   const { data: registrations = [] } = useQuery({ queryKey: ["registrations"], queryFn: () => base44.entities.InterestRegistration.list("-created_date", 200) });
   return wrap(<RegistrationsTable registrations={registrations} />);
 }
@@ -137,10 +152,10 @@ export const ADMIN_MODULES = {
   partners: { title: "Partners", detail: "Partner logos and links", icon: "handshake", Component: PartnersModule },
   testimonials: { title: "Testimonials", detail: "Fan quotes, publish queue", icon: "quote", Component: TestimonialsModule },
   products: { title: "Products", detail: "Merch, pricing and stock", icon: "package", Component: ProductsModule },
-  orders: { title: "Orders", detail: "Fulfilment and tracking", icon: "shopping-bag", Component: OrdersModule },
-  forum: { title: "Forum Moderation", detail: "Pending, reported, removed", icon: "message-square", Component: ForumModule },
+  orders: { title: "Orders", detail: "Fulfilment and tracking", icon: "shopping-bag", Component: OrdersModule, selfChrome: true },
+  forum: { title: "Forum Moderation", detail: "Pending, reported, removed", icon: "message-square", Component: ForumModule, selfChrome: true },
   users: { title: "User Accounts", detail: "Roles and access", icon: "users", Component: UsersModule },
-  registrations: { title: "Registrations", detail: "Trip interest signups", icon: "user-check", Component: RegistrationsModule },
+  registrations: { title: "Registrations", detail: "Trip interest signups", icon: "user-check", Component: RegistrationsModule, selfChrome: true },
   invites: { title: "Invites", detail: "Invitations and handover", icon: "user-plus", Component: InvitesModule },
   bans: { title: "Bans", detail: "Email, IP and user blocks", icon: "ban", Component: BansModule },
   events: { title: "Events", detail: "Event content and tickets", icon: "calendar-days", Component: EventsModule },
