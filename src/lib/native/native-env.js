@@ -27,14 +27,28 @@ export function detectPlatform(capacitorGlobal) {
   }
 }
 
+// The platform cannot change mid-session, so the first answer is latched:
+// the whole app (route-tree selection included) must never flip trees at
+// runtime, even if something later redefines window.Capacitor (the
+// @capacitor/core web runtime replaces a pre-set global when a plugin
+// module first loads, which would otherwise re-answer "web").
+let cachedIsNative = null;
+let cachedPlatform = null;
+
 export function isNativeApp() {
+  if (cachedIsNative !== null) return cachedIsNative;
   if (typeof window === "undefined") return false;
-  return detectNativePlatform(window.Capacitor);
+  cachedIsNative = detectNativePlatform(window.Capacitor);
+  if (cachedIsNative) cachedPlatform = detectPlatform(window.Capacitor);
+  return cachedIsNative;
 }
 
 export function getPlatform() {
+  if (cachedPlatform !== null) return cachedPlatform;
   if (typeof window === "undefined") return "web";
-  return detectPlatform(window.Capacitor);
+  const platform = detectPlatform(window.Capacitor);
+  if (isNativeApp()) cachedPlatform = platform;
+  return platform;
 }
 
 export function isIos() {

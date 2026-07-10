@@ -72,3 +72,19 @@ Routes (from `src/App.jsx`):
 11. Deep link: open `https://rugbyleaguetakeover.com/forum?thread=<id>` from
     Notes → app opens on the thread (after Associated Domains is live)
 12. Theme accents (Account → accent picker) still apply and persist
+
+## Native product (RLT-IOS-003) — status
+
+- ✅ Distinct native shell: five fan tabs, Takeover sheet, no web chrome in-app
+- ✅ Native fan screens (Home dashboard, News reader `/news/:id`, Forum feed +
+  `/forum/thread/:id`, Store + `/store/product/:id` + cart, touch Gallery,
+  Account hub) and native admin shell (all 22 managers reachable)
+- ✅ Canonical share/deep-link routes valid on web AND native
+- ✅ Query-cache persistence with PII denylist; notification tap-routing map
+- ✅ Checkout return screens (webhook remains payment authority) — 🔧 device
+  verification once universal links are live
+- ⏳ Native Google OAuth (exact plan in `docs/NATIVE_ARCHITECTURE.md`) — Google
+  stays hidden in the shell until device-proven
+- ⏳ APNs delivery pipeline (RLT-IOS-004) — tokens register; nothing sends yet
+- 🔧 Screenshots for the store listing should be retaken from the NATIVE
+  screens once a signed build runs

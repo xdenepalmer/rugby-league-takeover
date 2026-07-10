@@ -10,6 +10,7 @@ A public, account-optional web app. Anonymous visitors can browse and (where all
 - **Supabase** (`@supabase/supabase-js`) for data (Postgres + RLS), auth, Edge Functions, and Storage — wrapped by the compat client in `src/api/base44Client.js` which preserves the original `base44.*` call surface.
 - **Stripe** hosted checkout (PCI SAQ A — no card data touches the app).
 - **PWA**: service worker (`public/sw.js`) + web manifest.
+- **Native iOS (Capacitor 8)**: a distinct native product — its own five-tab shell, native fan/admin screens and app-grade navigation over the same Supabase backend. See `docs/NATIVE_ARCHITECTURE.md`.
 - **Tests**: Node's built-in test runner (`node --test`). **Typecheck**: `tsc` against `jsconfig.json`. **Lint**: ESLint.
 
 ## 3. Local setup

@@ -162,3 +162,16 @@ fonts, AppDelegate hooks).
 - **Universal links not opening the app**: TEAMID still placeholder in the AASA
   file, Associated Domains capability missing, or Apple's CDN cache (can take
   up to a day; verify with `curl -s https://rugbyleaguetakeover.com/.well-known/apple-app-site-association`).
+
+## Native product architecture (RLT-IOS-003)
+
+The shell now renders its OWN route tree (`src/native/`) — five fan tabs,
+native detail routes, a native admin shell — while the web tree is untouched.
+Read `docs/NATIVE_ARCHITECTURE.md` before changing navigation, share URLs,
+caching or haptics; the architecture contracts are test-locked
+(`tests/native-*.test.mjs`).
+
+Codemagic now has two workflows:
+- `ios-capacitor` — full signed build + TestFlight publish (start manually).
+- `ios-build-verify` — validation gate + web build + `cap sync` + UNSIGNED
+  xcodebuild. No signing, no publishing; safe on any branch.
