@@ -1,103 +1,89 @@
 # Codemagic CI/CD — builds the Capacitor iOS app on Codemagic's macOS runners,
 # so no local Mac is needed (works from Windows).
 #
-# ── REFERENCE SIGNING TEMPLATE ────────────────────────────────────────────────
-# Every app in the account shares ONE distribution certificate. The RSA private
-# key lives once as the secured Codemagic variable CERTIFICATE_PRIVATE_KEY in the
-# 'appstore' variable group. Because all apps use the SAME key, fetch-signing
-# -files reuses the single existing certificate instead of minting a new one —
-# Apple caps distribution certs, so a key-per-app setup eventually wedges.
+# ── SHARED TEAM SIGNING (do not deviate) ──────────────────────────────────────
+# Every app in the Codemagic TEAM shares ONE Apple distribution certificate.
+# The RSA private key lives once as the secured variable CERTIFICATE_PRIVATE_KEY
+# in the team-level 'appstore' group. Because all apps sign with the SAME key,
+# `app-store-connect fetch-signing-files --create` REUSES the single existing
+# distribution certificate and only mints a new one if none matches that key —
+# Apple caps distribution certs at 3, so a key-per-app setup eventually wedges.
+# NEVER run `openssl genrsa` for a new app; reuse the shared key.
 #
-# To onboard a NEW app: copy the 'Set up code signing' step verbatim, set
-# BUNDLE_ID, attach the 'appstore' group, and reuse the App Store Connect API
-# key integration. NEVER run `openssl genrsa` for a new app — reuse the shared
-# key so the shared certificate is reused.
+# Two env groups, split strictly by purpose:
+#   • appstore   → shared signing ONLY (CERTIFICATE_PRIVATE_KEY). Nothing else.
+#   • rugby_env  → THIS app's own runtime config, never shared with other apps:
+#                    VITE_SUPABASE_URL          this app's Supabase project URL
+#                    VITE_SUPABASE_ANON_KEY     publishable (RLS-guarded) key
+#                    VITE_RAPIDAPI_KEY          NRL data feed key (optional)
+#                  Stripe/AusPost/Resend secrets are NOT build-time vars — they
+#                  live in Supabase Edge Function secrets (see .env.example).
 #
-# One-time in the Codemagic UI before the first green build:
-#   1. App Store Connect API key integration named "app_store_connect".
-#   2. The 'appstore' variable group containing CERTIFICATE_PRIVATE_KEY (secure)
-#      — the shared distribution key.
-#   3. In the Apple Developer portal, enable Push Notifications + Associated
-#      Domains on the App ID (see docs/iOS_RUNBOOK.md).
+# App Store Connect: the team integration is named 'codemagic'
+# (issuer 05b5e87a-6136-41db-96c9-8e9ccb3c824a); it provides the API key used
+# for signing-file fetch AND TestFlight publishing. This app must be in the SAME
+# Codemagic team, or it cannot see the 'appstore' group or the 'codemagic'
+# integration.
+#
 # The project is SPM-based (no CocoaPods): build the .xcodeproj directly.
 workflows:
-  ios-capacitor:
-    name: iOS build (Capacitor shell)
+  ios:
+    name: Rugby League Takeover (iOS)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
       groups:
-        # Shared, team/app-scoped group holding CERTIFICATE_PRIVATE_KEY (secure)
-        # — the one distribution key reused across every app in the account.
-        - appstore
-      node: 22
+        - appstore          # shared signing (CERTIFICATE_PRIVATE_KEY) — DO NOT duplicate
+        - rugby_env         # this app's own runtime vars (Supabase etc.)
       xcode: latest
+      node: 22
       vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
         BUNDLE_ID: "com.rugbyleaguetakeover.app"
     integrations:
-      app_store_connect: app_store_connect
-    scripts:
-      - name: Install dependencies
-        script: npm ci
-      - name: Validation gate (same as GitHub CI)
-        script: npm run lint && npm run typecheck && npm test
-      - name: Build web assets and sync into the iOS shell
-        script: npm run build && npx cap sync ios
-      # Shared-certificate signing. --certificate-key points at the account-wide
-      # distribution key; --create only mints a certificate if none matches that
-      # key, so after the first app creates it, every app reuses the same one.
-      - name: Set up code signing
-        script: |
-          set -e
-          keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
-            --create
-          keychain add-certificates
-          xcode-project use-profiles
-      # App Store Connect rejects an IPA whose CFBundleVersion it has already
-      # seen ("attribute with a value that has already been used"). The Xcode
-      # project pins CURRENT_PROJECT_VERSION=1, so every upload after the
-      # first fails — bump the build number past the highest one TestFlight
-      # knows before archiving.
-      - name: Increment build number
-        script: |
-          set -eo pipefail
-          cd ios/App
-          APP_APPLE_ID=$(app-store-connect list-apps \
-            --bundle-id-identifier "$BUNDLE_ID" \
-            --json | jq -r '.[0].id')
-          # Fail LOUDLY on auth/bundle-id problems — a silent empty id would
-          # fall back to build 1 and reproduce the duplicate-version failure.
-          if [ -z "$APP_APPLE_ID" ] || [ "$APP_APPLE_ID" = "null" ]; then
-            echo "ERROR: could not resolve the App Store Connect app id for $BUNDLE_ID" >&2
-            exit 1
-          fi
-          # --all-versions: highest build number across ALL versions, so a
-          # different marketing-version train can never hand back a low number.
-          # The || fallback is ONLY for the very first upload (no builds yet).
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" --all-versions || echo "")
-          NEXT_BUILD_NUMBER=$(( ${LATEST_BUILD_NUMBER:-0} + 1 ))
-          echo "Latest TestFlight build: ${LATEST_BUILD_NUMBER:-none} → building $NEXT_BUILD_NUMBER"
-          agvtool new-version -all "$NEXT_BUILD_NUMBER"
-      - name: Build signed IPA
-        script: |
-          xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+      app_store_connect: codemagic
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
-        submit_to_app_store: false
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+      - name: Build web bundle + Capacitor sync
+        script: npm run build && npx cap sync ios
+      # Shared-certificate signing. --certificate-key points at the team-wide
+      # distribution key; --create reuses the certificate that matches it and
+      # only mints one if none exists, so every app reuses the same cert.
+      - name: Set up code signing (reuse shared distribution cert)
+        script: |
+          set -ex
+          keychain initialize
+          SIGNING_KEY="$CERTIFICATE_PRIVATE_KEY"
+          if [ -z "$SIGNING_KEY" ]; then echo "::error:: CERTIFICATE_PRIVATE_KEY not set (group appstore)"; exit 1; fi
+          CERT_KEY=$(mktemp); printf '%s' "$SIGNING_KEY" > "$CERT_KEY"
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@file:"$CERT_KEY" \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      # App Store Connect rejects an IPA whose CFBundleVersion it has already
+      # seen. The project pins CURRENT_PROJECT_VERSION=1, so drive a unique
+      # build number from Codemagic's incrementing $BUILD_NUMBER instead.
+      - name: Set unique build number
+        script: |
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$XCODE_PROJECT/project.pbxproj"
+      - name: Build IPA
+        script: xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
 
   # Build-verify only: runs the validation gate + web build + iOS sync with
   # NO signing and NO TestFlight upload. Safe to run on any branch — use it
   # to smoke-check changes on a real macOS runner without shipping anything.
-  # Only the ios-capacitor workflow above publishes, and only when started
-  # deliberately (no triggering: block anywhere in this file).
+  # Only the 'ios' workflow above publishes, and only when started deliberately
+  # (no triggering: block anywhere in this file).
   ios-build-verify:
     name: iOS build verify (no publishing)
     instance_type: mac_mini_m2

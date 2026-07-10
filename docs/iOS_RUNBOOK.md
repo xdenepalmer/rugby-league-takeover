@@ -19,31 +19,47 @@ A starter `codemagic.yaml` at the repo root builds the iOS app on Codemagic's
 macOS runners and can push straight to TestFlight — no local Mac required.
 One-time setup in the Codemagic UI:
 
-1. Connect this GitHub repo to a Codemagic app.
-2. Create an **App Store Connect API key** integration named
-   `app_store_connect` (or edit the name in `codemagic.yaml`).
-3. Attach the shared `appstore` variable group containing
-   `CERTIFICATE_PRIVATE_KEY` (secure) — the account-wide distribution key.
-   The `Set up code signing` step runs `app-store-connect
-   fetch-signing-files --certificate-key @env:CERTIFICATE_PRIVATE_KEY
-   --create`, reusing the shared certificate (see the reference-signing
-   template comments at the top of `codemagic.yaml`). Without that group the
-   first build fails at signing.
-4. In the Apple Developer portal, add **Push Notifications** and
+This app follows the shared **team** signing convention used by every iOS app
+in the account: ONE Apple distribution certificate, reused via a single RSA key.
+One-time setup in the Codemagic UI (all of it is team-level except the runtime
+group):
+
+1. Connect this GitHub repo to a Codemagic app **in the same Codemagic team**
+   as the other iOS apps — otherwise it can't see the shared `appstore` group
+   or the `codemagic` integration below.
+2. The shared **App Store Connect API key** integration is named `codemagic`
+   (issuer `05b5e87a-6136-41db-96c9-8e9ccb3c824a`); it is team-level, so no
+   per-app setup — `codemagic.yaml` just references it.
+3. The shared `appstore` variable group holds ONLY `CERTIFICATE_PRIVATE_KEY`
+   (secure) — the account-wide distribution key. Do not add anything else to
+   it. The `Set up code signing` step runs `app-store-connect
+   fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE
+   --certificate-key=@file:… --create`, which **reuses** the distribution
+   certificate that matches the shared key and only mints one if none exists.
+   (After a green build, the Apple Developer portal must still show exactly 3
+   distribution certs — a 4th means the key didn't match.)
+4. Create this app's OWN `rugby_env` variable group with its runtime config —
+   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (publishable, RLS-guarded),
+   and optionally `VITE_RAPIDAPI_KEY`. Never reuse another app's. Safe defaults
+   are baked into `src/api/supabaseClient.js`, so the group overrides them
+   rather than being strictly required. Stripe/AusPost/Resend secrets are NOT
+   build vars — they live in Supabase Edge Function secrets (see `.env.example`).
+5. In the Apple Developer portal, add **Push Notifications** and
    **Associated Domains** capabilities to the App ID — with cloud builds
    there is no Xcode UI, so capabilities live on the App ID + entitlements
    (`ios/App/App` target) rather than being clicked in Xcode.
-5. Info.plist usage strings and PrivacyInfo.xcprivacy (below) must be added
+6. Info.plist usage strings and PrivacyInfo.xcprivacy (below) must be added
    to the committed `ios/` project since every build starts from git.
 
-The `codemagic.yaml` runs the same validation gate as GitHub CI, then
-`vite build && cap sync ios`, an `Increment build number` step (resolves the
-latest TestFlight build via the App Store Connect API and agvtools the
-project to latest+1 — an earlier upload failed with "attribute with a value
-that has already been used" because `CURRENT_PROJECT_VERSION` was pinned at
-1), then `xcode-project build-ipa` on the SPM-based `App.xcodeproj`.
-Codemagic builds have run and signing works; the TestFlight upload is the
-step being verified.
+The `ios` workflow installs deps, builds the web bundle + `cap sync ios`, sets
+up shared-cert signing, drives a unique build number from Codemagic's
+incrementing `$BUILD_NUMBER` (the project pins `CURRENT_PROJECT_VERSION=1`, and
+a fixed version is rejected as a duplicate upload — "attribute with a value
+that has already been used"), then runs `xcode-project build-ipa` on the
+SPM-based `App.xcodeproj` and publishes to App Store Connect / TestFlight.
+NOTE: `$BUILD_NUMBER` must stay ahead of the highest build TestFlight already
+has; if this Codemagic app is new, bump its build-number counter in the UI
+before the first upload so it doesn't collide with an existing build.
 
 ## Mac prerequisites (only if building locally instead of Codemagic)
 
@@ -186,7 +202,8 @@ caching or haptics; the architecture contracts are test-locked
 (`tests/native-*.test.mjs`).
 
 Codemagic now has two workflows:
-- `ios-capacitor` — full signed build + TestFlight publish (start manually).
+- `ios` ("Rugby League Takeover (iOS)") — full signed build + TestFlight
+  publish via the shared team cert (start manually).
 - `ios-build-verify` — validation gate + web build + `cap sync` + UNSIGNED
   xcodebuild. No signing, no publishing; safe on any branch.
 
