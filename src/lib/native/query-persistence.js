@@ -24,19 +24,23 @@ export const QUERY_CACHE_STORAGE_KEY = "rlt_native_query_cache";
 export const QUERY_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 
 /**
- * Query-key roots that MAY be persisted: public, non-PII content only.
- * Anything not on this list (forumPosts, testimonials, tippingEntries,
- * notifications, orders, registrations, users, bans, invites,
- * adminAttention, myOrders, myInterest, myPosts, fanRewardEvents, user, …)
- * is never written to disk.
+ * Query-key roots that MAY be persisted: public, non-PII content whose RLS
+ * returns the same rows for every caller. Anything not on this list
+ * (forumPosts, testimonials, tippingEntries, notifications, orders,
+ * registrations, users, bans, invites, adminAttention, myOrders,
+ * myInterest, myPosts, fanRewardEvents, user, …) is never written to disk.
+ *
+ * Deliberately NOT allowlisted despite being "public" feeds: `events` and
+ * `matchups` — their RLS widens to unpublished rows for admins
+ * (`is_published or is_admin()`), and the native admin modules query the
+ * SAME roots, so allowlisting them would persist unpublished admin content
+ * on an admin device (and hydrate it into the fan UI at next cold start).
  */
 export const PERSIST_ALLOWLIST = [
   "siteSettings",
   "news",
   "products",
   "gallery",
-  "matchups",
-  "events",
   "teams",
   "partners",
   "faqs",

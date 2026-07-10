@@ -66,7 +66,9 @@ export default function NativeArticleScreen() {
 
   const article = listArticle || byIdArticle || null;
   const loading = (isLoading || byIdFetching) && !article;
-  const offlineOnly = !isLoading && !findArticle(articles, id) && !!article;
+  // A by-id article was fetched live over the network — never label it as
+  // an offline copy just because it's beyond the newest-50 list.
+  const offlineOnly = !isLoading && !findArticle(articles, id) && !!article && !byIdArticle;
   const related = useMemo(() => relatedArticles(articles, article), [articles, article]);
   const [saved, setSaved] = useState(() => isArticleSaved(id));
   const [scaleIdx, setScaleIdx] = useState(0);

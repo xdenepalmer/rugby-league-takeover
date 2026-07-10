@@ -35,14 +35,15 @@ test("malformed or hostile push payloads fall back to the notification centre", 
 // ── Query-cache persistence policy ──────────────────────────────────────
 test("persistence allowlist admits only public, non-PII content roots", async () => {
   const src = read("../src/lib/native/query-persistence.js");
-  for (const key of ["siteSettings", "news", "products", "gallery", "matchups", "events", "teams", "partners", "faqs"]) {
+  for (const key of ["siteSettings", "news", "products", "gallery", "teams", "partners", "faqs"]) {
     assert.ok(src.includes(`"${key}"`), `allowlist must include ${key}`);
   }
   assert.ok(!src.includes("PERSIST_DENYLIST"), "denylist model must be gone — allowlist is the policy");
-  for (const key of ["forumPosts", "testimonials", "tippingEntries", "notifications", "orders"]) {
+  const allowSection = src.match(/export const PERSIST_ALLOWLIST = \[[\s\S]*?\];/)[0];
+  for (const key of ["forumPosts", "testimonials", "tippingEntries", "notifications", "orders", "events", "matchups"]) {
     assert.ok(
-      !new RegExp(`PERSIST_ALLOWLIST[\\s\\S]*?"${key}"[\\s\\S]*?\\];`).test(src),
-      `${key} must never be allowlisted (PII/admin projections)`
+      !allowSection.includes(`"${key}"`),
+      `${key} must never be allowlisted (PII, or admin-widened RLS: events/matchups return unpublished rows to admins)`
     );
   }
   assert.ok(src.includes("shouldDehydrateQuery"), "allowlist must be enforced at dehydrate time");
@@ -76,6 +77,9 @@ test("shouldPersistQuery policy (pure)", async () => {
   assert.equal(shouldPersistQuery(["forumPosts"], { status: "success" }), false, "admin projections carry ip_address/user_email");
   assert.equal(shouldPersistQuery(["testimonials"], { status: "success" }), false);
   assert.equal(shouldPersistQuery(["tippingEntries"], { status: "success" }), false);
+  // Admin-widened RLS roots (unpublished rows for admins) never persist.
+  assert.equal(shouldPersistQuery(["events"], { status: "success" }), false, "events RLS widens for admins");
+  assert.equal(shouldPersistQuery(["matchups"], { status: "success" }), false, "matchups RLS widens for admins");
   // User-scoped data never persists (secure by default: not allowlisted).
   assert.equal(shouldPersistQuery(["notifications", "u1"], { status: "success" }), false);
   assert.equal(shouldPersistQuery(["myOrders", "a@b.c"], { status: "success" }), false);

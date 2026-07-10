@@ -63,12 +63,21 @@ workflows:
       # knows before archiving.
       - name: Increment build number
         script: |
-          set -e
+          set -eo pipefail
           cd ios/App
           APP_APPLE_ID=$(app-store-connect list-apps \
             --bundle-id-identifier "$BUNDLE_ID" \
             --json | jq -r '.[0].id')
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" || echo "")
+          # Fail LOUDLY on auth/bundle-id problems — a silent empty id would
+          # fall back to build 1 and reproduce the duplicate-version failure.
+          if [ -z "$APP_APPLE_ID" ] || [ "$APP_APPLE_ID" = "null" ]; then
+            echo "ERROR: could not resolve the App Store Connect app id for $BUNDLE_ID" >&2
+            exit 1
+          fi
+          # --all-versions: highest build number across ALL versions, so a
+          # different marketing-version train can never hand back a low number.
+          # The || fallback is ONLY for the very first upload (no builds yet).
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" --all-versions || echo "")
           NEXT_BUILD_NUMBER=$(( ${LATEST_BUILD_NUMBER:-0} + 1 ))
           echo "Latest TestFlight build: ${LATEST_BUILD_NUMBER:-none} → building $NEXT_BUILD_NUMBER"
           agvtool new-version -all "$NEXT_BUILD_NUMBER"

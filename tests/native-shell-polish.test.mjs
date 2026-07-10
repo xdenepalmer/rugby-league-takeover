@@ -53,11 +53,13 @@ test("no static @capacitor imports anywhere in src (dynamic-only contract)", () 
   // re-exports. Only dynamic `import("@capacitor/…")` is allowed.
   const srcDir = fileURLToPath(new URL("../src", import.meta.url));
   const offenders = [];
+  // Whitespace-tolerant (import{App}from"@capacitor/app" is valid ESM) and
+  // NOT matching dynamic import("…") — "(" never matches \s*[^;(].
   const staticEdge = new RegExp(
     [
-      String.raw`import\s[^;]*from\s+["']@capacitor\/`, // import x / { x } from "@capacitor/…"
-      String.raw`import\s+["']@capacitor\/`, // side-effect: import "@capacitor/…"
-      String.raw`export\s[^;]*from\s+["']@capacitor\/`, // re-export: export … from "@capacitor/…"
+      String.raw`import\s*[^;(][^;]*?from\s*["']@capacitor\/`, // import x / {x} from "@capacitor/…"
+      String.raw`import\s*["']@capacitor\/`, // side-effect: import "@capacitor/…"
+      String.raw`export\s*[^;]*?from\s*["']@capacitor\/`, // re-export: export … / * from "@capacitor/…"
     ].join("|")
   );
   const walk = (dir) => {
@@ -65,7 +67,7 @@ test("no static @capacitor imports anywhere in src (dynamic-only contract)", () 
       const path = join(dir, name);
       if (statSync(path).isDirectory()) {
         walk(path);
-      } else if (/\.(js|jsx|mjs)$/.test(name)) {
+      } else if (/\.(js|jsx|mjs|ts|tsx|mts)$/.test(name)) {
         const source = readFileSync(path, "utf8");
         if (staticEdge.test(source)) offenders.push(path);
       }

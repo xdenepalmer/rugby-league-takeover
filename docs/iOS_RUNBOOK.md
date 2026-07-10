@@ -22,8 +22,13 @@ One-time setup in the Codemagic UI:
 1. Connect this GitHub repo to a Codemagic app.
 2. Create an **App Store Connect API key** integration named
    `app_store_connect` (or edit the name in `codemagic.yaml`).
-3. Automatic signing (`ios_signing`) will create/fetch the certificate and
-   provisioning profile for `com.rugbyleaguetakeover.app`.
+3. Attach the shared `appstore` variable group containing
+   `CERTIFICATE_PRIVATE_KEY` (secure) — the account-wide distribution key.
+   The `Set up code signing` step runs `app-store-connect
+   fetch-signing-files --certificate-key @env:CERTIFICATE_PRIVATE_KEY
+   --create`, reusing the shared certificate (see the reference-signing
+   template comments at the top of `codemagic.yaml`). Without that group the
+   first build fails at signing.
 4. In the Apple Developer portal, add **Push Notifications** and
    **Associated Domains** capabilities to the App ID — with cloud builds
    there is no Xcode UI, so capabilities live on the App ID + entitlements
@@ -32,9 +37,13 @@ One-time setup in the Codemagic UI:
    to the committed `ios/` project since every build starts from git.
 
 The `codemagic.yaml` runs the same validation gate as GitHub CI, then
-`vite build && cap sync ios`, then `xcode-project build-ipa` on the SPM-based
-`App.xcodeproj`. The first Codemagic build has NOT been run yet — expect a
-signing/integration round-trip on the first attempt.
+`vite build && cap sync ios`, an `Increment build number` step (resolves the
+latest TestFlight build via the App Store Connect API and agvtools the
+project to latest+1 — an earlier upload failed with "attribute with a value
+that has already been used" because `CURRENT_PROJECT_VERSION` was pinned at
+1), then `xcode-project build-ipa` on the SPM-based `App.xcodeproj`.
+Codemagic builds have run and signing works; the TestFlight upload is the
+step being verified.
 
 ## Mac prerequisites (only if building locally instead of Codemagic)
 
@@ -120,9 +129,14 @@ and matches the site's anti-white-flash background.
   natively today; a Capacitor Browser + deep-link OAuth flow is the deferred
   fix. Web OAuth is unchanged.
 - **Stripe checkout**: opens in the system browser sheet
-  (`openExternalUrl`); Stripe's success/cancel return lands on the website.
-  Orders are webhook-authoritative (`stripeWebhook`), so a missed redirect
-  never loses an order. In-app return via universal link is a follow-up.
+  (`openExternalUrl`). The native in-app return is code-complete: Stripe
+  redirects to `/store/checkout/success?session_id=…`, the universal link
+  lands on the verification-gated native return screen, and
+  `verifyCheckoutReturn` checks the session server-side (see "Checkout-return
+  deployment" below — the edge functions still need deploying; until then
+  the return lands on the website's legacy banner). Orders are
+  webhook-authoritative (`stripeWebhook`), so a missed redirect never loses
+  an order.
 - **External links** (tickets, sponsors, user-posted links): a global
   interceptor in `NativeAppBootstrap` opens foreign hosts in the system
   browser and turns absolute links to our own domain into router navigations.
@@ -146,7 +160,7 @@ and matches the site's anti-white-flash background.
 npm run lint && npm run typecheck && npm test && npm run build && npx cap sync ios
 ```
 
-All of this runs on Linux/CI. 113 tests at time of writing; the new
+All of this runs on Linux/CI. 221 tests at time of writing; the new
 native-specific guards are covered by `tests/native-env.test.mjs`,
 `tests/native-guards.test.mjs`, `tests/capacitor-config.test.mjs`,
 `tests/native-shell-polish.test.mjs` (chunking, OAuth guard, link classification,

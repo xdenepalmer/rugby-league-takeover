@@ -73,7 +73,7 @@ Routes (from `src/App.jsx`):
     Notes → app opens on the thread (after Associated Domains is live)
 12. Theme accents (Account → accent picker) still apply and persist
 
-## Native product (RLT-IOS-003 + corrections 003F–003H) — status
+## Native product (RLT-IOS-003 + corrections 003F–003M) — status
 
 - ✅ Distinct native shell: five fan tabs, Takeover sheet, no web chrome in-app
 - ✅ Native fan screens (Home dashboard, News reader `/news/:id`, Forum feed +
@@ -82,7 +82,8 @@ Routes (from `src/App.jsx`):
 - ✅ Native admin shell + functional parity (all capabilities reachable)
 - ✅ Native admin priority workflows: Orders, Forum moderation, Registrations
   (true list/detail) — ⏳ the other 19 modules remain wrapped web managers
-- ✅ Query-cache persistence with PII denylist; notification tap-routing map
+- ✅ Query-cache persistence with a public-content ALLOWLIST (only
+  non-PII, non-admin-widened roots ever persist); notification tap-routing map
 - ✅ Checkout return: canonical session-id URLs + server-side verification
   (verifyCheckoutReturn) + verification-gated native screens — 🔧 DEPLOY
   `createCheckout` (changed) + `verifyCheckoutReturn` (new) to Supabase,

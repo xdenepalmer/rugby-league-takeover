@@ -10,8 +10,8 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
 
 ## Core rules
 - **No code without a story.** One story = one bounded change with objective, context, files affected, steps, test plan, rollback plan.
-- **Backend authority:** Base44 functions/entities are authoritative; frontend is projection only.
-- **Manual Base44 Publish:** nothing is live until published in Base44.
+- **Backend authority:** Supabase (Postgres + RLS, Auth, Edge Functions) is authoritative; the `base44` client is a compatibility shim over it and the frontend is projection only.
+- **Deploys are explicit:** Supabase edge functions and migrations only go live when deployed/applied deliberately (see the manual deploy items in the router below) — merging code does not deploy it.
 - **Ambiguity rule:** _If ambiguity exists, stop and request Architect clarification._ Do not guess scope.
 - **No push / no PR** without explicit Architect instruction.
 - **No direct shared-branch work:** no agent may work directly on `main` or `bmad/baseline-integration` without an Architect-approved BMAD story.
@@ -69,11 +69,13 @@ Antigravity must work through **`ui-ux-pro-max`** specifications and an **approv
   agent instructed to REFUTE. Then Architect review → single PR
   `rlt-ios-003-native-product` → `main`.
 - → **Manual deploy items (not code):** deploy `createCheckout` +
-  `verifyCheckoutReturn` together; apply migration
-  `0009_user_push_tokens.sql` (carries the 003I insert-policy fix) before
-  any push work; finish Apple signing → Codemagic `ios-capacitor` (now
-  auto-increments the build number) → TestFlight; device-verify universal
-  links + checkout return + VoiceOver/Dynamic Type.
+  `verifyCheckoutReturn` together; apply migrations
+  `0009_user_push_tokens.sql` (carries the 003I insert-policy fix — apply
+  before any push work) and `0010_store_orders_session_index.sql`
+  (stripe_session_id unique index — apply with/before the
+  verifyCheckoutReturn deploy); finish Apple signing → Codemagic
+  `ios-capacitor` (now auto-increments the build number) → TestFlight;
+  device-verify universal links + checkout return + VoiceOver/Dynamic Type.
 - → **Deferred / follow-up stories:** RLT-IOS-004 (APNs send pipeline +
   PUSH2 shared-device token reassignment via SECURITY DEFINER upsert RPC +
   disable-tokens-on-signout); moderator-native gap decision (expose

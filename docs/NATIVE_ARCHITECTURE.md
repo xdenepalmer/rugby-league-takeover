@@ -28,7 +28,7 @@ pre-003 apart from the checkout-return alias routes) or a lazy
 `NativeAppRoutes` when `isNativeApp()`. The native chunk is never
 modulepreloaded on web (verified per build). For scale context: the web
 entry chunk itself is small (~71KB), but TOTAL preloaded web JS (entry +
-modulepreloaded vendor chunks) is ~1.0MB raw / ~320KB gzipped — quote the
+modulepreloaded vendor chunks) is ~1.07MB raw / ~320KB gzipped — quote the
 total, not just the entry, when talking about web payload.
 
 `isNativeApp()`/`getPlatform()` **latch their first answer**
@@ -69,7 +69,9 @@ Chromium smoke harness) and flip the route tree mid-flight.
 | `/account/<section>` | native list/detail (`notifications`, `fanhub`, `orders`, `posts`, `achievements`, `leaderboard`, `profile`, `interest`, `security`) | `?tab=` (unchanged) |
 
 Aliases: native `/forum?thread=` → `/forum/thread/:id`; native
-`/account?tab=` → child routes (`src/native/navigation/native-aliases.js`).
+`/store?product=` → `/store/product/:id`; native `/account?tab=` → child
+routes — all resolved centrally by `NativePublicShell` via `nativeAliasFor`
+(`src/native/navigation/native-aliases.js`).
 Share URLs (`src/lib/native/share.js`) now emit these canonical per-entity
 paths, so universal links resolve everywhere.
 
@@ -156,10 +158,14 @@ shortcuts, breadcrumbs) is not carried onto the phone.
   — localStorage persister, 24h `maxAge`, build-id `buster`, loaded via
   dynamic import (persist packages are exempted from web-preloaded vendor
   chunks in `vite.config.js`). **ALLOWLIST (only these ever persist):**
-  `siteSettings`, `news`, `products`, `gallery`, `matchups`, `events`,
-  `teams`, `partners`, `faqs` — public, non-PII content roots, enforced at
-  dehydrate time; only successful queries persist and mutations never
-  dehydrate. Everything else (forum posts — whose admin projections carry
+  `siteSettings`, `news`, `products`, `gallery`, `teams`, `partners`,
+  `faqs` — public content roots whose RLS returns the same rows to every
+  caller, enforced at dehydrate time; only successful queries persist and
+  mutations never dehydrate. `events`/`matchups` are deliberately NOT
+  allowlisted: their RLS widens to unpublished rows for admins and the
+  native admin modules share the same query keys, so persisting them would
+  write unpublished admin content to an admin device (delta-review finding).
+  Everything else (forum posts — whose admin projections carry
   `ip_address`/`user_email`/`reported_by` — notifications, orders, all
   user-scoped and admin keys) never touches disk, secure by default. The
   original 003D denylist model leaked those admin projections to
@@ -283,8 +289,9 @@ app_store_ready: no
 
 ## Known gaps / deferred
 
-- **Deploy** `createCheckout` + `verifyCheckoutReturn` to Supabase, then
-  device-verify the universal-link checkout return.
+- **Deploy** `createCheckout` + `verifyCheckoutReturn` to Supabase and apply
+  migration `0010_store_orders_session_index.sql` (unique index backing the
+  session-id lookup), then device-verify the universal-link checkout return.
 - **Moderator-native gap (accepted limitation, decide in a follow-up):**
   non-admin moderators can moderate nothing natively. The web grants
   moderators pin/delete through the `forumAction` edge function; the native

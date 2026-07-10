@@ -20,16 +20,44 @@ export function mapUrlToRoute(urlString, { canonicalOrigin = CANONICAL_WEB_ORIGI
   }
 }
 
-// getLaunchUrl() returns the same last-launch URL for the whole process
-// lifetime (it is never cleared), so it must be consumed AT MOST ONCE per
-// session. Without this latch, any re-init of the deep-link wiring would
-// navigate back to the launch route — e.g. re-landing on the checkout
-// return screen on every tab press after a universal-link open.
+// getLaunchUrl() returns the same last-launch URL for the whole NATIVE
+// PROCESS lifetime (it is never cleared), so it must be consumed AT MOST
+// ONCE per process. Without this latch, any re-init of the deep-link wiring
+// would navigate back to the launch route — e.g. re-landing on the checkout
+// return screen on every tab press after a universal-link open. The module
+// variable covers re-inits within one JS context; the sessionStorage marker
+// covers WKWebView page reloads (memory-pressure recovery), where a fresh
+// JS context would otherwise re-consume the same process-scoped launch URL.
+const LAUNCH_URL_CONSUMED_KEY = "rlt_launch_url_consumed";
 let launchUrlConsumed = false;
+
+// Checks the PRIOR-context marker only (the module latch guards the current
+// context and is deliberately set before this runs).
+function launchUrlConsumedInPriorContext(url) {
+  try {
+    return sessionStorage.getItem(LAUNCH_URL_CONSUMED_KEY) === url;
+  } catch {
+    return false;
+  }
+}
+
+function markLaunchUrlConsumed(url) {
+  launchUrlConsumed = true;
+  try {
+    sessionStorage.setItem(LAUNCH_URL_CONSUMED_KEY, url);
+  } catch {
+    // best-effort — the module latch still covers this JS context
+  }
+}
 
 /** Test-only escape hatch. */
 export function resetLaunchUrlLatchForTests() {
   launchUrlConsumed = false;
+  try {
+    sessionStorage.removeItem(LAUNCH_URL_CONSUMED_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -57,12 +85,15 @@ export function initDeepLinks(navigate) {
       listener = handle;
 
       // Cold start via a link: the event fires before listeners exist, so ask
-      // for the launch URL explicitly — once per session (see latch above).
+      // for the launch URL explicitly — once per process (see latch above).
       if (launchUrlConsumed) return;
       launchUrlConsumed = true;
       try {
         const launch = await App.getLaunchUrl();
-        const route = mapUrlToRoute(launch?.url);
+        const url = launch?.url || "";
+        if (!url || launchUrlConsumedInPriorContext(url)) return;
+        markLaunchUrlConsumed(url);
+        const route = mapUrlToRoute(url);
         if (route && route !== "/" && !cancelled) navigate(route);
       } catch {
         // No launch URL — normal app-icon start.
