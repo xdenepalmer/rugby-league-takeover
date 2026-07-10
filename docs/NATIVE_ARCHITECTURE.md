@@ -1,6 +1,6 @@
 # Native iOS Product Architecture (RLT-IOS-003)
 
-_Last updated: 2026-07-10 · branch `rlt-ios-003-native-product`_
+_Last updated: 2026-07-10 · branch `rlt-ios-003-native-product` (incl. Architect corrections 003F–003H)_
 
 The Capacitor shell no longer mirrors the website. Web/PWA and native iOS are
 **two presentation layers over one shared system**:
@@ -108,18 +108,32 @@ shortcuts, breadcrumbs) is not carried onto the phone.
 - **Overview:** revenue/orders/signups/posts tiles + a needs-attention queue
   (fulfil, moderate, registrations, low/out-of-stock, unpublished news,
   problem orders) deep-linking into modules.
-- **Hubs → modules:** every one of the 22 web managers renders full-screen
-  behind a native top bar with its panel's exact data wiring
-  (`admin-modules.jsx`). Native-only URL addressability:
-  `/admin/store/orders`, `/admin/community/forum`, `/admin/people/bans`,
-  `/admin/settings/settings`, … (web admin URLs still stop at the section —
-  unchanged).
+- **True native workflows (003G)** for the three highest-value modules:
+  - **Orders** — `/admin/store/orders` searchable/pipeline-filtered list →
+    `/admin/store/orders/:orderId` detail: customer contact actions
+    (email/call/copy address), line items, tracking editor + copy, AusPost
+    label/track via the existing edge functions, confirmed status
+    transitions writing payload-identical updates (timeline entries,
+    shipped/delivered stamps, tracking-required shipping, destructive
+    cancel/refund). Payment state is labeled webhook-authoritative.
+  - **Forum moderation** — `/admin/community/forum` queues
+    (pending/reported/live/removed with counts), search,
+    publish/hide/pin/remove/restore with the web manager's exact payloads,
+    author/IP bans via the shared `BanDialog` + `Ban.create` shape, and
+    open-fan-thread navigation.
+  - **Registrations** — `/admin/people/registrations` list →
+    `/:regId` detail with contact actions and bulk BCC email; read-only.
+- **Remaining 19 modules:** the existing (card-based, functional) web
+  managers render full-screen behind native chrome with panel-identical
+  data wiring (`admin-modules.jsx`) — functional parity, not yet native
+  presentation. Classic Orders/Forum/Registrations managers stay exported
+  as escape hatches.
+- Native-only URL addressability throughout (`/admin/store/orders/:orderId`,
+  `/admin/community/forum`, `/admin/settings/settings`, …); web admin URLs
+  still stop at the section (unchanged).
 - Attention badges (pending posts / paid orders) poll id-only projections.
 - Guards unchanged: `RequireAdmin` wraps the subtree; RLS/edge functions
-  remain the enforcement. Transitional note: managers are the web
-  implementations (fully functional, card-based); true native list/detail
-  rebuilds (Orders, Forum moderation, Registrations ranked highest-value)
-  are a follow-up story.
+  remain the enforcement.
 
 ## State, performance & caching rules
 
@@ -142,15 +156,33 @@ shortcuts, breadcrumbs) is not carried onto the phone.
   Scrolling and repeated renders can never vibrate (min-interval ≥100ms per
   event; outcome events ≥800ms).
 
-## Checkout return
+## Checkout return (server-authoritative, 003F)
 
-Stripe's server-derived redirect (`/store?success=true|cancelled=true` on the
-canonical origin) enters the app via universal link → native Store redirects
-into `/store/checkout/success|cancel` screens: the lingering browser sheet is
-closed, `myOrders`/`products` refetch, success clears the cart exactly like
-the web return. **The URL is a UI signal only — the Stripe webhook remains
-the sole payment authority** (order status renders from webhook-written
-data). Requires AASA verification on a real device (see status).
+`createCheckout` now sends Stripe to the canonical return routes with a
+verifiable reference: `/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`
+and `/store/checkout/cancel` (web users flow through the App.jsx aliases into
+the existing banner behavior; in the installed app the universal link lands on
+the native screens; legacy `/store?success=true` arrivals still redirect
+natively).
+
+**The URL proves navigation only.** The native return screen runs a
+verification state machine: it calls the read-only `verifyCheckoutReturn`
+edge function, which validates the session-id format, retrieves the session
+from Stripe server-side, rejects foreign apps via `rlt_app_id` metadata,
+double-binds to our order via the stored `stripe_session_id`, and returns a
+PII-free `{paymentStatus, sessionStatus, orderStatus}`. States:
+`confirming → confirmed | pending | cancelled | unverified`. Success copy and
+the single, guarded, exactly-once cart clear happen **only on verified
+payment**; pending polls politely (5×4s) and keeps the cart; unverified never
+claims success. Guest-safe: possession of the unguessable `cs_` session id
+delivered by Stripe's redirect is the return credential. The **webhook remains
+the only writer** of order state.
+
+**Deployment required (not yet live):** `createCheckout` (changed) and
+`verifyCheckoutReturn` (new) must be deployed to Supabase. No new secrets
+(reuses the Stripe key + `RLT_APP_ID`). Until deployed, production still uses
+the legacy web-banner return. Device verification of the universal-link
+return is still outstanding.
 
 ## Push
 
@@ -185,15 +217,42 @@ cannot be device-proven from this environment. To implement:
    `canUseGoogleOAuth` to allow native. Also route password-reset/confirm
    emails through verified universal links at that point.
 
+## Honest status matrix
+
+```
+native_routes_complete: yes            native_fan_shell_complete: yes
+native_admin_shell_complete: yes       native_admin_functional_parity: yes
+native_admin_priority_workflows_complete: yes (Orders, Moderation, Registrations)
+native_admin_all_workflows_native: no  (19 modules remain wrapped web managers)
+
+checkout_return_routes_complete: yes
+checkout_server_verification_complete: yes (code; edge fns NOT yet deployed)
+checkout_return_deployed: no           checkout_return_device_verified: no
+
+push_token_registration_code_complete: yes
+push_token_migration_applied: no       push_token_registration_live_verified: no
+push_delivery_complete: no
+
+codemagic_config_complete: yes         signed_ipa_build_verified: no
+testflight_upload_verified: no         testflight_install_verified: no
+
+oauth_return_complete: no (exact plan above; Google hidden natively)
+universal_links: code-complete, device-unverified
+app_store_ready: no
+```
+
 ## Known gaps / deferred
 
+- **Deploy** `createCheckout` + `verifyCheckoutReturn` to Supabase, then
+  device-verify the universal-link checkout return.
 - APNs **send** pipeline (RLT-IOS-004): JWT provider auth via Edge Function,
   enabled-token targeting, preferences, event types (reply/mention/drop/
   order/admin), deep-link payloads per `push-routing.js`, badge counts,
-  delivery logs/rate limits, live-device verification.
+  delivery logs/rate limits, live-device verification. Apply the
+  `user_push_tokens` migration first.
 - Native OAuth + auth-email deep-link return (plan above).
-- True native list/detail rebuilds for Orders / Forum moderation /
-  Registrations (highest-value next admin step).
+- Native presentation for the remaining 19 admin modules (wrapped web
+  managers today — functional, not native).
 - Edge-swipe back gesture (deferred: conflicts with gallery swipe; Back
   buttons are explicit).
 - Xcode/simulator/TestFlight validation — requires the Codemagic signing
@@ -202,11 +261,12 @@ cannot be device-proven from this environment. To implement:
 
 ## Validation
 
-`npm test` (181) · `npm run lint` · `npm run typecheck` · `npm run build` ·
-`npx cap sync ios` — all green at each of the five story commits. Chromium
-smoke (iPhone viewport + Capacitor stub): native Home/News/Forum/Store/
-Gallery/Login render the native shell (5 tabs, no Admin tab, one Takeover
-trigger), web Home/Login unchanged (SiteNav + Google button present, no page
-errors). Contract tests: `tests/native-app-shell.test.mjs`,
+`npm test` (202) · `npm run lint` · `npm run typecheck` · `npm run build` ·
+`npx cap sync ios` — all green at each story commit (A–E and corrections
+F–H). Chromium smoke (iPhone viewport + Capacitor stub): native Home/News/
+Forum/Store/Gallery/Login render the native shell (5 tabs, no Admin tab, one
+Takeover trigger), web Home/Login keep their layout (SiteNav + Google button
+present, no page errors). Contract tests: `tests/native-app-shell.test.mjs`,
 `native-fan-screens.test.mjs`, `native-admin-shell.test.mjs`,
-`native-state-flows.test.mjs`.
+`native-state-flows.test.mjs`, `checkout-return.test.mjs`,
+`native-admin-workflows.test.mjs`.

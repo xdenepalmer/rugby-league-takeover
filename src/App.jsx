@@ -83,8 +83,9 @@ const AuthenticatedApp = () => {
   }
 
   // Platform presentation split: same backend, auth and query cache — the
-  // native shell gets an app-grade route tree, the web keeps this one
-  // byte-for-byte. isNativeApp() is stable for the app's lifetime (the
+  // native shell gets an app-grade route tree while this web tree keeps its
+  // existing layout and behavior (canonical detail routes were added
+  // deliberately). isNativeApp() latches for the app's lifetime (the
   // Capacitor bridge is injected before any script runs).
   if (isNativeApp()) {
     return (

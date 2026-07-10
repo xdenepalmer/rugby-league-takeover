@@ -175,3 +175,12 @@ Codemagic now has two workflows:
 - `ios-capacitor` — full signed build + TestFlight publish (start manually).
 - `ios-build-verify` — validation gate + web build + `cap sync` + UNSIGNED
   xcodebuild. No signing, no publishing; safe on any branch.
+
+### Checkout-return deployment (RLT-IOS-003F)
+
+The authoritative checkout return needs two Supabase Edge Function deploys:
+`createCheckout` (changed: canonical session-id return URLs) and
+`verifyCheckoutReturn` (new: read-only server-side session verification).
+No new secrets. Until both are deployed, production keeps the legacy
+`/store?success=true` web-banner return and the native verification screens
+are simply never reached from live checkouts.
