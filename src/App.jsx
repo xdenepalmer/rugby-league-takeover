@@ -2,7 +2,7 @@ import React, { useEffect, useState, lazy, Suspense } from "react";
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MotionConfig } from 'framer-motion'
 import { queryClientInstance } from '@/lib/query-client';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import PublicLayout from '@/components/public/PublicLayout';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -16,6 +16,7 @@ import { THEME_ACCENTS } from '@/lib/theme-accents';
 
 // Lazy-loaded pages
 const Home = lazy(() => import("./pages/Home"));
+const NewsArticle = lazy(() => import("./pages/NewsArticle"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Account = lazy(() => import("./pages/Account"));
 const Store = lazy(() => import("./pages/Store"));
@@ -51,6 +52,17 @@ const LoadingFallback = () => (
     </span>
   </div>
 );
+
+// Web aliases for the canonical detail routes the app shares: the forum
+// page already handles ?thread=, the store opens quick-view from ?product=.
+const ForumThreadRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/forum?thread=${encodeURIComponent(id)}`} replace />;
+};
+const StoreProductRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/store?product=${encodeURIComponent(id)}`} replace />;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingPublicSettings, authError } = useAuth();
@@ -90,8 +102,11 @@ const AuthenticatedApp = () => {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/store" element={<Store />} />
+          <Route path="/store/product/:id" element={<StoreProductRedirect />} />
           <Route path="/forum" element={<Forum />} />
+          <Route path="/forum/thread/:id" element={<ForumThreadRedirect />} />
           <Route path="/news" element={<News />} />
+          <Route path="/news/:id" element={<NewsArticle />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/terms" element={<Terms />} />

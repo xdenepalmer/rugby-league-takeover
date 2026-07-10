@@ -64,6 +64,14 @@ export default function NativePublicShell() {
     saveTabMemory(memoryRef.current);
   }, [currentPath]);
 
+  // Screens (e.g. native Home's travel CTA) open the plan sheet by event so
+  // they don't need shell props threaded through the router.
+  useEffect(() => {
+    const openPlan = () => setPlanOpen(true);
+    window.addEventListener("rlt_open_plan", openPlan);
+    return () => window.removeEventListener("rlt_open_plan", openPlan);
+  }, []);
+
   // Cart badge: same localStorage + event contract the web tab bar uses.
   useEffect(() => {
     const updateCartCount = () => {

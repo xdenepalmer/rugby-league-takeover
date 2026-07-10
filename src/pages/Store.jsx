@@ -627,6 +627,21 @@ export default function Store() {
     staleTime: 60000, // Cache products list for 1 minute
     gcTime: 300000,   // Keep in cache garbage collection for 5 minutes
   });
+
+  // Canonical product links (/store/product/:id redirects here as
+  // ?product=<id>): open the quick view once products are available.
+  useEffect(() => {
+    const target = searchParams.get("product");
+    if (!target || !products.length) return;
+    const match = products.find((p) => String(p.id) === String(target));
+    if (match) setQuickViewProduct(match);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete("product");
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products.length, searchParams]);
   const { data: settingsRecords = [] } = useQuery({
     queryKey: ["siteSettings"],
     queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),

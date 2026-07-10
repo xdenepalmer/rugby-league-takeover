@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { ArrowLeft, Images, Play, ExternalLink, X, ChevronLeft, ChevronRight, Camera, Film } from "lucide-react";
@@ -269,6 +269,7 @@ export default function Gallery() {
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [filterEvent, setFilterEvent] = useState(ALL);
   const [filterType, setFilterType] = useState(ALL);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["gallery"],
@@ -302,6 +303,21 @@ export default function Gallery() {
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const goPrev = useCallback(() => setLightboxIndex(i => (i - 1 + filtered.length) % filtered.length), [filtered.length]);
   const goNext = useCallback(() => setLightboxIndex(i => (i + 1) % filtered.length), [filtered.length]);
+
+  // Canonical media links (/gallery?item=<id> from the app's share sheet):
+  // open the lightbox directly once items are available.
+  useEffect(() => {
+    const target = searchParams.get("item");
+    if (!target || !items.length) return;
+    const idx = filtered.findIndex((i) => String(i.id) === String(target));
+    if (idx >= 0) setLightboxIndex(idx);
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete("item");
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, searchParams]);
 
   return (
     <main className="relative min-h-dvh bg-background text-foreground">

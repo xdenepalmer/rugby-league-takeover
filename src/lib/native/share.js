@@ -59,7 +59,9 @@ export function shareArticle(article) {
   return shareUrl({
     title: article?.title || "Rugby League Takeover",
     text: article?.title,
-    url: article?.link || "/news",
+    // Canonical per-article route (resolves on web and in the app via
+    // universal links). Legacy external `link` values still win when set.
+    url: article?.link || (article?.id ? `/news/${encodeURIComponent(article.id)}` : "/news"),
   });
 }
 
@@ -67,7 +69,7 @@ export function shareThread(thread) {
   return shareUrl({
     title: thread?.title || "RLT Forum",
     text: thread?.title,
-    url: thread?.id ? `/forum?thread=${encodeURIComponent(thread.id)}` : "/forum",
+    url: thread?.id ? `/forum/thread/${encodeURIComponent(thread.id)}` : "/forum",
   });
 }
 
@@ -75,7 +77,7 @@ export function shareProduct(product) {
   return shareUrl({
     title: product?.name || "RLT Store",
     text: product?.name,
-    url: "/store",
+    url: product?.id ? `/store/product/${encodeURIComponent(product.id)}` : "/store",
   });
 }
 
@@ -83,6 +85,6 @@ export function shareGalleryItem(item) {
   return shareUrl({
     title: item?.title || "RLT Gallery",
     text: item?.title,
-    url: "/gallery",
+    url: item?.id ? `/gallery?item=${encodeURIComponent(item.id)}` : "/gallery",
   });
 }
