@@ -85,10 +85,13 @@ Routes (from `src/App.jsx`):
 - ✅ Query-cache persistence with a public-content ALLOWLIST (only
   non-PII, non-admin-widened roots ever persist); notification tap-routing map
 - ✅ Checkout return: canonical session-id URLs + server-side verification
-  (verifyCheckoutReturn) + verification-gated native screens — 🔧 DEPLOY
-  `createCheckout` (changed) + `verifyCheckoutReturn` (new) to Supabase,
-  then 🔧 device-verify the universal-link return. Until deployed the legacy
-  web-banner return remains live.
+  (verifyCheckoutReturn) + verification-gated WEB AND NATIVE return screens
+  (one shared hook; Stripe payment_status is the exclusive confirmation
+  authority; the URL-trusting ?success=true flow is gone; bind failures in
+  createCheckout fail closed) — 🔧 DEPLOY `createCheckout` (changed) +
+  `verifyCheckoutReturn` (new) to Supabase, then 🔧 device-verify the
+  universal-link return. Until deployed, returns land on the soft
+  "Order confirming" notice (never a false success).
 - ⏳ Push: token registration code-complete — 🔧 apply `0009_user_push_tokens`
   migration; live registration unverified; NO delivery pipeline (RLT-IOS-004)
 - ⏳ Native Google OAuth (exact plan in `docs/NATIVE_ARCHITECTURE.md`) — Google

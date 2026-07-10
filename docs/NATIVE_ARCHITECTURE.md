@@ -183,41 +183,54 @@ shortcuts, breadcrumbs) is not carried onto the phone.
   Scrolling and repeated renders can never vibrate (min-interval ≥100ms per
   event; outcome events ≥800ms).
 
-## Checkout return (server-authoritative, 003F)
+## Checkout return (server-authoritative, 003F → hardened 003I/003O)
 
-`createCheckout` now sends Stripe to the canonical return routes with a
+`createCheckout` sends Stripe to the canonical return routes with a
 verifiable reference: `/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`
-and `/store/checkout/cancel` (web users flow through the App.jsx aliases into
-the existing banner behavior; in the installed app the universal link lands on
-the native screens; legacy `/store?success=true` arrivals still redirect
-natively).
+and `/store/checkout/cancel`. Binding that session id onto the order row is a
+HARD precondition (003O): if the `stripe_session_id` update fails,
+`createCheckout` expires the Stripe session and returns an error instead of a
+payable URL, so no customer can ever pay into an unverifiable order.
 
-**The URL proves navigation only (on native).** The native return screen
-runs a verification state machine: it calls the read-only
-`verifyCheckoutReturn` edge function, which (in order) validates the
-session-id format, looks up `store_orders` by that exact
-`stripe_session_id` — unknown ids 404 **before any Stripe call**
-(anti-amplification; bind #1) — then retrieves the session from Stripe
-server-side, rejects foreign apps via `rlt_app_id` metadata, and requires
-the session's own `metadata.order_id` to point back at the same order row
-(bind #2) before reporting a PII-free
-`{paymentStatus, sessionStatus, orderStatus}`. (The original 003F called
-Stripe first and its order bind only decorated `orderStatus`; the DB-first
-double-bind landed in 003I.) States: `confirming → confirmed | pending |
-cancelled | unverified`, plus a soft `confirming_offline` state when the
-return URL carries no `session_id` at all (deploy skew from an
-un-redeployed `createCheckout`) — that case defers to the webhook and never
-shows a red failure. Success copy and the single, guarded, exactly-once
-cart clear happen **only on verified payment**; pending polls politely
-(5×4s) and keeps the cart; unverified never claims success. Guest-safe:
-possession of the unguessable `cs_` session id delivered by Stripe's
-redirect is the return credential. The **webhook remains the only writer**
-of order state.
+**The URL proves navigation only — on BOTH platforms (003O).** Web
+(`src/pages/CheckoutReturn.jsx`) and native
+(`NativeCheckoutReturnScreen.jsx`) both drive their UI from the single shared
+`useCheckoutReturn` hook, which calls the read-only `verifyCheckoutReturn`
+edge function. That function (in order) validates the session-id format,
+looks up `store_orders` by that exact `stripe_session_id` — unknown ids 404
+**before any Stripe call** (anti-amplification; bind #1) — then retrieves the
+session from Stripe server-side, rejects foreign apps via `rlt_app_id`
+metadata, and requires the session's own `metadata.order_id` to point back at
+the same order row (bind #2) before reporting a PII-free
+`{paymentStatus, sessionStatus, orderStatus}`.
 
-**Honesty note (web, pre-existing):** the WEB `/store?success=true` banner
-flow still clears the cart on URL arrival without server verification —
-unchanged pre-003 behavior, kept deliberately to leave web/PWA intact. Only
-the native return is verification-gated.
+**Stripe's `payment_status` is the EXCLUSIVE confirmation authority (003O).**
+`resolveCheckoutConfirmation` confirms only on `paid` /
+`no_payment_required`; the webhook-written `orderStatus` is informational and
+can never upgrade an unpaid session into a success claim. States:
+`confirming → confirmed | pending | cancelled | unverified`, plus a soft
+`confirming_offline` state when the return URL carries no `session_id` at all
+(deploy skew from an un-redeployed `createCheckout`) — that case defers to
+the webhook and never shows a red failure. Success copy and the single,
+guarded, exactly-once cart clear (one `writeCart([])` call site inside the
+shared hook, keyed per session) happen **only on Stripe-verified payment**;
+pending polls politely (5×4s) and keeps the cart; unverified never claims
+success. Guest-safe: possession of the unguessable `cs_` session id delivered
+by Stripe's redirect is the return credential. The **webhook remains the only
+writer** of order state.
+
+**Web URL-trust is GONE (003O):** the old `/store?success=true` flow that
+cleared the cart and showed "Order Placed Successfully!" on URL arrival alone
+has been removed. `/store/checkout/success|cancel` now route to the verified
+web return page, and a bare `?success=true` (hand-typed, or the deploy window
+before the new `createCheckout` ships) shows only a soft amber "Order
+confirming" notice — no success claim, cart untouched.
+
+**Admin refunds are RECORDED, not charged (003O):** the web and native
+"Record Refund" actions write refund fields onto the order (validated:
+positive, ≤ order total) and say explicitly that the actual Stripe refund is
+issued separately in the Stripe dashboard. No client code calls the Stripe
+refund API.
 
 **Deployment required (not yet live):** `createCheckout` (changed) and
 `verifyCheckoutReturn` (new) must be deployed to Supabase. No new secrets
@@ -271,6 +284,9 @@ native_admin_all_workflows_native: no  (19 modules remain wrapped web managers)
 
 checkout_return_routes_complete: yes
 checkout_server_verification_complete: yes (code; edge fns NOT yet deployed)
+checkout_confirmation_stripe_exclusive: yes (003O — orderStatus never confirms)
+checkout_web_return_verified: yes (003O — URL-trust flow removed)
+checkout_bind_failure_fails_closed: yes (003O — session expired, no URL returned)
 checkout_return_deployed: no           checkout_return_device_verified: no
 
 push_token_registration_code_complete: yes

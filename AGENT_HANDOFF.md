@@ -53,9 +53,21 @@ Multi-agent BMAD workflow. This file defines who does what and how work is hande
   confirmed findings. Source of truth for the findings + fixes:
   `docs/RLT-IOS-003-CORRECTION-HANDOFF.md`; architecture + honest status
   matrix: `docs/NATIVE_ARCHITECTURE.md`.
+- **003N accepted; 003O delivered** (Architect verdict "CHANGES REQUIRED" →
+  closed): Stripe `payment_status` is now the EXCLUSIVE checkout
+  confirmation (orderStatus never confirms); `createCheckout` fails closed
+  when the `stripe_session_id` bind can't persist (session expired, no URL
+  returned); WEB and native returns both verify via the single shared
+  `useCheckoutReturn` hook (the URL-trusting `?success=true` cart clear +
+  success banner are gone — a bare `?success=true` shows a soft "Order
+  confirming" notice); admin refunds are honestly labelled "Record Refund"
+  (order fields only, amount validated ≤ total; the Stripe refund is issued
+  separately in the dashboard).
 - **State:** gate green (tests · lint · typecheck · build · cap sync ios)
-  at every story commit. NO PR, NO merge yet — after the delta re-review, a
-  single PR `rlt-ios-003-native-product` → `main` goes to the Architect.
+  at every story commit. NO PR, NO merge yet — after the narrow 003O
+  review (Stripe-only confirmation · bind-failure behaviour · verified
+  returns · exactly-once cart clear · refund wording · docs truth · full
+  gate), a single PR goes to the Architect.
 - **Earlier waves:** the RLT-001* hotfix/reconciliation series and the
   RLT-002 refactor wave are merged history on `main`; their narratives live
   in this file's git history and `RUN_LOG.md`, not here.

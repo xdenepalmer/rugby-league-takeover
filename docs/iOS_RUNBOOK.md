@@ -150,7 +150,8 @@ and matches the site's anti-white-flash background.
   lands on the verification-gated native return screen, and
   `verifyCheckoutReturn` checks the session server-side (see "Checkout-return
   deployment" below — the edge functions still need deploying; until then
-  the return lands on the website's legacy banner). Orders are
+  returns show the soft "Order confirming" notice, since the URL-trusting
+  success banner was removed in 003O). Orders are
   webhook-authoritative (`stripeWebhook`), so a missed redirect never loses
   an order.
 - **External links** (tickets, sponsors, user-posted links): a global
@@ -212,6 +213,7 @@ Codemagic now has two workflows:
 The authoritative checkout return needs two Supabase Edge Function deploys:
 `createCheckout` (changed: canonical session-id return URLs) and
 `verifyCheckoutReturn` (new: read-only server-side session verification).
-No new secrets. Until both are deployed, production keeps the legacy
-`/store?success=true` web-banner return and the native verification screens
-are simply never reached from live checkouts.
+No new secrets. Until both are deployed, live checkouts still return to
+`/store?success=true`, which now shows only a soft "Order confirming" notice
+(003O removed the URL-trusting success banner and cart clear); the verified
+return screens are reached once the new `createCheckout` ships.
