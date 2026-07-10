@@ -14,7 +14,7 @@
 # key so the shared certificate is reused.
 #
 # One-time in the Codemagic UI before the first green build:
-#   1. App Store Connect API key integration named "app_store_connect".
+#   1. App Store Connect API key integration named "codemagic".
 #   2. The 'appstore' variable group containing CERTIFICATE_PRIVATE_KEY (secure)
 #      — the shared distribution key.
 #   3. In the Apple Developer portal, enable Push Notifications + Associated
@@ -30,12 +30,14 @@ workflows:
         # Shared, team/app-scoped group holding CERTIFICATE_PRIVATE_KEY (secure)
         # — the one distribution key reused across every app in the account.
         - appstore
+        # App-specific runtime vars (Supabase URL/key, RapidAPI, etc.).
+        - rugby_env
       node: 22
       xcode: latest
       vars:
         BUNDLE_ID: "com.rugbyleaguetakeover.app"
     integrations:
-      app_store_connect: app_store_connect
+      app_store_connect: codemagic
     scripts:
       - name: Install dependencies
         script: npm ci
