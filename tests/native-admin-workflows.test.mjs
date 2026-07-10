@@ -12,6 +12,7 @@ import {
   calcEstimatedDelivery,
   buildOrderStatusPayload,
   buildRefundPayload,
+  validateRefundAmount,
   MOD_QUEUES,
   moderationQueue,
   moderationCounts,
@@ -110,9 +111,40 @@ test("refund payload carries the full web field set", () => {
   assert.equal(refund.refund_reason, "damaged in transit");
   assert.ok(refund.refunded_at, "refunded_at stamped");
   assert.equal(refund.timeline.length, 2);
-  assert.match(refund.timeline[1].note, /Refund \$129\.50 AUD — damaged in transit/);
+  // Record-only wording: the audit trail must say the refund was RECORDED and
+  // that the Stripe refund is issued separately — never imply money moved here.
+  assert.match(refund.timeline[1].note, /Refund \$129\.50 AUD recorded — damaged in transit/);
+  assert.match(refund.timeline[1].note, /Issue the Stripe refund separately/);
+  assert.equal(refund.timeline[1].action, "Refund recorded");
   const noReason = buildRefundPayload(order, { actorEmail: "a", amount: 10 });
   assert.match(noReason.timeline[1].note, /No reason provided/);
+});
+
+test("refund amount is validated: positive and never over the order total", () => {
+  const total = 129.5;
+  assert.deepEqual(validateRefundAmount("100.00", total), { ok: true, amount: 100, error: null });
+  assert.deepEqual(validateRefundAmount(total, total), { ok: true, amount: 129.5, error: null }, "exact full refund allowed");
+  assert.equal(validateRefundAmount("0", total).ok, false, "zero rejected");
+  assert.equal(validateRefundAmount("-5", total).ok, false, "negative rejected");
+  assert.equal(validateRefundAmount("abc", total).ok, false, "non-numeric rejected");
+  assert.equal(validateRefundAmount("", total).ok, false, "empty rejected");
+  assert.equal(validateRefundAmount("200", total).ok, false, "over-total rejected");
+  assert.match(validateRefundAmount("200", total).error, /can't exceed the order total/);
+  // With no known total we still enforce positivity but can't cap.
+  assert.equal(validateRefundAmount("9999", 0).ok, true, "no total → positivity only");
+});
+
+test("both refund UIs are relabelled record-only and clarify Stripe is separate", () => {
+  const web = read("../src/components/admin/OrdersManager.jsx");
+  const native = read("../src/native/admin/workflows/NativeOrdersWorkflow.jsx");
+  for (const [name, src] of [["web", web], ["native", native]]) {
+    assert.ok(/Record\s*[Rr]efund/.test(src), `${name} button is relabelled record-only`);
+    assert.ok(!/Issue\s*[Rr]efund/.test(src), `${name} drops the misleading "Issue refund" wording`);
+    assert.ok(/Stripe/.test(src) && /separately/i.test(src), `${name} states the Stripe refund is separate`);
+  }
+  // Web validates inline; native delegates to the shared helper — both cap.
+  assert.ok(/exceed the order total/.test(web), "web validates the amount against the order total");
+  assert.ok(native.includes("validateRefundAmount"), "native validates via the shared helper");
 });
 
 // ── Moderation: queues + payload parity ─────────────────────────────────

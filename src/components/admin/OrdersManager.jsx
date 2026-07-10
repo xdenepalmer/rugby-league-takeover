@@ -237,6 +237,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundAmount, setRefundAmount] = useState(Number(order.total_aud || 0));
   const [refundReason, setRefundReason] = useState("");
+  const [refundError, setRefundError] = useState(null);
   const [freshLabelUrl, setFreshLabelUrl] = useState(null);
 
   const createLabelMutation = useMutation({
@@ -342,20 +343,36 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     onUpdate(order.id, data);
   };
 
+  // Recording a refund marks the order refunded in our records ONLY — it does
+  // not move money. The actual refund is issued separately in Stripe. The
+  // recorded amount must still be a real, positive figure no larger than what
+  // the customer paid.
   const handleRefundConfirm = () => {
+    const amount = Number(refundAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setRefundError("Enter a refund amount greater than $0.");
+      return;
+    }
+    const total = Number(order.total_aud);
+    if (Number.isFinite(total) && total > 0 && amount > total + 0.005) {
+      setRefundError(`Refund can't exceed the order total ($${total.toFixed(2)} AUD).`);
+      return;
+    }
+    const recorded = Number(amount.toFixed(2));
     const existingTimeline = [...timeline];
     existingTimeline.push(makeTimelineEntry(
-      "Status changed to Refunded",
+      "Refund recorded",
       actorEmail,
-      `Refund $${Number(refundAmount).toFixed(2)} AUD — ${refundReason || "No reason provided"}`
+      `Refund $${recorded.toFixed(2)} AUD recorded — ${refundReason || "No reason provided"}. Issue the Stripe refund separately.`
     ));
     onUpdate(order.id, {
       status: "refunded",
-      refund_amount: Number(refundAmount),
+      refund_amount: recorded,
       refund_reason: refundReason,
       refunded_at: new Date().toISOString(),
       timeline: existingTimeline,
     });
+    setRefundError(null);
     setShowRefundForm(false);
   };
 
@@ -701,13 +718,16 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         onClick={() => setShowRefundForm(true)}
                         className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
                       >
-                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Issue Refund
+                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Record Refund
                       </Button>
                     ) : (
                       <div className="border border-destructive/30 bg-destructive/5 p-4 space-y-3">
                         <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
-                          <AlertTriangle className="h-3.5 w-3.5" /> Issue Refund
+                          <AlertTriangle className="h-3.5 w-3.5" /> Record Refund
                         </div>
+                        <p className="text-[11px] leading-snug text-muted-foreground">
+                          This records the refund on the order only — it does not move any money. Issue the actual refund to the customer separately in the Stripe dashboard.
+                        </p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
                             <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Refund Amount (AUD)</label>
@@ -717,7 +737,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                               step="0.01"
                               min="0"
                               value={refundAmount}
-                              onChange={(e) => setRefundAmount(e.target.value)}
+                              onChange={(e) => { setRefundAmount(e.target.value); setRefundError(null); }}
                               className="h-11 rounded-none border-border/40 text-sm font-mono"
                             />
                           </div>
@@ -732,17 +752,20 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                             />
                           </div>
                         </div>
+                        {refundError && (
+                          <p className="text-[11px] font-bold text-destructive" role="alert">{refundError}</p>
+                        )}
                         <div className="flex items-center gap-2">
                           <Button
                             variant="destructive"
                             onClick={handleRefundConfirm}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
                           >
-                            Confirm Refund
+                            Record Refund
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(Number(order.total_aud || 0)); }}
+                            onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(Number(order.total_aud || 0)); setRefundError(null); }}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px] border-border/30"
                           >
                             Cancel

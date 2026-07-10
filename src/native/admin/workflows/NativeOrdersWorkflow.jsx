@@ -33,6 +33,7 @@ import {
   canRefundOrder,
   buildOrderStatusPayload,
   buildRefundPayload,
+  validateRefundAmount,
   makeTimelineEntry,
 } from "./workflow-helpers.js";
 
@@ -233,11 +234,17 @@ export function NativeOrderDetail() {
   };
 
   const confirmRefund = () => {
+    const check = validateRefundAmount(refundForm?.amount, order.total_aud);
+    if (!check.ok) {
+      emitHaptic("mutation.error");
+      setRefundForm((form) => (form ? { ...form, error: check.error } : form));
+      return;
+    }
     updateMutation.mutate({
       id: order.id,
       data: buildRefundPayload(order, {
         actorEmail: user?.email || "admin",
-        amount: refundForm?.amount,
+        amount: check.amount,
         reason: (refundForm?.reason || "").trim(),
       }),
     });
@@ -397,15 +404,18 @@ export function NativeOrderDetail() {
                     </button>
                   )}
                   {canRefundOrder(order.status) && (
-                    <button type="button" onClick={() => { emitHaptic("mutation.warning"); setRefundForm({ amount: Number(order.total_aud || 0), reason: "" }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
-                      Issue refund
+                    <button type="button" onClick={() => { emitHaptic("mutation.warning"); setRefundForm({ amount: Number(order.total_aud || 0), reason: "", error: null }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
+                      Record refund
                     </button>
                   )}
                 </div>
               )}
               {refundForm && (
                 <div className="border border-red-500/40 bg-red-500/5 p-3">
-                  <p className="pb-2 text-[10px] font-black uppercase tracking-widest text-red-300">Issue refund</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-300">Record refund</p>
+                  <p className="pb-2 pt-1 text-[10px] leading-snug text-muted-foreground">
+                    This records the refund on the order only. Issue the actual refund to the customer separately in the Stripe dashboard.
+                  </p>
                   <div className="grid gap-2">
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground" htmlFor="native-refund-amount">
                       Refund amount (AUD)
@@ -417,7 +427,7 @@ export function NativeOrderDetail() {
                       min="0"
                       inputMode="decimal"
                       value={refundForm.amount}
-                      onChange={(e) => setRefundForm({ ...refundForm, amount: e.target.value })}
+                      onChange={(e) => setRefundForm({ ...refundForm, amount: e.target.value, error: null })}
                       className="h-11 rounded-none border-border bg-background font-mono"
                     />
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground" htmlFor="native-refund-reason">
@@ -431,12 +441,15 @@ export function NativeOrderDetail() {
                       className="h-11 rounded-none border-border bg-background"
                     />
                   </div>
+                  {refundForm.error && (
+                    <p className="pt-2 text-[10px] font-bold text-red-400" role="alert">{refundForm.error}</p>
+                  )}
                   <div className="grid grid-cols-2 gap-2 pt-3">
                     <button type="button" disabled={updateMutation.isPending} onClick={() => setRefundForm(null)} className="ios-pressable flex min-h-11 items-center justify-center border border-border text-xs font-bold uppercase tracking-widest disabled:opacity-40">
                       Cancel
                     </button>
                     <button type="button" disabled={updateMutation.isPending} onClick={() => { emitHaptic("mutation.warning"); confirmRefund(); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/60 bg-red-500/15 text-xs font-bold uppercase tracking-widest text-red-300 disabled:opacity-40">
-                      Confirm refund
+                      Record refund
                     </button>
                   </div>
                 </div>

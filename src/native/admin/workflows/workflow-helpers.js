@@ -86,9 +86,9 @@ export function canCancelOrder(status) {
   return !["completed", "cancelled", "refunded"].includes(status || "pending");
 }
 
-/** Web parity: refunds are offered for any order that isn't already refunded
- *  (including delivered orders — OrdersManager shows Issue Refund whenever
- *  status !== "refunded"). */
+/** Web parity: a refund can be recorded for any order that isn't already
+ *  refunded (including delivered orders — OrdersManager shows Record Refund
+ *  whenever status !== "refunded"). */
 export function canRefundOrder(status) {
   return (status || "pending") !== "refunded";
 }
@@ -132,8 +132,35 @@ export function buildOrderStatusPayload(order, newStatus, { actorEmail, tracking
   return data;
 }
 
-/** Full refund payload the web manager writes (OrdersManager.handleRefundConfirm). */
+/**
+ * Validate an admin-entered refund amount against the order total. Refunds
+ * here are RECORDED, not charged — buildRefundPayload only writes order fields;
+ * the money movement is a separate action in the Stripe dashboard. But the
+ * recorded figure must still be real: a positive amount that never claims more
+ * than the customer actually paid. Returns { ok, amount, error }.
+ */
+export function validateRefundAmount(rawAmount, orderTotalAud) {
+  const amount = Number(rawAmount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, amount: null, error: "Enter a refund amount greater than $0." };
+  }
+  const total = Number(orderTotalAud);
+  // 0.005 tolerance so an exact full refund isn't rejected by float rounding.
+  if (Number.isFinite(total) && total > 0 && amount > total + 0.005) {
+    return { ok: false, amount: null, error: `Refund can't exceed the order total ($${total.toFixed(2)} AUD).` };
+  }
+  return { ok: true, amount: Number(amount.toFixed(2)), error: null };
+}
+
+/**
+ * Refund RECORD payload the web manager writes (OrdersManager.handleRefundConfirm).
+ * This marks the order refunded in our records only — it does NOT move money.
+ * The actual refund must be issued separately in Stripe; the timeline note says
+ * so, so the audit trail never implies a charge was reversed here.
+ */
 export function buildRefundPayload(order, { actorEmail, amount, reason } = {}) {
+  const cents = Number(amount);
+  const display = (Number.isFinite(cents) ? cents : 0).toFixed(2);
   return {
     status: "refunded",
     refund_amount: Number(amount),
@@ -142,9 +169,9 @@ export function buildRefundPayload(order, { actorEmail, amount, reason } = {}) {
     timeline: [
       ...(order.timeline || []),
       makeTimelineEntry(
-        "Status changed to Refunded",
+        "Refund recorded",
         actorEmail,
-        `Refund $${Number(amount).toFixed(2)} AUD — ${reason || "No reason provided"}`
+        `Refund $${display} AUD recorded — ${reason || "No reason provided"}. Issue the Stripe refund separately.`
       ),
     ],
   };
