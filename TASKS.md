@@ -55,3 +55,4 @@ BMAD story board. One story = one bounded change. No code without a story.
 | RLT-009 | Account My Orders section | queued (after baseline) | Order history in `/account` |
 | RLT-010 | Checkout Trust Layer | queued (after Antigravity UX spec) | Trust/conversion UX; needs Antigravity `ui-ux-pro-max` spec |
 | RLT-011 | Store shipping checkout completion | backlog | Preserved WIP on `bmad/wip-store-shipping` (`f0684600`) and `bmad/story-rlt-011-codex-store-shipping` (`46d069b`); resume only if Architect chooses to continue it |
+| RLT-IOS-003 | Native product transformation (platform split, native fan+admin shells, state/perf, QA) | in_progress | Branch `rlt-ios-003-native-product` off `main` `98f917d`; staged sub-stories 003A-003E, one commit each; audit at docs/audits/RLT-IOS-003-AUDIT.md |
