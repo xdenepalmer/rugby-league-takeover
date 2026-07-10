@@ -1,9 +1,13 @@
 /**
- * Checkout-return policy, shared by the native return screen (and any future
- * web upgrade). The rule this encodes: the return URL proves navigation, the
- * VERIFIED Stripe session / webhook-written order state proves payment. The
- * cart may be cleared exactly once, and only after verification confirms.
+ * Checkout-return policy, shared by the web and native return screens (via
+ * useCheckoutReturn). The rule this encodes: the return URL proves navigation
+ * only; Stripe's live payment_status is the EXCLUSIVE proof of payment. The
+ * cart may be cleared exactly once, and only after Stripe confirms.
  */
+// Webhook-written "paid-like" order states. Informational ONLY (e.g. showing
+// "your order is being prepared") — deliberately NOT used to confirm a
+// checkout return. A stale/anomalous internal status must never be able to
+// upgrade an unpaid Stripe session into a "paid" claim; Stripe is exclusive.
 export const PAID_ORDER_STATUSES = ["paid", "packing", "shipped", "completed"];
 
 const SESSION_ID_PATTERN = /^cs_(test|live)_[A-Za-z0-9]{10,240}$/;
@@ -13,19 +17,21 @@ export function isValidStripeSessionId(value) {
 }
 
 /**
- * Map a verifyCheckoutReturn result to a UI confirmation state:
- *  - "confirmed"  → Stripe says paid (or the webhook already advanced the order)
+ * Map a verifyCheckoutReturn result to a UI confirmation state. Confirmation
+ * is driven by Stripe's payment_status EXCLUSIVELY — the endpoint's
+ * webhook-written `orderStatus` is never allowed to confirm payment on its own.
+ *  - "confirmed"  → Stripe reports the session paid (or no payment required)
  *  - "pending"    → session completed but payment still processing (async
  *                   methods / webhook lag) — keep the cart, poll politely
  *  - "cancelled"  → the session expired without payment
- *  - "unverified" → anything else (missing/foreign session, error) — never
+ *  - "unverified" → anything else (missing/foreign session, error, or an
+ *                   unpaid session that isn't clearly pending/expired) — never
  *                   show success, never touch the cart
  */
 export function resolveCheckoutConfirmation(result) {
   if (!result || typeof result !== "object") return "unverified";
-  const { paymentStatus, sessionStatus, orderStatus } = result;
+  const { paymentStatus, sessionStatus } = result;
   if (paymentStatus === "paid" || paymentStatus === "no_payment_required") return "confirmed";
-  if (orderStatus && PAID_ORDER_STATUSES.includes(orderStatus)) return "confirmed";
   if (sessionStatus === "complete") return "pending";
   if (sessionStatus === "expired") return "cancelled";
   return "unverified";

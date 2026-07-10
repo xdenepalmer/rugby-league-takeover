@@ -25,14 +25,21 @@ test("stripe session ids validate strictly", () => {
 });
 
 // ── Verification → confirmation state ───────────────────────────────────
-test("payment truth maps to confirmation states", () => {
+test("only Stripe payment_status can confirm — order status never overrides", () => {
   assert.equal(resolveCheckoutConfirmation({ paymentStatus: "paid" }), "confirmed");
   assert.equal(resolveCheckoutConfirmation({ paymentStatus: "no_payment_required" }), "confirmed");
+  // The unsafe override is GONE: a webhook-written paid-like order status must
+  // NOT confirm a checkout return while Stripe still reports the session unpaid.
   for (const orderStatus of PAID_ORDER_STATUSES) {
     assert.equal(
       resolveCheckoutConfirmation({ paymentStatus: "unpaid", orderStatus }),
-      "confirmed",
-      `webhook-written ${orderStatus} confirms`
+      "unverified",
+      `unpaid Stripe + order '${orderStatus}' must NOT confirm (Stripe is exclusive)`
+    );
+    assert.equal(
+      resolveCheckoutConfirmation({ paymentStatus: "unpaid", orderStatus, sessionStatus: "complete" }),
+      "pending",
+      `unpaid+complete stays pending regardless of order '${orderStatus}'`
     );
   }
   assert.equal(
