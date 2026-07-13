@@ -89,12 +89,12 @@ export function buildMatchupSavePayload(draft) {
  * clobbering them with null. Same entity, same field names — corrected
  * values only.
  */
-export function buildPublishTogglePayload(matchup, isPublished) {
-  return cleanMatchupPayload({
-    is_published: isPublished,
-    home_score: matchup?.home_score,
-    away_score: matchup?.away_score,
-  });
+export function buildPublishTogglePayload(_matchup, isPublished) {
+  // Toggling publish must touch ONLY is_published. base44/Supabase .update is a
+  // partial write, so omitting the score fields leaves them exactly as-is —
+  // which both avoids the web row-toggle's score-nulling bug (it sends
+  // home_score/away_score: null) and never coerces a scheduled game to 0-0.
+  return { is_published: isPublished };
 }
 
 /** Centre column of a fixture row: score line when final, "VS" otherwise. */

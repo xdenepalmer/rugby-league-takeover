@@ -114,14 +114,14 @@ test("save payload strips id and cleans scores (web saveEdit → cleanPayload)",
   assert.equal(payload.is_published, true);
 });
 
-test("publish toggle writes is_published with the record's CURRENT scores (no score wipe)", () => {
-  // A published-state flip on a final game must not null its recorded score.
+test("publish toggle writes ONLY is_published (partial update never touches scores)", () => {
+  // A publish flip must not modify scores at all — base44/Supabase .update is a
+  // partial write, so a final game keeps its recorded score and a scheduled
+  // game is never coerced to 0-0 (both are the web row-toggle's score bug).
   const final = { id: "m1", status: "final", home_score: 24, away_score: 12, is_published: true };
-  assert.deepEqual(buildPublishTogglePayload(final, false), { is_published: false, home_score: 24, away_score: 12 });
-  // A scheduled game with null scores coerces to 0/0 — the SAME value the web's
-  // cleanPayload (Number(null) || 0) writes, so no drift from the web result.
+  assert.deepEqual(buildPublishTogglePayload(final, false), { is_published: false });
   const scheduled = { id: "m2", status: "scheduled", home_score: null, away_score: null };
-  assert.deepEqual(buildPublishTogglePayload(scheduled, true), { is_published: true, home_score: 0, away_score: 0 });
+  assert.deepEqual(buildPublishTogglePayload(scheduled, true), { is_published: true });
 });
 
 // ── Scoreline + picker grouping ──────────────────────────────────────────

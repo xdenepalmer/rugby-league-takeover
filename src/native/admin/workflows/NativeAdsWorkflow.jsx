@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -64,9 +64,11 @@ import {
  * and invalidates the SAME query keys (["siteAds"], ["siteSettings"]) so the
  * cache stays shared with the wrapped web panel.
  *
- * Session ad metrics stay in localStorage `rlt_ad_stats` (read + reset only,
- * web parity) and sponsors in `rlt_sponsors` (read only). The web AdsManager
- * dispatches no rlt_admin_log events for ads, so neither does this.
+ * Session ad metrics stay in localStorage `rlt_ad_stats` (read + reset), and
+ * like the web AdsManager the counters live-refresh — a 10s poll plus
+ * foreground/impression/click listeners — so open analytics stay current.
+ * Sponsors read from `rlt_sponsors` (read only). The web AdsManager dispatches
+ * no rlt_admin_log events for ads, so neither does this.
  */
 
 const AD_STATS_KEY = "rlt_ad_stats";
@@ -573,6 +575,23 @@ export default function NativeAdsWorkflow() {
   const [confirmDelete, setConfirmDelete] = useState(null); // ad id | null
   const [confirmResetStats, setConfirmResetStats] = useState(false);
   const [stats, setStats] = useState(() => readLS(AD_STATS_KEY, {}));
+
+  // Live-refresh the analytics counters like the web AdsManager: a 10s poll
+  // plus re-reads on foreground and on ad impression/click events.
+  useEffect(() => {
+    const refresh = () => setStats(readLS(AD_STATS_KEY, {}));
+    const interval = setInterval(refresh, 10000);
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    window.addEventListener("rlt_ad_impression", refresh);
+    window.addEventListener("rlt_ad_click", refresh);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("rlt_ad_impression", refresh);
+      window.removeEventListener("rlt_ad_click", refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   const counts = useMemo(() => adCounts(ads), [ads]);
   const analytics = useMemo(() => aggregateAnalytics(stats), [stats]);

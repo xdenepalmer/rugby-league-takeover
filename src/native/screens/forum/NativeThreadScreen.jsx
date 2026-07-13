@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Share2, Flag, MessageSquare, X } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Share2, Flag, MessageSquare, X, Pin, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import UserAvatar from "@/components/forum/feed/UserAvatar";
 import ForumMedia from "@/components/forum/ForumMedia";
@@ -21,7 +24,7 @@ export const nativeReplyDraftKey = (threadId) => `rlt_native_reply_draft_${threa
 
 const REPORT_REASONS = ["Spam", "Harassment", "Off-topic", "Other"];
 
-function ReplyNode({ post, depth, avatarFor, onReplyTo }) {
+function ReplyNode({ post, depth, avatarFor, onReplyTo, isModerator, onModDelete }) {
   return (
     <div className={depth > 0 ? "ml-3 border-l-2 border-primary/25 pl-3" : ""}>
       <div className="flex items-start gap-2 py-2">
@@ -32,17 +35,37 @@ function ReplyNode({ post, depth, avatarFor, onReplyTo }) {
           </p>
           <p className="whitespace-pre-wrap pt-0.5 text-sm leading-relaxed">{post.body}</p>
           {post.media_url && <ForumMedia url={post.media_url} type={post.media_type} className="mt-2 max-h-64" />}
-          <button
-            type="button"
-            onClick={() => onReplyTo(post)}
-            className="ios-pressable mt-1 min-h-9 text-[10px] font-bold uppercase tracking-widest text-primary"
-          >
-            Reply
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onReplyTo(post)}
+              className="ios-pressable mt-1 min-h-9 text-[10px] font-bold uppercase tracking-widest text-primary"
+            >
+              Reply
+            </button>
+            {isModerator && (
+              <button
+                type="button"
+                aria-label="Remove reply"
+                onClick={() => onModDelete(post)}
+                className="ios-pressable mt-1 flex min-h-9 items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-red-400"
+              >
+                <Trash2 className="h-3 w-3" aria-hidden="true" /> Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
       {(post.replies || []).map((child) => (
-        <ReplyNode key={child.id} post={child} depth={depth + 1} avatarFor={avatarFor} onReplyTo={onReplyTo} />
+        <ReplyNode
+          key={child.id}
+          post={child}
+          depth={depth + 1}
+          avatarFor={avatarFor}
+          onReplyTo={onReplyTo}
+          isModerator={isModerator}
+          onModDelete={onModDelete}
+        />
       ))}
     </div>
   );
@@ -56,7 +79,9 @@ function ReplyNode({ post, depth, avatarFor, onReplyTo }) {
  */
 export default function NativeThreadScreen() {
   const { id } = useParams();
-  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, isModerator } = useAuth();
+  const queryClient = useQueryClient();
   const { data: posts = [], isLoading } = useForumPosts();
   const { avatars } = useForumAvatars();
 
@@ -118,6 +143,43 @@ export default function NativeThreadScreen() {
   });
   const reactionMutation = useForumReaction(thread?.id);
   const reportMutation = useReportPost();
+
+  // ── Moderator tools ──────────────────────────────────────────────────────
+  // Moderators are not admins: direct entity writes fail RLS. Every action
+  // goes through the SAME forumAction edge function the web Forum page uses,
+  // with byte-identical payloads, and invalidates the SAME ["forumPosts"]
+  // cache key so the web feed and native shell stay in lock-step.
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const pinMutation = useMutation({
+    mutationFn: (isPinned) =>
+      base44.functions.invoke("forumAction", { action: "pin", postId: thread.id, is_pinned: isPinned }),
+    onMutate: () => emitHaptic("action.primary"),
+    onSuccess: (_data, isPinned) => {
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+      toast({ title: isPinned ? "Pinned" : "Unpinned" });
+    },
+    onError: (error) => {
+      emitHaptic("mutation.error");
+      toast({ title: "Action failed", description: error?.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (postId) => base44.functions.invoke("forumAction", { action: "delete", postId }),
+    onMutate: () => emitHaptic("mutation.warning"),
+    onSuccess: (_data, postId) => {
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+      toast({ title: "Removed" });
+      // The whole thread is gone — leave the dead route.
+      if (thread && String(postId) === String(thread.id)) navigate("/forum");
+    },
+    onError: (error) => {
+      emitHaptic("mutation.error");
+      toast({ title: "Remove failed", description: error?.message, variant: "destructive" });
+    },
+    onSettled: () => setDeleteTarget(null),
+  });
 
   const canSend = body.trim() && (isAuthenticated || guestName.trim());
   const replies = thread ? countReplies(thread) - 1 : 0;
@@ -208,6 +270,34 @@ export default function NativeThreadScreen() {
                 isPending={reactionMutation.isPending}
               />
             </div>
+
+            {isModerator && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+                <span className="text-[9px] font-black uppercase tracking-[0.25em] text-primary">Mod</span>
+                <button
+                  type="button"
+                  disabled={pinMutation.isPending}
+                  onClick={() => pinMutation.mutate(!thread.is_pinned)}
+                  className={`ios-pressable flex min-h-9 items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-widest disabled:opacity-40 ${
+                    thread.is_pinned ? "bg-primary/15 text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  <Pin className="h-3.5 w-3.5" aria-hidden="true" />
+                  {thread.is_pinned ? "Unpin" : "Pin"}
+                </button>
+                <button
+                  type="button"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => {
+                    emitHaptic("mutation.warning");
+                    setDeleteTarget(thread);
+                  }}
+                  className="ios-pressable flex min-h-9 items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-widest text-red-400 disabled:opacity-40"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete
+                </button>
+              </div>
+            )}
           </div>
 
           <p className="pt-4 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
@@ -215,7 +305,18 @@ export default function NativeThreadScreen() {
           </p>
           <div className="pt-1">
             {(thread.replies || []).map((reply) => (
-              <ReplyNode key={reply.id} post={reply} depth={0} avatarFor={avatarFor} onReplyTo={setReplyTo} />
+              <ReplyNode
+                key={reply.id}
+                post={reply}
+                depth={0}
+                avatarFor={avatarFor}
+                onReplyTo={setReplyTo}
+                isModerator={isModerator}
+                onModDelete={(node) => {
+                  emitHaptic("mutation.warning");
+                  setDeleteTarget(node);
+                }}
+              />
             ))}
           </div>
         </div>
@@ -259,6 +360,37 @@ export default function NativeThreadScreen() {
                 className="ios-pressable min-h-11 shrink-0 bg-primary px-4 text-sm font-bold uppercase tracking-wide text-primary-foreground disabled:opacity-40"
               >
                 {submitMutation.isPending ? "…" : "Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-end" role="dialog" aria-modal="true" aria-label="Confirm removal">
+          <button type="button" aria-label="Close" className="absolute inset-0 bg-black/60" onClick={() => setDeleteTarget(null)} />
+          <div className="ios-sheet relative w-full border-t border-border bg-card p-4 pb-[max(1rem,var(--safe-bottom))]">
+            <p className="font-display text-sm font-bold uppercase tracking-widest">Remove this post?</p>
+            <p className="pt-1 text-xs text-muted-foreground">
+              {thread && String(deleteTarget.id) === String(thread.id)
+                ? "This thread and every reply under it will be permanently removed."
+                : `${deleteTarget.author_name || "This member"}'s reply will be permanently removed.`}
+            </p>
+            <div className="flex gap-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="ios-pressable min-h-11 flex-1 border border-border text-xs font-bold uppercase tracking-widest"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                className="ios-pressable min-h-11 flex-1 bg-red-500 text-xs font-bold uppercase tracking-widest text-white disabled:opacity-40"
+              >
+                {deleteMutation.isPending ? "Removing…" : "Remove"}
               </button>
             </div>
           </div>
