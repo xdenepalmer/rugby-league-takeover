@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { Menu } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
@@ -8,7 +9,19 @@ import PublicOfflineBanner from "@/components/PublicOfflineBanner";
 import { emitHaptic } from "@/lib/native/haptic-events";
 import NativeTabBar from "./NativeTabBar.jsx";
 import NativeMoreSheet from "./NativeMoreSheet.jsx";
+import NativeRouteSkeleton from "../components/NativeRouteSkeleton.jsx";
 import NativeScrollMemory from "../navigation/NativeScrollMemory.jsx";
+
+// Native page transition: a quick slide-fade (the canitickit feel). Honoured by
+// MotionConfig reducedMotion="user" (App.jsx), so it self-disables under Reduce
+// Motion. mode="wait" lets the exit finish before the enter, which keeps it out
+// of the way of NativeScrollMemory's before-paint scroll restore.
+const pageVariants = {
+  initial: { opacity: 0, x: 12 },
+  in: { opacity: 1, x: 0 },
+  out: { opacity: 0, x: -12 },
+};
+const pageTransition = { type: "tween", ease: "easeOut", duration: 0.18 };
 import { isTabRootPath } from "./native-tabs.js";
 import { nativeAliasFor } from "../navigation/native-aliases.js";
 import {
@@ -159,7 +172,22 @@ export default function NativePublicShell() {
       )}
 
       <main id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))]">
-        <Outlet />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            variants={pageVariants}
+            initial="initial"
+            animate="in"
+            exit="out"
+            transition={pageTransition}
+            style={{ willChange: "transform, opacity" }}
+          >
+            {/* Native skeleton (not the web spinner) while a tab's chunk loads. */}
+            <Suspense fallback={<NativeRouteSkeleton />}>
+              <Outlet />
+            </Suspense>
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <NativeTabBar onTabPress={handleTabPress} cartCount={cartCount} />

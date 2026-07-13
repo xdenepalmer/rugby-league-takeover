@@ -71,6 +71,15 @@ if (isNativeApp()) {
   }, 2500);
 }
 
+// Stamp the native class on <html> BEFORE React mounts, so the native-feel CSS
+// layer (press-dip, overscroll lock) applies from the very first paint instead
+// of flashing un-styled web chrome on cold launch. NativeAppBootstrap adds it
+// too (idempotent) alongside its status-bar/splash side effects.
+if (isNativeApp()) {
+  document.documentElement.classList.add('is-native-app');
+  document.body?.classList.add('is-native-app');
+}
+
 const rootEl = document.getElementById('root');
 try {
   ReactDOM.createRoot(rootEl).render(

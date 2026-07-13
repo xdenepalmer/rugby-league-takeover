@@ -2,8 +2,10 @@
   "appId": "com.rugbyleaguetakeover.app",
   "appName": "Rugby League Takeover",
   "webDir": "dist",
+  "backgroundColor": "#030712",
   "ios": {
-    "contentInset": "never"
+    "contentInset": "never",
+    "backgroundColor": "#030712"
   },
   "plugins": {
     "SplashScreen": {
