@@ -32,6 +32,10 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   const [open, setOpen] = useState(false);
   const scrollYRef = useRef(0);
   const wasDrawerOpenRef = useRef(false);
+  // When a hash link is tapped in the mobile drawer, the scroll must wait until
+  // the drawer has closed and the body is unlocked — otherwise it scrolls a
+  // position:fixed body (no-op) and the close-restore yanks you back.
+  const pendingHashRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const location = useLocation();
@@ -40,12 +44,9 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
 
   const [activeHash, setActiveHash] = useState("");
 
-  /* Scroll-to-hash helper — handles both same-page and cross-page anchor links */
-  const scrollToHash = (href, e) => {
-    if (!href.startsWith("/#")) return; // not a hash link
-    e.preventDefault();
-    const hash = href.substring(1); // e.g. "#events"
-
+  /* Navigate to a homepage anchor (e.g. "#events") — same-page or cross-page.
+     Retries because sections mount lazily (LazySection). */
+  const goToHash = (hash) => {
     const scrollToTarget = (attempt = 0) => {
       const el = document.querySelector(hash);
       if (el) {
@@ -63,6 +64,26 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
       navigateTo(`/${hash}`);
       setTimeout(() => scrollToTarget(), 150);
     }
+  };
+
+  /* Desktop nav: the page is scrollable, so jump straight to the anchor. */
+  const scrollToHash = (href, e) => {
+    if (!href.startsWith("/#")) return; // not a hash link — let the Link navigate
+    e.preventDefault();
+    goToHash(href.substring(1));
+  };
+
+  /* Mobile drawer: an anchor link can't scroll a position:fixed body, so DEFER
+     it — record the hash, close the drawer, and let the unlock effect scroll to
+     it once the body is scrollable again. Real routes just close + navigate. */
+  const handleDrawerNav = (href, e) => {
+    if (href.startsWith("/#")) {
+      e.preventDefault();
+      pendingHashRef.current = href.substring(1);
+    } else {
+      pendingHashRef.current = null;
+    }
+    setOpen(false);
   };
 
   useEffect(() => {
@@ -174,10 +195,19 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     if (wasDrawerOpenRef.current) {
       wasDrawerOpenRef.current = false;
       unlockBody();
+      // Restore the pre-open scroll instantly (no flash), then — if the user
+      // tapped an anchor link — glide to that section now that the body scrolls.
       window.scrollTo(0, scrollYRef.current);
+      if (pendingHashRef.current) {
+        const hash = pendingHashRef.current;
+        pendingHashRef.current = null;
+        requestAnimationFrame(() => goToHash(hash));
+      }
     }
 
     return undefined;
+  // goToHash is a stable closure over refs/router helpers; re-run only on open.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Close drawer on ESC key
@@ -480,9 +510,9 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                     const active = isLinkActive(link.href);
                     return (
                       <motion.div key={link.href} variants={itemVariants}>
-                        <Link 
-                          to={link.href} 
-                          onClick={(e) => { scrollToHash(link.href, e); setOpen(false); }} 
+                        <Link
+                          to={link.href}
+                          onClick={(e) => handleDrawerNav(link.href, e)}
                           onMouseEnter={() => prefetchRoute(link.href)}
                           onTouchStart={() => prefetchRoute(link.href)}
                           className={`group relative flex items-center py-3 min-h-[44px] font-display text-xl uppercase tracking-wider cursor-pointer transition-all ${
