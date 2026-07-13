@@ -71,25 +71,17 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles --project "$XCODE_PROJECT"
       # App Store Connect rejects an IPA whose CFBundleVersion it has already
-      # seen ("must be higher than the previously uploaded version"). Codemagic's
-      # local $BUILD_NUMBER counter for this app is BEHIND the builds already on
-      # TestFlight (it was at 1 while ASC had 31), so derive the next build
-      # number from App Store Connect's actual latest and always exceed it.
-      - name: Set unique build number (above App Store Connect's latest)
+      # seen ("must be higher than the previously uploaded version"), and
+      # Codemagic's local $BUILD_NUMBER counter for this app was BEHIND the
+      # builds already on TestFlight (it sat at 1 while ASC had 31). Use the
+      # current Unix timestamp as the build number: strictly increasing on every
+      # build, always far above any prior version, safely within a 32-bit int,
+      # and dependent on nothing (no ASC API lookup, no app-id resolution).
+      - name: Set unique build number (monotonic timestamp)
         script: |
           set -eo pipefail
-          APP_ID=$(app-store-connect list-apps --bundle-id-identifier "$BUNDLE_ID" --json | jq -r '.[0].id')
-          if [ -z "$APP_ID" ] || [ "$APP_ID" = "null" ]; then
-            echo "::error:: could not resolve the App Store Connect app id for $BUNDLE_ID"; exit 1
-          fi
-          # Highest build across ALL marketing versions on TestFlight (this is
-          # what ASC compares against — e.g. the '31' in the duplicate error).
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_ID" --all-versions 2>/dev/null || echo 0)
-          echo "$LATEST" | grep -qE '^[0-9]+$' || LATEST=0
-          NEXT=$(( LATEST + 1 ))
-          # Never regress below Codemagic's own counter either (belt + suspenders).
-          if [ "${BUILD_NUMBER:-0}" -gt "$NEXT" ]; then NEXT="$BUILD_NUMBER"; fi
-          echo "App Store Connect latest TestFlight build: $LATEST -> building $NEXT"
+          NEXT=$(date +%s)
+          echo "Setting CFBundleVersion to $NEXT"
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = $NEXT;/g" "$XCODE_PROJECT/project.pbxproj"
       - name: Build IPA
         script: xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
