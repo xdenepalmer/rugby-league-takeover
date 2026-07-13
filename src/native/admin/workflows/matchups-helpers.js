@@ -106,6 +106,23 @@ export function matchupScoreline(matchup) {
 }
 
 /**
+ * Native-only additive search over the fixture list. The web MatchupsManager
+ * has no search box (it renders every fixture inline), so this NEVER changes
+ * what is written — it only narrows what the native list displays. Matches the
+ * fields a person would scan for: either club, the label, the venue, or a
+ * final-result note.
+ */
+export function filterMatchups(matchups, query = "") {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return matchups || [];
+  return (matchups || []).filter((m) =>
+    `${m?.home_team || ""} ${m?.away_team || ""} ${m?.label || ""} ${m?.venue || ""} ${m?.result_note || ""}`
+      .toLowerCase()
+      .includes(q)
+  );
+}
+
+/**
  * League-grouped roster for the native team picker (web parity: TeamSelect
  * renders an NRL group then a British Super League group from ALL_TEAMS).
  */
