@@ -1,11 +1,15 @@
+import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, Undo2 } from "lucide-react";
 import { supabase } from "@/api/supabaseClient";
 import { appParams } from "@/lib/app-params";
 import AdminOfflineBanner from "@/components/admin/AdminOfflineBanner";
 import { emitHaptic } from "@/lib/native/haptic-events";
 import NativeAdminTabBar from "./NativeAdminTabBar.jsx";
+import NativeRouteSkeleton from "../components/NativeRouteSkeleton.jsx";
+import { pageVariants, pageTransition } from "../components/native-page-motion.js";
 import NativeScrollMemory from "../navigation/NativeScrollMemory.jsx";
 
 /**
@@ -63,7 +67,24 @@ export default function NativeAdminShell() {
       <AdminOfflineBanner />
 
       <main id="admin-content" className="mx-auto w-full max-w-2xl pb-[max(84px,calc(84px+var(--safe-bottom)))]">
-        <Outlet />
+        {/* Same slide-fade + native skeleton as the fan shell, so admin tab
+            navigation is smooth and consistent instead of a hard cut with a
+            full-screen spinner flash while a module's chunk loads. */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            variants={pageVariants}
+            initial="initial"
+            animate="in"
+            exit="out"
+            transition={pageTransition}
+            style={{ willChange: "transform, opacity" }}
+          >
+            <Suspense fallback={<NativeRouteSkeleton />}>
+              <Outlet />
+            </Suspense>
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <NativeAdminTabBar attention={attention} currentPath={pathname} />

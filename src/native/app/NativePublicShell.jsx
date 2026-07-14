@@ -10,18 +10,8 @@ import { emitHaptic } from "@/lib/native/haptic-events";
 import NativeTabBar from "./NativeTabBar.jsx";
 import NativeMoreSheet from "./NativeMoreSheet.jsx";
 import NativeRouteSkeleton from "../components/NativeRouteSkeleton.jsx";
+import { pageVariants, pageTransition } from "../components/native-page-motion.js";
 import NativeScrollMemory from "../navigation/NativeScrollMemory.jsx";
-
-// Native page transition: a quick slide-fade (the canitickit feel). Honoured by
-// MotionConfig reducedMotion="user" (App.jsx), so it self-disables under Reduce
-// Motion. mode="wait" lets the exit finish before the enter, which keeps it out
-// of the way of NativeScrollMemory's before-paint scroll restore.
-const pageVariants = {
-  initial: { opacity: 0, x: 12 },
-  in: { opacity: 1, x: 0 },
-  out: { opacity: 0, x: -12 },
-};
-const pageTransition = { type: "tween", ease: "easeOut", duration: 0.18 };
 import { isTabRootPath } from "./native-tabs.js";
 import { nativeAliasFor } from "../navigation/native-aliases.js";
 import {

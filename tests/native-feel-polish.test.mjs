@@ -42,3 +42,22 @@ test("the native shell animates page transitions and shows a skeleton, not a spi
   const skeleton = read("../src/native/components/NativeRouteSkeleton.jsx");
   assert.ok(skeleton.includes("NativeSkeleton"), "the skeleton is built from the shimmer primitive");
 });
+
+test("the admin command centre shell transitions and skeletons IDENTICALLY to the fan shell", () => {
+  const shell = read("../src/native/admin/NativeAdminShell.jsx");
+  assert.ok(shell.includes("AnimatePresence") && shell.includes('mode="wait"'), "admin route transitions wrap the outlet");
+  assert.ok(shell.includes("key={pathname}"), "admin transition keys off the path");
+  assert.ok(/<Suspense fallback=\{<NativeRouteSkeleton \/>\}>[\s\S]*?<Outlet \/>/.test(shell), "the skeleton wraps the admin outlet, so a module chunk load never flashes the full-screen spinner");
+  // Both shells must pull the SAME motion constants, so admin nav can't drift
+  // from the fan nav's feel — this is what fixes the 'dodgy/inconsistent' report.
+  assert.ok(shell.includes('from "../components/native-page-motion.js"'), "admin shell imports the shared motion constants");
+  const fan = read("../src/native/app/NativePublicShell.jsx");
+  assert.ok(fan.includes('from "../components/native-page-motion.js"'), "fan shell imports the shared motion constants");
+});
+
+test("the shared native page-motion constants are a quick slide-fade", () => {
+  const motion = read("../src/native/components/native-page-motion.js");
+  assert.ok(motion.includes("export const pageVariants"), "exports pageVariants");
+  assert.ok(motion.includes("export const pageTransition"), "exports pageTransition");
+  assert.ok(/duration:\s*0\.18/.test(motion), "the transition is the quick 0.18s canitickit slide-fade");
+});
