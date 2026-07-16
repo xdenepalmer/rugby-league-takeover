@@ -148,18 +148,65 @@ export function buildOrderMetadata({ appId, orderId, totalAud }) {
   };
 }
 
-export function isPaidSessionForOrder(session, order, expectedAppId = "") {
-  if (!session || !order) return { ok: false, error: "Missing session or order" };
-  if (session.payment_status !== "paid") return { ok: false, error: "Checkout session is not paid" };
-  if (order.stripe_session_id && session.id !== order.stripe_session_id) return { ok: false, error: "Checkout session does not match order" };
-  if (session.metadata?.order_id && session.metadata.order_id !== order.id) return { ok: false, error: "Session order metadata does not match order" };
-  if (expectedAppId && session.metadata?.rlt_app_id && session.metadata.rlt_app_id !== expectedAppId) return { ok: false, error: "Session app metadata does not match this app" };
-  if (String(session.currency || "").toLowerCase() !== CHECKOUT_CURRENCY) return { ok: false, error: "Checkout currency does not match" };
+// Classify a checkout session against the order it claims to pay (mirrors
+// stripeWebhook/index.ts):
+//   'paid'    → every binding holds and the money is in: write payment state.
+//   'pending' → bindings hold but payment isn't complete (async methods still
+//               settling): acknowledge, wait for async_payment_succeeded.
+//   'reject'  → a binding/amount/currency mismatch: 400 so the anomaly stays
+//               loud in the Stripe dashboard.
+export function classifyCheckoutSession(session, order, expectedAppId = "") {
+  if (!session || !order) return { outcome: "reject", reason: "Missing session or order" };
+  if (order.stripe_session_id && session.id !== order.stripe_session_id) return { outcome: "reject", reason: "Checkout session does not match order" };
+  if (session.metadata?.order_id && session.metadata.order_id !== order.id) return { outcome: "reject", reason: "Session order metadata does not match order" };
+  if (expectedAppId && session.metadata?.rlt_app_id && session.metadata.rlt_app_id !== expectedAppId) return { outcome: "reject", reason: "Session app metadata does not match this app" };
+  if (String(session.currency || "").toLowerCase() !== CHECKOUT_CURRENCY) return { outcome: "reject", reason: "Checkout currency does not match" };
 
   const expectedCents = Math.round(Number(order.total_aud || 0) * 100);
-  if (Number(session.amount_total) !== expectedCents) return { ok: false, error: "Checkout amount does not match order total" };
+  if (Number(session.amount_total) !== expectedCents) return { outcome: "reject", reason: "Checkout amount does not match order total" };
 
-  return { ok: true };
+  // Same confirmation rule the return screens apply (checkout-return.js):
+  // Stripe's payment_status is the EXCLUSIVE authority.
+  if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+    return { outcome: "pending", reason: "Checkout session is not paid yet" };
+  }
+  return { outcome: "paid" };
+}
+
+// Back-compat shim over classifyCheckoutSession — same accept/refuse answer
+// the webhook used before async payment support ('pending' is not ok to pay).
+export function isPaidSessionForOrder(session, order, expectedAppId = "") {
+  const verdict = classifyCheckoutSession(session, order, expectedAppId);
+  return verdict.outcome === "paid" ? { ok: true } : { ok: false, error: verdict.reason };
+}
+
+// Server-side refund validation (mirrors stripeRefund/index.ts
+// validateStripeRefundAmount): cents-first rounding, ≥ $0.01, and never more
+// than what's still refundable after prior partial refunds.
+export function validateStripeRefundAmount(rawAmount, orderTotalAud, alreadyRefundedAud = 0) {
+  const raw = Number(rawAmount);
+  if (!Number.isFinite(raw)) {
+    return { ok: false, error: "Enter a refund amount greater than $0." };
+  }
+  const amountAud = Number(raw.toFixed(2));
+  if (amountAud < 0.01) {
+    return { ok: false, error: "Enter a refund amount greater than $0." };
+  }
+  const total = Number(orderTotalAud);
+  const refunded = Number(alreadyRefundedAud);
+  const priorAud = Number.isFinite(refunded) && refunded > 0 ? Number(refunded.toFixed(2)) : 0;
+  if (Number.isFinite(total) && total > 0) {
+    const remaining = Number((Number(total.toFixed(2)) - priorAud).toFixed(2));
+    if (amountAud > remaining) {
+      return {
+        ok: false,
+        error: priorAud > 0
+          ? `Refund can't exceed the remaining balance ($${remaining.toFixed(2)} AUD — $${priorAud.toFixed(2)} already refunded).`
+          : `Refund can't exceed the order total ($${total.toFixed(2)} AUD).`,
+      };
+    }
+  }
+  return { ok: true, amountAud, amountCents: Math.round(amountAud * 100), error: null };
 }
 
 export function getNextStockQuantity(product, purchasedQuantity) {

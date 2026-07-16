@@ -7,11 +7,13 @@ import {
   buildOrderMetadata,
   buildShippingLineItem,
   calculateOrderTotalAud,
+  classifyCheckoutSession,
   getNextStockQuantity,
   isPaidSessionForOrder,
   normalizeCheckoutItems,
   resolveCheckoutCustomer,
   resolveCheckoutOrigin,
+  validateStripeRefundAmount,
 } from "./checkout-rules.mjs";
 
 test("normalizes cart quantities and removes malformed items", () => {
@@ -101,6 +103,47 @@ test("accepts paid webhook sessions only when order, amount, currency, app, and 
   assert.equal(isPaidSessionForOrder({ ...session, amount_total: 9991 }, order, "app_123").ok, false);
   assert.equal(isPaidSessionForOrder({ ...session, metadata: { ...metadata, rlt_app_id: "other" } }, order, "app_123").ok, false);
   assert.equal(isPaidSessionForOrder({ ...session, payment_status: "unpaid" }, order, "app_123").ok, false);
+});
+
+test("classifies webhook sessions as paid / pending / reject so async methods never retry-storm", () => {
+  const order = { id: "order_123", total_aud: 99.9, stripe_session_id: "cs_live_123" };
+  const metadata = buildOrderMetadata({ appId: "app_123", orderId: order.id, totalAud: order.total_aud });
+  const session = { id: "cs_live_123", payment_status: "paid", amount_total: 9990, currency: "aud", metadata };
+
+  assert.equal(classifyCheckoutSession(session, order, "app_123").outcome, "paid");
+  // 100%-covered sessions confirm exactly like the return screens do.
+  assert.equal(classifyCheckoutSession({ ...session, payment_status: "no_payment_required" }, order, "app_123").outcome, "paid");
+  // Bindings hold but an async method (bank debit) hasn't settled: PENDING —
+  // acknowledged with a 2xx, never 400d (Stripe would retry for days).
+  assert.equal(classifyCheckoutSession({ ...session, payment_status: "unpaid" }, order, "app_123").outcome, "pending");
+  // Binding/amount mismatches stay hard rejects regardless of payment state.
+  assert.equal(classifyCheckoutSession({ ...session, amount_total: 9991 }, order, "app_123").outcome, "reject");
+  assert.equal(classifyCheckoutSession({ ...session, id: "cs_live_other" }, order, "app_123").outcome, "reject");
+  assert.equal(classifyCheckoutSession({ ...session, metadata: { ...metadata, order_id: "other" } }, order, "app_123").outcome, "reject");
+  assert.equal(classifyCheckoutSession({ ...session, currency: "usd" }, order, "app_123").outcome, "reject");
+  assert.equal(classifyCheckoutSession(session, null, "app_123").outcome, "reject");
+});
+
+test("server refund validation rounds to cents first and caps at the remaining balance", () => {
+  // Cents-first rounding: 0.004 would record $0.00 — rejected.
+  assert.equal(validateStripeRefundAmount(0.004, 100).ok, false);
+  assert.equal(validateStripeRefundAmount("abc", 100).ok, false);
+  assert.equal(validateStripeRefundAmount(-5, 100).ok, false);
+
+  const full = validateStripeRefundAmount(99.9, 99.9);
+  assert.equal(full.ok, true);
+  assert.equal(full.amountAud, 99.9);
+  assert.equal(full.amountCents, 9990);
+
+  // A sub-cent overshoot rounds DOWN into validity, never over the total.
+  assert.equal(validateStripeRefundAmount(99.901, 99.9).ok, true);
+  assert.equal(validateStripeRefundAmount(99.91, 99.9).ok, false);
+
+  // Partial refunds shrink what remains refundable.
+  assert.equal(validateStripeRefundAmount(50, 99.9, 60).ok, false);
+  const partial = validateStripeRefundAmount(39.9, 99.9, 60);
+  assert.equal(partial.ok, true);
+  assert.equal(partial.amountCents, 3990);
 });
 
 test("builds a priced AusPost shipping line item and rejects missing rate selections", () => {

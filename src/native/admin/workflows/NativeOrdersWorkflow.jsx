@@ -31,6 +31,7 @@ import {
   nextOrderActions,
   canCancelOrder,
   canRefundOrder,
+  canStripeRefundOrder,
   buildOrderStatusPayload,
   buildRefundPayload,
   validateRefundAmount,
@@ -177,6 +178,9 @@ export function NativeOrderDetail() {
   const [tracking, setTracking] = useState(null); // lazily seeded from order
   const [confirm, setConfirm] = useState(null); // { to, label, destructive }
   const [refundForm, setRefundForm] = useState(null); // { amount, reason } | null
+  // Set when the server says the order has no Stripe payment to charge
+  // against — flips the form into the honest record-only fallback.
+  const [stripeRefundUnavailable, setStripeRefundUnavailable] = useState(false);
   const trackingState = tracking ?? {
     number: order?.tracking_number || "",
     url: order?.tracking_url || "",
@@ -233,11 +237,44 @@ export function NativeOrderDetail() {
     setConfirm(null);
   };
 
+  // Real money movement for Stripe-paid orders: the stripeRefund function
+  // issues the refund via Stripe AND writes the order record server-side.
+  const stripeRefundMutation = useMutation({
+    mutationFn: ({ amount, reason }) => base44.functions.invoke("stripeRefund", { orderId: order.id, amount, reason }),
+    onSuccess: ({ data }) => {
+      emitHaptic("save.success");
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["adminAttention"] });
+      setRefundForm(null);
+      toast({
+        title: data?.fullyRefunded ? "Refund issued" : "Partial refund issued",
+        description: data?.warning || `$${Number(data?.amount || 0).toFixed(2)} AUD sent back via Stripe.`,
+      });
+    },
+    onError: (error) => {
+      emitHaptic("mutation.error");
+      if (error?.data?.code === "no_stripe_payment") {
+        // No Stripe payment attached — flip the open form to record-only.
+        setStripeRefundUnavailable(true);
+        setRefundForm((form) => (form ? { ...form, error: null } : form));
+        return;
+      }
+      setRefundForm((form) => (form ? { ...form, error: error.message || "Refund could not be issued." } : form));
+    },
+  });
+
+  // Record-only is the fallback for orders with no Stripe payment attached
+  // (migrated/manual records) — Stripe-paid orders refund for real above.
+  const useStripeRefund = canStripeRefundOrder(order) && !stripeRefundUnavailable;
   const confirmRefund = () => {
     const check = validateRefundAmount(refundForm?.amount, order.total_aud);
     if (!check.ok) {
       emitHaptic("mutation.error");
       setRefundForm((form) => (form ? { ...form, error: check.error } : form));
+      return;
+    }
+    if (useStripeRefund) {
+      stripeRefundMutation.mutate({ amount: check.amount, reason: (refundForm?.reason || "").trim() });
       return;
     }
     updateMutation.mutate({
@@ -405,16 +442,18 @@ export function NativeOrderDetail() {
                   )}
                   {canRefundOrder(order.status) && (
                     <button type="button" onClick={() => { emitHaptic("mutation.warning"); setRefundForm({ amount: Number(order.total_aud || 0), reason: "", error: null }); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/40 text-xs font-bold uppercase tracking-widest text-red-400">
-                      Record refund
+                      {useStripeRefund ? "Refund via Stripe" : "Record refund"}
                     </button>
                   )}
                 </div>
               )}
               {refundForm && (
                 <div className="border border-red-500/40 bg-red-500/5 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-red-300">Record refund</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-300">{useStripeRefund ? "Refund via Stripe" : "Record refund"}</p>
                   <p className="pb-2 pt-1 text-[10px] leading-snug text-muted-foreground">
-                    This records the refund on the order only. Issue the actual refund to the customer separately in the Stripe dashboard.
+                    {useStripeRefund
+                      ? "Issues a real refund through Stripe to the customer's original payment method, then updates the order."
+                      : "This records the refund on the order only. Issue the actual refund to the customer separately in the Stripe dashboard."}
                   </p>
                   <div className="grid gap-2">
                     <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground" htmlFor="native-refund-amount">
@@ -445,11 +484,11 @@ export function NativeOrderDetail() {
                     <p className="pt-2 text-[10px] font-bold text-red-400" role="alert">{refundForm.error}</p>
                   )}
                   <div className="grid grid-cols-2 gap-2 pt-3">
-                    <button type="button" disabled={updateMutation.isPending} onClick={() => setRefundForm(null)} className="ios-pressable flex min-h-11 items-center justify-center border border-border text-xs font-bold uppercase tracking-widest disabled:opacity-40">
+                    <button type="button" disabled={updateMutation.isPending || stripeRefundMutation.isPending} onClick={() => setRefundForm(null)} className="ios-pressable flex min-h-11 items-center justify-center border border-border text-xs font-bold uppercase tracking-widest disabled:opacity-40">
                       Cancel
                     </button>
-                    <button type="button" disabled={updateMutation.isPending} onClick={() => { emitHaptic("mutation.warning"); confirmRefund(); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/60 bg-red-500/15 text-xs font-bold uppercase tracking-widest text-red-300 disabled:opacity-40">
-                      Record refund
+                    <button type="button" disabled={updateMutation.isPending || stripeRefundMutation.isPending} onClick={() => { emitHaptic("mutation.warning"); confirmRefund(); }} className="ios-pressable flex min-h-11 items-center justify-center border border-red-500/60 bg-red-500/15 text-xs font-bold uppercase tracking-widest text-red-300 disabled:opacity-40">
+                      {stripeRefundMutation.isPending ? "Refunding…" : useStripeRefund ? "Issue refund" : "Record refund"}
                     </button>
                   </div>
                 </div>

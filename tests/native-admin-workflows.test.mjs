@@ -142,13 +142,25 @@ test("refund amount is validated: positive and never over the order total", () =
   assert.equal(validateRefundAmount("9999", 0).ok, true, "no total → positivity only");
 });
 
-test("both refund UIs are relabelled record-only and clarify Stripe is separate", () => {
+test("refund UIs label the two paths honestly: 'Issue' only where money truly moves", () => {
+  // 003O-4 banned "Issue refund" because the button only RECORDED a refund.
+  // RLT-STRIPE-001 added a real server-side Stripe refund, so the rule
+  // evolves: "Issue" wording is allowed ONLY on the Stripe path (gated by
+  // useStripeRefund); the record-only fallback keeps the record-only label
+  // and says the Stripe refund happens separately.
   const web = read("../src/components/admin/OrdersManager.jsx");
   const native = read("../src/native/admin/workflows/NativeOrdersWorkflow.jsx");
   for (const [name, src] of [["web", web], ["native", native]]) {
-    assert.ok(/Record\s*[Rr]efund/.test(src), `${name} button is relabelled record-only`);
-    assert.ok(!/Issue\s*[Rr]efund/.test(src), `${name} drops the misleading "Issue refund" wording`);
-    assert.ok(/Stripe/.test(src) && /separately/i.test(src), `${name} states the Stripe refund is separate`);
+    assert.ok(/Record\s*[Rr]efund/.test(src), `${name} keeps the record-only label for the fallback`);
+    const lines = src.split("\n");
+    lines.forEach((line, i) => {
+      if (/Issue.{0,10}[Rr]efund|Issues a real refund/.test(line)) {
+        // The gate may sit a couple of lines up when the ternary wraps.
+        const window = lines.slice(Math.max(0, i - 2), i + 1).join("\n");
+        assert.ok(window.includes("useStripeRefund"), `${name}: "Issue" wording must be gated on the real Stripe path — got: ${line.trim()}`);
+      }
+    });
+    assert.ok(/Stripe/.test(src) && /separately/i.test(src), `${name} record-only copy states the Stripe refund is separate`);
     // ONE shared validator on both surfaces — no inline duplicate to drift.
     assert.ok(src.includes("validateRefundAmount"), `${name} validates via the shared helper`);
   }

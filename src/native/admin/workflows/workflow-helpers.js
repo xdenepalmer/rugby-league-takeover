@@ -93,6 +93,16 @@ export function canRefundOrder(status) {
   return (status || "pending") !== "refunded";
 }
 
+/**
+ * Whether the order carries a Stripe payment the stripeRefund edge function
+ * can target (payment intent recorded by the webhook, or a checkout session
+ * it can resolve one from). Orders without either — migrated/manual records —
+ * fall back to the honest record-only flow.
+ */
+export function canStripeRefundOrder(order) {
+  return Boolean(order?.stripe_payment_intent_id || order?.stripe_session_id);
+}
+
 /** Shipping-method config mirrored from the web OrdersManager. */
 export const SHIPPING_METHODS = {
   standard: { label: "Standard (7–10 business days)", days: 10 },
@@ -159,10 +169,12 @@ export function validateRefundAmount(rawAmount, orderTotalAud) {
 }
 
 /**
- * Refund RECORD payload the web manager writes (OrdersManager.handleRefundConfirm).
- * This marks the order refunded in our records only — it does NOT move money.
- * The actual refund must be issued separately in Stripe; the timeline note says
- * so, so the audit trail never implies a charge was reversed here.
+ * Refund RECORD payload — the fallback for orders with NO Stripe payment
+ * attached (migrated/manual records), where the stripeRefund edge function
+ * has nothing to charge against. This marks the order refunded in our records
+ * only — it does NOT move money — and the timeline note says so, so the audit
+ * trail never implies a charge was reversed here. Orders paid through Stripe
+ * refund for real via base44.functions.invoke("stripeRefund", ...) instead.
  */
 export function buildRefundPayload(order, { actorEmail, amount, reason } = {}) {
   const cents = Number(amount);

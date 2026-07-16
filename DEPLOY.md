@@ -21,11 +21,20 @@ Env vars (Vercel project settings): `VITE_SUPABASE_URL`,
   apply new ones with `supabase db push` (or the SQL editor, in order).
   ⚠️ `0009_user_push_tokens.sql` is committed but **not yet applied** — apply
   it when the push-notification story starts.
+  ⚠️ `0011_store_orders_payment_intent.sql` + the updated `stripeWebhook` +
+  new `stripeRefund` function are committed but **not yet deployed** — the
+  exact commands are step 0 of `docs/STRIPE_GO_LIVE.md`.
 - **Edge functions**: deploy changed functions from `supabase/functions/` with
-  `supabase functions deploy <name>`.
+  `supabase functions deploy <name>` (run `node scripts/sync-shared.mjs` first
+  if `_shared/shared.ts` changed). `stripeWebhook` must keep
+  `--no-verify-jwt` — Stripe can't send a Supabase JWT; the signature check is
+  its authenticity gate.
 - **Secrets** (functions): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
   `SITE_URL`; optional `CHECKOUT_ALLOWED_ORIGINS`, `CHECKOUT_DEFAULT_ORIGIN`,
-  AusPost keys.
+  AusPost keys. Full list + values: `.env.example`.
+- **Stripe**: the complete go-live checklist (secrets, webhook endpoint, the
+  five events to subscribe, test cards, refunds) is
+  `docs/STRIPE_GO_LIVE.md`.
 - **Auth**: redirect allow-list must contain the production domain routes
   (`/account`, `/reset-password`). Native in-app auth return will add entries
   in a later story.

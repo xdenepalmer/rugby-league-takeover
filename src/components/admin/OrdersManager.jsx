@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 // Pure, platform-neutral refund validation shared with the native workflow
 // (rounds to cents first, requires ≥ $0.01, caps at the order total).
-import { validateRefundAmount } from "@/native/admin/workflows/workflow-helpers";
+import { validateRefundAmount, canStripeRefundOrder } from "@/native/admin/workflows/workflow-helpers";
 
 const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded"];
 const paidLike = ["paid", "packing", "shipped", "completed"];
@@ -241,6 +241,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [refundAmount, setRefundAmount] = useState(Number(order.total_aud || 0));
   const [refundReason, setRefundReason] = useState("");
   const [refundError, setRefundError] = useState(null);
+  // Set when the server says the order has no Stripe payment to charge
+  // against — flips the form into the honest record-only fallback.
+  const [stripeRefundUnavailable, setStripeRefundUnavailable] = useState(false);
   const [freshLabelUrl, setFreshLabelUrl] = useState(null);
 
   const createLabelMutation = useMutation({
@@ -264,6 +267,30 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
       toast({ title: "Tracking refreshed", description: data?.latest_event || `Status: ${data?.status || "unknown"}` });
     },
     onError: (error) => toast({ title: "Could not refresh tracking", description: error.message, variant: "destructive" }),
+  });
+
+  // Real money movement: the stripeRefund edge function issues the refund via
+  // Stripe (admin-verified server-side) and writes the order record itself.
+  const stripeRefundMutation = useMutation({
+    mutationFn: ({ amount, reason }) => base44.functions.invoke("stripeRefund", { orderId: order.id, amount, reason }),
+    onSuccess: ({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setShowRefundForm(false);
+      setRefundError(null);
+      toast({
+        title: data?.fullyRefunded ? "Refund issued" : "Partial refund issued",
+        description: data?.warning || `$${Number(data?.amount || 0).toFixed(2)} AUD sent back via Stripe (${data?.refundId || "refund created"}).`,
+      });
+    },
+    onError: (error) => {
+      if (error?.data?.code === "no_stripe_payment") {
+        // No Stripe payment on this order — offer the record-only fallback.
+        setStripeRefundUnavailable(true);
+        setRefundError(null);
+        return;
+      }
+      setRefundError(error.message || "Refund could not be issued.");
+    },
   });
 
   const status = getStatusConfig(order.status || "pending");
@@ -346,10 +373,12 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     onUpdate(order.id, data);
   };
 
-  // Recording a refund marks the order refunded in our records ONLY — it does
-  // not move money. The actual refund is issued separately in Stripe. The
-  // recorded amount must still be a real, positive figure no larger than what
-  // the customer paid.
+  // Two refund paths, chosen by what the order actually carries:
+  //   • Stripe-paid orders → the stripeRefund edge function moves the money
+  //     via Stripe AND writes the order record (server-authoritative).
+  //   • Orders with no Stripe payment (migrated/manual) → the honest
+  //     record-only write below, whose timeline says no money moved here.
+  const useStripeRefund = canStripeRefundOrder(order) && !stripeRefundUnavailable;
   const handleRefundConfirm = () => {
     // Shared validator (same one the native workflow uses) so the rules can
     // never drift between surfaces.
@@ -359,6 +388,10 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
       return;
     }
     const recorded = check.amount;
+    if (useStripeRefund) {
+      stripeRefundMutation.mutate({ amount: recorded, reason: refundReason });
+      return;
+    }
     const existingTimeline = [...timeline];
     existingTimeline.push(makeTimelineEntry(
       "Refund recorded",
@@ -718,15 +751,17 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         onClick={() => setShowRefundForm(true)}
                         className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
                       >
-                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Record Refund
+                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {useStripeRefund ? "Refund via Stripe" : "Record Refund"}
                       </Button>
                     ) : (
                       <div className="border border-destructive/30 bg-destructive/5 p-4 space-y-3">
                         <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
-                          <AlertTriangle className="h-3.5 w-3.5" /> Record Refund
+                          <AlertTriangle className="h-3.5 w-3.5" /> {useStripeRefund ? "Refund via Stripe" : "Record Refund"}
                         </div>
                         <p className="text-[11px] leading-snug text-muted-foreground">
-                          This records the refund on the order only — it does not move any money. Issue the actual refund to the customer separately in the Stripe dashboard.
+                          {useStripeRefund
+                            ? "This issues a real refund through Stripe to the customer's original payment method, then updates the order. Partial amounts are supported."
+                            : "This records the refund on the order only — it does not move any money. Issue the actual refund to the customer separately in the Stripe dashboard."}
                         </p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
@@ -758,13 +793,15 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         <div className="flex items-center gap-2">
                           <Button
                             variant="destructive"
+                            disabled={stripeRefundMutation.isPending}
                             onClick={handleRefundConfirm}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
                           >
-                            Record Refund
+                            {stripeRefundMutation.isPending ? "Refunding…" : useStripeRefund ? "Issue Stripe Refund" : "Record Refund"}
                           </Button>
                           <Button
                             variant="outline"
+                            disabled={stripeRefundMutation.isPending}
                             onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(Number(order.total_aud || 0)); setRefundError(null); }}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px] border-border/30"
                           >

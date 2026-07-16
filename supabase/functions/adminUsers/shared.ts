@@ -79,6 +79,19 @@ export function getStripeWebhookSecret() {
   return secret;
 }
 
+// Every configured webhook signing secret, current-mode secret first. Both the
+// live and test Stripe webhook endpoints point at the same function URL, so
+// signature verification tries each configured secret — the event's own
+// session/order binding (not the secret that matched) scopes what it can touch.
+export function getStripeWebhookSecrets() {
+  const primary = getStripeWebhookSecret(); // throws when the active mode is unconfigured
+  const others = [
+    Deno.env.get('STRIPE_WEBHOOK_SECRET_TEST'),
+    Deno.env.get('STRIPE_WEBHOOK_SECRET_LIVE') || Deno.env.get('STRIPE_WEBHOOK_SECRET'),
+  ];
+  return [primary, ...others.filter((secret) => secret && secret !== primary)];
+}
+
 // ---------------------------------------------------------------------------
 // Branded transactional email (Resend). One light-themed template (white card,
 // orange accent + logo) so every email is on-brand and renders consistently in
