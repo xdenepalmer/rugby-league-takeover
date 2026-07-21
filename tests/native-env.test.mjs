@@ -21,6 +21,12 @@ test("a native iOS bridge is detected", () => {
   assert.equal(detectPlatform(bridge), "ios");
 });
 
+test("a native Android bridge is detected", () => {
+  const bridge = { isNativePlatform: () => true, getPlatform: () => "android" };
+  assert.equal(detectNativePlatform(bridge), true);
+  assert.equal(detectPlatform(bridge), "android");
+});
+
 test("a throwing bridge fails safe to web", () => {
   const bridge = { isNativePlatform: () => { throw new Error("boom"); } };
   assert.equal(detectNativePlatform(bridge), false);

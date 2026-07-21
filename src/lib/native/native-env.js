@@ -1,5 +1,5 @@
 /**
- * Native environment detection for the Capacitor iOS shell.
+ * Native environment detection for the Capacitor iOS and Android shells.
  *
  * The Capacitor bridge injects `window.Capacitor` before any page script runs
  * inside the native WebView. On the plain web/PWA nothing injects it, so every
@@ -39,6 +39,10 @@ export function getPlatform() {
 
 export function isIos() {
   return getPlatform() === "ios";
+}
+
+export function isAndroid() {
+  return getPlatform() === "android";
 }
 
 export function isWeb() {

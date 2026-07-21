@@ -1,5 +1,4 @@
-# Codemagic CI/CD — builds the Capacitor iOS app on Codemagic's macOS runners,
-# so no local Mac is needed (works from Windows).
+# Codemagic CI/CD builds the Capacitor iOS and Android apps from Windows.
 #
 # ── REFERENCE SIGNING TEMPLATE ────────────────────────────────────────────────
 # Every app in the account shares ONE distribution certificate. The RSA private
@@ -79,3 +78,45 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false
+
+  android-capacitor:
+    name: Android build (Capacitor shell)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      groups:
+        - rugby_env
+      android_signing:
+        # One-time Codemagic setup: upload the private Android upload keystore
+        # under this reference. Google Play App Signing keeps the app-signing
+        # key separate from this upload key.
+        - rlt_android_upload
+      node: 22
+      java: 21
+      vars:
+        PACKAGE_NAME: "com.rugbyleaguetakeover.app"
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Validation gate (same as GitHub CI)
+        script: npm run lint && npm run typecheck && npm test
+      - name: Set up Android SDK and optional Firebase config
+        script: |
+          set -e
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+          if [ -n "${FIREBASE_ANDROID_CONFIG:-}" ]; then
+            printf '%s' "$FIREBASE_ANDROID_CONFIG" | base64 --decode > "$CM_BUILD_DIR/android/app/google-services.json"
+          fi
+      - name: Build web assets and sync into the Android shell
+        script: npm run android:build
+      - name: Build signed Android App Bundle
+        script: |
+          set -e
+          cd android
+          ./gradlew bundleRelease \
+            -PversionCode="${BUILD_NUMBER}" \
+            -PversionName="1.0.${BUILD_NUMBER}"
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
+      - android/app/build/reports/**

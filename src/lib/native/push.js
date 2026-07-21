@@ -1,10 +1,10 @@
 /**
  * Push notification FOUNDATION only. This wraps permission/registration/token
  * plumbing for the native shell; there is deliberately no automatic permission
- * prompt (Apple rejects permission requests with no visible purpose) and no
- * send pipeline — delivery requires APNs credentials plus a Supabase send
- * function that do not exist yet. See supabase/migrations/0009_user_push_tokens.sql
- * for the token persistence path this is designed to feed.
+ * prompt and no send pipeline. Delivery requires Apple APNs and Android
+ * Firebase Cloud Messaging credentials plus a Supabase send function that do
+ * not exist yet. See supabase/migrations/0009_user_push_tokens.sql for the
+ * token persistence path this is designed to feed.
  */
 import { isNativeApp } from "./native-env.js";
 
@@ -24,9 +24,9 @@ export async function getPushPermissionStatus() {
 }
 
 /**
- * Ask the user for push permission and register with APNs. Only call this from
- * an explicit user action (e.g. a notification-preferences toggle) — never on
- * app launch.
+ * Ask the user for push permission and register with the platform push service.
+ * Only call this from an explicit user action (for example, a notification
+ * preferences toggle) — never on app launch.
  */
 export async function requestPushPermission() {
   if (!isNativeApp()) return "unsupported";
@@ -42,8 +42,8 @@ export async function requestPushPermission() {
 
 /**
  * Attach push listeners. Returns a cleanup function. `onToken` receives the
- * APNs device token string; persisting it (user_push_tokens) is the caller's
- * responsibility so auth context stays out of this module.
+ * platform device token string; persisting it (user_push_tokens) is the
+ * caller's responsibility so auth context stays out of this module.
  */
 export function addPushListeners({ onToken, onError, onReceived, onActioned } = {}) {
   if (!isNativeApp()) return () => {};

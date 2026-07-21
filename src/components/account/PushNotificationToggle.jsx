@@ -8,15 +8,14 @@ import {
   requestPushPermission,
 } from "@/lib/native/push";
 import { disableUserPushTokens, persistPushToken } from "@/lib/native/push-registration";
+import { getPlatform } from "@/lib/native/native-env";
 
 /**
  * Native-only push control for the account Notification Preferences.
  *
- * Requests OS permission on an explicit toggle (never on launch — Apple rejects
- * unprompted permission requests), registers with APNs, and persists the device
- * token. iOS gives no way to revoke permission from inside the app, so turning
- * the switch off disables the user's stored tokens (the send pipeline honors
- * `enabled`) and denied users are pointed at iOS Settings.
+ * Requests OS permission on an explicit toggle, registers with the platform
+ * push service, and persists the device token. Turning the switch off disables
+ * the user's stored tokens and denied users are pointed at system settings.
  */
 export default function PushNotificationToggle() {
   const { user, updateProfile } = useAuth();
@@ -25,6 +24,7 @@ export default function PushNotificationToggle() {
   const [on, setOn] = useState(false);
   const [busy, setBusy] = useState(false);
   const cleanupRef = useRef(null);
+  const settingsLabel = getPlatform() === "android" ? "Android Settings" : "iOS Settings";
 
   useEffect(() => {
     let active = true;
@@ -42,7 +42,7 @@ export default function PushNotificationToggle() {
       onError: () =>
         toast({
           title: "Couldn't enable push",
-          description: "APNs registration failed. Please try again shortly.",
+          description: "Device registration failed. Please try again shortly.",
           variant: "destructive",
         }),
     });
@@ -79,7 +79,7 @@ export default function PushNotificationToggle() {
             toast({
               title: "Permission needed",
               description:
-                "Turn on notifications for Rugby League Takeover in iOS Settings to receive alerts.",
+                `Turn on notifications for Rugby League Takeover in ${settingsLabel} to receive alerts.`,
               variant: "destructive",
             });
           }
@@ -88,7 +88,7 @@ export default function PushNotificationToggle() {
         setBusy(false);
       }
     },
-    [busy, userId, updateProfile]
+    [busy, settingsLabel, userId, updateProfile]
   );
 
   const denied = status === "denied";
@@ -99,7 +99,7 @@ export default function PushNotificationToggle() {
         <span className="font-semibold">Push Notifications</span>
         <p className="text-xs text-muted-foreground">
           {denied
-            ? "Notifications are blocked. Enable them for Rugby League Takeover in iOS Settings."
+            ? `Notifications are blocked. Enable them for Rugby League Takeover in ${settingsLabel}.`
             : "Match countdowns, ticket alerts and forum replies delivered straight to your device."}
         </p>
       </div>

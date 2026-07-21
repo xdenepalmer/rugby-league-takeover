@@ -1,6 +1,6 @@
 /**
- * Bridges the pure push plumbing (push.js) to the data layer: persists APNs
- * device tokens into user_push_tokens (see supabase/migrations/0009) and
+ * Bridges the pure push plumbing (push.js) to the data layer: persists native
+ * push tokens into user_push_tokens (see supabase/migrations/0009) and
  * disables them when the user turns push off. Kept separate from push.js so
  * that module stays free of auth/data-layer concerns. The base44 client is
  * imported lazily so the token-reconciliation logic below can be unit-tested
@@ -9,7 +9,7 @@
 import { getPlatform } from "./native-env.js";
 
 /**
- * Decide whether an APNs token is new (insert) or already known (update +
+ * Decide whether a platform token is new (insert) or already known (update +
  * re-enable), given the rows currently matching that token. Pure so tests can
  * exercise it without the data layer. The unique index on `token` means there
  * is at most one match.
@@ -51,9 +51,9 @@ export async function persistPushToken(userId, token) {
 }
 
 /**
- * Turn push off server-side. iOS gives no API to revoke OS permission from
- * within the app, so we instead disable the user's stored tokens; the (future)
- * send pipeline only targets rows where `enabled` is true.
+ * Turn push off server-side. Mobile platforms do not provide a reliable way to
+ * revoke OS permission from inside the app, so we instead disable the user's
+ * stored tokens; the future send pipeline only targets enabled rows.
  */
 export async function disableUserPushTokens(userId) {
   if (!userId) return;

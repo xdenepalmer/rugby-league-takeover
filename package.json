@@ -1,6 +1,6 @@
 {
   "name": "rugby-league-takeover",
-  "description": "Rugby League Takeover web app (Supabase + Vercel, Capacitor iOS shell)",
+  "description": "Rugby League Takeover web app (Supabase + Vercel, Capacitor iOS and Android shells)",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,9 +15,14 @@
     "ios:build": "vite build && cap sync ios",
     "ios:sync": "cap sync ios",
     "ios:open": "cap open ios",
-    "ios:run": "cap run ios"
+    "ios:run": "cap run ios",
+    "android:build": "vite build && cap sync android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "android:run": "cap run android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
     "@capacitor/app-launcher": "^8.0.1",
     "@capacitor/browser": "^8.0.3",

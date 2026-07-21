@@ -6,7 +6,13 @@
  */
 import { CANONICAL_WEB_ORIGIN, isNativeApp } from "./native-env.js";
 
-const CANONICAL_HOSTS = new Set(["rugbyleaguetakeover.com", "www.rugbyleaguetakeover.com", "localhost"]);
+const CANONICAL_HOSTS = new Set([
+  "rugbyleaguetakeover.com",
+  "www.rugbyleaguetakeover.com",
+  "rugbyleaguetakeover.com.au",
+  "www.rugbyleaguetakeover.com.au",
+  "localhost",
+]);
 
 export function mapUrlToRoute(urlString, { canonicalOrigin = CANONICAL_WEB_ORIGIN } = {}) {
   if (!urlString) return null;

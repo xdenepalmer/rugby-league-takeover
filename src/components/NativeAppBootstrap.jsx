@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isNativeApp } from "@/lib/native/native-env";
+import { isIos, isNativeApp } from "@/lib/native/native-env";
 import { initDeepLinks, mapUrlToRoute } from "@/lib/native/deep-links";
 import { classifyHref, openExternalUrl, openSystemUrl } from "@/lib/native/open-external";
 
@@ -28,23 +28,26 @@ export default function NativeAppBootstrap() {
       )
       .catch(() => {});
 
-    // iOS keyboard polish: prevent overlap and ensure smooth scrolling
-    import("@capacitor/keyboard")
-      .then(({ Keyboard }) => {
-        Promise.allSettled([
-          Keyboard.setAccessoryBarVisible({ isVisible: true }),
-          Keyboard.setScroll({ isDisabled: false })
-        ]);
-      })
-      .catch(() => {});
+    // These keyboard controls are iOS-only. Android uses its native resize
+    // behavior from the Capacitor configuration.
+    if (isIos()) {
+      import("@capacitor/keyboard")
+        .then(({ Keyboard }) => {
+          Promise.allSettled([
+            Keyboard.setAccessoryBarVisible({ isVisible: true }),
+            Keyboard.setScroll({ isDisabled: false }),
+          ]);
+        })
+        .catch(() => {});
+    }
 
     const removeDeepLinks = initDeepLinks(navigate);
 
     // Inside the shell: absolute http(s) links (ticket vendors, sponsor sites,
     // user-authored forum links) must open in the system browser sheet,
     // absolute links to our own domain must become router navigations, and
-    // mailto:/tel:/sms: must go to the OS handler (WKWebView silently ignores
-    // them). Nothing may navigate the WebView off the local app.
+    // mailto:/tel:/sms: must go to the OS handler. Nothing may navigate the
+    // WebView off the local app.
     const handleClick = (event) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
       const anchor = event.target?.closest?.("a[href]");

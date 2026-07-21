@@ -58,6 +58,8 @@ test("install prompt is hidden inside the native shell", () => {
 test("universal links on the canonical domain map to router paths", () => {
   assert.equal(mapUrlToRoute("https://rugbyleaguetakeover.com/forum?thread=abc"), "/forum?thread=abc");
   assert.equal(mapUrlToRoute("https://www.rugbyleaguetakeover.com/news"), "/news");
+  assert.equal(mapUrlToRoute("https://rugbyleaguetakeover.com.au/gallery"), "/gallery");
+  assert.equal(mapUrlToRoute("https://www.rugbyleaguetakeover.com.au/faq"), "/faq");
   assert.equal(mapUrlToRoute("https://rugbyleaguetakeover.com/store?success=true"), "/store?success=true");
   assert.equal(mapUrlToRoute("capacitor://localhost/account"), "/account");
 });

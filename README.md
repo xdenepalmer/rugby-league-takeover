@@ -9,7 +9,7 @@ A public, account-optional web app. Anonymous visitors can browse and (where all
 - **React 18 + Vite**, React Router, TanStack Query, Tailwind CSS, shadcn/ui, framer-motion, lucide-react, recharts.
 - **Supabase** (`@supabase/supabase-js`) for data (Postgres + RLS), auth, Edge Functions, and Storage — wrapped by the compat client in `src/api/base44Client.js` which preserves the original `base44.*` call surface.
 - **Stripe** hosted checkout (PCI SAQ A — no card data touches the app).
-- **PWA**: service worker (`public/sw.js`) + web manifest.
+- **PWA + native shells**: service worker/web manifest, plus Capacitor 8 for iOS and Android.
 - **Tests**: Node's built-in test runner (`node --test`). **Typecheck**: `tsc` against `jsconfig.json`. **Lint**: ESLint.
 
 ## 3. Local setup
@@ -36,6 +36,8 @@ No secrets belong in the repo. Stripe/Resend secret keys live only in Supabase E
 - `npm run preview` — preview the production build.
 - `npm run ios:build` — web build + sync into the iOS shell (`vite build && cap sync ios`).
 - `npm run ios:sync` / `npm run ios:open` / `npm run ios:run` — Capacitor sync / open in Xcode / run (Mac only for open/run).
+- `npm run android:build` — web build + sync into the Android shell (`vite build && cap sync android`).
+- `npm run android:sync` / `npm run android:open` / `npm run android:run` — Capacitor sync / open in Android Studio / run.
 
 ## 6. Deploy flow
 1. Make code changes locally on a branch.
@@ -43,7 +45,8 @@ No secrets belong in the repo. Stripe/Resend secret keys live only in Supabase E
 3. Frontend: `npm run build` → deploy `dist/` to your static host.
 4. Database schema changes: add a migration under `supabase/migrations/` and apply it to the project.
 5. Edge Functions: edit `supabase/functions/<name>/index.ts` (shared helpers live in `supabase/functions/_shared/shared.ts`; run `node scripts/sync-shared.mjs` after editing them) and deploy to Supabase.
-6. iOS: the Capacitor shell in `ios/` ships via Xcode/TestFlight — see `docs/iOS_RUNBOOK.md` and `docs/APP_STORE_CHECKLIST.md`. Web deploys do not update the installed app.
+6. iOS: the Capacitor shell in `ios/` ships via Xcode/TestFlight — see `docs/iOS_RUNBOOK.md` and `docs/APP_STORE_CHECKLIST.md`.
+7. Android: the Capacitor shell in `android/` ships as an AAB through Google Play — see `docs/ANDROID_RUNBOOK.md` and `docs/GOOGLE_PLAY_CHECKLIST.md`. Web deploys do not update either installed app.
 
 ## 7. BMAD workflow rules
 - **No code without a story.** One story = one bounded change.

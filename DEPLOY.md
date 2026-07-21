@@ -37,6 +37,15 @@ App Store. See `docs/iOS_RUNBOOK.md` (build/run) and
 `docs/APP_STORE_CHECKLIST.md` (submission). Web deploys do NOT update
 installed apps — ship a new build via `npm run ios:build` + Xcode archive.
 
+## Android (Capacitor)
+
+The native shell in `android/` ships separately as a signed Android App Bundle
+through Google Play. See `docs/ANDROID_RUNBOOK.md` for build/signing steps and
+`docs/GOOGLE_PLAY_CHECKLIST.md` for Play Console setup. Run
+`npm run android:build`, then build `android/app/build/outputs/bundle/release/app-release.aab`
+with Android Studio or the `android-capacitor` Codemagic workflow. Web deploys
+do not update installed Android apps.
+
 ## Post-deploy smoke test
 
 - Homepage countdown + background video play.
