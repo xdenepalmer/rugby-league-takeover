@@ -113,6 +113,7 @@ workflows:
         script: |
           set -e
           cd android
+          chmod +x gradlew
           ./gradlew bundleRelease \
             -PversionCode="${BUILD_NUMBER}" \
             -PversionName="1.0.${BUILD_NUMBER}"
