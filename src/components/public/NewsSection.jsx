@@ -10,6 +10,7 @@ import { Calendar, ArrowRight, Clock, Newspaper } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 import PublicDetailSheet from "./PublicDetailSheet";
 import FeaturedNewsCard from "./FeaturedNewsCard";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
 
 /* ── Reading time estimator ── */
 const readingTime = (text) => {
@@ -148,10 +149,7 @@ export default function NewsSection({ articles = [], settings = {} }) {
   const [selectedArticle, setSelectedArticle] = useState(null);
 
   const handleCtaClick = () => {
-    const element = document.querySelector("#travel");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollToAnchor("#travel");
   };
 
   return (
