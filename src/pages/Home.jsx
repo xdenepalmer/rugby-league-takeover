@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { scrollToAnchor } from "@/lib/scroll-to-anchor";
+import VisitorCounter from "@/components/public/VisitorCounter";
 
 function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, onClick, tone = "primary" }) {
   const toneClass = {
@@ -525,6 +526,8 @@ export default function Home() {
                 <Link to="/terms" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70 hover:text-foreground transition-colors">Terms</Link>
                 <span className="text-muted-foreground/30">·</span>
                 <Link to="/privacy" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70 hover:text-foreground transition-colors">Privacy</Link>
+                <span className="text-muted-foreground/30">·</span>
+                <VisitorCounter />
               </div>
               <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 <span>Powered by</span>

@@ -12,6 +12,7 @@ import AdSlot from "@/components/ads/AdSlot";
 import PublicOfflineBanner from "@/components/PublicOfflineBanner";
 import { selectionChanged } from "@/lib/native/haptics";
 import { scrollToAnchor } from "@/lib/scroll-to-anchor";
+import VisitorCounter from "./VisitorCounter";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
@@ -142,6 +143,9 @@ export default function PublicLayout() {
             <Link to="/terms" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Terms &amp; Conditions</Link>
             <span className="text-muted-foreground/30">·</span>
             <Link to="/privacy" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Privacy Policy</Link>
+          </div>
+          <div className="mt-2 flex justify-center">
+            <VisitorCounter />
           </div>
         </footer>
       )}
