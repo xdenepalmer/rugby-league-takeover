@@ -12,6 +12,8 @@ import ScrollProgressBar from "./ScrollProgressBar";
 import AdSlot from "@/components/ads/AdSlot";
 import PublicOfflineBanner from "@/components/PublicOfflineBanner";
 import { selectionChanged } from "@/lib/native/haptics";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
+import VisitorCounter from "./VisitorCounter";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
@@ -26,20 +28,10 @@ export default function PublicLayout() {
   const [cartCount, setCartCount] = useState(0);
 
   const handleNavigate = (hash) => {
-    if (location.pathname !== "/") {
-      navigate("/");
-      setTimeout(() => {
-        const element = document.querySelector(hash);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 300);
-    } else {
-      const element = document.querySelector(hash);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
+    // Land on home first when needed; scrollToAnchor polls until the target
+    // section mounts and is robust to the lazy sections reflowing mid-scroll.
+    if (location.pathname !== "/") navigate("/");
+    scrollToAnchor(hash);
   };
   
   const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({
@@ -155,6 +147,9 @@ export default function PublicLayout() {
             <Link to="/terms" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Terms &amp; Conditions</Link>
             <span className="text-muted-foreground/30">·</span>
             <Link to="/privacy" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Privacy Policy</Link>
+          </div>
+          <div className="mt-2 flex justify-center">
+            <VisitorCounter />
           </div>
         </footer>
       )}

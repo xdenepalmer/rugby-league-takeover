@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
 
 const logoUrl = "/icons/icon-192.png";
 const NotificationBell = lazy(() => import("@/components/NotificationBell"));
@@ -40,29 +41,21 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
 
   const [activeHash, setActiveHash] = useState("");
 
-  /* Scroll-to-hash helper — handles both same-page and cross-page anchor links */
+  /* Scroll-to-hash helper — handles both same-page and cross-page anchor links.
+     Delegates the actual scroll to the shared scrollToAnchor helper, which is
+     robust against the home page's lazy-loaded sections reflowing mid-scroll
+     (a plain smooth scrollIntoView lands on the wrong section — see the helper). */
   const scrollToHash = (href, e) => {
     if (!href.startsWith("/#")) return; // not a hash link
     e.preventDefault();
     const hash = href.substring(1); // e.g. "#events"
+    setActiveHash(hash);
 
-    const scrollToTarget = (attempt = 0) => {
-      const el = document.querySelector(hash);
-      if (el) {
-        setActiveHash(hash);
-        window.history.replaceState(null, "", `/${hash}`);
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      if (attempt < 6) setTimeout(() => scrollToTarget(attempt + 1), 150);
-    };
-
-    if (location.pathname === "/") {
-      scrollToTarget();
-    } else {
-      navigateTo(`/${hash}`);
-      setTimeout(() => scrollToTarget(), 150);
+    if (location.pathname !== "/") {
+      // Land on home first; scrollToAnchor polls until the section mounts.
+      navigateTo("/");
     }
+    scrollToAnchor(hash);
   };
 
   useEffect(() => {

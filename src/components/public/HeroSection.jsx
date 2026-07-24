@@ -4,6 +4,7 @@ import { Sparkles, UserPlus, Calendar, ShoppingBag, MessageSquare } from "lucide
 import { Link } from "react-router-dom";
 import CursorSpotlight from "./CursorSpotlight";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
 
 const logoUrl = "/icons/icon-192.png";
 
@@ -37,14 +38,8 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
 
   const handleTravelInterestClick = (event) => {
     event.preventDefault();
-    const target = document.querySelector("#travel-registration");
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
-    } else {
-      document.querySelector("#travel")?.scrollIntoView({ behavior: "smooth" });
-      window.setTimeout(() => document.querySelector("#travel-registration")?.scrollIntoView({ behavior: "smooth" }), 650);
-    }
-    window.history.replaceState(null, "", "#travel-registration");
+    // Target lives inside the lazy TravelSection — prescroll to its wrapper.
+    scrollToAnchor("#travel-registration", { prescroll: "#travel" });
   };
 
   // Split title lines and words for staggered reveals
