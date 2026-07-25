@@ -12,19 +12,33 @@ alter table public.store_orders
   add column if not exists cancel_reason text,
   add column if not exists restocked_at timestamptz;       -- set once when items are returned to stock
 
--- Allow a 'partially_refunded' status. The original inline CHECK is dropped by
--- discovered name (it's auto-generated), then re-added with the extra value.
+-- Allow a 'partially_refunded' status. The original inline CHECK has an
+-- auto-generated name, so it's found by the COLUMN it constrains rather than by
+-- name or by a text match on its definition — matching '%status%' in the
+-- definition would be ambiguous (store_orders also has stripe_payment_status /
+-- customer_status_note columns and a shipping_method CHECK). conkey pins it to
+-- single-column CHECKs on exactly `status`. Loops so re-running is safe and
+-- multiple matches are all cleared before the new constraint is added.
 do $$
-declare c text;
+declare
+  c record;
+  status_attnum smallint;
 begin
-  select conname into c
-  from pg_constraint
-  where conrelid = 'public.store_orders'::regclass
-    and contype = 'c'
-    and pg_get_constraintdef(oid) ilike '%status%';
-  if c is not null then
-    execute format('alter table public.store_orders drop constraint %I', c);
-  end if;
+  select attnum into status_attnum
+  from pg_attribute
+  where attrelid = 'public.store_orders'::regclass
+    and attname = 'status'
+    and not attisdropped;
+
+  for c in
+    select conname
+    from pg_constraint
+    where conrelid = 'public.store_orders'::regclass
+      and contype = 'c'
+      and conkey = array[status_attnum]
+  loop
+    execute format('alter table public.store_orders drop constraint %I', c.conname);
+  end loop;
 end $$;
 
 alter table public.store_orders
