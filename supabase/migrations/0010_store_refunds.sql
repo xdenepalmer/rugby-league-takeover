@@ -30,3 +30,12 @@ end $$;
 alter table public.store_orders
   add constraint store_orders_status_check
   check (status in ('pending', 'paid', 'packing', 'shipped', 'completed', 'cancelled', 'refunded', 'partially_refunded'));
+
+-- Indexes the store had none of beyond the PK. The webhook looks orders up by
+-- stripe_session_id on every Stripe event (idempotency), the admin list sorts
+-- by created_date and filters by status, and customers read their own orders
+-- by lower(user_email) — all full table scans until now.
+create index if not exists store_orders_stripe_session_idx on public.store_orders (stripe_session_id);
+create index if not exists store_orders_status_idx on public.store_orders (status);
+create index if not exists store_orders_created_idx on public.store_orders (created_date desc);
+create index if not exists store_orders_user_email_idx on public.store_orders (lower(user_email));

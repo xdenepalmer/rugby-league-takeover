@@ -6,6 +6,7 @@ import {
   Search, Download, DollarSign, ShoppingCart, Clock, PackageCheck, BadgeCheck,
   ChevronDown, Package, CreditCard, Truck, XCircle, CheckCircle2, RotateCcw,
   User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays, Send, RefreshCw,
+  Pencil, Printer, Ban,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { downloadCsv } from "@/lib/csv";
@@ -17,8 +18,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 
-const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded"];
+const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded", "partially_refunded"];
+// Statuses an admin sets by hand via the dropdown. Cancel/refund states are
+// driven by the dedicated Cancel/Refund actions (which move money + stock), so
+// they're intentionally excluded here to prevent a "fake" status flip.
+const MANUAL_STATUSES = ["pending", "paid", "packing", "shipped", "completed"];
 const paidLike = ["paid", "packing", "shipped", "completed"];
+const refundable = ["paid", "packing", "shipped", "completed", "partially_refunded"];
 const toFulfil = ["paid", "packing"];
 
 const statusConfig = {
@@ -29,6 +35,7 @@ const statusConfig = {
   completed: { label: "Delivered", icon: CheckCircle2,  color: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5",  dot: "bg-emerald-400" },
   cancelled: { label: "Cancelled", icon: XCircle,       color: "border-destructive/30 text-destructive bg-destructive/5",  dot: "bg-destructive" },
   refunded:  { label: "Refunded",  icon: RotateCcw,     color: "border-destructive/30 text-destructive bg-destructive/5",  dot: "bg-destructive" },
+  partially_refunded: { label: "Part. Refunded", icon: RotateCcw, color: "border-amber-500/30 text-amber-400 bg-amber-500/5", dot: "bg-amber-400" },
 };
 
 const getStatusConfig = (s) => statusConfig[s] || statusConfig.pending;
@@ -56,6 +63,131 @@ const CARRIERS = ["Australia Post", "DHL", "FedEx", "UPS", "USPS", "StarTrack", 
 /* Helper: build a timeline entry */
 function makeTimelineEntry(action, actor, note) {
   return { action, timestamp: new Date().toISOString(), actor: actor || "system", ...(note ? { note } : {}) };
+}
+
+/* Prefer the structured destination fields (populated from the paid Stripe
+   address, and what the AusPost label needs); fall back to the freeform string. */
+function structuredAddressLines(order) {
+  const line2Parts = [order.shipping_suburb, order.shipping_state, order.shipping_postcode].filter(Boolean).join(" ");
+  const lines = [
+    order.shipping_name || order.customer_name,
+    order.shipping_address_line1,
+    order.shipping_address_line2,
+    line2Parts,
+    order.shipping_country,
+  ].filter(Boolean);
+  return lines;
+}
+function hasStructuredAddress(order) {
+  return !!(order.shipping_address_line1 && order.shipping_postcode);
+}
+function orderAddressText(order) {
+  const lines = structuredAddressLines(order);
+  if (lines.length > 1) return lines.join("\n");
+  return order.shipping_address || "";
+}
+
+/* ── Prominent customer address block (with copy) ── */
+function AddressBlock({ order }) {
+  const structured = hasStructuredAddress(order);
+  const text = orderAddressText(order);
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(text || "");
+      toast({ title: "Address copied" });
+    } catch (err) {
+      toast({ title: "Copy failed", description: err.message, variant: "destructive" });
+    }
+  };
+  return (
+    <div className={`border p-3 ${structured ? "border-primary/25 bg-primary/[0.04]" : "border-amber-500/30 bg-amber-500/[0.05]"}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <MapPin className="h-3 w-3 text-primary" /> Ship To
+        </p>
+        {text && (
+          <button type="button" onClick={copyAddress} className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 hover:text-foreground">
+            <Copy className="h-2.5 w-2.5" /> Copy
+          </button>
+        )}
+      </div>
+      {text ? (
+        <address className="not-italic whitespace-pre-line text-sm leading-relaxed text-foreground">{text}</address>
+      ) : (
+        <p className="text-[11px] italic text-amber-400/80">No shipping address on file for this order.</p>
+      )}
+      {!structured && text && (
+        <p className="mt-2 flex items-center gap-1 text-[10px] text-amber-400/80">
+          <AlertTriangle className="h-2.5 w-2.5" /> Unstructured address — an AusPost label can't be generated until it's edited into structured fields.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Inline editor for customer + structured shipping address ── */
+function OrderEditForm({ editFields, setEditFields, onSave, onCancel }) {
+  const set = (k) => (e) => setEditFields((f) => ({ ...f, [k]: e.target.value }));
+  const field = (k, label, placeholder, cls = "") => (
+    <div className={`space-y-1 ${cls}`}>
+      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">{label}</label>
+      <Input value={editFields[k] || ""} onChange={set(k)} placeholder={placeholder} className="h-10 rounded-none border-border/40 text-sm" />
+    </div>
+  );
+  return (
+    <div className="border border-primary/25 bg-primary/[0.03] p-3 space-y-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {field("customer_name", "Customer name", "Full name")}
+        {field("customer_email", "Email", "name@example.com")}
+      </div>
+      <div className="grid gap-2 border-t border-border/20 pt-3 sm:grid-cols-2">
+        {field("shipping_name", "Ship-to name", "Recipient", "sm:col-span-2")}
+        {field("shipping_address_line1", "Address line 1", "Street address", "sm:col-span-2")}
+        {field("shipping_address_line2", "Address line 2", "Unit / apt (optional)", "sm:col-span-2")}
+        {field("shipping_suburb", "Suburb / City", "Suburb")}
+        {field("shipping_state", "State", "e.g. NSW")}
+        {field("shipping_postcode", "Postcode", "e.g. 2000")}
+        {field("shipping_country", "Country", "AU")}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button onClick={onSave} className="h-10 rounded-none bg-primary hover:bg-primary/90 text-[9px] font-bold uppercase tracking-wider">
+          <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Save details
+        </Button>
+        <Button variant="outline" onClick={onCancel} className="h-10 rounded-none border-border/30 text-[9px] font-bold uppercase tracking-wider">Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
+/* Open a print-optimized packing slip / address label in a new window. Works
+   independently of the AusPost carrier label — always available for any order. */
+function printPackingSlip(order) {
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const orderNo = String(order.id || "").slice(-6).toUpperCase();
+  const address = orderAddressText(order) || order.shipping_address || "";
+  const items = (order.line_items || [])
+    .map((i) => `<tr><td style="width:32px">${esc(i.quantity)}×</td><td>${esc(i.name)}${i.size ? ` (Size ${esc(i.size)})` : ""}</td></tr>`)
+    .join("");
+  const win = window.open("", "_blank", "width=440,height=680");
+  if (!win) {
+    toast({ title: "Pop-up blocked", description: "Allow pop-ups for this site to print the label.", variant: "destructive" });
+    return;
+  }
+  win.document.write(`<!doctype html><html><head><title>Order ${orderNo}</title>
+    <style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box} body{padding:24px;color:#111;margin:0}
+    h1{font-size:15px;text-transform:uppercase;letter-spacing:1px;margin:0 0 2px} .muted{color:#666;font-size:11px}
+    .box{border:2px solid #111;padding:16px;margin:14px 0} .lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+    .addr{font-size:19px;line-height:1.5;white-space:pre-line;font-weight:bold} table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+    td{padding:5px 0;border-bottom:1px solid #ddd;vertical-align:top} .from{font-size:10px;color:#666;margin-top:12px}
+    @media print{@page{margin:10mm}}</style></head><body>
+    <h1>Rugby League Takeover</h1>
+    <div class="muted">Order #${orderNo}${order.created_date ? " · " + esc(new Date(order.created_date).toLocaleDateString()) : ""}</div>
+    <div class="box"><div class="lbl">Ship to</div><div class="addr">${esc(address) || "(no address on file)"}</div></div>
+    <table>${items}</table>
+    <div class="from">Rugby League Takeover &middot; rugbyleaguetakeover.com</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();},150);};<\/script>
+    </body></html>`);
+  win.document.close();
 }
 
 /* Helper: calculate estimated delivery */
@@ -235,9 +367,23 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [customerNote, setCustomerNote] = useState(order.customer_status_note || "");
   const [confirmAction, setConfirmAction] = useState(null);
   const [showRefundForm, setShowRefundForm] = useState(false);
-  const [refundAmount, setRefundAmount] = useState(Number(order.total_aud || 0));
+  const [refundAmount, setRefundAmount] = useState(Math.max(0, Number(order.total_aud || 0) - Number(order.refund_amount || 0)));
   const [refundReason, setRefundReason] = useState("");
   const [freshLabelUrl, setFreshLabelUrl] = useState(null);
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [editFields, setEditFields] = useState({
+    customer_name: order.customer_name || "",
+    customer_email: order.customer_email || "",
+    shipping_name: order.shipping_name || order.customer_name || "",
+    shipping_address_line1: order.shipping_address_line1 || "",
+    shipping_address_line2: order.shipping_address_line2 || "",
+    shipping_suburb: order.shipping_suburb || "",
+    shipping_state: order.shipping_state || "",
+    shipping_postcode: order.shipping_postcode || "",
+    shipping_country: order.shipping_country || "AU",
+  });
 
   const createLabelMutation = useMutation({
     mutationFn: () => base44.functions.invoke("auspostCreateLabel", { orderId: order.id }),
@@ -262,11 +408,59 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     onError: (error) => toast({ title: "Could not refresh tracking", description: error.message, variant: "destructive" }),
   });
 
+  // Real Stripe refund (server-authoritative). Replaces the old data-only write.
+  const refundMutation = useMutation({
+    mutationFn: ({ amount, reason }) => base44.functions.invoke("stripeRefund", { orderId: order.id, amount, reason }),
+    onSuccess: ({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setShowRefundForm(false);
+      setRefundReason("");
+      toast({
+        title: data?.isFull ? "Refund issued" : "Partial refund issued",
+        description: `$${Number(data?.refundedAmount || 0).toFixed(2)} AUD refunded via Stripe${data?.restocked ? " · items restocked" : ""}.`,
+      });
+    },
+    onError: (error) => toast({ title: "Refund failed", description: error.message, variant: "destructive" }),
+  });
+
+  // Cancel (marks cancelled + restocks a paid order; no auto-refund by policy).
+  const cancelMutation = useMutation({
+    mutationFn: ({ reason }) => base44.functions.invoke("cancelOrder", { orderId: order.id, reason }),
+    onSuccess: ({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setShowCancelForm(false);
+      setCancelReason("");
+      toast({
+        title: "Order cancelled",
+        description: `${data?.restocked ? "Items restocked. " : ""}${data?.wasPaid ? "This was a paid order — issue a refund separately if money is owed." : ""}`.trim() || "Order cancelled.",
+      });
+    },
+    onError: (error) => toast({ title: "Cancel failed", description: error.message, variant: "destructive" }),
+  });
+
+  const saveEdit = () => {
+    const line1Parts = [editFields.shipping_address_line1, editFields.shipping_address_line2].filter(Boolean).join(", ");
+    const cityParts = [editFields.shipping_suburb, editFields.shipping_state, editFields.shipping_postcode].filter(Boolean).join(" ");
+    const rebuilt = [editFields.shipping_name || editFields.customer_name, line1Parts, cityParts, editFields.shipping_country].filter(Boolean).join(", ");
+    const existingTimeline = [...timeline];
+    existingTimeline.push(makeTimelineEntry("Order details edited", actorEmail, "Customer / shipping details updated by admin"));
+    onUpdate(order.id, {
+      ...editFields,
+      shipping_address: rebuilt || order.shipping_address || "",
+      timeline: existingTimeline,
+    });
+    setEditMode(false);
+  };
+
   const status = getStatusConfig(order.status || "pending");
   const StatusIcon = status.icon;
   const lineItems = order.line_items || [];
   const isFulfillable = paidLike.includes(order.status) && order.status !== "completed";
   const timeline = order.timeline || [];
+  const refundedSoFar = Number(order.refund_amount || 0);
+  const refundRemaining = Math.max(0, Number(order.total_aud || 0) - refundedSoFar);
+  const canRefund = refundable.includes(order.status) && refundRemaining > 0 && !!order.stripe_session_id;
+  const canCancel = order.status !== "cancelled" && order.status !== "refunded";
 
   const handleQuickAction = (newStatus) => {
     if (newStatus === "shipped" && !trackingNumber) {
@@ -280,6 +474,12 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   };
 
   const executeAction = () => {
+    // Refund/cancel confirmations carry a `run` callback (money/stock actions).
+    if (confirmAction?.run) {
+      confirmAction.run();
+      setConfirmAction(null);
+      return;
+    }
     const data = { status: confirmAction.status };
     const existingTimeline = [...timeline];
 
@@ -343,20 +543,27 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   };
 
   const handleRefundConfirm = () => {
-    const existingTimeline = [...timeline];
-    existingTimeline.push(makeTimelineEntry(
-      "Status changed to Refunded",
-      actorEmail,
-      `Refund $${Number(refundAmount).toFixed(2)} AUD — ${refundReason || "No reason provided"}`
-    ));
-    onUpdate(order.id, {
-      status: "refunded",
-      refund_amount: Number(refundAmount),
-      refund_reason: refundReason,
-      refunded_at: new Date().toISOString(),
-      timeline: existingTimeline,
+    const amt = Number(refundAmount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      toast({ title: "Enter a valid amount", description: "Refund must be greater than $0.", variant: "destructive" });
+      return;
+    }
+    if (amt > refundRemaining + 0.005) {
+      toast({ title: "Amount too high", description: `Only $${refundRemaining.toFixed(2)} AUD is left to refund on this order.`, variant: "destructive" });
+      return;
+    }
+    // Final confirm before real money moves via Stripe.
+    setConfirmAction({
+      label: `Refund $${amt.toFixed(2)} AUD to ${order.customer_name || "the customer"}?`,
+      run: () => refundMutation.mutate({ amount: amt, reason: refundReason }),
     });
-    setShowRefundForm(false);
+  };
+
+  const handleCancelConfirm = () => {
+    setConfirmAction({
+      label: `Cancel order #${String(order.id || "").slice(-6).toUpperCase()}?`,
+      run: () => cancelMutation.mutate({ reason: cancelReason }),
+    });
   };
 
   const copyOrderSummary = async () => {
@@ -510,16 +717,31 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   </div>
                 )}
 
-                {/* Shipping address */}
-                {order.shipping_address && (
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 mb-1">Shipping Address</p>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground/40" />
-                      <span className="whitespace-pre-line">{order.shipping_address}</span>
+                {/* Customer + shipping address (prominent, editable) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Customer &amp; Shipping</p>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => printPackingSlip(order)} className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 hover:text-primary">
+                        <Printer className="h-2.5 w-2.5" /> Print slip
+                      </button>
+                      <button type="button" onClick={() => setEditMode(!editMode)} className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 hover:text-primary">
+                        <Pencil className="h-2.5 w-2.5" /> {editMode ? "Close" : "Edit"}
+                      </button>
                     </div>
                   </div>
-                )}
+                  {editMode ? (
+                    <OrderEditForm editFields={editFields} setEditFields={setEditFields} onSave={saveEdit} onCancel={() => setEditMode(false)} />
+                  ) : (
+                    <>
+                      <div className="text-sm text-foreground">
+                        {order.customer_name || "—"}
+                        <span className="text-muted-foreground/50"> · {order.customer_email || "no email"}</span>
+                      </div>
+                      <AddressBlock order={order} />
+                    </>
+                  )}
+                </div>
 
                 {/* AusPost label + tracking actions */}
                 <div className="border border-border/20 bg-muted/5 p-3 space-y-2">
@@ -569,25 +791,35 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <label htmlFor={`order-status-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Status</label>
-                      <Select
-                        value={order.status || "pending"}
-                        onValueChange={handleStatusChange}
-                      >
-                        <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {statuses.map((s) => {
-                            const conf = getStatusConfig(s);
-                            return (
-                              <SelectItem key={s} value={s}>
-                                <span className="flex items-center gap-2">
-                                  <span className={`h-1.5 w-1.5 rounded-full ${conf.dot}`} />
-                                  {conf.label}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                      {MANUAL_STATUSES.includes(order.status || "pending") ? (
+                        <Select
+                          value={order.status || "pending"}
+                          onValueChange={handleStatusChange}
+                        >
+                          <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {MANUAL_STATUSES.map((s) => {
+                              const conf = getStatusConfig(s);
+                              return (
+                                <SelectItem key={s} value={s}>
+                                  <span className="flex items-center gap-2">
+                                    <span className={`h-1.5 w-1.5 rounded-full ${conf.dot}`} />
+                                    {conf.label}
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        // Cancelled / refunded / partially-refunded are set by the
+                        // Cancel/Refund actions (which move money + stock), never by hand.
+                        <div className="h-11 flex items-center gap-2 px-3 border border-border/40 bg-muted/5 text-sm">
+                          <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                          <span className="font-semibold">{status.label}</span>
+                          <span className="ml-auto text-[8px] font-bold uppercase tracking-wider text-muted-foreground/40">Set via actions</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1">
@@ -692,30 +924,52 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   />
                 </div>
 
-                {/* Refund Action */}
-                {order.status !== "refunded" && (
-                  <div>
-                    {!showRefundForm ? (
-                      <Button
-                        variant="destructive"
-                        onClick={() => setShowRefundForm(true)}
-                        className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
-                      >
-                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Issue Refund
-                      </Button>
-                    ) : (
+                {/* Refund (real Stripe) + Cancel actions */}
+                {(canRefund || canCancel) && (
+                  <div className="flex flex-col gap-3 border-t border-border/10 pt-4">
+                    {refundedSoFar > 0 && (
+                      <p className="text-[10px] text-amber-400/80">
+                        Already refunded ${refundedSoFar.toFixed(2)} AUD · ${refundRemaining.toFixed(2)} remaining
+                      </p>
+                    )}
+
+                    {!showRefundForm && !showCancelForm && (
+                      <div className="flex flex-wrap gap-2">
+                        {canRefund && (
+                          <Button
+                            variant="destructive"
+                            onClick={() => { setRefundAmount(refundRemaining); setShowRefundForm(true); }}
+                            className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
+                          >
+                            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Issue Refund
+                          </Button>
+                        )}
+                        {canCancel && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowCancelForm(true)}
+                            className="rounded-none border-destructive/40 text-destructive text-[9px] font-bold uppercase tracking-wider min-h-[44px] hover:bg-destructive/10"
+                          >
+                            <Ban className="mr-1.5 h-3.5 w-3.5" /> Cancel Order
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {showRefundForm && (
                       <div className="border border-destructive/30 bg-destructive/5 p-4 space-y-3">
                         <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
-                          <AlertTriangle className="h-3.5 w-3.5" /> Issue Refund
+                          <AlertTriangle className="h-3.5 w-3.5" /> Refund via Stripe
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
-                            <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Refund Amount (AUD)</label>
+                            <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Amount (AUD) · max ${refundRemaining.toFixed(2)}</label>
                             <Input
                               id={`order-refund-amount-${order.id}`}
                               type="number"
                               step="0.01"
                               min="0"
+                              max={refundRemaining}
                               value={refundAmount}
                               onChange={(e) => setRefundAmount(e.target.value)}
                               className="h-11 rounded-none border-border/40 text-sm font-mono"
@@ -736,16 +990,57 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                           <Button
                             variant="destructive"
                             onClick={handleRefundConfirm}
+                            disabled={refundMutation.isPending}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
                           >
-                            Confirm Refund
+                            {refundMutation.isPending ? "Refunding…" : "Refund via Stripe"}
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(Number(order.total_aud || 0)); }}
+                            onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(refundRemaining); }}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px] border-border/30"
                           >
-                            Cancel
+                            Back
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {showCancelForm && (
+                      <div className="border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
+                          <Ban className="h-3.5 w-3.5" /> Cancel order
+                        </div>
+                        {paidLike.includes(order.status) && (
+                          <p className="text-[10px] text-amber-400/80">
+                            This order is paid. Cancelling returns the items to stock but does <strong>not</strong> refund the customer — issue a refund separately if money is owed.
+                          </p>
+                        )}
+                        <div className="space-y-1">
+                          <label htmlFor={`order-cancel-reason-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Reason (optional)</label>
+                          <Textarea
+                            id={`order-cancel-reason-${order.id}`}
+                            placeholder="Why is this order being cancelled?"
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            className="min-h-11 resize-none rounded-none border-border/40 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="destructive"
+                            onClick={handleCancelConfirm}
+                            disabled={cancelMutation.isPending}
+                            className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
+                          >
+                            {cancelMutation.isPending ? "Cancelling…" : "Confirm Cancel"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => { setShowCancelForm(false); setCancelReason(""); }}
+                            className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px] border-border/30"
+                          >
+                            Back
                           </Button>
                         </div>
                       </div>

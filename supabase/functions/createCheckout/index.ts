@@ -273,7 +273,9 @@ Deno.serve(async (req) => {
     await svc.from('store_orders').update({ stripe_session_id: session.id }).eq('id', order.id);
     return json({ url: session.url });
   } catch (error) {
+    // Log the real cause server-side; never leak internals (Stripe keys, stack,
+    // DB errors) to the browser.
     console.error('createCheckout error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return json({ error: 'Checkout could not be started. Please try again.' }, 500);
   }
 });
