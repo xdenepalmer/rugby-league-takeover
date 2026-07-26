@@ -24,12 +24,16 @@ Deno.serve(async (req) => {
     if (order.status === 'refunded') return json({ error: 'A fully refunded order cannot be cancelled' }, 400);
 
     const wasPaid = ['paid', 'packing', 'shipped', 'completed', 'partially_refunded'].includes(order.status);
+    // Only pre-dispatch orders go back into stock. A shipped/completed order's
+    // goods have physically left — restocking them would inflate inventory and
+    // oversell. Those need a return to be received before manual restocking.
+    const preDispatch = ['paid', 'packing'].includes(order.status);
     const nowIso = new Date().toISOString();
 
-    // Return stock once — only for a paid order (stock was decremented at
-    // payment) that hasn't already been restocked by a refund/cancel.
+    // Return stock once — stock was decremented at payment, and restocked_at
+    // stops a later refund from returning the same items twice.
     let restocked = false;
-    if (restock && wasPaid && !order.restocked_at) {
+    if (restock && preDispatch && !order.restocked_at) {
       for (const item of order.line_items || []) {
         if (!item.product_id) continue;
         const { data: product } = await svc.from('products').select('id, stock_quantity').eq('id', item.product_id).maybeSingle();
@@ -37,9 +41,9 @@ Deno.serve(async (req) => {
         const stock = Number(product.stock_quantity);
         if (!Number.isFinite(stock)) continue; // untracked stock
         const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-        await svc.from('products').update({ stock_quantity: Math.max(0, Math.floor(stock) + qty) }).eq('id', product.id);
+        const { error: stockError } = await svc.from('products').update({ stock_quantity: Math.max(0, Math.floor(stock) + qty) }).eq('id', product.id);
+        if (!stockError) restocked = true;
       }
-      restocked = true;
     }
 
     const timeline = [
@@ -53,13 +57,23 @@ Deno.serve(async (req) => {
       },
     ];
 
-    await svc.from('store_orders').update({
+    // Stock may already have been credited back above, so a failed status
+    // write would leave inventory inflated with the order still live — surface
+    // it instead of reporting success.
+    const { error: writeError } = await svc.from('store_orders').update({
       status: 'cancelled',
       cancelled_at: nowIso,
       cancel_reason: reason || '',
       ...(restocked ? { restocked_at: nowIso } : {}),
       timeline,
     }).eq('id', id);
+
+    if (writeError) {
+      console.error('cancelOrder: failed to write cancellation for order', id, writeError);
+      return json({
+        error: `Order could not be cancelled${restocked ? ' — note stock was already returned, so check inventory' : ''}.`,
+      }, 500);
+    }
 
     return json({ ok: true, restocked, wasPaid });
   } catch (error) {

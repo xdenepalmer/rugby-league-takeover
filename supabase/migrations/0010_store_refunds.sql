@@ -19,6 +19,13 @@ alter table public.store_orders
 -- customer_status_note columns and a shipping_method CHECK). conkey pins it to
 -- single-column CHECKs on exactly `status`. Loops so re-running is safe and
 -- multiple matches are all cleared before the new constraint is added.
+-- Don't queue behind a long transaction and stall the store. Plain SET (not SET
+-- LOCAL) so it works whether or not the runner wraps this in a transaction.
+set lock_timeout = '5s';
+
+-- The DROP and the re-ADD happen inside ONE DO block (a single statement, so a
+-- single implicit transaction): as separate statements, a failure after the
+-- drop would leave store_orders with NO status constraint at all.
 do $$
 declare
   c record;
@@ -39,11 +46,14 @@ begin
   loop
     execute format('alter table public.store_orders drop constraint %I', c.conname);
   end loop;
-end $$;
 
-alter table public.store_orders
-  add constraint store_orders_status_check
-  check (status in ('pending', 'paid', 'packing', 'shipped', 'completed', 'cancelled', 'refunded', 'partially_refunded'));
+  execute $ddl$
+    alter table public.store_orders
+      add constraint store_orders_status_check
+      check (status in ('pending', 'paid', 'packing', 'shipped', 'completed',
+                        'cancelled', 'refunded', 'partially_refunded'))
+  $ddl$;
+end $$;
 
 -- Indexes the store had none of beyond the PK. The webhook looks orders up by
 -- stripe_session_id on every Stripe event (idempotency), the admin list sorts

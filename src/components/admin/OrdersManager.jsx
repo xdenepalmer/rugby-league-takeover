@@ -24,7 +24,9 @@ const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancell
 // they're intentionally excluded here to prevent a "fake" status flip.
 const MANUAL_STATUSES = ["pending", "paid", "packing", "shipped", "completed"];
 const paidLike = ["paid", "packing", "shipped", "completed"];
-const refundable = ["paid", "packing", "shipped", "completed", "partially_refunded"];
+// 'cancelled' is refundable: cancelling never auto-refunds, so the money is
+// still owed and must be returnable afterwards.
+const refundable = ["paid", "packing", "shipped", "completed", "partially_refunded", "cancelled"];
 const toFulfil = ["paid", "packing"];
 
 const statusConfig = {
@@ -1013,7 +1015,10 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         </div>
                         {paidLike.includes(order.status) && (
                           <p className="text-[10px] text-amber-400/80">
-                            This order is paid. Cancelling returns the items to stock but does <strong>not</strong> refund the customer — issue a refund separately if money is owed.
+                            This order is paid. Cancelling does <strong>not</strong> refund the customer — issue a refund separately if money is owed (you still can after cancelling).
+                            {["paid", "packing"].includes(order.status)
+                              ? " Items will be returned to stock."
+                              : " Items are already dispatched, so stock is left unchanged — restock manually if they come back."}
                           </p>
                         )}
                         <div className="space-y-1">

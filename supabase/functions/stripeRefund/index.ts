@@ -25,7 +25,10 @@ Deno.serve(async (req) => {
     const { data: order } = await svc.from('store_orders').select('*').eq('id', id).maybeSingle();
     if (!order) return json({ error: 'Order not found' }, 404);
 
-    const REFUNDABLE = ['paid', 'packing', 'shipped', 'completed', 'partially_refunded'];
+    // 'cancelled' MUST be refundable: cancelling doesn't auto-refund (shop
+    // policy), so the admin refunds afterwards — omitting it would strand the
+    // customer's money with no in-app way to return it.
+    const REFUNDABLE = ['paid', 'packing', 'shipped', 'completed', 'partially_refunded', 'cancelled'];
     if (!REFUNDABLE.includes(order.status)) {
       return json({ error: `An order with status "${order.status}" can't be refunded` }, 400);
     }
@@ -71,7 +74,9 @@ Deno.serve(async (req) => {
     const isFull = totalRefunded >= orderTotal - 0.005;
     const nowIso = new Date().toISOString();
 
-    // Restock once, only when the order becomes fully refunded.
+    // Restock once, only when the order becomes fully refunded. `restocked` is
+    // set only if something was ACTUALLY returned to stock — otherwise we'd
+    // stamp restocked_at and burn the one-shot guard without restocking.
     let restocked = false;
     if (restock && isFull && !order.restocked_at) {
       for (const item of order.line_items || []) {
@@ -81,22 +86,24 @@ Deno.serve(async (req) => {
         const stock = Number(product.stock_quantity);
         if (!Number.isFinite(stock)) continue; // untracked stock — nothing to return
         const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-        await svc.from('products').update({ stock_quantity: Math.max(0, Math.floor(stock) + qty) }).eq('id', product.id);
+        const { error: stockError } = await svc.from('products').update({ stock_quantity: Math.max(0, Math.floor(stock) + qty) }).eq('id', product.id);
+        if (!stockError) restocked = true;
       }
-      restocked = true;
     }
 
-    const timeline = [
-      ...(Array.isArray(order.timeline) ? order.timeline : []),
-      {
-        action: isFull ? 'refunded' : 'partially_refunded',
-        timestamp: nowIso,
-        actor: me.email || 'admin',
-        note: `Refunded $${refundAud.toFixed(2)} AUD via Stripe${reason ? ` — ${reason}` : ''}${restocked ? ' · items restocked' : ''}`,
-      },
-    ];
+    const refundEntry = {
+      action: isFull ? 'refunded' : 'partially_refunded',
+      timestamp: nowIso,
+      actor: me.email || 'admin',
+      note: `Refunded $${refundAud.toFixed(2)} AUD via Stripe${reason ? ` — ${reason}` : ''}${restocked ? ' · items restocked' : ''}`,
+    };
+    const timeline = [...(Array.isArray(order.timeline) ? order.timeline : []), refundEntry];
 
-    await svc.from('store_orders').update({
+    // ── Record the refund. The money has ALREADY moved at this point, so a
+    // failed write is serious: refund_amount would stay stale and a later
+    // refund could double-pay. Guard against a concurrent refund having
+    // changed refund_amount since we read it, then verify the write landed.
+    const patch = {
       status: isFull ? 'refunded' : 'partially_refunded',
       refund_amount: totalRefunded,
       refund_reason: reason || order.refund_reason || '',
@@ -105,7 +112,40 @@ Deno.serve(async (req) => {
       stripe_payment_intent_id: paymentIntentId,
       ...(restocked ? { restocked_at: nowIso } : {}),
       timeline,
-    }).eq('id', id);
+    };
+
+    let guarded = svc.from('store_orders').update(patch).eq('id', id);
+    guarded = alreadyRefunded === 0
+      ? guarded.or('refund_amount.is.null,refund_amount.eq.0')
+      : guarded.eq('refund_amount', alreadyRefunded);
+    const { data: wrote, error: writeError } = await guarded.select('id');
+
+    if (writeError || !wrote?.length) {
+      // Either the write errored, or another refund landed first. Our Stripe
+      // refund is real either way — re-read and record it additively so the
+      // order can never under-report what was refunded.
+      const { data: fresh } = await svc.from('store_orders').select('refund_amount, timeline').eq('id', id).maybeSingle();
+      const freshTotal = Math.min(orderTotal, num(fresh?.refund_amount) + refundAud);
+      const { error: retryError } = await svc.from('store_orders').update({
+        ...patch,
+        refund_amount: freshTotal,
+        status: freshTotal >= orderTotal - 0.005 ? 'refunded' : 'partially_refunded',
+        // Append onto whatever the winning writer left, so neither refund's
+        // audit entry is lost.
+        timeline: [...(Array.isArray(fresh?.timeline) ? fresh.timeline : []), refundEntry],
+      }).eq('id', id);
+
+      if (retryError) {
+        // Money left Stripe but we could not record it. Fail LOUDLY with the
+        // refund id so the admin can reconcile instead of refunding again.
+        console.error('stripeRefund: refund', refund.id, 'succeeded but recording FAILED for order', id, retryError);
+        return json({
+          error: `Refund ${refund.id} succeeded in Stripe but could not be recorded on the order. Do NOT refund again — reconcile this order in Stripe first.`,
+          refundId: refund.id,
+          recorded: false,
+        }, 500);
+      }
+    }
 
     return json({
       ok: true,
