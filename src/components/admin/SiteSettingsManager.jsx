@@ -23,6 +23,7 @@ const defaults = {
   hero_title: "The annual\nVegas takeover",
   hero_description: "Join the world's most passionate and loyal Rugby League supporter groups for an unforgettable global footy invasion of Las Vegas.",
   hero_button_label: "Enter the site",
+  ticker_items: "LAS VEGAS TAKEOVER 2027\nRUGBY LEAGUE GLOBAL INVASION\nVIP TRAVEL PACKAGES DROPPING SOON\nEXCLUSIVE FAN EVENTS & MEETUPS\nSTADIUM SWIM PARTIES",
   background_video_urls: [
     "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
     "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/bf55ac1e7_allegiantstadiumparadisenevadaclaytonhaamallegiantallegiantstadiumparadis.mp4"
@@ -397,6 +398,19 @@ export default function SiteSettingsManager({ settings }) {
                       </div>
                       <LabeledField label="Hero Title" help="Use line breaks to split across multiple lines." fullWidth>
                         <Textarea placeholder="The annual&#10;Vegas takeover" value={draft.hero_title || ""} onChange={(e) => update("hero_title", e.target.value)} className="min-h-24" />
+                      </LabeledField>
+                      <LabeledField
+                        label="Scrolling Banner"
+                        help="The Vegas marquee under the hero. One item per line — emojis welcome 🎰🏉. Colours alternate gold/red automatically. Leave blank to use the defaults."
+                        fullWidth
+                        indicator={isCustom("ticker_items") ? "custom" : "default"}
+                      >
+                        <Textarea
+                          placeholder={"LAS VEGAS TAKEOVER 2027\n🏉 RUGBY LEAGUE GLOBAL INVASION\n🎰 STADIUM SWIM PARTIES"}
+                          value={draft.ticker_items ?? ""}
+                          onChange={(e) => update("ticker_items", e.target.value)}
+                          className="min-h-32 font-mono text-sm"
+                        />
                       </LabeledField>
                       <LabeledField label="Hero Description" help="Supporting paragraph below the title." fullWidth>
                         <Textarea placeholder="Join the world's most passionate supporter groups..." value={draft.hero_description || ""} onChange={(e) => update("hero_description", e.target.value)} className="min-h-24" />

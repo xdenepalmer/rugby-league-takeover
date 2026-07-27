@@ -222,13 +222,26 @@ const defaultEvent = {
   is_coming_soon: true,
 };
 
-const tickerItems = [
-  { text: "LAS VEGAS TAKEOVER 2027", type: "gold" },
-  { text: "RUGBY LEAGUE GLOBAL INVASION", type: "red" },
-  { text: "VIP TRAVEL PACKAGES DROPPING SOON", type: "gold" },
-  { text: "EXCLUSIVE FAN EVENTS & MEETUPS", type: "red" },
-  { text: "STADIUM SWIM PARTIES", type: "gold" },
+// Fallback marquee when the admin hasn't set one in Site Content.
+const DEFAULT_TICKER_LINES = [
+  "LAS VEGAS TAKEOVER 2027",
+  "RUGBY LEAGUE GLOBAL INVASION",
+  "VIP TRAVEL PACKAGES DROPPING SOON",
+  "EXCLUSIVE FAN EVENTS & MEETUPS",
+  "STADIUM SWIM PARTIES",
 ];
+
+// Admins edit the ticker as one item per line (emoji welcome). Colours
+// alternate gold/red automatically so the Vegas look is preserved without
+// asking anyone to pick one.
+function parseTickerItems(raw) {
+  const lines = String(raw || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const source = lines.length ? lines : DEFAULT_TICKER_LINES;
+  return source.map((text, i) => ({ text, type: i % 2 === 0 ? "gold" : "red" }));
+}
 
 const slotSymbols = [
   ["🍒", "🎰", "🍒"],
@@ -281,6 +294,9 @@ export default function Home() {
   const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: queriesEnabled });
 
   const settings = settingsRecords[0] || {};
+  // Admin-editable marquee (Site Content → Brand & Hero); falls back to the
+  // built-in lines when unset.
+  const tickerItems = parseTickerItems(settings.ticker_items);
   const visibleNews = (news.length ? news : defaultNews).filter((article) => article.is_published !== false).slice(0, 6);
   const visiblePackages = packages.length ? packages : defaultPackages;
   const event = events[0] || defaultEvent;
