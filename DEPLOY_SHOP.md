@@ -22,7 +22,7 @@ existing data.
 **Easiest path — Supabase SQL editor** (no DB password needed):
 
 1. Open the [SQL editor](https://supabase.com/dashboard/project/ohytlrgfpcpvnqgdpqap/sql/new).
-2. Paste the entire contents of `supabase/migrations/0010_store_refunds.sql`.
+2. Paste the entire contents of `supabase/migrations/0013_store_refunds.sql`.
 3. Run. Expect `Success. No rows returned`.
 
 **Or via CLI** (needs the DB password):

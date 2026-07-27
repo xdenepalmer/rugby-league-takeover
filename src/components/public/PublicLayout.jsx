@@ -1,8 +1,9 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
+import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { NavLink, Link, useLocation, useOutlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Home, ShoppingBag, MessageSquare, User, ShieldCheck, Compass } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
@@ -11,7 +12,8 @@ import ScrollProgressBar from "./ScrollProgressBar";
 import AdSlot from "@/components/ads/AdSlot";
 import PublicOfflineBanner from "@/components/PublicOfflineBanner";
 import { selectionChanged } from "@/lib/native/haptics";
-import { scrollToAnchor, scrollToAnchorWhenReady } from "@/lib/scroll-to-anchor";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
+import VisitorCounter from "./VisitorCounter";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
@@ -25,17 +27,11 @@ export default function PublicLayout() {
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
-  // scrollToAnchorWhenReady waits for the target to mount after a cross-page
-  // navigation, then holds the position while the homepage's lazy sections
-  // mount and reflow underneath the scroll (a plain scrollIntoView lands on
-  // whatever section happens to occupy the stale offset).
   const handleNavigate = (hash) => {
-    if (location.pathname !== "/") {
-      navigate("/");
-      scrollToAnchorWhenReady(hash);
-    } else {
-      scrollToAnchor(hash);
-    }
+    // Land on home first when needed; scrollToAnchor polls until the target
+    // section mounts and is robust to the lazy sections reflowing mid-scroll.
+    if (location.pathname !== "/") navigate("/");
+    scrollToAnchor(hash);
   };
   
   const { data: settingsRecords = [], isLoading: isLoadingSettings } = useQuery({
@@ -121,14 +117,17 @@ export default function PublicLayout() {
       <div id="main-content" className="flex-1 pb-[max(76px,calc(76px+var(--safe-bottom)))] xl:pb-0">
         {/* Instant native-style tab switching: new page mounts immediately with a
             quick fade-in — no exit-animation wait between routes. */}
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-        >
-          {outlet}
-        </motion.div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, x: 15 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -15 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Suspense fallback={<LoadingFallback />}>{outlet}</Suspense>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Sponsored Ad Slot — above footer, all pages */}
@@ -148,6 +147,9 @@ export default function PublicLayout() {
             <Link to="/terms" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Terms &amp; Conditions</Link>
             <span className="text-muted-foreground/30">·</span>
             <Link to="/privacy" className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors">Privacy Policy</Link>
+          </div>
+          <div className="mt-2 flex justify-center">
+            <VisitorCounter />
           </div>
         </footer>
       )}

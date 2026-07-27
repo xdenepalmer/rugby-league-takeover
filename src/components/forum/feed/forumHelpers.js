@@ -7,7 +7,7 @@
 import {
   MessageSquare, Globe, Flame, Zap, Plane, MapPin,
 } from "lucide-react";
-import { canonicalizeShareUrl } from "@/lib/native/share";
+import { canonicalizeShareUrl } from "@/hooks/useNativeShare";
 
 export const CATEGORY_META = {
   All:      { label: "All Topics",       icon: Globe,        gradient: "from-slate-400/25 to-slate-500/5",  accent: "text-slate-300",   dot: "bg-slate-300",   ring: "ring-slate-400/20",   hue: 220, glow: "rgba(148,163,184,0.15)" },

@@ -47,5 +47,5 @@ echo
 echo "✅ Functions deployed: ${FUNCTIONS[*]}"
 echo
 echo "NEXT: apply the database migration if you haven't yet —"
-echo "  supabase/migrations/0010_store_refunds.sql  (see DEPLOY_SHOP.md)"
+echo "  supabase/migrations/0013_store_refunds.sql  (see DEPLOY_SHOP.md)"
 echo "Refunds will fail with a missing-column error until it is applied."

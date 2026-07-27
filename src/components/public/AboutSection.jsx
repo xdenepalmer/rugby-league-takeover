@@ -99,8 +99,9 @@ export default function AboutSection({ settings = {} }) {
   const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [1.15, 1.05, 1]);
 
   return (
+    // The "#about" anchor lives on the Home.jsx wrapper (with scroll offset);
+    // this section must not duplicate that id.
     <section
-      id="about"
       ref={sectionRef}
       className="relative border-t border-border bg-secondary/80 overflow-hidden"
     >

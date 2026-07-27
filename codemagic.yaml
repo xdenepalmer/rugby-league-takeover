@@ -14,7 +14,7 @@
 # key so the shared certificate is reused.
 #
 # One-time in the Codemagic UI before the first green build:
-#   1. App Store Connect API key integration named "app_store_connect".
+#   1. App Store Connect API key integration named "codemagic".
 #   2. The 'appstore' variable group containing CERTIFICATE_PRIVATE_KEY (secure)
 #      — the shared distribution key.
 #   3. In the Apple Developer portal, enable Push Notifications + Associated
@@ -30,12 +30,14 @@ workflows:
         # Shared, team/app-scoped group holding CERTIFICATE_PRIVATE_KEY (secure)
         # — the one distribution key reused across every app in the account.
         - appstore
+        # App-specific runtime vars (Supabase URL/key, RapidAPI, etc.).
+        - rugby_env
       node: 22
       xcode: latest
       vars:
         BUNDLE_ID: "com.rugbyleaguetakeover.app"
     integrations:
-      app_store_connect: app_store_connect
+      app_store_connect: codemagic
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -56,6 +58,16 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles
+      # App Store Connect rejects a re-used CFBundleVersion ("must be higher than
+      # the previously uploaded version"). Stamp every build with Codemagic's
+      # ever-incrementing $BUILD_NUMBER via CURRENT_PROJECT_VERSION (Info.plist
+      # maps CFBundleVersion to it), so each upload is unique and monotonic.
+      - name: Set a unique build number
+        script: |
+          set -e
+          BN="${BUILD_NUMBER:-$(date +%s)}"
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = ${BN};/g" ios/App/App.xcodeproj/project.pbxproj
+          echo "CFBundleVersion (CURRENT_PROJECT_VERSION) set to ${BN}"
       - name: Build signed IPA
         script: |
           xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App

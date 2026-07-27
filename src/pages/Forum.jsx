@@ -46,6 +46,7 @@ import CollapsibleGuidelines from "@/components/forum/feed/CollapsibleGuidelines
 import FanRankCard from "@/components/forum/feed/FanRankCard";
 import { hasUnreadReplies, getUnreadReplyCount, getReadTimestamps, markThreadRead } from "@/lib/forum-read-tracker";
 import { successImpact, errorImpact } from "@/lib/native/haptics";
+import { triggerAppStoreReview } from "@/components/AppStoreReviewPrompt";
 
 // Lazy-loaded feature islands to trim the initial bundle footprint
 const StadiumSeatPlanner = lazy(() => import("@/components/forum/StadiumSeatPlanner"));
@@ -905,6 +906,7 @@ export default function Forum() {
       if (!data?.parent_id) { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); setUserFilter("all"); setMobileTab("feed"); }
       try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
       toast({ title: data?.id ? "Post published" : "Post submitted", description: "Your discussion is now visible in the forum." });
+      triggerAppStoreReview();
       if (data?.reward) {
         // Pre-compute the conditional part — nested template literals inside ${}
         // have broken the Base44 build pipeline before (publish-killer pattern).
