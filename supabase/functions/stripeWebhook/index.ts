@@ -62,7 +62,18 @@ Deno.serve(async (req) => {
         }
 
         const paidAt = new Date().toISOString();
-        const shipping = session.shipping_details;
+        // Stripe moved Checkout Session shipping details to
+        // `collected_information.shipping_details` (Basil API, shipped in
+        // stripe@22 — there is no top-level `session.shipping_details` any
+        // more). Reading only the old path silently produced EMPTY addresses
+        // on every paid order. Prefer the new location, keep the legacy one for
+        // sessions created before the upgrade, and fall back to the billing
+        // address so an order is never left with nothing to ship to.
+        const shipping = session.collected_information?.shipping_details
+          ?? session.shipping_details
+          ?? (session.customer_details?.address
+            ? { name: session.customer_details.name, address: session.customer_details.address }
+            : null);
         const shippingAddress = shipping?.address
           ? [shipping.name, shipping.address.line1, shipping.address.line2, shipping.address.city, shipping.address.state, shipping.address.postal_code, shipping.address.country].filter(Boolean).join(', ')
           : order.shipping_address || '';
