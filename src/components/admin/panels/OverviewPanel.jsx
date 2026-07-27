@@ -98,7 +98,7 @@ export default function OverviewPanel() {
   }, [overrideMutation]);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* ── Action Queue (what needs the owner now) ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -147,11 +147,11 @@ export default function OverviewPanel() {
               transition={{ duration: 0.35, ease: "easeInOut" }}
               className="overflow-hidden"
             >
-              <div className="grid gap-5 pt-4">
+              <div className="grid grid-cols-1 gap-5 pt-4">
               <AdminOverview counts={counts} registrations={registrations} orders={orders} statOverrides={statOverrides} onSaveOverride={handleSaveOverride} />
 
                 {/* ── Additional Stats Row ── */}
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -213,7 +213,7 @@ export default function OverviewPanel() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.4 }}
-        className="grid gap-5 lg:grid-cols-2"
+        className="grid grid-cols-1 gap-5 lg:grid-cols-2"
       >
         <ActivityFeed orders={orders} registrations={registrations} forumPosts={forumPosts} />
         <AdminNotepad />

@@ -89,7 +89,7 @@ function PackageCard({ pkg, index, updateMutation, deleteMutation }) {
             </button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FieldLabel label="Package Name" icon={Package} helpText="Display name shown on the homepage">
               <Input
                 value={draft.name}
@@ -370,7 +370,7 @@ export default function TravelPackagesManager({ packages }) {
               className="overflow-hidden"
             >
               <div className="border-t border-border/50 p-5">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FieldLabel label="Package Name" icon={Package} helpText="Display name shown on the homepage">
                     <Input
                       placeholder="e.g. VIP Courtside Experience"
@@ -447,7 +447,7 @@ export default function TravelPackagesManager({ packages }) {
           </p>
         </motion.div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <AnimatePresence>
             {packages.map((pkg, i) => (
               <PackageCard

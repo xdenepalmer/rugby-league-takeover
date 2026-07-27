@@ -301,7 +301,7 @@ export default function DataExporter({ registrations = [], orders = [], forumPos
         </div>
 
         {/* ── Export cards grid ── */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {EXPORT_CONFIGS.map((config, i) => (
             <ExportCard
               key={config.id}

@@ -281,7 +281,7 @@ export default function UsersManager() {
   }
 
   return (
-    <section className="grid gap-5">
+    <section className="grid grid-cols-1 gap-5">
       {/* ── Section Header ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -406,7 +406,7 @@ export default function UsersManager() {
           </p>
         </motion.div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <AnimatePresence>
             {filtered.map((u, i) => (
               <UserCard

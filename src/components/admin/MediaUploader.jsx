@@ -67,7 +67,7 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
   }, []);
 
   return (
-    <div className="grid gap-2">
+    <div className="grid grid-cols-1 gap-2">
       {label && (
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           {label}

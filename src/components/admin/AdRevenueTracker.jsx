@@ -398,14 +398,14 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
      RENDER
      ═══════════════════════════════════════════════════════════ */
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
 
       {/* ════════════════════════════════════════════════════
           SECTION 1: REVENUE DASHBOARD
           ════════════════════════════════════════════════════ */}
 
       {/* KPI Cards Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon={DollarSign}
           label="Total Monthly Revenue"
@@ -436,7 +436,7 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
       </div>
 
       {/* CPM Revenue + Slot Count */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           icon={MousePointerClick}
           label="CPM Revenue (Estimated)"
@@ -498,7 +498,7 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
       )}
 
       {/* Revenue by Position — Pie + Bar Combo */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section
           title="Revenue by Position"
           subtitle="Monthly revenue distribution across ad placements"
@@ -673,8 +673,8 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
         accentColor="bg-gradient-to-r from-primary via-primary/60 to-primary"
         delay={0.5}
       >
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-          <div className="grid gap-1.5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+          <div className="grid grid-cols-1 gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Select Sponsor
             </label>
@@ -791,7 +791,7 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {abTestAds.map((ad, adIdx) => {
               const variants = ad.ab_variants.slice(0, 2);
               const [a, b] = variants;
@@ -896,7 +896,7 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
                       Impression Volume Comparison
                     </p>
                     {/* Variant A bar */}
-                    <div className="grid gap-0.5">
+                    <div className="grid grid-cols-1 gap-0.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-mono text-muted-foreground">Variant A</span>
                         <span className="text-[9px] font-mono text-muted-foreground tabular-nums">{aImps.toLocaleString()}</span>
@@ -911,7 +911,7 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
                       </div>
                     </div>
                     {/* Variant B bar */}
-                    <div className="grid gap-0.5">
+                    <div className="grid grid-cols-1 gap-0.5">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-mono text-muted-foreground">Variant B</span>
                         <span className="text-[9px] font-mono text-muted-foreground tabular-nums">{bImps.toLocaleString()}</span>

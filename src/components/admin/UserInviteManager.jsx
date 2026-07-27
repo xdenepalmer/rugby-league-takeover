@@ -72,9 +72,9 @@ export default function UserInviteManager() {
 
         {/* Invite Form */}
         <div className="mt-6 border border-border/50 bg-card/30 p-5">
-          <div className="grid gap-5 md:grid-cols-[1fr_180px]">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_180px]">
             {/* Email field */}
-            <div className="grid gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5">
               <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 <Mail className="h-3 w-3" />
                 Recipient Email
@@ -92,7 +92,7 @@ export default function UserInviteManager() {
             </div>
 
             {/* Role field */}
-            <div className="grid gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5">
               <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 <Shield className="h-3 w-3" />
                 Access Level

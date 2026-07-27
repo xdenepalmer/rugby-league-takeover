@@ -308,7 +308,7 @@ function SponsorCard({ sponsor, index, onEdit, onDelete, onToggleActive }) {
             >
               <div className="mt-4 pt-4 border-t border-border/30 grid gap-4 md:grid-cols-2">
                 {/* Left: detail grid */}
-                <div className="grid gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   {[
                     { label: "Company",      value: sponsor.company_name },
                     { label: "Contact",      value: sponsor.contact_name },
@@ -336,7 +336,7 @@ function SponsorCard({ sponsor, index, onEdit, onDelete, onToggleActive }) {
                 </div>
 
                 {/* Right: notes */}
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1">
                     <StickyNote className="h-3 w-3" /> Internal Notes
                   </label>
@@ -442,7 +442,7 @@ export default function SponsorManager() {
 
   /* ── Render ── */
   return (
-    <section className="grid gap-5">
+    <section className="grid grid-cols-1 gap-5">
       {/* ──────────── HEADER ──────────── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -563,7 +563,7 @@ export default function SponsorManager() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <AnimatePresence>
                   {visibleSponsors.map((sponsor, i) => (
                     <SponsorCard
@@ -605,7 +605,7 @@ export default function SponsorManager() {
               </button>
             </div>
 
-            <div className="grid gap-4 p-5">
+            <div className="grid grid-cols-1 gap-4 p-5">
               {/* Validation errors */}
               {errors.length > 0 && (
                 <motion.div
@@ -626,8 +626,8 @@ export default function SponsorManager() {
               )}
 
               {/* Row 1: Company + Contact Name */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Company Name *</label>
                   <Input
                     placeholder="e.g. Telstra"
@@ -636,7 +636,7 @@ export default function SponsorManager() {
                     className={`h-11 rounded-none ${!editing.company_name?.trim() && errors.length ? "border-red-500/50" : ""}`}
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Contact Name</label>
                   <Input
                     placeholder="Primary contact person"
@@ -648,8 +648,8 @@ export default function SponsorManager() {
               </div>
 
               {/* Row 2: Email + Phone */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Mail className="inline h-3 w-3 mr-1" /> Email
                   </label>
@@ -661,7 +661,7 @@ export default function SponsorManager() {
                     className={`h-11 rounded-none font-mono ${editing.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editing.contact_email) ? "border-red-500/50" : ""}`}
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Phone className="inline h-3 w-3 mr-1" /> Phone
                   </label>
@@ -676,8 +676,8 @@ export default function SponsorManager() {
               </div>
 
               {/* Row 3: Website + Brand Color */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Globe className="inline h-3 w-3 mr-1" /> Website
                   </label>
@@ -688,7 +688,7 @@ export default function SponsorManager() {
                     className={`h-11 rounded-none font-mono ${editing.website && !/^https?:\/\/.+/.test(editing.website) ? "border-red-500/50" : ""}`}
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Brand Color</label>
                   <div className="flex gap-2">
                     <input
@@ -715,8 +715,8 @@ export default function SponsorManager() {
               />
 
               {/* Row 4: Tier + Total Spend */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Sponsorship Tier</label>
                   <div className="relative">
                     <select
@@ -731,7 +731,7 @@ export default function SponsorManager() {
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <DollarSign className="inline h-3 w-3 mr-1" /> Total Spend (AUD)
                   </label>
@@ -748,8 +748,8 @@ export default function SponsorManager() {
               </div>
 
               {/* Row 5: Contract dates */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Calendar className="inline h-3 w-3 mr-1" /> Contract Start
                   </label>
@@ -760,7 +760,7 @@ export default function SponsorManager() {
                     className="h-11 rounded-none font-mono"
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Calendar className="inline h-3 w-3 mr-1" /> Contract End
                   </label>
@@ -777,7 +777,7 @@ export default function SponsorManager() {
               </div>
 
               {/* Notes */}
-              <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   <StickyNote className="inline h-3 w-3 mr-1" /> Internal Notes
                 </label>

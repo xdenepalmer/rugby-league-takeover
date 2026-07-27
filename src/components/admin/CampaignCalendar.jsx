@@ -207,7 +207,7 @@ export default function CampaignCalendar({ ads, sponsors }) {
 
   /* ═════════════════════ Render ═════════════════════ */
   return (
-    <section className="grid gap-5">
+    <section className="grid grid-cols-1 gap-5">
       {/* ── Container ── */}
       <div className="border border-border bg-card/60 cmd-glass overflow-hidden">
         <div className="cmd-accent-bar h-[2px] w-full" />

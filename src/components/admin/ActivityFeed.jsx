@@ -199,7 +199,7 @@ export default function ActivityFeed({ orders = [], registrations = [], forumPos
                 </p>
               </motion.div>
             ) : (
-              <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 {filtered.map((item, i) => {
                   const config = TYPE_CONFIG[item.type];
                   const Icon = config.icon;

@@ -223,7 +223,7 @@ export default function BansManager() {
   const liftedCount = bans.filter((b) => !b.is_active).length;
 
   return (
-    <section className="grid gap-5">
+    <section className="grid grid-cols-1 gap-5">
       {/* ── Section Header ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -322,7 +322,7 @@ export default function BansManager() {
               className="overflow-hidden"
             >
               <div className="border-t border-border/50 p-5">
-                <div className="grid gap-4 md:grid-cols-[160px_1fr_1fr]">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-[160px_1fr_1fr]">
                   <FieldLabel label="Ban Type">
                     <Select value={newType} onValueChange={setNewType}>
                       <SelectTrigger className="h-11 rounded-none bg-background/40 border-border/60">
@@ -412,7 +412,7 @@ export default function BansManager() {
           </p>
         </motion.div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <AnimatePresence>
             {filtered.map((ban, i) => (
               <BanCard key={ban.id} ban={ban} index={i} liftBan={liftBan} />

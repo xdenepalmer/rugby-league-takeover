@@ -51,13 +51,13 @@ function MatchupFields({ value, onChange, logoFor }) {
   const setAway = (t) => onChange({ ...value, away_team: t.name, away_logo: logoFor(t.name) });
   const isFinal = value.status === "final";
   return (
-    <div className="grid gap-3">
-      <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
+    <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
         <TeamSelect valueName={value.home_team} onPick={setHome} placeholder="Home team" />
         <span className="text-center font-display text-xl text-primary">VS</span>
         <TeamSelect valueName={value.away_team} onPick={setAway} placeholder="Away team" />
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <DateTimePicker value={value.kickoff} onChange={(val) => onChange({ ...value, kickoff: val })} placeholder="Kickoff date & time" />
         <Input placeholder="Label (e.g. Double Header Game 1)" value={value.label || ""} onChange={(e) => onChange({ ...value, label: e.target.value })} className="h-11 rounded-none" />
         <Input placeholder="Venue (optional)" value={value.venue || ""} onChange={(e) => onChange({ ...value, venue: e.target.value })} className="h-11 rounded-none" />
@@ -65,14 +65,14 @@ function MatchupFields({ value, onChange, logoFor }) {
         <Input type="number" placeholder="Sort order" value={value.sort_order ?? 1} onChange={(e) => onChange({ ...value, sort_order: Number(e.target.value) })} className="h-11 rounded-none" />
       </div>
 
-      <div className="grid gap-3 border-t border-border/60 pt-3">
+      <div className="grid grid-cols-1 gap-3 border-t border-border/60 pt-3">
         <label className="flex min-h-11 items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
           <Trophy className="h-4 w-4" /> Game finished?
           <Switch checked={isFinal} onCheckedChange={(v) => onChange({ ...value, status: v ? "final" : "scheduled" })} />
           <span className="font-normal normal-case tracking-normal text-muted-foreground/70">{isFinal ? "Result shows instead of kickoff" : "Toggle on to enter the final score"}</span>
         </label>
         {isFinal && (
-          <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr_1fr]">
+          <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr_1fr]">
             <Input type="number" placeholder={`${value.home_team || "Home"} score`} value={value.home_score ?? ""} onChange={(e) => onChange({ ...value, home_score: e.target.value === "" ? "" : Number(e.target.value) })} className="h-11 rounded-none" />
             <span className="text-center font-display text-primary">-</span>
             <Input type="number" placeholder={`${value.away_team || "Away"} score`} value={value.away_score ?? ""} onChange={(e) => onChange({ ...value, away_score: e.target.value === "" ? "" : Number(e.target.value) })} className="h-11 rounded-none" />
@@ -154,7 +154,7 @@ export default function MatchupsManager({ matchups = [], teams = [] }) {
         <AnimatePresence mode="popLayout">
         {sorted.map((m, index) => (
           editId === m.id ? (
-            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="grid gap-3 border border-primary/50 bg-background/40 p-4">
+            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, duration: 0.3 }} className="grid grid-cols-1 gap-3 border border-primary/50 bg-background/40 p-4">
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary"><Pencil className="h-4 w-4" /> Editing match-up</p>
               <MatchupFields value={editDraft} onChange={setEditDraft} logoFor={logoFor} />
               <div className="flex items-center gap-4">

@@ -142,7 +142,7 @@ export default function ImageField({ value, onChange, label = "Image", className
         </AnimatePresence>
 
         {/* URL input + upload button */}
-        <div className="grid flex-1 gap-2.5">
+        <div className="grid grid-cols-1 flex-1 gap-2.5">
           <Input
             placeholder="Paste image URL"
             value={url}

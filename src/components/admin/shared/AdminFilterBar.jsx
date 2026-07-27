@@ -75,7 +75,10 @@ export default function AdminFilterBar({
 
         {/* Filter pills (scroll on mobile) */}
         {filters.length > 0 && (
-          <div className="flex-1 overflow-x-auto sm:flex-initial">
+          // min-w-0 is required: without it this flex item is sized by its
+          // min-w-max child, so the pill row widens the whole admin page
+          // instead of scrolling inside itself.
+          <div className="min-w-0 flex-1 overflow-x-auto sm:flex-initial">
             <div className="flex items-center gap-1.5 min-w-max">
               {filters.map((filter) => (
                 <button

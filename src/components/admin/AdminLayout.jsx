@@ -505,7 +505,7 @@ export default function AdminLayout({ children }) {
                 </div>
                 <Gauge className="h-4 w-4 text-accent" />
               </div>
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {attentionItems.map((item) => (
                   <AttentionCard key={item.label} {...item} />
                 ))}
@@ -770,7 +770,7 @@ export default function AdminLayout({ children }) {
           <div className="px-4 pt-4 md:px-8">
             <section className="admin-route-banner relative overflow-hidden border border-border/70 bg-card/40 cmd-glass">
               <div className="h-[2px] w-full cmd-accent-bar" />
-              <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5">
+              <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:p-5">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-primary/30 bg-primary/10 text-primary shadow-[0_0_24px_hsl(var(--primary)/0.08)]">
                     <ActiveIcon className="h-5 w-5" />

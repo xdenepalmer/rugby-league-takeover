@@ -138,11 +138,11 @@ function OrderEditForm({ editFields, setEditFields, onSave, onCancel }) {
   );
   return (
     <div className="border border-primary/25 bg-primary/[0.03] p-3 space-y-3">
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {field("customer_name", "Customer name", "Full name")}
         {field("customer_email", "Email", "name@example.com")}
       </div>
-      <div className="grid gap-2 border-t border-border/20 pt-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 border-t border-border/20 pt-3 sm:grid-cols-2">
         {field("shipping_name", "Ship-to name", "Recipient", "sm:col-span-2")}
         {field("shipping_address_line1", "Address line 1", "Street address", "sm:col-span-2")}
         {field("shipping_address_line2", "Address line 2", "Unit / apt (optional)", "sm:col-span-2")}
@@ -789,7 +789,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                 </div>
 
                 {/* Status + Carrier + Shipping Method */}
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <label htmlFor={`order-status-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Status</label>
@@ -963,7 +963,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
                           <AlertTriangle className="h-3.5 w-3.5" /> Refund via Stripe
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
                             <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Amount (AUD) · max ${refundRemaining.toFixed(2)}</label>
                             <Input

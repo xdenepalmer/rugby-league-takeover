@@ -120,7 +120,7 @@ export default function TeamsManager({ teams = [] }) {
           <p className="mt-1 text-xs text-muted-foreground/40">Add your first team above</p>
         </div>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((team, index) => <Tile key={team.name} team={team} index={index} />)}
         </div>
       )}
@@ -151,7 +151,7 @@ export default function TeamsManager({ teams = [] }) {
           <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${bulkOpen ? "rotate-180" : ""}`} />
         </button>
         {bulkOpen && (
-          <div className="grid gap-3 border-t border-border p-4">
+          <div className="grid grid-cols-1 gap-3 border-t border-border p-4">
             <p className="text-xs text-muted-foreground">Paste one club per line as <span className="font-mono text-foreground">Club Name = https://logo-url.png</span> (you can also use a comma or <span className="font-mono text-foreground">|</span> instead of <span className="font-mono text-foreground">=</span>). Transparent PNGs look best. Use image links you own or are licensed to use - official club crests are copyrighted.</p>
             <Textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={6} placeholder={"Penrith Panthers = https://your-cdn.com/penrith.png\nMelbourne Storm = https://your-cdn.com/storm.png"} className="rounded-none font-mono text-xs" />
             {bulkText.trim() && (

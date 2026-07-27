@@ -28,7 +28,7 @@ export default function AdminOverviewCharts({ regData, revData, pieData }) {
   return (
     <>
       {/* ── Charts Grid ── */}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Registrations Chart */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}

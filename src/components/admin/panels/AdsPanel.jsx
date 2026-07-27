@@ -30,7 +30,7 @@ export default function AdsPanel() {
   ];
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}

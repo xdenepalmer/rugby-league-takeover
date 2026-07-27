@@ -115,7 +115,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
             </button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Product Name</label>
               <Input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
@@ -156,7 +156,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
             <Textarea value={draft.details || ""} onChange={(e) => setDraft({ ...draft, details: e.target.value })} placeholder="What's included, care instructions, sizing notes…" className="min-h-16 rounded-none text-sm border-border/40 resize-none" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
             <ImageField label="Second photo (optional)" value={draft.image_url_2} onChange={(url) => setDraft({ ...draft, image_url_2: url })} />
           </div>
@@ -333,7 +333,7 @@ export default function ProductsManager({ products, loading }) {
                 <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary/60 flex items-center gap-1.5">
                   <Plus className="h-3 w-3" /> Add New Product
                 </p>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Product Name</label>
                     <Input placeholder="e.g. Takeover Tee" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
@@ -348,7 +348,7 @@ export default function ProductsManager({ products, loading }) {
                   <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Description</label>
                   <Textarea placeholder="Describe the product…" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} className="min-h-16 rounded-none text-sm border-border/40 resize-none" />
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Stock Quantity</label>
                     <Input type="number" value={draft.stock_quantity} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />

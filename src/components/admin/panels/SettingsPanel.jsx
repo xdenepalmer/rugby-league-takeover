@@ -11,7 +11,7 @@ export default function SettingsPanel() {
   const { data: faqs = [] } = useQuery({ queryKey: ["faqs"], queryFn: () => base44.entities.Faq.list("sort_order", 200), retry: false, meta: { silent: true } });
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}

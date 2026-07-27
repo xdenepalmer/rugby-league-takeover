@@ -234,7 +234,7 @@ export default function SiteSettingsManager({ settings }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
-            className="grid gap-5"
+            className="grid grid-cols-1 gap-5"
           >
             {/* Header section card */}
             <div className="border border-border/60 bg-card/60 p-5 cmd-glass relative overflow-hidden">
@@ -254,7 +254,7 @@ export default function SiteSettingsManager({ settings }) {
             </div>
 
             {/* Grid modules list */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categories.map((c, i) => {
                 const Icon = c.icon;
                 return (
@@ -333,7 +333,7 @@ export default function SiteSettingsManager({ settings }) {
             </div>
 
             {/* Split side navigation + Form container */}
-            <div className="grid gap-5 md:grid-cols-[200px_1fr]">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-[200px_1fr]">
               {/* Desktop Side Navigation */}
               <aside className="hidden md:flex flex-col gap-1 border-r border-border/60 pr-4">
                 <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-300 mb-2 px-2.5">Modules</span>
@@ -378,7 +378,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Switch checked={draft.hero_eyebrow_visible !== false} onCheckedChange={(value) => update("hero_eyebrow_visible", value)} />
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Logo URL" help="Direct URL to your site logo image." indicator={isCustom("site_logo_url") ? "custom" : "default"}>
                           <Input placeholder="https://example.com/logo.png" value={draft.site_logo_url || ""} onChange={(e) => update("site_logo_url", e.target.value)} />
                         </LabeledField>
@@ -387,7 +387,7 @@ export default function SiteSettingsManager({ settings }) {
                         </div>
                       </div>
                       <ImagePreview url={draft.site_logo_url} alt="Site logo" />
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Hero Eyebrow" help="Small text above the main heading.">
                           <Input placeholder="Las Vegas • Rugby League" value={draft.hero_eyebrow || ""} onChange={(e) => update("hero_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -432,7 +432,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Switch checked={draft.countdown_enabled !== false} onCheckedChange={(value) => update("countdown_enabled", value)} />
                       </div>
                       {draft.countdown_enabled !== false && (
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <LabeledField label="Takeover start date & time" help="The moment the countdown reaches zero.">
                             <DateTimePicker value={draft.countdown_date || ""} onChange={(val) => update("countdown_date", val)} placeholder="Pick the takeover date & time" />
                           </LabeledField>
@@ -480,7 +480,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Captions className="h-3 w-3 text-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">News</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="News Eyebrow">
                           <Input placeholder="Latest News" value={draft.news_eyebrow || ""} onChange={(e) => update("news_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -497,7 +497,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Plane className="h-3 w-3 text-accent" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Travel</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="Travel Eyebrow">
                           <Input placeholder="Travel Packages" value={draft.travel_eyebrow || ""} onChange={(e) => update("travel_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -514,7 +514,7 @@ export default function SiteSettingsManager({ settings }) {
                         <ShoppingBag className="h-3 w-3 text-emerald-400" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-emerald-400">Merch</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="Merch Eyebrow">
                           <Input placeholder="Merch" value={draft.merch_eyebrow || ""} onChange={(e) => update("merch_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -538,7 +538,7 @@ export default function SiteSettingsManager({ settings }) {
                         <FileText className="h-3 w-3 text-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">About Us</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="About Eyebrow">
                           <Input placeholder="About Us" value={draft.about_eyebrow || ""} onChange={(e) => update("about_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -552,7 +552,7 @@ export default function SiteSettingsManager({ settings }) {
                       <LabeledField label="About Body" fullWidth help="Extended paragraph content for the about section.">
                         <Textarea placeholder="Expect flags, chants, mateship..." value={draft.about_body || ""} onChange={(e) => update("about_body", e.target.value)} className="min-h-24" />
                       </LabeledField>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="About Highlight" help="Pullout quote or key message.">
                           <Input placeholder="Join the world's most passionate..." value={draft.about_highlight || ""} onChange={(e) => update("about_highlight", e.target.value)} />
                         </LabeledField>
@@ -568,7 +568,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Quote className="h-3 w-3 text-accent" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Registration</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="Registration Eyebrow">
                           <Input placeholder="Register interest" value={draft.registration_eyebrow || ""} onChange={(e) => update("registration_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -590,7 +590,7 @@ export default function SiteSettingsManager({ settings }) {
                           The sender/return address AusPost uses to calculate live shipping rates and generate labels. Domestic AU shipments only.
                         </p>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Sender name" help="Shown on the label as the return-to contact.">
                           <Input placeholder="e.g. Dene Palmer" value={draft.shipping_sender_name || ""} onChange={(e) => update("shipping_sender_name", e.target.value)} />
                         </LabeledField>
@@ -604,7 +604,7 @@ export default function SiteSettingsManager({ settings }) {
                       <LabeledField label="Address line 2 (optional)" fullWidth>
                         <Input placeholder="Unit, suite, etc." value={draft.shipping_sender_address_line2 || ""} onChange={(e) => update("shipping_sender_address_line2", e.target.value)} />
                       </LabeledField>
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <LabeledField label="Suburb">
                           <Input placeholder="e.g. Brisbane" value={draft.shipping_sender_suburb || ""} onChange={(e) => update("shipping_sender_suburb", e.target.value)} />
                         </LabeledField>
@@ -630,7 +630,7 @@ export default function SiteSettingsManager({ settings }) {
                         <h3 className="font-display text-lg uppercase text-primary">Footer and Copyright</h3>
                         <p className="text-[10px] text-muted-foreground">Adjust labels displayed at the bottom of public pages.</p>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Footer Text" help="Displayed in the site footer." indicator={isCustom("footer_text") ? "custom" : "default"}>
                           <Input placeholder="Rugby League Takeover Las Vegas © 2026" value={draft.footer_text || ""} onChange={(e) => update("footer_text", e.target.value)} />
                         </LabeledField>
@@ -645,7 +645,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Users className="h-3 w-3 text-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">Social Links</span>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Facebook URL" help="Shown in the homepage social blocks.">
                           <Input placeholder="https://facebook.com/..." value={draft.social_facebook_url || ""} onChange={(e) => update("social_facebook_url", e.target.value)} />
                         </LabeledField>
@@ -662,7 +662,7 @@ export default function SiteSettingsManager({ settings }) {
 
                       <div className="mt-6 border-t border-border/30 pt-5">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Legal pages (footer)</p>
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <LabeledField label="Terms & Conditions" help="Shown at /terms. Leave blank to use the built-in starter text. Blank lines = new paragraph; wrap a line in [brackets] for a heading." fullWidth>
                             <Textarea placeholder="Your Terms & Conditions…" value={draft.legal_terms || ""} onChange={(e) => update("legal_terms", e.target.value)} className="min-h-40" />
                           </LabeledField>
