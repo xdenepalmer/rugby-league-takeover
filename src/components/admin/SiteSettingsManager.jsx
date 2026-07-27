@@ -23,6 +23,7 @@ const defaults = {
   hero_title: "The annual\nVegas takeover",
   hero_description: "Join the world's most passionate and loyal Rugby League supporter groups for an unforgettable global footy invasion of Las Vegas.",
   hero_button_label: "Enter the site",
+  ticker_items: "LAS VEGAS TAKEOVER 2027\nRUGBY LEAGUE GLOBAL INVASION\nVIP TRAVEL PACKAGES DROPPING SOON\nEXCLUSIVE FAN EVENTS & MEETUPS\nSTADIUM SWIM PARTIES",
   background_video_urls: [
     "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
     "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/bf55ac1e7_allegiantstadiumparadisenevadaclaytonhaamallegiantallegiantstadiumparadis.mp4"
@@ -56,6 +57,10 @@ const defaults = {
   shipping_sender_suburb: "",
   shipping_sender_state: "",
   shipping_sender_postcode: "",
+  pickup_enabled: false,
+  pickup_audience: "international",
+  pickup_label: "Collect in Las Vegas at the event",
+  pickup_instructions: "",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
   footer_powered_by: "DENEO.AI",
   contact_email: "",
@@ -233,7 +238,7 @@ export default function SiteSettingsManager({ settings }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25 }}
-            className="grid gap-5"
+            className="grid grid-cols-1 gap-5"
           >
             {/* Header section card */}
             <div className="border border-border/60 bg-card/60 p-5 cmd-glass relative overflow-hidden">
@@ -253,7 +258,7 @@ export default function SiteSettingsManager({ settings }) {
             </div>
 
             {/* Grid modules list */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categories.map((c, i) => {
                 const Icon = c.icon;
                 return (
@@ -332,7 +337,7 @@ export default function SiteSettingsManager({ settings }) {
             </div>
 
             {/* Split side navigation + Form container */}
-            <div className="grid gap-5 md:grid-cols-[200px_1fr]">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-[200px_1fr]">
               {/* Desktop Side Navigation */}
               <aside className="hidden md:flex flex-col gap-1 border-r border-border/60 pr-4">
                 <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-300 mb-2 px-2.5">Modules</span>
@@ -377,7 +382,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Switch checked={draft.hero_eyebrow_visible !== false} onCheckedChange={(value) => update("hero_eyebrow_visible", value)} />
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Logo URL" help="Direct URL to your site logo image." indicator={isCustom("site_logo_url") ? "custom" : "default"}>
                           <Input placeholder="https://example.com/logo.png" value={draft.site_logo_url || ""} onChange={(e) => update("site_logo_url", e.target.value)} />
                         </LabeledField>
@@ -386,7 +391,7 @@ export default function SiteSettingsManager({ settings }) {
                         </div>
                       </div>
                       <ImagePreview url={draft.site_logo_url} alt="Site logo" />
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Hero Eyebrow" help="Small text above the main heading.">
                           <Input placeholder="Las Vegas • Rugby League" value={draft.hero_eyebrow || ""} onChange={(e) => update("hero_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -397,6 +402,19 @@ export default function SiteSettingsManager({ settings }) {
                       </div>
                       <LabeledField label="Hero Title" help="Use line breaks to split across multiple lines." fullWidth>
                         <Textarea placeholder="The annual&#10;Vegas takeover" value={draft.hero_title || ""} onChange={(e) => update("hero_title", e.target.value)} className="min-h-24" />
+                      </LabeledField>
+                      <LabeledField
+                        label="Scrolling Banner"
+                        help="The Vegas marquee under the hero. One item per line — emojis welcome 🎰🏉. Colours alternate gold/red automatically. Leave blank to use the defaults."
+                        fullWidth
+                        indicator={isCustom("ticker_items") ? "custom" : "default"}
+                      >
+                        <Textarea
+                          placeholder={"LAS VEGAS TAKEOVER 2027\n🏉 RUGBY LEAGUE GLOBAL INVASION\n🎰 STADIUM SWIM PARTIES"}
+                          value={draft.ticker_items ?? ""}
+                          onChange={(e) => update("ticker_items", e.target.value)}
+                          className="min-h-32 font-mono text-sm"
+                        />
                       </LabeledField>
                       <LabeledField label="Hero Description" help="Supporting paragraph below the title." fullWidth>
                         <Textarea placeholder="Join the world's most passionate supporter groups..." value={draft.hero_description || ""} onChange={(e) => update("hero_description", e.target.value)} className="min-h-24" />
@@ -418,7 +436,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Switch checked={draft.countdown_enabled !== false} onCheckedChange={(value) => update("countdown_enabled", value)} />
                       </div>
                       {draft.countdown_enabled !== false && (
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <LabeledField label="Takeover start date & time" help="The moment the countdown reaches zero.">
                             <DateTimePicker value={draft.countdown_date || ""} onChange={(val) => update("countdown_date", val)} placeholder="Pick the takeover date & time" />
                           </LabeledField>
@@ -466,7 +484,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Captions className="h-3 w-3 text-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">News</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="News Eyebrow">
                           <Input placeholder="Latest News" value={draft.news_eyebrow || ""} onChange={(e) => update("news_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -483,7 +501,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Plane className="h-3 w-3 text-accent" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Travel</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="Travel Eyebrow">
                           <Input placeholder="Travel Packages" value={draft.travel_eyebrow || ""} onChange={(e) => update("travel_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -500,7 +518,7 @@ export default function SiteSettingsManager({ settings }) {
                         <ShoppingBag className="h-3 w-3 text-emerald-400" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-emerald-400">Merch</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="Merch Eyebrow">
                           <Input placeholder="Merch" value={draft.merch_eyebrow || ""} onChange={(e) => update("merch_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -524,7 +542,7 @@ export default function SiteSettingsManager({ settings }) {
                         <FileText className="h-3 w-3 text-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">About Us</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="About Eyebrow">
                           <Input placeholder="About Us" value={draft.about_eyebrow || ""} onChange={(e) => update("about_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -538,7 +556,7 @@ export default function SiteSettingsManager({ settings }) {
                       <LabeledField label="About Body" fullWidth help="Extended paragraph content for the about section.">
                         <Textarea placeholder="Expect flags, chants, mateship..." value={draft.about_body || ""} onChange={(e) => update("about_body", e.target.value)} className="min-h-24" />
                       </LabeledField>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="About Highlight" help="Pullout quote or key message.">
                           <Input placeholder="Join the world's most passionate..." value={draft.about_highlight || ""} onChange={(e) => update("about_highlight", e.target.value)} />
                         </LabeledField>
@@ -554,7 +572,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Quote className="h-3 w-3 text-accent" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-accent">Registration</span>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <LabeledField label="Registration Eyebrow">
                           <Input placeholder="Register interest" value={draft.registration_eyebrow || ""} onChange={(e) => update("registration_eyebrow", e.target.value)} />
                         </LabeledField>
@@ -576,7 +594,7 @@ export default function SiteSettingsManager({ settings }) {
                           The sender/return address AusPost uses to calculate live shipping rates and generate labels. Domestic AU shipments only.
                         </p>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Sender name" help="Shown on the label as the return-to contact.">
                           <Input placeholder="e.g. Dene Palmer" value={draft.shipping_sender_name || ""} onChange={(e) => update("shipping_sender_name", e.target.value)} />
                         </LabeledField>
@@ -590,7 +608,7 @@ export default function SiteSettingsManager({ settings }) {
                       <LabeledField label="Address line 2 (optional)" fullWidth>
                         <Input placeholder="Unit, suite, etc." value={draft.shipping_sender_address_line2 || ""} onChange={(e) => update("shipping_sender_address_line2", e.target.value)} />
                       </LabeledField>
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <LabeledField label="Suburb">
                           <Input placeholder="e.g. Brisbane" value={draft.shipping_sender_suburb || ""} onChange={(e) => update("shipping_sender_suburb", e.target.value)} />
                         </LabeledField>
@@ -607,6 +625,58 @@ export default function SiteSettingsManager({ settings }) {
                           Live rates on the store page and label creation both fail until a sender postcode is set here. The AusPost account credentials themselves (API key, account number) are configured as Supabase Edge Function secrets, not here.
                         </p>
                       </div>
+
+                      {/* ── Collect in Las Vegas ───────────────────────── */}
+                      <div className="border-t border-border/60 pt-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-widest text-foreground">Collect in Las Vegas</p>
+                            <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
+                              AusPost only ships within Australia, so overseas supporters can&apos;t buy shipping. Turn this on to let them collect their order at the event instead.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={draft.pickup_enabled === true}
+                            onCheckedChange={(v) => update("pickup_enabled", v)}
+                          />
+                        </div>
+
+                        {draft.pickup_enabled && (
+                          <div className="grid grid-cols-1 gap-3 border border-border/40 bg-muted/5 p-3">
+                            <LabeledField label="Who can collect?" help="International-only keeps Australian customers on paid shipping. Everyone lets any customer collect instead of paying for delivery.">
+                              <select
+                                value={draft.pickup_audience || "international"}
+                                onChange={(e) => update("pickup_audience", e.target.value)}
+                                className="h-11 w-full rounded-none border border-border/40 bg-background px-3 text-sm"
+                              >
+                                <option value="international">International orders only</option>
+                                <option value="everyone">Everyone (including Australia)</option>
+                              </select>
+                            </LabeledField>
+                            <LabeledField label="Option label" help="What the customer sees at checkout.">
+                              <Input
+                                placeholder="Collect in Las Vegas at the event"
+                                value={draft.pickup_label || ""}
+                                onChange={(e) => update("pickup_label", e.target.value)}
+                              />
+                            </LabeledField>
+                            <LabeledField label="Collection details" help="Where and when to collect. Shown at checkout and saved on the order." fullWidth>
+                              <Textarea
+                                placeholder="Collect from the Rugby League Takeover stand at Allegiant Stadium on match day. Bring your order number and photo ID."
+                                value={draft.pickup_instructions || ""}
+                                onChange={(e) => update("pickup_instructions", e.target.value)}
+                                className="min-h-20"
+                              />
+                            </LabeledField>
+                          </div>
+                        )}
+
+                        {!draft.pickup_enabled && (
+                          <p className="text-[10px] leading-relaxed text-amber-400/80">
+                            While this is off, customers outside Australia cannot complete an order at all.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -616,7 +686,7 @@ export default function SiteSettingsManager({ settings }) {
                         <h3 className="font-display text-lg uppercase text-primary">Footer and Copyright</h3>
                         <p className="text-[10px] text-muted-foreground">Adjust labels displayed at the bottom of public pages.</p>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Footer Text" help="Displayed in the site footer." indicator={isCustom("footer_text") ? "custom" : "default"}>
                           <Input placeholder="Rugby League Takeover Las Vegas © 2026" value={draft.footer_text || ""} onChange={(e) => update("footer_text", e.target.value)} />
                         </LabeledField>
@@ -631,7 +701,7 @@ export default function SiteSettingsManager({ settings }) {
                         <Users className="h-3 w-3 text-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-primary">Social Links</span>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <LabeledField label="Facebook URL" help="Shown in the homepage social blocks.">
                           <Input placeholder="https://facebook.com/..." value={draft.social_facebook_url || ""} onChange={(e) => update("social_facebook_url", e.target.value)} />
                         </LabeledField>
@@ -648,7 +718,7 @@ export default function SiteSettingsManager({ settings }) {
 
                       <div className="mt-6 border-t border-border/30 pt-5">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Legal pages (footer)</p>
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <LabeledField label="Terms & Conditions" help="Shown at /terms. Leave blank to use the built-in starter text. Blank lines = new paragraph; wrap a line in [brackets] for a heading." fullWidth>
                             <Textarea placeholder="Your Terms & Conditions…" value={draft.legal_terms || ""} onChange={(e) => update("legal_terms", e.target.value)} className="min-h-40" />
                           </LabeledField>

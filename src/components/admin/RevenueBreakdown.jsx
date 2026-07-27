@@ -183,9 +183,9 @@ export default function RevenueBreakdown({ orders }) {
   }, [statusBreakdown, totalOrderCount]);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* ── Top Row: 3 Big Stat Cards ── */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <BigStatCard
           icon={DollarSign}
           label="Total Revenue"

@@ -109,7 +109,7 @@ export default function DateTimePicker({ value, onChange, placeholder = "Pick a 
 
   if (isMobile) {
     return (
-      <label className="grid gap-1.5">
+      <label className="grid grid-cols-1 gap-1.5">
         <span className="sr-only">{placeholder}</span>
         <div className="relative">
           <Input

@@ -308,7 +308,7 @@ export default function SystemStatusPanel({ counts = {}, orders = [], registrati
                 <p className="text-sm text-foreground">You're all caught up — nothing needs you right now. 🎉</p>
               </motion.div>
             ) : (
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {todos.map((t, i) => {
                   const Icon = t.icon;
                   const isUrgent = t.priority === "urgent";
@@ -352,7 +352,7 @@ export default function SystemStatusPanel({ counts = {}, orders = [], registrati
         {/* ── Status checks ── */}
         <div className="mt-5 border-t border-border/40 pt-4">
           <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Everything working?</p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {checks.map((c, i) => {
               const Icon = c.icon;
               return (

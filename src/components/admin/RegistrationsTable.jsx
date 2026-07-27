@@ -338,7 +338,7 @@ export default function RegistrationsTable({ registrations }) {
                 variants={container}
                 initial="hidden"
                 animate="show"
-                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
               >
                 {pagedItems.map((item, index) => {
                   const tc = teamColor(item.team_supported);

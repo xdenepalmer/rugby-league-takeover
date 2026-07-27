@@ -54,11 +54,26 @@ Deno.serve(async (req) => {
 
         const verification = isPaidSessionForOrder(session, order, Deno.env.get('RLT_APP_ID') || 'rugby-league-takeover');
         if (!verification.ok) {
-          return json({ error: verification.error }, 400);
+          // A business-validation failure (amount/currency/app mismatch) will
+          // NEVER pass on retry. Returning 400 makes Stripe redeliver the same
+          // event forever, so ack with 200 and just log it for admin review.
+          console.error('stripeWebhook validation failed for order', orderId, '-', verification.error);
+          return json({ received: true, ignored: verification.error });
         }
 
         const paidAt = new Date().toISOString();
-        const shipping = session.shipping_details;
+        // Stripe moved Checkout Session shipping details to
+        // `collected_information.shipping_details` (Basil API, shipped in
+        // stripe@22 — there is no top-level `session.shipping_details` any
+        // more). Reading only the old path silently produced EMPTY addresses
+        // on every paid order. Prefer the new location, keep the legacy one for
+        // sessions created before the upgrade, and fall back to the billing
+        // address so an order is never left with nothing to ship to.
+        const shipping = session.collected_information?.shipping_details
+          ?? session.shipping_details
+          ?? (session.customer_details?.address
+            ? { name: session.customer_details.name, address: session.customer_details.address }
+            : null);
         const shippingAddress = shipping?.address
           ? [shipping.name, shipping.address.line1, shipping.address.line2, shipping.address.city, shipping.address.state, shipping.address.postal_code, shipping.address.country].filter(Boolean).join(', ')
           : order.shipping_address || '';
@@ -166,7 +181,9 @@ Deno.serve(async (req) => {
 
     return json({ received: true });
   } catch (error) {
+    // Bad signature / transient errors: log the detail, return a generic 400 so
+    // Stripe retries transient failures without us leaking internals.
     console.error('stripeWebhook error:', error);
-    return json({ error: (error as Error).message }, 400);
+    return json({ error: 'Webhook could not be processed' }, 400);
   }
 });

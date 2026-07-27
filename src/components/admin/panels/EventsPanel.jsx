@@ -38,7 +38,7 @@ export default function EventsPanel() {
   const withTickets = events.filter((e) => (e.tickets || []).some((t) => t?.url) || e.ticket_url).length;
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* Section Header */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -68,7 +68,7 @@ export default function EventsPanel() {
       </motion.div>
 
       {/* Stats Row */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat icon={CalendarDays} label="Total events" value={events.length} color="from-primary to-primary/60" delay={0.1} />
         <Stat icon={Eye} label="Published (live)" value={published} color="from-emerald-500 to-emerald-500/60" delay={0.15} />
         <Stat icon={Ticket} label="With ticket links" value={withTickets} color="from-accent to-accent/60" delay={0.2} />

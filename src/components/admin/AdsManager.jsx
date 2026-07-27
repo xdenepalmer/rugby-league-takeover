@@ -274,7 +274,7 @@ export default function AdsManager() {
 
   /* ── Render ── */
   return (
-    <section className="grid gap-5">
+    <section className="grid grid-cols-1 gap-5">
       {/* ──────────── 1. GLOBAL TOGGLE ──────────── */}
       <div className="border border-border bg-card/60 cmd-glass p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -398,7 +398,7 @@ export default function AdsManager() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
           >
             {POSITIONS.map((pos) => {
               const assigned = ads.filter((a) => a.position === pos.key);
@@ -448,7 +448,7 @@ export default function AdsManager() {
                     <p className="text-[10px] text-muted-foreground/60 mb-3">{pos.desc}</p>
 
                     {active ? (
-                      <div className="grid gap-2">
+                      <div className="grid grid-cols-1 gap-2">
                         <div className="flex items-center gap-2">
                           <Eye className="h-3 w-3 text-emerald-400 shrink-0" />
                           <span className="text-xs font-mono text-foreground truncate">{active.title || "Untitled"}</span>
@@ -636,7 +636,7 @@ export default function AdsManager() {
               </button>
             </div>
 
-            <div className="grid gap-4 p-5">
+            <div className="grid grid-cols-1 gap-4 p-5">
               {/* Validation errors */}
               {errors.length > 0 && (
                 <motion.div
@@ -656,8 +656,8 @@ export default function AdsManager() {
                 </motion.div>
               )}
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Title *</label>
                   <Input
                     placeholder="Ad campaign name"
@@ -666,7 +666,7 @@ export default function AdsManager() {
                     className={`h-11 rounded-none ${!editing.title?.trim() && errors.length ? "border-red-500/50" : ""}`}
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     Target URL
                     {editing.target_url && (
@@ -684,7 +684,7 @@ export default function AdsManager() {
                 </div>
               </div>
 
-              <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Sponsor</label>
                 <div className="relative">
                   <select
@@ -721,9 +721,9 @@ export default function AdsManager() {
                 </div>
               )}
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Position selector */}
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Position</label>
                   <div className="relative">
                     <select
@@ -740,7 +740,7 @@ export default function AdsManager() {
                 </div>
 
                 {/* Size selector */}
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Size</label>
                   <div className="relative">
                     <select
@@ -757,16 +757,16 @@ export default function AdsManager() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Monthly Rate (AUD)</label>
                   <Input type="number" min="0" step="0.01" placeholder="0.00" value={editing.price_per_month || ''} onChange={(e) => setEditing({ ...editing, price_per_month: parseFloat(e.target.value) || 0 })} className="h-11 rounded-none font-mono" />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">CPM Rate (AUD)</label>
                   <Input type="number" min="0" step="0.01" placeholder="0.00" value={editing.cpm_rate || ''} onChange={(e) => setEditing({ ...editing, cpm_rate: parseFloat(e.target.value) || 0 })} className="h-11 rounded-none font-mono" />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Device Target</label>
                   <div className="relative">
                     <select value={editing.device_target || 'all'} onChange={(e) => setEditing({ ...editing, device_target: e.target.value })} className="h-11 w-full appearance-none border border-border bg-background px-3 pr-8 text-sm font-mono rounded-none focus:outline-none focus:ring-1 focus:ring-primary/40">
@@ -779,8 +779,8 @@ export default function AdsManager() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-1.5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Calendar className="inline h-3 w-3 mr-1" />Start Date
                     <span className="text-muted-foreground/50 ml-1">(optional)</span>
@@ -792,7 +792,7 @@ export default function AdsManager() {
                     className="h-11 rounded-none font-mono"
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                     <Calendar className="inline h-3 w-3 mr-1" />End Date
                     <span className="text-muted-foreground/50 ml-1">(optional)</span>
@@ -926,10 +926,10 @@ export default function AdsManager() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="grid gap-4"
+            className="grid grid-cols-1 gap-4"
           >
             {/* KPI cards */}
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
               {[
                 { label: "Total Impressions", value: analytics.totalImpressions.toLocaleString(), icon: Eye, color: "text-primary" },
                 { label: "Total Clicks", value: analytics.totalClicks.toLocaleString(), icon: MousePointerClick, color: "text-accent" },
@@ -964,7 +964,7 @@ export default function AdsManager() {
                 </Button>
               </div>
 
-              <div className="grid gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {POSITIONS.map((pos) => {
                   const data = analytics.byPosition[pos.key];
                   const pct = maxImpressions > 0 ? ((data.impressions / maxImpressions) * 100) : 0;
@@ -973,7 +973,7 @@ export default function AdsManager() {
                     : "0.0";
 
                   return (
-                    <div key={pos.key} className="grid gap-1">
+                    <div key={pos.key} className="grid grid-cols-1 gap-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-mono text-foreground uppercase tracking-wider">
                           {pos.label}

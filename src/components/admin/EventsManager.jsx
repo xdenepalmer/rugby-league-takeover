@@ -122,7 +122,7 @@ function TicketsEditor({ tickets = [], onChange }) {
           key={i}
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
-          className="grid items-center gap-2 md:grid-cols-[1.2fr_90px_2fr_auto_auto] border-l-2 border-primary/15 pl-3 overflow-hidden"
+          className="grid grid-cols-1 items-center gap-2 md:grid-cols-[1.2fr_90px_2fr_auto_auto] border-l-2 border-primary/15 pl-3 overflow-hidden"
         >
           <Input placeholder="Tier (e.g. VIP)" value={ticket.name || ""} onChange={(e) => update(i, { name: e.target.value })} className="h-11 rounded-none text-sm border-border/30" />
           <Input type="number" placeholder="$AUD" value={ticket.price_aud ?? ""} onChange={(e) => update(i, { price_aud: Number(e.target.value) })} className="h-11 rounded-none text-sm border-border/30" />
@@ -149,7 +149,7 @@ function EventFields({ draft, setDraft }) {
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <LabeledField label="Event Title">
           <Input placeholder="e.g. Official Pre-Game Party" value={draft.title || ""} onChange={(e) => set({ title: e.target.value })} className="h-11 rounded-none text-sm border-border/40" />
         </LabeledField>

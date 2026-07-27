@@ -32,7 +32,7 @@ export default function PartnersManager({ partners = [] }) {
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a partner</p>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input placeholder="Partner / venue name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none" />
           <Input placeholder="Website link (optional)" value={draft.url} onChange={(e) => setDraft({ ...draft, url: e.target.value })} className="h-11 rounded-none" />
           <Input type="number" placeholder="Sort order" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none" />
@@ -50,8 +50,8 @@ export default function PartnersManager({ partners = [] }) {
       <div className="mt-6 grid gap-4">
         {sorted.length === 0 && <p className="text-sm text-muted-foreground">No partners yet. Add your first one above.</p>}
         {sorted.map((partner) => (
-          <div key={partner.id} className="grid gap-3 border border-border p-4">
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_110px]">
+          <div key={partner.id} className="grid grid-cols-1 gap-3 border border-border p-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_110px]">
               <Input defaultValue={partner.name || ""} onBlur={(e) => updateMutation.mutate({ id: partner.id, data: { name: e.target.value } })} className="h-11 rounded-none" />
               <Input defaultValue={partner.url || ""} placeholder="Website link" onBlur={(e) => updateMutation.mutate({ id: partner.id, data: { url: e.target.value } })} className="h-11 rounded-none" />
               <Input type="number" defaultValue={partner.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: partner.id, data: { sort_order: Number(e.target.value) } })} className="h-11 rounded-none" />

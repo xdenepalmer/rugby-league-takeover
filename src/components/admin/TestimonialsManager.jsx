@@ -44,12 +44,12 @@ export default function TestimonialsManager({ testimonials = [] }) {
 
       <div className="mt-5 grid gap-3 border border-border bg-background/40 p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground"><Plus className="h-4 w-4" /> Add a testimonial</p>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input placeholder="Name (e.g. Jacko)" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="rounded-none" />
           <Input placeholder="Role / location (optional, e.g. Eels fan · Sydney)" value={draft.author_role} onChange={(e) => setDraft({ ...draft, author_role: e.target.value })} className="rounded-none" />
         </div>
         <Textarea placeholder="What they said…" value={draft.quote} onChange={(e) => setDraft({ ...draft, quote: e.target.value })} className="min-h-20 rounded-none" />
-        <div className="grid items-center gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-2">
           <label className="flex items-center gap-3 text-sm text-muted-foreground">Rating
             <Select value={String(draft.rating ?? 0)} onValueChange={(v) => setDraft({ ...draft, rating: Number(v) })}>
               <SelectTrigger className="h-9 w-28 rounded-none"><SelectValue /></SelectTrigger>
@@ -74,13 +74,13 @@ export default function TestimonialsManager({ testimonials = [] }) {
             {t.is_published === false && (
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-400"><Clock className="h-3.5 w-3.5" /> Pending review{t.user_email ? ` · ${t.user_email}` : ""}</p>
             )}
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_110px]">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_110px]">
               <Input defaultValue={t.author_name || ""} placeholder="Name" onBlur={(e) => updateMutation.mutate({ id: t.id, data: { author_name: e.target.value } })} className="rounded-none" />
               <Input defaultValue={t.author_role || ""} placeholder="Role / location" onBlur={(e) => updateMutation.mutate({ id: t.id, data: { author_role: e.target.value } })} className="rounded-none" />
               <Input type="number" defaultValue={t.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: t.id, data: { sort_order: Number(e.target.value) } })} className="rounded-none" />
             </div>
             <Textarea defaultValue={t.quote || ""} placeholder="Quote" onBlur={(e) => updateMutation.mutate({ id: t.id, data: { quote: e.target.value } })} className="min-h-20 rounded-none" />
-            <div className="grid items-center gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-2">
               <label className="flex items-center gap-3 text-sm text-muted-foreground">Rating
                 <Select value={String(t.rating ?? 0)} onValueChange={(v) => updateMutation.mutate({ id: t.id, data: { rating: Number(v) } })}>
                   <SelectTrigger className="h-9 w-28 rounded-none"><SelectValue /></SelectTrigger>

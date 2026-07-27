@@ -301,7 +301,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [],
   const pieData = useMemo(() => Object.entries(statusCounts).map(([name, value]) => ({ name, value })), [statusCounts]);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* ── Section Header ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -310,7 +310,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [],
         className="admin-overview-hero relative overflow-hidden border border-border bg-card/60 cmd-glass"
       >
         <div className="cmd-accent-bar h-[2px] w-full" />
-        <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1.35fr] lg:items-stretch lg:p-6">
+        <div className="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[1fr_1.35fr] lg:items-stretch lg:p-6">
           <div className="flex flex-col justify-between">
             <div>
               <div className="mb-3 flex items-center gap-2">
@@ -343,7 +343,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [],
             </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3 lg:h-full">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:h-full">
             <PriorityTile
               to="/admin/store"
               icon={PackageCheck}

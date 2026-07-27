@@ -216,7 +216,7 @@ export default function ActionQueue({
 
   /* ── Action cards grid ── */
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {visible.map((action, i) => (
         <ActionCard
           key={action.id}

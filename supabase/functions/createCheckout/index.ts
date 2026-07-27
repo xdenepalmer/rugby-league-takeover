@@ -144,6 +144,52 @@ function buildShippingLineItem(shipping: any) {
   };
 }
 
+// Mirror of resolveFulfilment in tests/checkout-rules.mjs — keep in sync.
+// Decides whether a (choice, country) pair may check out at all. The settings
+// come from the DATABASE, never the request, so a client cannot enable pickup
+// or dodge the Australia-only shipping rule by lying about the config.
+const isAustralia = (country: unknown) => {
+  const c = toTrimmedString(country).toUpperCase();
+  return c === 'AU' || c === 'AUS' || c === 'AUSTRALIA';
+};
+
+// deno-lint-ignore no-explicit-any
+function resolveFulfilment({ method, shipping, country, settings }: any) {
+  const choice = toTrimmedString(method).toLowerCase() || 'shipping';
+  const pickupEnabled = settings?.pickup_enabled === true;
+  const audience = toTrimmedString(settings?.pickup_audience).toLowerCase() || 'international';
+  const australian = isAustralia(country);
+
+  if (choice === 'pickup') {
+    if (!pickupEnabled) {
+      return { ok: false, error: 'Collection in Las Vegas is not currently available.' };
+    }
+    if (audience === 'international' && australian) {
+      return { ok: false, error: 'Collection is for international orders only — please choose a shipping method.' };
+    }
+    return { ok: true, method: 'pickup', shipping: null };
+  }
+
+  if (choice !== 'shipping') {
+    return { ok: false, error: "Choose how you'd like to receive your order." };
+  }
+
+  if (country && !australian) {
+    return {
+      ok: false,
+      error: pickupEnabled
+        ? 'We only ship within Australia — choose collection in Las Vegas instead.'
+        : 'We currently only ship within Australia.',
+    };
+  }
+
+  const selection = buildShippingLineItem(shipping);
+  if (!selection) {
+    return { ok: false, error: 'A shipping option is required — please choose a shipping method.' };
+  }
+  return { ok: true, method: 'shipping', shipping: selection };
+}
+
 function resolveCheckoutOrigin(originHeader: unknown, allowlistEnv: unknown, fallback = DEFAULT_CHECKOUT_ORIGIN) {
   const fallbackOrigin = parseOrigin(fallback) || DEFAULT_CHECKOUT_ORIGIN;
   const requestedOrigin = parseOrigin(originHeader);
@@ -182,7 +228,7 @@ Deno.serve(async (req) => {
   try {
     const svc = serviceClient();
     const stripe = new Stripe(getStripeSecretKey());
-    const { items, customerName = '', customerEmail = '', shipping } = await req.json();
+    const { items, customerName = '', customerEmail = '', shipping, fulfilment, country } = await req.json();
     const normalizedItems = normalizeCheckoutItems(items);
 
     const user = await getCaller(req, svc);
@@ -192,13 +238,29 @@ Deno.serve(async (req) => {
       return json({ error: 'Cart items and a valid email are required' }, 400);
     }
 
-    // A priced shipping selection (from auspostRates) is required — the order
-    // total must include real shipping cost before we send the customer to
-    // Stripe. Domestic (AU) only, matching the AusPost rate-calc scope.
-    const shippingSelection = buildShippingLineItem(shipping);
-    if (!shippingSelection) {
-      return json({ error: 'A shipping option is required — please choose a shipping method.' }, 400);
+    // Fulfilment is decided against the SAVED settings, not the request, so a
+    // client can't turn pickup on for itself or bypass Australia-only shipping.
+    // An order can never reach Stripe without a valid shipping selection or an
+    // allowed pickup.
+    const { data: siteSettings } = await svc
+      .from('site_settings')
+      .select('pickup_enabled, pickup_audience, pickup_label, pickup_instructions')
+      .order('updated_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const fulfilmentResult = resolveFulfilment({
+      method: fulfilment,
+      shipping,
+      country,
+      settings: siteSettings,
+    });
+    if (!fulfilmentResult.ok) {
+      return json({ error: fulfilmentResult.error }, 400);
     }
+    const isPickup = fulfilmentResult.method === 'pickup';
+    // Pickup carries no shipping cost and no address to charge for.
+    const shippingSelection = fulfilmentResult.shipping || { code: 'PICKUP', name: 'Collect in Las Vegas', postcode: '', price_aud: 0, stripeLineItem: null };
 
     const productsById = new Map();
     const unavailableProductIds = [];
@@ -248,6 +310,17 @@ Deno.serve(async (req) => {
         shipping_service_code: shippingSelection.code,
         shipping_service_name: shippingSelection.name,
         shipping_cost_aud: shippingSelection.price_aud,
+        fulfilment_method: fulfilmentResult.method,
+        // A pickup order has no delivery address by design — record where to
+        // collect so the admin (and the customer's confirmation) has it.
+        ...(isPickup
+          ? {
+              shipping_address: siteSettings?.pickup_instructions
+                || siteSettings?.pickup_label
+                || 'Collect in Las Vegas at the event',
+              customer_status_note: 'Collect in Las Vegas at the event — bring your order number and ID.',
+            }
+          : {}),
       })
       .select('id')
       .single();
@@ -261,8 +334,9 @@ Deno.serve(async (req) => {
       line_items: allStripeLineItems,
       phone_number_collection: { enabled: true },
       // Domestic AU only — matches the AusPost rate calc, which only quotes
-      // Australian postcodes.
-      shipping_address_collection: { allowed_countries: ['AU'] },
+      // Australian postcodes. A pickup order is collected in person, so Stripe
+      // must NOT ask for a delivery address it would never be shipped to.
+      ...(isPickup ? {} : { shipping_address_collection: { allowed_countries: ['AU'] as const } }),
       metadata: buildOrderMetadata({
         appId: Deno.env.get('RLT_APP_ID') || 'rugby-league-takeover',
         orderId: order.id,
@@ -273,7 +347,9 @@ Deno.serve(async (req) => {
     await svc.from('store_orders').update({ stripe_session_id: session.id }).eq('id', order.id);
     return json({ url: session.url });
   } catch (error) {
+    // Log the real cause server-side; never leak internals (Stripe keys, stack,
+    // DB errors) to the browser.
     console.error('createCheckout error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return json({ error: 'Checkout could not be started. Please try again.' }, 500);
   }
 });

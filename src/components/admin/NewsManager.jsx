@@ -61,7 +61,7 @@ function EditForm({ article, updateMutation, onClose }) {
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FieldLabel label="Title">
           <Input value={editDraft.title} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} className="h-11 rounded-none" />
         </FieldLabel>
@@ -366,7 +366,7 @@ export default function NewsManager({ articles }) {
               className="overflow-hidden"
             >
               <div className="border-t border-border/50 p-5">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <FieldLabel label="Title">
                     <Input placeholder="Article title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none" />
                   </FieldLabel>
@@ -423,7 +423,7 @@ export default function NewsManager({ articles }) {
           </p>
         </motion.div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <AnimatePresence>
             {articles.map((article, i) => (
               <ArticleCard

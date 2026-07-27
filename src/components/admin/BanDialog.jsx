@@ -48,12 +48,12 @@ export default function BanDialog({ trigger, title, description, confirmLabel = 
         title={<span className="flex items-center gap-2"><BanIcon className="h-5 w-5 text-destructive" /> {title}</span>}
         description={description}
       >
-        <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-4 py-2">
+          <div className="grid grid-cols-1 gap-2">
             <Label>Reason</Label>
             <Input placeholder="e.g. Repeated spam" value={reason} onChange={(e) => setReason(e.target.value)} className="h-11 rounded-none" />
           </div>
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Label>Duration</Label>
             <Select value={days} onValueChange={setDays}>
               <SelectTrigger className="h-11 rounded-none"><SelectValue /></SelectTrigger>

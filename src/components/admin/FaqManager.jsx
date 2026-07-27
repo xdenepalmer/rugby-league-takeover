@@ -70,8 +70,8 @@ export default function FaqManager({ faqs = [], category = "store", title, descr
       <div className="mt-6 grid gap-4">
         {sorted.length === 0 && <p className="text-sm text-muted-foreground">No FAQs yet. Add your first one above.</p>}
         {sorted.map((faq) => (
-          <div key={faq.id} className="grid gap-3 border border-border p-4">
-            <div className="grid gap-3 md:grid-cols-[1fr_120px]">
+          <div key={faq.id} className="grid grid-cols-1 gap-3 border border-border p-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_120px]">
               <Input defaultValue={faq.question || ""} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { question: e.target.value } })} className="h-11 rounded-none" />
               <Input type="number" defaultValue={faq.sort_order ?? 1} onBlur={(e) => updateMutation.mutate({ id: faq.id, data: { sort_order: Number(e.target.value) } })} className="h-11 rounded-none" />
             </div>

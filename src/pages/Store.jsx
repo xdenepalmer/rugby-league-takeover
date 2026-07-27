@@ -23,7 +23,8 @@ import {
   Info,
   Lock,
   Truck,
-  Ruler
+  Ruler,
+  MapPin
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -806,6 +807,28 @@ export default function Store() {
 
   // AusPost live rate calculation — a real quote (or a $0 override once the
   // free-shipping threshold is hit) is required before checkout can proceed.
+  // ── Fulfilment: ship (AusPost, Australia only) or collect in Las Vegas ──
+  // AusPost is domestic-only, so overseas supporters can't buy shipping at all;
+  // collection is their route, and the admin controls whether it's offered.
+  const storeSettings = settingsRecords[0] || {};
+  const pickupEnabled = storeSettings.pickup_enabled === true;
+  const pickupAudience = storeSettings.pickup_audience || "international";
+  const pickupLabel = storeSettings.pickup_label || "Collect in Las Vegas at the event";
+  const pickupInstructions = storeSettings.pickup_instructions || "";
+  const [orderCountry, setOrderCountry] = useState("AU");
+  const isAuOrder = orderCountry === "AU";
+  const pickupAvailable = pickupEnabled && (pickupAudience === "everyone" || !isAuOrder);
+  const shippingAvailable = isAuOrder;
+  const [deliveryMode, setDeliveryMode] = useState("shipping");
+  // Keep the choice legal whenever the country or the admin settings change.
+  useEffect(() => {
+    if (!shippingAvailable && pickupAvailable) setDeliveryMode("pickup");
+    else if (!pickupAvailable && shippingAvailable) setDeliveryMode("shipping");
+  }, [shippingAvailable, pickupAvailable]);
+  const isPickup = deliveryMode === "pickup" && pickupAvailable;
+  // Nothing can be ordered when we can neither ship nor let them collect.
+  const cannotFulfil = !shippingAvailable && !pickupAvailable;
+
   const [shippingPostcode, setShippingPostcode] = useState("");
   const [shippingRates, setShippingRates] = useState([]);
   const [shippingRatesFor, setShippingRatesFor] = useState("");
@@ -853,7 +876,12 @@ export default function Store() {
     e.preventDefault();
     if (cart.length === 0 || !checkoutEmail) return;
 
-    if (ratesStale || !selectedRate) {
+    if (cannotFulfil) {
+      setShippingError("We currently only ship within Australia.");
+      return;
+    }
+    // A shipped order must always carry a priced rate; a pickup order needs none.
+    if (!isPickup && (ratesStale || !selectedRate)) {
       setShippingError("Please calculate and select a shipping option before checkout.");
       return;
     }
@@ -873,12 +901,16 @@ export default function Store() {
         items: cart.map((item) => ({ productId: item.id, quantity: item.quantity, size: item.size || "" })),
         customerName: checkoutName,
         customerEmail: checkoutEmail,
-        shipping: {
-          code: selectedRate.code,
-          name: selectedRate.name,
-          postcode: shippingPostcode.trim(),
-          price_aud: isFreeShipping ? 0 : selectedRate.price_aud,
-        },
+        fulfilment: isPickup ? "pickup" : "shipping",
+        country: orderCountry,
+        shipping: isPickup
+          ? null
+          : {
+              code: selectedRate.code,
+              name: selectedRate.name,
+              postcode: shippingPostcode.trim(),
+              price_aud: isFreeShipping ? 0 : selectedRate.price_aud,
+            },
       });
 
       if (response?.data?.url) {
@@ -1243,6 +1275,70 @@ export default function Store() {
                     </div>
                   </div>
 
+                  {/* Where the order is going decides what's on offer: AusPost
+                      ships domestically only, so overseas orders can just collect. */}
+                  {pickupEnabled && (
+                    <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
+                      <label htmlFor="order-country" className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                        <MapPin className="h-3 w-3 text-primary" /> Where are you ordering from?
+                      </label>
+                      <select
+                        id="order-country"
+                        value={orderCountry}
+                        onChange={(e) => setOrderCountry(e.target.value)}
+                        className="h-11 w-full rounded-none border border-border/40 bg-background px-3 text-sm"
+                      >
+                        <option value="AU">Australia</option>
+                        <option value="INTL">Outside Australia</option>
+                      </select>
+
+                      {(shippingAvailable || pickupAvailable) && (
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {shippingAvailable && (
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryMode("shipping")}
+                              className={`flex min-h-11 items-center gap-2 border px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider transition-all ${
+                                !isPickup ? "border-primary/50 bg-primary/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border"
+                              }`}
+                            >
+                              <Truck className="h-3.5 w-3.5 shrink-0" /> Ship it to me
+                            </button>
+                          )}
+                          {pickupAvailable && (
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryMode("pickup")}
+                              className={`flex min-h-11 items-center gap-2 border px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider transition-all ${
+                                isPickup ? "border-primary/50 bg-primary/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border"
+                              }`}
+                            >
+                              <MapPin className="h-3.5 w-3.5 shrink-0" /> {pickupLabel}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {isPickup && (
+                        <div className="border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">{pickupLabel} · No shipping cost</p>
+                          {pickupInstructions && (
+                            <p className="mt-1.5 whitespace-pre-line text-[11px] leading-relaxed text-slate-300">{pickupInstructions}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {cannotFulfil && (
+                        <p className="text-[11px] leading-relaxed text-amber-400">
+                          We currently only ship within Australia, and collection isn&apos;t available right now.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!pickupEnabled && !isAuOrder && null}
+
+                  {!isPickup && (
                   <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
@@ -1318,11 +1414,12 @@ export default function Store() {
                       <p className="text-[10px] font-medium text-amber-400">Cart or postcode changed — recalculate shipping.</p>
                     )}
                   </div>
+                  )}
 
                   <div className="flex items-center justify-between text-base font-bold uppercase tracking-wider mb-4 border-b border-border/30 pb-3">
                     <span>Total</span>
                     <span className="text-accent font-mono tracking-tight text-lg">
-                      ${(cartSubtotal + (selectedRate && !ratesStale ? (isFreeShipping ? 0 : Number(selectedRate.price_aud)) : 0)).toFixed(2)} AUD
+                      ${(cartSubtotal + (!isPickup && selectedRate && !ratesStale ? (isFreeShipping ? 0 : Number(selectedRate.price_aud)) : 0)).toFixed(2)} AUD
                     </span>
                   </div>
 
@@ -1370,15 +1467,19 @@ export default function Store() {
 
                     <Button
                       type="submit"
-                      disabled={checkingOut || ratesStale || !selectedRate}
+                      disabled={checkingOut || cannotFulfil || (!isPickup && (ratesStale || !selectedRate))}
                       className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       <CreditCard className="h-4 w-4" />
                       {checkingOut
                         ? "Connecting to Stripe..."
-                        : ratesStale || !selectedRate
-                          ? "Calculate shipping to continue"
-                          : `Checkout • $${(cartSubtotal + (isFreeShipping ? 0 : Number(selectedRate.price_aud))).toFixed(2)} AUD`}
+                        : cannotFulfil
+                          ? "Not available outside Australia"
+                          : isPickup
+                            ? `Checkout • $${cartSubtotal.toFixed(2)} AUD`
+                            : ratesStale || !selectedRate
+                              ? "Calculate shipping to continue"
+                              : `Checkout • $${(cartSubtotal + (isFreeShipping ? 0 : Number(selectedRate.price_aud))).toFixed(2)} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe

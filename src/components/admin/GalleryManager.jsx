@@ -89,7 +89,7 @@ export default function GalleryManager({ items = [] }) {
   }, {});
 
   return (
-    <section className="grid gap-6">
+    <section className="grid grid-cols-1 gap-6">
       {/* Stats row */}
       {sorted.length > 0 && (
         <div className="flex flex-wrap gap-3">
@@ -113,9 +113,9 @@ export default function GalleryManager({ items = [] }) {
           <Plus className="h-4 w-4" /> Add Gallery Item
         </p>
 
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {/* Row 1: Title + Type */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
               placeholder="Title / caption (optional)"
               value={draft.title}
@@ -177,7 +177,7 @@ export default function GalleryManager({ items = [] }) {
           )}
 
           {/* Row 3: Event label + sort */}
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Input
               placeholder="Event label (e.g. Las Vegas 2024)"
               value={draft.event_label}
@@ -216,7 +216,7 @@ export default function GalleryManager({ items = [] }) {
       </div>
 
       {/* ── Existing Items ── */}
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {sorted.length === 0 && (
           <div className="border border-border bg-card/20 py-12 text-center">
             <Images className="mx-auto h-10 w-10 text-muted-foreground/20 stroke-1 mb-3" />
@@ -280,7 +280,7 @@ export default function GalleryManager({ items = [] }) {
               {/* Expanded edit form */}
               {isExpanded && (
                 <div className="border-t border-border/60 p-4 grid gap-3 bg-background/30">
-                  <div className="grid gap-3 sm:grid-cols-[1fr_160px_100px]">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px_100px]">
                     <Input
                       defaultValue={item.title || ""}
                       placeholder="Title / caption"
