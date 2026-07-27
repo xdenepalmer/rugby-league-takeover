@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
 
 const logoUrl = "/icons/icon-192.png";
 const NotificationBell = lazy(() => import("@/components/NotificationBell"));
@@ -51,7 +52,10 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
       if (el) {
         setActiveHash(hash);
         window.history.replaceState(null, "", `/${hash}`);
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Sections above the target lazy-mount with placeholder heights, so the
+        // page reflows mid-scroll and a one-shot scrollIntoView lands on the
+        // wrong section. scrollToAnchor re-asserts until it settles.
+        scrollToAnchor(el);
         return;
       }
       if (attempt < 6) setTimeout(() => scrollToTarget(attempt + 1), 150);

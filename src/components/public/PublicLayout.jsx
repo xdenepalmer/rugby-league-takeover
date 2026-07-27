@@ -11,6 +11,7 @@ import ScrollProgressBar from "./ScrollProgressBar";
 import AdSlot from "@/components/ads/AdSlot";
 import PublicOfflineBanner from "@/components/PublicOfflineBanner";
 import { selectionChanged } from "@/lib/native/haptics";
+import { scrollToAnchor, scrollToAnchorWhenReady } from "@/lib/scroll-to-anchor";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
@@ -24,20 +25,16 @@ export default function PublicLayout() {
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
+  // scrollToAnchorWhenReady waits for the target to mount after a cross-page
+  // navigation, then holds the position while the homepage's lazy sections
+  // mount and reflow underneath the scroll (a plain scrollIntoView lands on
+  // whatever section happens to occupy the stale offset).
   const handleNavigate = (hash) => {
     if (location.pathname !== "/") {
       navigate("/");
-      setTimeout(() => {
-        const element = document.querySelector(hash);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 300);
+      scrollToAnchorWhenReady(hash);
     } else {
-      const element = document.querySelector(hash);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
+      scrollToAnchor(hash);
     }
   };
   

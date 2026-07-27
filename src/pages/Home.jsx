@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessageSquare, Plane, Radio, ShoppingBag, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { scrollToAnchor, scrollToAnchorWhenReady } from "@/lib/scroll-to-anchor";
 
 function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, onClick, tone = "primary" }) {
   const toneClass = {
@@ -62,12 +63,11 @@ function PublicActionCard({ icon: Icon, eyebrow, title, body, action, to, href, 
 function LiveHudDashboard({ settings = {} }) {
   const scrollToSection = (id) => (event) => {
     event.preventDefault();
-    const target = document.querySelector(id);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
-    } else if (id === "#travel-registration") {
-      document.querySelector("#travel")?.scrollIntoView({ behavior: "smooth" });
-      window.setTimeout(() => document.querySelector(id)?.scrollIntoView({ behavior: "smooth" }), 650);
+    if (!scrollToAnchor(id) && id === "#travel-registration") {
+      // The registration form lives inside the lazy Travel section — scroll to
+      // Travel first so it mounts, then settle onto the form itself.
+      scrollToAnchor("#travel");
+      scrollToAnchorWhenReady(id);
     }
     window.history.replaceState(null, "", id);
   };
