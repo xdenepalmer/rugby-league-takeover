@@ -6,6 +6,8 @@ import {
   buildCheckoutLineItems,
   buildOrderMetadata,
   buildShippingLineItem,
+  isAustralia,
+  resolveFulfilment,
   calculateOrderTotalAud,
   getNextStockQuantity,
   isPaidSessionForOrder,
@@ -132,4 +134,60 @@ test("decrements stock without allowing negative inventory", () => {
   assert.equal(getNextStockQuantity({ stock_quantity: 5 }, 2), 3);
   assert.equal(getNextStockQuantity({ stock_quantity: 1 }, 3), 0);
   assert.equal(getNextStockQuantity({}, 3), null);
+});
+
+/* ── Vegas pickup fulfilment ───────────────────────────────────────────── */
+
+test("shipping is refused for non-Australian orders", () => {
+  const settings = { pickup_enabled: false, pickup_audience: "international" };
+  const rate = { code: "AUS_PARCEL_REGULAR", name: "Parcel Post", postcode: "4000", price_aud: 12.5 };
+
+  const overseas = resolveFulfilment({ method: "shipping", shipping: rate, country: "US", settings });
+  assert.equal(overseas.ok, false);
+  assert.match(overseas.error, /only ship within Australia/i);
+
+  const domestic = resolveFulfilment({ method: "shipping", shipping: rate, country: "AU", settings });
+  assert.equal(domestic.ok, true);
+  assert.equal(domestic.method, "shipping");
+  assert.equal(domestic.shipping.price_aud, 12.5);
+});
+
+test("an order can never check out without a fulfilment choice", () => {
+  const settings = { pickup_enabled: true, pickup_audience: "everyone" };
+  // shipping selected but no rate chosen
+  assert.equal(resolveFulfilment({ method: "shipping", shipping: null, country: "AU", settings }).ok, false);
+  // a bogus method is rejected rather than defaulting to free delivery
+  assert.equal(resolveFulfilment({ method: "teleport", country: "AU", settings }).ok, false);
+});
+
+test("pickup obeys the admin toggle and its audience", () => {
+  const rate = { code: "X", name: "Parcel", postcode: "4000", price_aud: 10 };
+
+  // feature off → nobody can collect
+  const off = { pickup_enabled: false, pickup_audience: "everyone" };
+  assert.equal(resolveFulfilment({ method: "pickup", country: "US", settings: off }).ok, false);
+
+  // international-only → overseas yes, Australians no
+  const intl = { pickup_enabled: true, pickup_audience: "international" };
+  assert.equal(resolveFulfilment({ method: "pickup", country: "US", settings: intl }).ok, true);
+  const auBlocked = resolveFulfilment({ method: "pickup", country: "AU", settings: intl });
+  assert.equal(auBlocked.ok, false);
+  assert.match(auBlocked.error, /international/i);
+
+  // everyone → an Australian may collect instead of paying for shipping
+  const all = { pickup_enabled: true, pickup_audience: "everyone" };
+  const auPickup = resolveFulfilment({ method: "pickup", country: "AU", settings: all });
+  assert.equal(auPickup.ok, true);
+  assert.equal(auPickup.method, "pickup");
+  assert.equal(auPickup.shipping, null, "pickup must not carry a shipping charge");
+
+  // overseas customer gets pointed at collection instead of a dead end
+  const nudge = resolveFulfilment({ method: "shipping", shipping: rate, country: "GB", settings: intl });
+  assert.equal(nudge.ok, false);
+  assert.match(nudge.error, /collection in Las Vegas/i);
+});
+
+test("Australia is recognised however the client spells it", () => {
+  for (const c of ["AU", "au", "AUS", "Australia"]) assert.equal(isAustralia(c), true, c);
+  for (const c of ["US", "NZ", "GB", ""]) assert.equal(isAustralia(c), false, c);
 });

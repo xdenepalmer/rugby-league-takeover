@@ -117,6 +117,60 @@ export function buildShippingLineItem(shipping) {
   };
 }
 
+// ── Fulfilment: ship (AusPost, Australia only) or collect in Las Vegas ──────
+//
+// AusPost rates are domestic, so shipping can only serve Australian addresses.
+// Overseas supporters collect at the event instead. Both the feature and who
+// may use it are admin settings, and this decides — server-side — whether a
+// given (choice, country) pair is allowed to check out at all.
+//
+// settings: { pickup_enabled, pickup_audience: 'international'|'everyone' }
+// Returns { ok: true, method, shipping? } or { ok: false, error }.
+export const isAustralia = (country) => {
+  const c = toTrimmedString(country).toUpperCase();
+  return c === "AU" || c === "AUS" || c === "AUSTRALIA";
+};
+
+export function resolveFulfilment({ method, shipping, country, settings } = {}) {
+  const choice = toTrimmedString(method).toLowerCase() || "shipping";
+  const pickupEnabled = settings?.pickup_enabled === true;
+  const audience = toTrimmedString(settings?.pickup_audience).toLowerCase() || "international";
+  const australian = isAustralia(country);
+
+  if (choice === "pickup") {
+    if (!pickupEnabled) {
+      return { ok: false, error: "Collection in Las Vegas is not currently available." };
+    }
+    // 'international' restricts collection to overseas supporters; 'everyone'
+    // lets Australian customers collect instead of paying for shipping.
+    if (audience === "international" && australian) {
+      return { ok: false, error: "Collection is for international orders only — please choose a shipping method." };
+    }
+    return { ok: true, method: "pickup", shipping: null };
+  }
+
+  if (choice !== "shipping") {
+    return { ok: false, error: "Choose how you'd like to receive your order." };
+  }
+
+  // Shipping is Australia-only. An overseas customer is told what to do next
+  // rather than being left at a dead end.
+  if (country && !australian) {
+    return {
+      ok: false,
+      error: pickupEnabled
+        ? "We only ship within Australia — choose collection in Las Vegas instead."
+        : "We currently only ship within Australia.",
+    };
+  }
+
+  const selection = buildShippingLineItem(shipping);
+  if (!selection) {
+    return { ok: false, error: "A shipping option is required — please choose a shipping method." };
+  }
+  return { ok: true, method: "shipping", shipping: selection };
+}
+
 export function resolveCheckoutOrigin(originHeader, allowlistEnv, fallback = DEFAULT_CHECKOUT_ORIGIN) {
   const fallbackOrigin = parseOrigin(fallback) || DEFAULT_CHECKOUT_ORIGIN;
   const requestedOrigin = parseOrigin(originHeader);

@@ -93,6 +93,20 @@ function orderAddressText(order) {
 function AddressBlock({ order }) {
   const structured = hasStructuredAddress(order);
   const text = orderAddressText(order);
+
+  // A pickup order is collected in person — there's deliberately no delivery
+  // address and no AusPost label, so don't nag about a "missing" one.
+  if (order.fulfilment_method === "pickup") {
+    return (
+      <div className="border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
+        <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-400">
+          <MapPin className="h-3 w-3" /> Collect in Las Vegas
+        </p>
+        <p className="mt-1.5 text-sm text-foreground">No delivery — customer collects at the event.</p>
+        {text && <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-slate-300">{text}</p>}
+      </div>
+    );
+  }
   const copyAddress = async () => {
     try {
       await navigator.clipboard.writeText(text || "");
@@ -745,7 +759,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   )}
                 </div>
 
-                {/* AusPost label + tracking actions */}
+                {/* AusPost label + tracking actions — nothing to post for a
+                    pickup order, so the whole block is hidden for those. */}
+                {order.fulfilment_method !== "pickup" && (
                 <div className="border border-border/20 bg-muted/5 p-3 space-y-2">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
                     <Truck className="h-3 w-3 text-primary" /> AusPost Shipping
@@ -787,6 +803,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Status + Carrier + Shipping Method */}
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

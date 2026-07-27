@@ -57,6 +57,10 @@ const defaults = {
   shipping_sender_suburb: "",
   shipping_sender_state: "",
   shipping_sender_postcode: "",
+  pickup_enabled: false,
+  pickup_audience: "international",
+  pickup_label: "Collect in Las Vegas at the event",
+  pickup_instructions: "",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
   footer_powered_by: "DENEO.AI",
   contact_email: "",
@@ -620,6 +624,58 @@ export default function SiteSettingsManager({ settings }) {
                         <p className="text-[10px] leading-relaxed text-slate-300">
                           Live rates on the store page and label creation both fail until a sender postcode is set here. The AusPost account credentials themselves (API key, account number) are configured as Supabase Edge Function secrets, not here.
                         </p>
+                      </div>
+
+                      {/* ── Collect in Las Vegas ───────────────────────── */}
+                      <div className="border-t border-border/60 pt-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-widest text-foreground">Collect in Las Vegas</p>
+                            <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
+                              AusPost only ships within Australia, so overseas supporters can&apos;t buy shipping. Turn this on to let them collect their order at the event instead.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={draft.pickup_enabled === true}
+                            onCheckedChange={(v) => update("pickup_enabled", v)}
+                          />
+                        </div>
+
+                        {draft.pickup_enabled && (
+                          <div className="grid grid-cols-1 gap-3 border border-border/40 bg-muted/5 p-3">
+                            <LabeledField label="Who can collect?" help="International-only keeps Australian customers on paid shipping. Everyone lets any customer collect instead of paying for delivery.">
+                              <select
+                                value={draft.pickup_audience || "international"}
+                                onChange={(e) => update("pickup_audience", e.target.value)}
+                                className="h-11 w-full rounded-none border border-border/40 bg-background px-3 text-sm"
+                              >
+                                <option value="international">International orders only</option>
+                                <option value="everyone">Everyone (including Australia)</option>
+                              </select>
+                            </LabeledField>
+                            <LabeledField label="Option label" help="What the customer sees at checkout.">
+                              <Input
+                                placeholder="Collect in Las Vegas at the event"
+                                value={draft.pickup_label || ""}
+                                onChange={(e) => update("pickup_label", e.target.value)}
+                              />
+                            </LabeledField>
+                            <LabeledField label="Collection details" help="Where and when to collect. Shown at checkout and saved on the order." fullWidth>
+                              <Textarea
+                                placeholder="Collect from the Rugby League Takeover stand at Allegiant Stadium on match day. Bring your order number and photo ID."
+                                value={draft.pickup_instructions || ""}
+                                onChange={(e) => update("pickup_instructions", e.target.value)}
+                                className="min-h-20"
+                              />
+                            </LabeledField>
+                          </div>
+                        )}
+
+                        {!draft.pickup_enabled && (
+                          <p className="text-[10px] leading-relaxed text-amber-400/80">
+                            While this is off, customers outside Australia cannot complete an order at all.
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
