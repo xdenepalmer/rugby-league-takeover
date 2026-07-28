@@ -96,13 +96,19 @@
     min-height: 100dvh;
   }
 
-  /* Prevent iOS Safari from zooming in when focusing a form field. Inputs must be
-     at least 16px on touch devices, so we bump them only on coarse pointers. */
+  /* Prevent iOS from zooming in when focusing a form field. Any input under 16px
+     triggers an auto-zoom that the user cannot undo — the page stays magnified and
+     starts scrolling sideways.
+     !important is load-bearing here: this rule lives in @layer base, which Tailwind
+     emits before the utilities layer, and a bare `input` selector (0,0,1) loses to
+     the `text-sm` that ui/input.jsx bakes into every field (0,1,0). Without it the
+     rule silently does nothing and every input in the app zooms. Checkboxes and
+     radios are excluded — they render no text and size off their own box. */
   @media (pointer: coarse) {
-    input,
+    input:not([type="checkbox"]):not([type="radio"]),
     textarea,
     select {
-      font-size: 16px;
+      font-size: 16px !important;
     }
   }
 
