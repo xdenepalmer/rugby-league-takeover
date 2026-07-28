@@ -1278,10 +1278,9 @@ export default function Store() {
                     ))}
                   </div>
                 )}
-              </div>
 
               {cart.length > 0 && (
-                <div className="border-t border-border/60 bg-card/60 pt-4 backdrop-blur-md pb-safe">
+                <div className="mt-4 border-t border-border/60 pt-4 pb-safe">
                   <div className="mb-4 bg-muted/20 border border-border/40 p-3 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
                       <span className="flex items-center gap-1">{needsMore > 0 ? `Spend $${needsMore.toFixed(2)} AUD more for free shipping` : <><Rocket className="h-3 w-3 inline" /> You qualify for free shipping!</>}</span>
@@ -1543,6 +1542,7 @@ export default function Store() {
                   </form>
                 </div>
               )}
+              </div>
             </motion.div>
           </>
         )}
