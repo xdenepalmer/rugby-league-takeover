@@ -20,7 +20,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel" };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true };
 
 // The largest packaging an item needs. Checkout offers the cart's biggest item's
 // size and nothing above it, so a customer can't put a cap in a large box.
@@ -30,6 +30,20 @@ const PARCEL_SIZE_OPTIONS = [
   { value: "medium", label: "Medium box" },
   { value: "large", label: "Large box — bulky items" },
 ];
+
+// Non-physical stock (memberships, anything digital) must not attract postage —
+// a cart of only these skips shipping entirely at checkout.
+const shippingRequiredField = (draft, setDraft) => (
+  <label className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">
+    <input
+      type="checkbox"
+      checked={draft.shipping_required !== false}
+      onChange={(e) => setDraft({ ...draft, shipping_required: e.target.checked })}
+      className="h-4 w-4 accent-primary"
+    />
+    This item ships physically
+  </label>
+);
 
 const parcelSizeField = (draft, setDraft) => (
   <select
@@ -172,6 +186,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
               <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
+            <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
             <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel. Parcel size caps what the customer can pick at checkout — nothing larger is offered.</p>
           </div>
 
@@ -391,6 +406,7 @@ export default function ProductsManager({ products, loading }) {
                     <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                   <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
+                  <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
                   <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel. Parcel size caps what the customer can pick at checkout — nothing larger is offered.</p>
                 </div>
                 <div className="space-y-2">
