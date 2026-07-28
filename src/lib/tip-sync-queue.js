@@ -56,6 +56,19 @@ export function isTipStillSyncable(tip, now = new Date()) {
   return now < kickoff;
 }
 
+/**
+ * Only transient failures are worth keeping queued. A definitive server
+ * rejection (validation, deadline, duplicate, auth) will fail identically on
+ * every retry, so it is dropped instead of being retried silently forever.
+ * 408/429 are retryable despite being 4xx.
+ */
+export function isRetryableSyncError(error) {
+  const status = Number(error?.status ?? error?.response?.status);
+  if (!Number.isFinite(status)) return true; // network/offline/unknown
+  if (status === 408 || status === 429) return true;
+  return status < 400 || status >= 500;
+}
+
 export function prunedTipQueue(storage = globalThis.localStorage, now = new Date()) {
   const kept = readTipQueue(storage).filter((t) => isTipStillSyncable(t, now));
   try {

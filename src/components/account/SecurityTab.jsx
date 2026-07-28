@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { KeyRound, LogOut, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { signOut } from "@/lib/sign-out";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +131,7 @@ export default function SecurityTab() {
       </div>
 
       <div className="flex justify-end">
-        <Button variant="ghost" onClick={() => base44.auth.logout("/")} className="rounded-none text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" onClick={() => signOut("/")} className="rounded-none text-muted-foreground hover:text-foreground">
           <LogOut className="mr-2 h-4 w-4" /> Log out
         </Button>
       </div>

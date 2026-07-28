@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { supabase } from '@/api/supabaseClient';
 import { appParams } from '@/lib/app-params';
 import { hasAdminRole, hasModeratorRole } from '@/lib/auth-roles';
+import { signOut } from '@/lib/sign-out';
 
 const AuthContext = createContext();
 
@@ -75,6 +76,10 @@ export const AuthProvider = ({ children }) => {
       });
       setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
+      // Without this, guards waiting on authChecked never resolve and the app
+      // sits on a loading screen instead of showing the error state.
+      setAuthChecked(true);
+      setIsAuthenticated(false);
     }
   }, [checkUserAuth]);
 
@@ -103,15 +108,15 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const logout = useCallback((shouldRedirect = true) => {
-    setUser(null);
-    setIsAuthenticated(false);
-
-    if (shouldRedirect) {
-      base44.auth.logout('/');
-    } else {
-      base44.auth.logout();
+  // Sign-out failures are reported by signOut() rather than swallowed: local
+  // state saying "logged out" while the session is still live is misleading.
+  const logout = useCallback(async (shouldRedirect = true) => {
+    const ok = await signOut(shouldRedirect ? '/' : '');
+    if (ok) {
+      setUser(null);
+      setIsAuthenticated(false);
     }
+    return ok;
   }, []);
 
   const navigateToLogin = useCallback(() => {

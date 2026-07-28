@@ -14,6 +14,7 @@ import AdminPullToRefresh from "./AdminPullToRefresh";
 const AdminCommandPalette = lazy(() => import("./AdminCommandPalette"));
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { signOut } from "@/lib/sign-out";
 import { Button } from "@/components/ui/button";
 import AdminOfflineBanner from "./AdminOfflineBanner";
 import {
@@ -341,7 +342,7 @@ export default function AdminLayout({ children }) {
   const handleMobileAction = (action) => {
     if (action === "export") triggerExport();
     else if (action === "refresh") queryClientInstance.invalidateQueries();
-    else if (action === "logout") { base44.auth.logout("/"); return; }
+    else if (action === "logout") { signOut("/"); return; }
     setMobileMoreOpen(false);
   };
 
@@ -449,7 +450,7 @@ export default function AdminLayout({ children }) {
                 variant="ghost"
                 size="mobile"
                 className="hidden rounded-none text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-destructive sm:inline-flex md:h-7 md:px-2"
-                onClick={() => base44.auth.logout("/")}
+                onClick={() => signOut("/")}
               >
                 <LogOut className="mr-1.5 h-3 w-3" /> Exit
               </Button>

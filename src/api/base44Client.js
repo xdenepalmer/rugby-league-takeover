@@ -139,17 +139,21 @@ const entities = Object.fromEntries(Object.keys(WRITE_TABLES).map((n) => [n, mak
 // flat user object the app expects.
 // ---------------------------------------------------------------------------
 async function fetchProfile(authUserId) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('auth_user_id', authUserId)
     .maybeSingle();
+  // A failed profile read must not look like "no profile row" — that would
+  // silently downgrade an admin/moderator to the default-user fallback below.
+  throwIf(error);
   return data;
 }
 
 const auth = {
   async isAuthenticated() {
-    const { data } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
+    throwIf(error);
     return !!data?.session;
   },
 
@@ -269,7 +273,10 @@ const auth = {
   },
 
   async logout(redirectUrl) {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    // Redirecting after a failed sign-out would leave a live session behind a
+    // logged-out-looking UI, so propagate instead.
+    throwIf(error);
     if (typeof redirectUrl === 'string' && redirectUrl) {
       window.location.assign(redirectUrl.startsWith('/') ? redirectUrl : '/');
     }
