@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DollarSign, TrendingUp, Download, Trophy, BarChart3,
@@ -12,6 +12,9 @@ import {
   ResponsiveContainer, Cell, PieChart, Pie,
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import useAnimatedCount from "@/hooks/use-animated-count";
+import { formatAmount, formatAud, formatCount } from "@/lib/format";
+import ChartTooltip from "./shared/ChartTooltip";
 
 /* ═══════════════════════════════════════════════════════════
    Constants
@@ -41,32 +44,8 @@ const TIER_BADGE = {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   Animated Counter Hook (matching RevenueBreakdown pattern)
-   ═══════════════════════════════════════════════════════════ */
-function useAnimatedCount(target, duration = 900) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (target === 0) { setVal(0); return; }
-    const start = performance.now();
-    const tick = (now) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setVal(eased * target);
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration]);
-  return val;
-}
-
-/* ═══════════════════════════════════════════════════════════
    Helpers
    ═══════════════════════════════════════════════════════════ */
-function fmtCurrency(n) {
-  return "$" + Number(n || 0).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 function ctrColor(ctr) {
   if (ctr >= 2) return "text-emerald-400";
   if (ctr >= 0.5) return "text-amber-400";
@@ -97,29 +76,20 @@ function calcCtr(impressions, clicks) {
 /* ═══════════════════════════════════════════════════════════
    Chart Tooltip (matching existing dark-theme pattern)
    ═══════════════════════════════════════════════════════════ */
-function ChartTooltipContent({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-none bg-card/95 border border-border p-3 shadow-xl backdrop-blur-sm">
-      <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
-        {label}
-      </p>
-      {payload.map((entry) => (
-        <p key={entry.name} className="text-sm font-bold" style={{ color: entry.color }}>
-          {entry.name}: {entry.name.toLowerCase().includes("revenue")
-            ? fmtCurrency(entry.value)
-            : typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
-        </p>
-      ))}
-    </div>
-  );
+const formatSeriesValue = (value, name) => {
+  if (name.toLowerCase().includes("revenue")) return formatAud(value);
+  return typeof value === "number" ? formatCount(value) : value;
+};
+
+function ChartTooltipContent(props) {
+  return <ChartTooltip {...props} formatValue={formatSeriesValue} />;
 }
 
 /* ═══════════════════════════════════════════════════════════
    Big Stat Card (replicates RevenueBreakdown aesthetic)
    ═══════════════════════════════════════════════════════════ */
 function StatCard({ icon: Icon, label, value, prefix = "", suffix = "", delay = 0, color, isCurrency = false }) {
-  const displayVal = useAnimatedCount(typeof value === "number" ? value : 0);
+  const displayVal = useAnimatedCount(typeof value === "number" ? value : 0, { duration: 900, round: false });
 
   return (
     <motion.div
@@ -143,9 +113,7 @@ function StatCard({ icon: Icon, label, value, prefix = "", suffix = "", delay = 
             </p>
             <p className="font-display text-3xl tabular-nums leading-none text-foreground counter-glow">
               {prefix}
-              {isCurrency
-                ? displayVal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : Math.round(displayVal).toLocaleString()}
+              {isCurrency ? formatAmount(displayVal) : formatCount(Math.round(displayVal))}
               {suffix}
             </p>
           </div>
@@ -653,7 +621,7 @@ export default function AdRevenueTracker({ ads, sponsors, stats }) {
                         </span>
                       </td>
                       <td className="px-3 py-3 pr-5 text-right text-sm font-mono font-bold text-accent tabular-nums">
-                        {fmtCurrency(row.revenue)}
+                        {formatAud(row.revenue)}
                       </td>
                     </motion.tr>
                   );

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { downloadCsv } from "@/lib/csv";
+import { formatAmountFixed, formatAudFixed } from "@/lib/format";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
@@ -433,7 +434,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
       setRefundReason("");
       toast({
         title: data?.isFull ? "Refund issued" : "Partial refund issued",
-        description: `$${Number(data?.refundedAmount || 0).toFixed(2)} AUD refunded via Stripe${data?.restocked ? " · items restocked" : ""}.`,
+        description: `${formatAudFixed(data?.refundedAmount)} AUD refunded via Stripe${data?.restocked ? " · items restocked" : ""}.`,
       });
     },
     onError: (error) => toast({ title: "Refund failed", description: error.message, variant: "destructive" }),
@@ -565,12 +566,12 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
       return;
     }
     if (amt > refundRemaining + 0.005) {
-      toast({ title: "Amount too high", description: `Only $${refundRemaining.toFixed(2)} AUD is left to refund on this order.`, variant: "destructive" });
+      toast({ title: "Amount too high", description: `Only ${formatAudFixed(refundRemaining)} AUD is left to refund on this order.`, variant: "destructive" });
       return;
     }
     // Final confirm before real money moves via Stripe.
     setConfirmAction({
-      label: `Refund $${amt.toFixed(2)} AUD to ${order.customer_name || "the customer"}?`,
+      label: `Refund ${formatAudFixed(amt)} AUD to ${order.customer_name || "the customer"}?`,
       run: () => refundMutation.mutate({ amount: amt, reason: refundReason }),
     });
   };
@@ -584,7 +585,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
   const copyOrderSummary = async () => {
     const items = lineItems.map((i) => `${i.quantity}x ${i.name}`).join(", ");
-    const summary = `Order #${String(order.id || "").slice(-6).toUpperCase()}\n${order.customer_name || "Customer"}\n${order.customer_email || ""}\n${order.shipping_address || ""}\nItems: ${items}\nTotal: $${Number(order.total_aud || 0).toFixed(2)} AUD`;
+    const summary = `Order #${String(order.id || "").slice(-6).toUpperCase()}\n${order.customer_name || "Customer"}\n${order.customer_email || ""}\n${order.shipping_address || ""}\nItems: ${items}\nTotal: ${formatAudFixed(order.total_aud)} AUD`;
     try {
       await navigator.clipboard.writeText(summary);
       toast({ title: "Copied", description: "Order summary copied to clipboard." });
@@ -689,7 +690,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
 
           <div className="shrink-0 text-right">
             <p className="font-display text-lg tabular-nums text-foreground">
-              ${Number(order.total_aud || 0).toFixed(2)}
+              {formatAudFixed(order.total_aud)}
             </p>
             <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/30">AUD</p>
           </div>
@@ -726,7 +727,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                           <span className="text-sm text-foreground">{item.name}</span>
                         </div>
                         <span className="text-sm font-mono text-muted-foreground tabular-nums">
-                          ${Number((item.price_aud || 0) * (item.quantity || 1)).toFixed(2)}
+                          {formatAudFixed((item.price_aud || 0) * (item.quantity || 1))}
                         </span>
                       </div>
                     ))}
@@ -948,7 +949,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   <div className="flex flex-col gap-3 border-t border-border/10 pt-4">
                     {refundedSoFar > 0 && (
                       <p className="text-[10px] text-amber-400/80">
-                        Already refunded ${refundedSoFar.toFixed(2)} AUD · ${refundRemaining.toFixed(2)} remaining
+                        Already refunded {formatAudFixed(refundedSoFar)} AUD · {formatAudFixed(refundRemaining)} remaining
                       </p>
                     )}
 
@@ -982,7 +983,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         </div>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
-                            <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Amount (AUD) · max ${refundRemaining.toFixed(2)}</label>
+                            <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Amount (AUD) · max {formatAudFixed(refundRemaining)}</label>
                             <Input
                               id={`order-refund-amount-${order.id}`}
                               type="number"
@@ -1179,7 +1180,7 @@ export default function OrdersManager({ orders }) {
     const rows = filtered.map((o) => [
       o.created_date ? format(new Date(o.created_date), "yyyy-MM-dd") : "",
       o.customer_name, o.customer_email, o.user_email || "guest", o.status || "pending",
-      Number(o.total_aud || 0).toFixed(2),
+      formatAmountFixed(o.total_aud),
       (o.line_items || []).map((i) => `${i.quantity}x ${i.name}`).join("; "),
       o.carrier || "", o.tracking_number || "", o.shipping_notes || "",
     ]);
@@ -1215,7 +1216,7 @@ export default function OrdersManager({ orders }) {
 
         {/* Stats */}
         <div className="grid gap-2 grid-cols-2 lg:grid-cols-4 mb-5">
-          <StatCard icon={DollarSign} label="Revenue (paid)" value={`$${revenue.toFixed(2)}`} accent="text-emerald-400" />
+          <StatCard icon={DollarSign} label="Revenue (paid)" value={formatAudFixed(revenue)} accent="text-emerald-400" />
           <StatCard icon={ShoppingCart} label="Total orders" value={orders.length} />
           <StatCard icon={Clock} label="Pending payment" value={pendingCount} accent={pendingCount > 0 ? "text-amber-400" : ""} />
           <StatCard icon={PackageCheck} label="To fulfil" value={fulfilCount} accent={fulfilCount > 0 ? "text-sky-400" : ""} />

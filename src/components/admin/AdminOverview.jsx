@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
+import React, { useState, useMemo, useRef, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import {
   TrendingUp, DollarSign, Users, ShoppingCart, MessageSquare,
@@ -7,27 +7,11 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SystemStatusPanel from "./SystemStatusPanel";
+import useAnimatedCount from "@/hooks/use-animated-count";
+import { formatAudFixed } from "@/lib/format";
 
 // Lazy-loaded charts to exclude heavy Recharts package from initial admin panel paint
 const AdminOverviewCharts = lazy(() => import("./AdminOverviewCharts"));
-
-/* ─── Animated Counter Hook ─────────────────────────────── */
-function useAnimatedCount(target, duration = 800) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (target === 0) { setVal(0); return; }
-    const start = performance.now();
-    const tick = (now) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setVal(Math.round(eased * target));
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration]);
-  return val;
-}
 
 /* ─── KPI Card Component (editable by owner) ───────────── */
 function KpiCard({ icon: Icon, label, value, subtext, trend, trendLabel, trendBadge, color, delay = 0, statKey, onSave, overrideValue }) {
@@ -380,7 +364,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [],
         <KpiCard
           icon={DollarSign}
           label="Total Revenue"
-          value={`$${totalRevenue.toFixed(2)}`}
+          value={formatAudFixed(totalRevenue)}
           subtext="AUD via Stripe"
           trendBadge={revenueTrend}
           color="bg-gradient-to-r from-accent to-accent/60"
@@ -501,7 +485,7 @@ export default function AdminOverview({ counts, registrations = [], orders = [],
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-bold text-accent tabular-nums">
-                        ${Number(order.total_aud || 0).toFixed(2)}
+                        {formatAudFixed(order.total_aud)}
                       </p>
                       <p className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">
                         {order.status || "pending"}

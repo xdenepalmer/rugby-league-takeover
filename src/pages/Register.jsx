@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { safeInternalPath } from "@/lib/next-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +45,7 @@ export default function Register() {
   const [otpCode, setOtpCode] = useState("");
   const [searchParams] = useSearchParams();
   const requestedNext = searchParams.get("next");
-  const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
+  const nextUrl = safeInternalPath(requestedNext, "/account");
   // Supabase Auth emails an 8-digit confirmation code, so the input must accept
   // all 8 — a 6-slot field silently truncated the code and every verification
   // failed with "token invalid", blocking signup on web and iOS alike.

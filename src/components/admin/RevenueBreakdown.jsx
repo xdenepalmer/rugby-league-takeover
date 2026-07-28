@@ -1,48 +1,23 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { DollarSign, TrendingUp, Trophy, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-
-/* ─── Animated Counter Hook ─────────────────────────────── */
-function useAnimatedCount(target, duration = 900) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (target === 0) { setVal(0); return; }
-    const start = performance.now();
-    const tick = (now) => {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setVal(eased * target);
-      if (progress < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration]);
-  return val;
-}
+import useAnimatedCount from "@/hooks/use-animated-count";
+import { formatAmount } from "@/lib/format";
+import ChartTooltip from "./shared/ChartTooltip";
 
 /* ─── Chart Tooltip ──────────────────────────────────────── */
-function ChartTooltipContent({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-none bg-card/95 border border-border p-3 shadow-xl backdrop-blur-sm">
-      <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
-        {label}
-      </p>
-      {payload.map((entry) => (
-        <p key={entry.name} className="text-sm font-bold" style={{ color: entry.color }}>
-          {entry.name}: ${typeof entry.value === "number" ? entry.value.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : entry.value}
-        </p>
-      ))}
-    </div>
-  );
+const formatRevenueValue = (value) => `$${typeof value === "number" ? formatAmount(value) : value}`;
+
+function ChartTooltipContent(props) {
+  return <ChartTooltip {...props} formatValue={formatRevenueValue} />;
 }
 
 /* ─── Big Stat Card ──────────────────────────────────────── */
 function BigStatCard({ icon: Icon, label, value, prefix = "", suffix = "", delay = 0, color }) {
-  const displayVal = useAnimatedCount(typeof value === "number" ? value : 0);
+  const displayVal = useAnimatedCount(typeof value === "number" ? value : 0, { duration: 900, round: false });
 
   return (
     <motion.div
@@ -70,7 +45,7 @@ function BigStatCard({ icon: Icon, label, value, prefix = "", suffix = "", delay
               {label}
             </p>
             <p className="font-display text-3xl tabular-nums leading-none text-foreground counter-glow">
-              {prefix}{displayVal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{suffix}
+              {prefix}{formatAmount(displayVal)}{suffix}
             </p>
           </div>
           <motion.div

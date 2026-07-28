@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import DateTimePicker from "./DateTimePicker";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
-import { useNativeCamera } from "@/hooks/useNativeCamera";
+import { useMediaUpload } from "@/hooks/useMediaUpload";
 
 const emptyEvent = {
   title: "", event_date: "", start_time: "", location: "", address: "", blurb: "",
@@ -31,28 +31,8 @@ function LabeledField({ label, help, children, span2 }) {
 
 /* ── Photo Upload Zone ── */
 function PhotoUploader({ onUploaded }) {
-  const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const { pickMedia, isNative } = useNativeCamera();
-  const upload = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      onUploaded(file_url);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleNativeClick = async (e) => {
-    if (isNative) {
-      e.preventDefault();
-      if (uploading) return;
-      const file = await pickMedia();
-      if (file) upload(file);
-    }
-  };
+  const { uploading, upload, handleNativeClick, isNative } = useMediaUpload(onUploaded);
   return (
     <div
       className={`relative border-2 border-dashed transition-colors p-4 text-center cursor-pointer ${

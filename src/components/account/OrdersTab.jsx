@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { formatAudFixed } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
 const statusConfig = {
@@ -226,7 +227,7 @@ export default function OrdersTab() {
                       <span className="text-foreground">{item.name}</span>
                     </div>
                     <span className="font-mono text-muted-foreground tabular-nums">
-                      ${Number((item.price_aud || 0) * (item.quantity || 1)).toFixed(2)}
+                      {formatAudFixed((item.price_aud || 0) * (item.quantity || 1))}
                     </span>
                   </div>
                 ))}
@@ -236,7 +237,7 @@ export default function OrdersTab() {
               <div className="flex items-center justify-between border-t border-border/20 pt-3 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</span>
                 <span className="font-display text-xl tabular-nums text-foreground">
-                  ${Number(order.total_aud || 0).toFixed(2)} <span className="text-xs text-muted-foreground font-normal">AUD</span>
+                  {formatAudFixed(order.total_aud)} <span className="text-xs text-muted-foreground font-normal">AUD</span>
                 </span>
               </div>
 

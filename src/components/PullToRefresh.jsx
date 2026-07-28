@@ -1,15 +1,24 @@
 /* ━━━ PullToRefresh ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * Native-feel pull-to-refresh for public feeds (touch only). Pull down from the
- * top to invalidate the given query keys (or all queries if none given), with
- * an iOS "tick" haptic at the release threshold and a success haptic on
- * completion. No-op affordance on desktop (hidden ≥ lg).
+ * Native-feel pull-to-refresh for public feeds and the admin PWA (touch only).
+ * Pull down from the top to invalidate the given query keys (or all queries if
+ * none given), with an iOS "tick" haptic at the release threshold and a success
+ * haptic on completion — pass haptics={false} where the surface stays silent.
+ * No-op affordance on desktop (hidden ≥ lg).
  */
 import React, { useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { queryClientInstance } from "@/lib/query-client";
 import { lightImpact, successImpact } from "@/lib/native/haptics";
 
-export default function PullToRefresh({ children, queryKeys = null, className = "" }) {
+const RELEASE_THRESHOLD = 56;
+
+export default function PullToRefresh({
+  children,
+  queryKeys = null,
+  className = "",
+  haptics = true,
+  labelClassName = "text-2xs",
+}) {
   const startY = useRef(null);
   const armed = useRef(false);
   const [pull, setPull] = useState(0);
@@ -27,10 +36,10 @@ export default function PullToRefresh({ children, queryKeys = null, className = 
     if (delta > 0 && window.scrollY <= 4) {
       const next = Math.min(delta * 0.4, 80);
       // Fire the "tick" once, as the pull crosses the release threshold.
-      if (next > 56 && !armed.current) {
+      if (next > RELEASE_THRESHOLD && !armed.current) {
         armed.current = true;
-        lightImpact();
-      } else if (next <= 56) {
+        if (haptics) lightImpact();
+      } else if (next <= RELEASE_THRESHOLD) {
         armed.current = false;
       }
       setPull(next);
@@ -38,7 +47,7 @@ export default function PullToRefresh({ children, queryKeys = null, className = 
   };
 
   const onTouchEnd = async () => {
-    const shouldRefresh = pull > 56;
+    const shouldRefresh = pull > RELEASE_THRESHOLD;
     startY.current = null;
     if (!shouldRefresh) {
       setPull(0);
@@ -54,7 +63,7 @@ export default function PullToRefresh({ children, queryKeys = null, className = 
       await queryClientInstance.invalidateQueries();
     }
     await new Promise((r) => setTimeout(r, 450));
-    successImpact();
+    if (haptics) successImpact();
     setRefreshing(false);
     setPull(0);
   };
@@ -71,8 +80,8 @@ export default function PullToRefresh({ children, queryKeys = null, className = 
             className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
             style={refreshing ? undefined : { transform: `rotate(${pull * 3}deg)` }}
           />
-          <span className="text-2xs font-bold uppercase tracking-[0.25em]">
-            {refreshing ? "Refreshing…" : pull > 56 ? "Release to refresh" : "Pull to refresh"}
+          <span className={`${labelClassName} font-bold uppercase tracking-[0.25em]`}>
+            {refreshing ? "Refreshing…" : pull > RELEASE_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
           </span>
         </div>
       </div>
