@@ -112,11 +112,6 @@ function buildCheckoutLineItems(items: any[], getProduct: (id: string) => any) {
 }
 
 // deno-lint-ignore no-explicit-any
-function calculateOrderTotalAud(lineItems: any[], shippingCostAud = 0) {
-  const cents = lineItems.reduce((total, item) => total + Math.round(Number(item.price_aud || 0) * 100) * Number(item.quantity || 0), 0);
-  return Number(((cents + Math.round(Number(shippingCostAud || 0) * 100)) / 100).toFixed(2));
-}
-
 // deno-lint-ignore no-explicit-any
 function buildShippingLineItem(shipping: any) {
   const code = toTrimmedString(shipping?.code);
@@ -142,6 +137,147 @@ function buildShippingLineItem(shipping: any) {
         }
       : null, // free shipping: nothing to charge, still recorded on the order
   };
+}
+
+// ── Money rules — mirror of tests/money-rules.mjs, keep in sync ────────────
+// All in integer cents. GST and the card fee are each either charged on top
+// ('added') or disclosed as a component of the price ('absorbed'), per the
+// saved settings. Order of operations: goods → shipping → GST → card fee.
+const DEFAULT_GST_RATE_PERCENT = 6.5;
+const DEFAULT_FREE_SHIPPING_THRESHOLD_AUD = 150;
+const DEFAULT_CARD_FEE_PERCENT = 1.75;
+const DEFAULT_CARD_FEE_FIXED_AUD = 0.3;
+
+const toCents = (aud: unknown) => Math.round(Number(aud || 0) * 100);
+const fromCents = (cents: number) => Number((cents / 100).toFixed(2));
+
+const clampPercent = (value: unknown, fallback: number) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback;
+};
+
+// deno-lint-ignore no-explicit-any
+function gstSettings(settings: any) {
+  return {
+    enabled: settings?.gst_enabled !== false,
+    ratePercent: clampPercent(settings?.gst_rate_percent, DEFAULT_GST_RATE_PERCENT),
+    mode: settings?.gst_mode === 'absorbed' ? 'absorbed' : 'added',
+    label: String(settings?.gst_label || 'GST').trim() || 'GST',
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+function cardFeeSettings(settings: any) {
+  const fixed = Number(settings?.card_fee_fixed_aud);
+  return {
+    enabled: settings?.card_fee_enabled === true,
+    percent: clampPercent(settings?.card_fee_percent, DEFAULT_CARD_FEE_PERCENT),
+    fixedCents: Number.isFinite(fixed) && fixed >= 0 ? toCents(fixed) : toCents(DEFAULT_CARD_FEE_FIXED_AUD),
+    mode: settings?.card_fee_mode === 'added' ? 'added' : 'absorbed',
+    label: String(settings?.card_fee_label || 'Card processing fee').trim() || 'Card processing fee',
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+function freeShippingThresholdAud(settings: any) {
+  const threshold = Number(settings?.free_shipping_threshold_aud);
+  return Number.isFinite(threshold) && threshold >= 0 ? threshold : DEFAULT_FREE_SHIPPING_THRESHOLD_AUD;
+}
+
+// 'absorbed' is the tax already inside the price: rate/(100+rate), not rate/100.
+// deno-lint-ignore no-explicit-any
+function computeGstCents(taxableCents: number, settings: any) {
+  const { enabled, ratePercent, mode } = gstSettings(settings);
+  if (!enabled || ratePercent <= 0) return 0;
+  const base = Math.max(0, taxableCents);
+  return mode === 'absorbed'
+    ? Math.round((base * ratePercent) / (100 + ratePercent))
+    : Math.round((base * ratePercent) / 100);
+}
+
+// 'added' is grossed up: Stripe's percentage applies to the final amount
+// including the surcharge, so percent x base under-recovers on every order.
+// deno-lint-ignore no-explicit-any
+function computeCardFeeCents(baseCents: number, settings: any) {
+  const { enabled, percent, fixedCents, mode } = cardFeeSettings(settings);
+  if (!enabled) return 0;
+  const base = Math.max(0, baseCents);
+  if (base <= 0) return 0;
+  if (mode === 'added') {
+    const rate = percent / 100;
+    if (rate >= 1) return 0;
+    return Math.max(0, Math.round((base + fixedCents) / (1 - rate)) - base);
+  }
+  return Math.round((base * percent) / 100) + fixedCents;
+}
+
+// deno-lint-ignore no-explicit-any
+function orderTotals({ subtotalCents, shippingCents = 0, settings, isPickup = false }: any) {
+  const goods = Math.max(0, Math.round(Number(subtotalCents) || 0));
+  const quoted = isPickup ? 0 : Math.max(0, Math.round(Number(shippingCents) || 0));
+  const freeShippingApplied = !isPickup && goods >= toCents(freeShippingThresholdAud(settings));
+  const shipping = freeShippingApplied ? 0 : quoted;
+
+  const gst = gstSettings(settings);
+  const taxable = goods + shipping;
+  const gstCents = computeGstCents(taxable, settings);
+  const gstIncluded = gst.mode === 'absorbed';
+  const afterTax = taxable + (gstIncluded ? 0 : gstCents);
+
+  const card = cardFeeSettings(settings);
+  const cardFeeCents = computeCardFeeCents(afterTax, settings);
+  const cardFeeIncluded = card.mode !== 'added';
+
+  return {
+    subtotalCents: goods,
+    shippingCents: shipping,
+    freeShippingApplied,
+    gstCents,
+    gstIncluded,
+    gstLabel: gst.label,
+    gstRatePercent: gst.ratePercent,
+    cardFeeCents,
+    cardFeeIncluded,
+    cardFeeLabel: card.label,
+    totalCents: afterTax + (cardFeeIncluded ? 0 : cardFeeCents),
+  };
+}
+
+// ── Signed shipping quotes ────────────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
+function cartFingerprint(items: any[]) {
+  return (items || [])
+    .map((i) => `${String(i?.productId ?? i?.product_id ?? '').trim()}:${Math.max(1, Math.floor(Number(i?.quantity) || 1))}`)
+    .filter((s) => !s.startsWith(':'))
+    .sort()
+    .join(',');
+}
+
+function quotePayload(code: string, priceCents: number, postcode: string, cartHash: string, expiresAt: number) {
+  return [code, priceCents, postcode, cartHash, expiresAt].join('|');
+}
+
+/** Constant-time compare so a wrong signature leaks nothing through timing. */
+function timingSafeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function verifyQuoteSignature(payload: string, signature: string) {
+  const secret = Deno.env.get('SHIPPING_QUOTE_SECRET');
+  if (!secret || !signature) return false;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const expected = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return timingSafeEqual(expected, String(signature).trim().toLowerCase());
 }
 
 // ── Parcel-size rules — mirror of tests/parcel-rules.mjs, keep in sync ──────
@@ -275,7 +411,7 @@ Deno.serve(async (req) => {
     // allowed pickup.
     const { data: siteSettings } = await svc
       .from('site_settings')
-      .select('pickup_enabled, pickup_audience, pickup_label, pickup_instructions')
+      .select('pickup_enabled, pickup_audience, pickup_label, pickup_instructions, gst_enabled, gst_rate_percent, gst_mode, gst_label, card_fee_enabled, card_fee_percent, card_fee_fixed_aud, card_fee_mode, card_fee_label, free_shipping_threshold_aud')
       .order('updated_date', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -334,15 +470,84 @@ Deno.serve(async (req) => {
     }
 
     const { lineItems, stripeLineItems } = lineItemResult;
-    const totalAud = calculateOrderTotalAud(lineItems, shippingSelection.price_aud);
+
+    // ── Postage price comes from OUR signed quote, never the request ────────
+    // auspostRates signs (service, price, postcode, cart, expiry). Re-deriving
+    // the cart hash here means an edited cart or an edited price fails the
+    // check. The free-shipping waiver is applied server-side too — it used to
+    // be a hardcoded 150 in the browser, with the client simply sending 0.
+    let quotedShippingCents = 0;
+    if (!isPickup) {
+      const claimedCents = toCents(shippingSelection.price_aud);
+      const cartHash = cartFingerprint(normalizedItems);
+      const expiresAt = Number(shipping?.expires_at);
+      const payload = quotePayload(shippingSelection.code, claimedCents, shippingSelection.postcode, cartHash, expiresAt);
+      const signatureValid = Number.isFinite(expiresAt)
+        && await verifyQuoteSignature(payload, String(shipping?.signature || ''));
+
+      if (!signatureValid) {
+        return json({ error: 'Shipping quote could not be verified — please recalculate shipping.' }, 400);
+      }
+      if (Date.now() > expiresAt) {
+        return json({ error: 'That shipping quote has expired — please recalculate shipping.' }, 400);
+      }
+      quotedShippingCents = claimedCents;
+    }
+
+    const subtotalCents = lineItems.reduce(
+      (sum: number, item: { price_aud?: number; quantity?: number }) =>
+        sum + toCents(item.price_aud) * Number(item.quantity || 0),
+      0,
+    );
+    const totals = orderTotals({
+      subtotalCents,
+      shippingCents: quotedShippingCents,
+      settings: siteSettings,
+      isPickup,
+    });
+    const totalAud = fromCents(totals.totalCents);
+
     const origin = resolveCheckoutOrigin(
       req.headers.get('origin'),
       Deno.env.get('CHECKOUT_ALLOWED_ORIGINS'),
       Deno.env.get('CHECKOUT_DEFAULT_ORIGIN') || DEFAULT_CHECKOUT_ORIGIN
     );
-    const allStripeLineItems = shippingSelection.stripeLineItem
-      ? [...stripeLineItems, shippingSelection.stripeLineItem]
-      : stripeLineItems;
+
+    // Rebuild the postage line from the server's figure, so a waived or
+    // re-derived amount is what actually reaches Stripe.
+    const allStripeLineItems = [...stripeLineItems];
+    if (totals.shippingCents > 0) {
+      allStripeLineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: CHECKOUT_CURRENCY,
+          unit_amount: totals.shippingCents,
+          product_data: { name: `Shipping — ${shippingSelection.name} (AusPost)` },
+        },
+      });
+    }
+    // Absorbed amounts are already inside the prices above — only charge the
+    // ones the shop has chosen to pass on.
+    if (!totals.gstIncluded && totals.gstCents > 0) {
+      allStripeLineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: CHECKOUT_CURRENCY,
+          unit_amount: totals.gstCents,
+          product_data: { name: `${totals.gstLabel} (${totals.gstRatePercent}%)` },
+        },
+      });
+    }
+    if (!totals.cardFeeIncluded && totals.cardFeeCents > 0) {
+      allStripeLineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: CHECKOUT_CURRENCY,
+          unit_amount: totals.cardFeeCents,
+          product_data: { name: totals.cardFeeLabel },
+        },
+      });
+    }
 
     const { data: order, error: orderError } = await svc
       .from('store_orders')
@@ -357,8 +562,17 @@ Deno.serve(async (req) => {
         customer_postcode: shippingSelection.postcode,
         shipping_service_code: shippingSelection.code,
         shipping_service_name: shippingSelection.name,
-        shipping_cost_aud: shippingSelection.price_aud,
+        // The server's figure, after the free-shipping waiver — not the claim.
+        shipping_cost_aud: fromCents(totals.shippingCents),
         fulfilment_method: fulfilmentResult.method,
+        // Rate and mode are stored with the amount so a later settings change
+        // never rewrites the history of orders already placed.
+        subtotal_aud: fromCents(totals.subtotalCents),
+        gst_amount_aud: fromCents(totals.gstCents),
+        gst_rate_percent: totals.gstRatePercent,
+        gst_included: totals.gstIncluded,
+        card_fee_aud: fromCents(totals.cardFeeCents),
+        card_fee_included: totals.cardFeeIncluded,
         // A pickup order has no delivery address by design — record where to
         // collect so the admin (and the customer's confirmation) has it.
         ...(isPickup
