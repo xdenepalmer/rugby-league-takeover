@@ -546,7 +546,7 @@ function StoreExperienceRail({ productCount, categoryCount, cartCount, onCartOpe
       icon: Truck,
       label: "Shipping",
       value: "Free over $150 AUD",
-      detail: "Estimates at checkout",
+      detail: "$15 AUD below $150",
       tone: "text-primary",
     },
     {
