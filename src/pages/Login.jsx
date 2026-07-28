@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { safeInternalPath } from "@/lib/next-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const requestedNext = searchParams.get("next");
-  const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
+  const nextUrl = safeInternalPath(requestedNext, "/account");
 
   const handleSubmit = async (e) => {
     e.preventDefault();

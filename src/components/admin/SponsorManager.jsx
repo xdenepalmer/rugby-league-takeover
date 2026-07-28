@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { readJson, writeJson } from "@/lib/local-storage";
 import ImageField from "./ImageField";
 
 /* ── Constants ────────────────────────────────────────────── */
@@ -49,12 +50,6 @@ const emptySponsor = () => ({
 });
 
 /* ── Helpers ──────────────────────────────────────────────── */
-function readLS(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
-}
-function writeLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* noop */ }
-}
 
 function getContractStatus(sponsor) {
   if (!sponsor.contract_start && !sponsor.contract_end) return null;
@@ -345,9 +340,9 @@ function SponsorCard({ sponsor, index, onEdit, onDelete, onToggleActive }) {
                     onChange={(e) => setNotesValue(e.target.value)}
                     onBlur={() => {
                       if (notesValue !== sponsor.notes) {
-                        const all = readLS(LS_KEY, []);
+                        const all = readJson(LS_KEY, []);
                         const idx = all.findIndex((s) => s.id === sponsor.id);
-                        if (idx >= 0) { all[idx].notes = notesValue; writeLS(LS_KEY, all); }
+                        if (idx >= 0) { all[idx].notes = notesValue; writeJson(LS_KEY, all); }
                         toast({ title: "Notes saved" });
                       }
                     }}
@@ -381,7 +376,7 @@ function SponsorCard({ sponsor, index, onEdit, onDelete, onToggleActive }) {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function SponsorManager() {
   /* ── State ── */
-  const [sponsors, setSponsors] = useState(() => readLS(LS_KEY, []));
+  const [sponsors, setSponsors] = useState(() => readJson(LS_KEY, []));
   const [editing, setEditing] = useState(null);
   const [view, setView] = useState("grid"); // "grid" | "form"
   const [search, setSearch] = useState("");
@@ -390,7 +385,7 @@ export default function SponsorManager() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   /* Persist */
-  useEffect(() => { writeLS(LS_KEY, sponsors); }, [sponsors]);
+  useEffect(() => { writeJson(LS_KEY, sponsors); }, [sponsors]);
 
   /* ── CRUD ── */
   const saveSponsor = useCallback((sponsor) => {

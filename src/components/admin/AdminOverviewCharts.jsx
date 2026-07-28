@@ -5,22 +5,7 @@ import {
 } from "recharts";
 import { DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
-
-function ChartTooltipContent({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-card/95 border border-border p-3 shadow-xl backdrop-blur-sm">
-      <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
-        {label}
-      </p>
-      {payload.map((entry) => (
-        <p key={entry.name} className="text-sm font-bold" style={{ color: entry.color }}>
-          {entry.name}: {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
-        </p>
-      ))}
-    </div>
-  );
-}
+import ChartTooltip from "./shared/ChartTooltip";
 
 const PIE_COLORS = ["hsl(15, 95%, 55%)", "hsl(45, 93%, 47%)", "#3b82f6", "#10b981", "#8b5cf6"];
 
@@ -61,7 +46,7 @@ export default function AdminOverviewCharts({ regData, revData, pieData }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 12%)" />
                   <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip content={<ChartTooltipContent />} />
+                  <Tooltip content={<ChartTooltip />} />
                   <Area
                     type="monotone"
                     dataKey="Signups"
@@ -114,7 +99,7 @@ export default function AdminOverviewCharts({ regData, revData, pieData }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 12%)" />
                   <XAxis dataKey="date" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip content={<ChartTooltipContent />} />
+                  <Tooltip content={<ChartTooltip />} />
                   <Bar dataKey="Sales" fill="url(#cmdRevGrad)" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -153,7 +138,7 @@ export default function AdminOverviewCharts({ regData, revData, pieData }) {
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip content={<ChartTooltipContent />} />
+                  <Tooltip content={<ChartTooltip />} />
                   <Legend
                     formatter={(value) => (
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground">

@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { readJson, writeJson } from "@/lib/local-storage";
 import ImageField from "./ImageField";
 
 /* ── Constants ── */
@@ -63,12 +64,6 @@ const sampleAd = (position = "footer") => ({
 });
 
 /* ── Helpers ── */
-function readLS(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
-}
-function writeLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* noop */ }
-}
 function isValidUrl(url) {
   if (!url) return false;
   try { new URL(url); return true; } catch { return false; }
@@ -114,12 +109,12 @@ export default function AdsManager() {
   const adsEnabled = settings.ads_enabled === true || settings.ads_enabled === "true";
 
   /* ── Local UI state ── */
-  const [stats, setStats] = useState(() => readLS("rlt_ad_stats", {}));
+  const [stats, setStats] = useState(() => readJson("rlt_ad_stats", {}));
   const [editing, setEditing] = useState(null);
   const [view, setView] = useState("slots");
   const [errors, setErrors] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [sponsors] = useState(() => readLS('rlt_sponsors', []));
+  const [sponsors] = useState(() => readJson('rlt_sponsors', []));
   const [showAbVariants, setShowAbVariants] = useState(false);
 
   /* ── Mutations ── */
@@ -169,7 +164,7 @@ export default function AdsManager() {
   useEffect(() => {
     const refresh = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        setStats(readLS("rlt_ad_stats", {}));
+        setStats(readJson("rlt_ad_stats", {}));
       }
     };
     const id = setInterval(refresh, 10000);
@@ -182,7 +177,7 @@ export default function AdsManager() {
     
     const handleVisibility = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        setStats(readLS("rlt_ad_stats", {}));
+        setStats(readJson("rlt_ad_stats", {}));
       }
     };
 
@@ -241,7 +236,7 @@ export default function AdsManager() {
   }, [ads, toggleActiveMutation]);
 
   const clearAllStats = useCallback(() => {
-    writeLS("rlt_ad_stats", {});
+    writeJson("rlt_ad_stats", {});
     setStats({});
     toast({ title: "Analytics cleared" });
   }, []);

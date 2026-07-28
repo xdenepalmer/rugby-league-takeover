@@ -10,6 +10,7 @@ import { Save, Trash2, Plus, X, ShoppingBag, Package, DollarSign, Eye, EyeOff, E
 import ImageField from "./ImageField";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 import { toast } from "@/components/ui/use-toast";
+import { formatAmountFixed } from "@/lib/format";
 
 const LOW_STOCK = 5;
 const stockBadge = (qty) => {
@@ -106,7 +107,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
 
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold font-mono text-primary border border-primary/20 bg-primary/5">
-                <DollarSign className="h-2.5 w-2.5" /> {Number(product.price_aud || 0).toFixed(2)} AUD
+                <DollarSign className="h-2.5 w-2.5" /> {formatAmountFixed(product.price_aud)} AUD
               </span>
               <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold border ${stock.tone}`}>
                 {stock.label}

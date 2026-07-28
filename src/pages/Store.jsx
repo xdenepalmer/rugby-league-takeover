@@ -39,6 +39,7 @@ import { openExternalUrl } from "@/lib/native/open-external";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
 import { orderTotals, freeShippingThresholdAud, toCents, fromCents } from "@/lib/money-rules";
+import { formatAudFixed } from "@/lib/format";
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -211,7 +212,7 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
         {/* Price & Action */}
         <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
           <span className="text-xl font-bold font-mono tracking-tight text-accent drop-shadow-[0_0_8px_rgba(217,119,6,0.3)]">
-            ${Number(product.price_aud || 0).toFixed(2)} <span className="text-xs text-slate-400 font-sans font-semibold">AUD</span>
+            {formatAudFixed(product.price_aud)} <span className="text-xs text-slate-400 font-sans font-semibold">AUD</span>
           </span>
           <Button
             onClick={() => (productHasSizes ? onOpenQuickView(product) : addToCart(product))}
@@ -348,7 +349,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                     </span>
                   )}
                   <h2 className="font-display text-2xl uppercase tracking-wide text-foreground mt-2">{product.name}</h2>
-                  <p className="text-xl font-bold font-mono text-accent mt-1">${Number(product.price_aud || 0).toFixed(2)} AUD</p>
+                  <p className="text-xl font-bold font-mono text-accent mt-1">{formatAudFixed(product.price_aud)} AUD</p>
                   {/* whitespace-pre-line preserves the line breaks/paragraphs entered in admin */}
                   <p className="text-xs text-slate-300 leading-relaxed mt-4 whitespace-pre-line">{product.description}</p>
                   {product.details && (
@@ -459,7 +460,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                   }} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
                 </div>
                 <Button onClick={handleAdd} disabled={quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99))} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
-                {quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99)) ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
+                {quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99)) ? "Not enough stock" : `Add to Cart • ${formatAudFixed(Number(product.price_aud || 0) * quantity)} AUD`}
                 </Button>
               </div>
             )}
@@ -1245,7 +1246,7 @@ export default function Store() {
                                 Size: {item.size}
                               </span>
                             )}
-                            <p className="text-xs text-accent mt-1 font-mono font-semibold">${Number(item.price_aud || 0).toFixed(2)} AUD</p>
+                            <p className="text-xs text-accent mt-1 font-mono font-semibold">{formatAudFixed(item.price_aud)} AUD</p>
                           </div>
                           <div className="mt-2 flex items-center justify-between">
                             <div className="flex items-center border border-border">
@@ -1284,7 +1285,7 @@ export default function Store() {
                 <div className="border-t border-border/60 bg-card/60 pt-4 backdrop-blur-md pb-safe">
                   <div className="mb-4 bg-muted/20 border border-border/40 p-3 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                      <span className="flex items-center gap-1">{needsMore > 0 ? `Spend $${needsMore.toFixed(2)} AUD more for free shipping` : <><Rocket className="h-3 w-3 inline" /> You qualify for free shipping!</>}</span>
+                      <span className="flex items-center gap-1">{needsMore > 0 ? `Spend ${formatAudFixed(needsMore)} AUD more for free shipping` : <><Rocket className="h-3 w-3 inline" /> You qualify for free shipping!</>}</span>
                     </div>
                     <div className="h-1.5 w-full bg-border overflow-hidden rounded-full">
                       <motion.div
@@ -1367,7 +1368,7 @@ export default function Store() {
                       </p>
                       {selectedRate && !ratesStale && (
                         <span className="font-mono text-xs font-bold text-emerald-400">
-                          {isFreeShipping ? "FREE" : `$${Number(selectedRate.price_aud).toFixed(2)} AUD`}
+                          {isFreeShipping ? "FREE" : `${formatAudFixed(selectedRate.price_aud)} AUD`}
                         </span>
                       )}
                     </div>
@@ -1424,7 +1425,7 @@ export default function Store() {
                               </span>
                             </span>
                             <span className="shrink-0 font-mono font-bold text-accent">
-                              {isFreeShipping ? "FREE" : `$${Number(rate.price_aud).toFixed(2)}`}
+                              {isFreeShipping ? "FREE" : formatAudFixed(rate.price_aud)}
                             </span>
                           </label>
                         ))}
@@ -1442,12 +1443,12 @@ export default function Store() {
                   <div className="mb-4 space-y-1.5 border-b border-border/30 pb-3">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Subtotal</span>
-                      <span className="font-mono tabular-nums">${cartSubtotal.toFixed(2)}</span>
+                      <span className="font-mono tabular-nums">{formatAudFixed(cartSubtotal)}</span>
                     </div>
                     {!isPickup && checkoutTotals.shippingCents > 0 && (
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Shipping</span>
-                        <span className="font-mono tabular-nums">${fromCents(checkoutTotals.shippingCents).toFixed(2)}</span>
+                        <span className="font-mono tabular-nums">{formatAudFixed(fromCents(checkoutTotals.shippingCents))}</span>
                       </div>
                     )}
                     {!isPickup && checkoutTotals.freeShippingApplied && (
@@ -1462,19 +1463,19 @@ export default function Store() {
                           {checkoutTotals.gstLabel} ({checkoutTotals.gstRatePercent}%)
                           {checkoutTotals.gstIncluded && <span className="ml-1 opacity-60">included</span>}
                         </span>
-                        <span className="font-mono tabular-nums">${fromCents(checkoutTotals.gstCents).toFixed(2)}</span>
+                        <span className="font-mono tabular-nums">{formatAudFixed(fromCents(checkoutTotals.gstCents))}</span>
                       </div>
                     )}
                     {checkoutTotals.cardFeeCents > 0 && !checkoutTotals.cardFeeIncluded && (
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>{checkoutTotals.cardFeeLabel}</span>
-                        <span className="font-mono tabular-nums">${fromCents(checkoutTotals.cardFeeCents).toFixed(2)}</span>
+                        <span className="font-mono tabular-nums">{formatAudFixed(fromCents(checkoutTotals.cardFeeCents))}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between pt-1.5 text-base font-bold uppercase tracking-wider">
                       <span>Total</span>
                       <span className="text-accent font-mono tracking-tight text-lg">
-                        ${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD
+                        {formatAudFixed(fromCents(checkoutTotals.totalCents))} AUD
                       </span>
                     </div>
                   </div>
@@ -1532,10 +1533,10 @@ export default function Store() {
                         : cannotFulfil
                           ? "Not available outside Australia"
                           : isPickup
-                            ? `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`
+                            ? `Checkout • ${formatAudFixed(fromCents(checkoutTotals.totalCents))} AUD`
                             : cartNeedsShipping && (ratesStale || !selectedRate)
                               ? "Calculate shipping to continue"
-                              : `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`}
+                              : `Checkout • ${formatAudFixed(fromCents(checkoutTotals.totalCents))} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe

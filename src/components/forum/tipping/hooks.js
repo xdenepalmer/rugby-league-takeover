@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { useAnimatedCount } from "@/hooks/use-animated-count";
 
 // ── Countdown Hook ──────────────────────────────────────────────────
 export function useCountdown(kickoff) {
@@ -20,23 +21,7 @@ export function useCountdown(kickoff) {
 }
 
 // ── Animated counter hook ───────────────────────────────────────────
+// Tip totals tick upward, so the count resumes from the previous total.
 export function useAnimatedCounter(target, duration = 800) {
-  const [value, setValue] = useState(0);
-  const prevRef = useRef(0);
-  useEffect(() => {
-    if (target === prevRef.current) return;
-    const start = prevRef.current;
-    const diff = target - start;
-    const startTime = performance.now();
-    const animate = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-      setValue(Math.round(start + diff * eased));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-    prevRef.current = target;
-  }, [target, duration]);
-  return value;
+  return useAnimatedCount(target, { duration, fromPrevious: true });
 }

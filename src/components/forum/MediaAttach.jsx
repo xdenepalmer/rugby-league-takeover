@@ -1,35 +1,13 @@
-import React, { useId, useState } from "react";
+import React, { useId } from "react";
 import { Paperclip, X } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
-import { useNativeCamera } from "@/hooks/useNativeCamera";
+import { useMediaUpload } from "@/hooks/useMediaUpload";
 
 // Compact media attach control for forum composers: paste an image/GIF/video URL
 // or upload a file. Calls onChange(url).
 export default function MediaAttach({ value, onChange }) {
-  const [uploading, setUploading] = useState(false);
   const inputId = useId();
-  const { pickMedia, isNative } = useNativeCamera();
-
-  const upload = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      onChange(file_url);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleNativeClick = async (e) => {
-    if (isNative) {
-      e.preventDefault();
-      if (uploading) return;
-      const file = await pickMedia();
-      if (file) upload(file);
-    }
-  };
+  const { uploading, upload, handleNativeClick, isNative } = useMediaUpload(onChange);
 
   return (
     <div className="grid gap-1.5">

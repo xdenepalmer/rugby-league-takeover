@@ -10,6 +10,7 @@ import {
   Filter,
   ChevronRight,
 } from "lucide-react";
+import { formatAmountFixed } from "@/lib/format";
 
 /* ─── Relative Time Helper ──────────────────────────────── */
 function relativeTime(dateStr) {
@@ -88,7 +89,7 @@ export default function ActivityFeed({ orders = [], registrations = [], forumPos
     // Orders
     orders.forEach((o) => {
       const orderId = o.id ? String(o.id).substring(0, 6).toUpperCase() : "???";
-      const total = Number(o.total_aud || 0).toFixed(2);
+      const total = formatAmountFixed(o.total_aud);
       items.push({
         type: "order",
         created_date: o.created_date,

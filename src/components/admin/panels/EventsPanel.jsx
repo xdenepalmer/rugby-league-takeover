@@ -1,8 +1,9 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { CalendarDays, Eye, Ticket, Activity } from "lucide-react";
+import { CalendarDays, Eye, Ticket } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import AdminPanelHeader from "../shared/AdminPanelHeader";
 import EventsManager from "../EventsManager";
 import TeamsManager from "../TeamsManager";
 import MatchupsManager from "../MatchupsManager";
@@ -39,33 +40,12 @@ export default function EventsPanel() {
 
   return (
     <div className="grid grid-cols-1 gap-5">
-      {/* Section Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden border border-border bg-card/60 cmd-glass"
-      >
-        <div className="cmd-accent-bar h-[2px] w-full" />
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <CalendarDays className="h-4 w-4 text-primary" />
-            <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-primary font-mono">
-              Events Module
-            </p>
-            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-primary/5 border border-primary/10">
-              <Activity className="h-2.5 w-2.5 text-primary cmd-pulse" />
-              <span className="text-[8px] font-bold uppercase tracking-wider text-primary">Live</span>
-            </span>
-          </div>
-          <h2 className="font-display text-3xl md:text-4xl uppercase leading-none tracking-wide">
-            Event Management
-          </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Build out the full Vegas calendar — meetups, Stadium Swim, match-week parties and more.
-            Each event can carry its own date, venue, photos, description and external ticket links across multiple price tiers.
-          </p>
-        </div>
-      </motion.div>
+      <AdminPanelHeader
+        icon={CalendarDays}
+        module="Events Module"
+        title="Event Management"
+        description="Build out the full Vegas calendar — meetups, Stadium Swim, match-week parties and more. Each event can carry its own date, venue, photos, description and external ticket links across multiple price tiers."
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
