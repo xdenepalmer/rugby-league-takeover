@@ -144,6 +144,37 @@ function buildShippingLineItem(shipping: any) {
   };
 }
 
+// ── Parcel-size rules — mirror of tests/parcel-rules.mjs, keep in sync ──────
+// auspostRates filters oversized packaging out of the quote; this is the
+// server-side half of that rule, applied to whatever the client sends back.
+export const PARCEL_RANK: Record<string, number> = { satchel: 0, small: 1, medium: 2, large: 3 };
+const DEFAULT_PARCEL_SIZE = 'satchel';
+
+const normalizeParcelSize = (value: unknown) => {
+  const size = String(value ?? '').trim().toLowerCase();
+  return size in PARCEL_RANK ? size : DEFAULT_PARCEL_SIZE;
+};
+
+// The qualifier (small/medium/large) is the capacity; a bare "satchel" is the
+// baseline. Largest-first so "extra large" never matches as "large".
+const SIZE_WORDS: [string, string][] = [
+  ['extra large', 'large'],
+  ['extralarge', 'large'],
+  ['large', 'large'],
+  ['medium', 'medium'],
+  ['small', 'small'],
+  ['satchel', 'satchel'],
+];
+
+// deno-lint-ignore no-explicit-any
+function serviceParcelSize(service: any): string | null {
+  const haystack = `${service?.code ?? ''} ${service?.name ?? ''}`.toLowerCase();
+  for (const [word, size] of SIZE_WORDS) {
+    if (haystack.includes(word)) return size;
+  }
+  return null; // weight-priced — always legitimate for the real parcel
+}
+
 // Mirror of resolveFulfilment in tests/checkout-rules.mjs — keep in sync.
 // Decides whether a (choice, country) pair may check out at all. The settings
 // come from the DATABASE, never the request, so a client cannot enable pickup
@@ -278,6 +309,23 @@ Deno.serve(async (req) => {
         error: 'Some items in your cart are no longer available. Please review your cart.',
         unavailableProductIds,
       }, 409);
+    }
+
+    // The storefront hides oversized packaging, but the rate list arrives from the
+    // client, so the ceiling is re-derived from the saved products and enforced
+    // here too. Without this a crafted request could still buy a Large box.
+    if (!isPickup) {
+      let requiredSize = DEFAULT_PARCEL_SIZE;
+      for (const product of productsById.values()) {
+        const size = normalizeParcelSize(product?.parcel_size);
+        if (PARCEL_RANK[size] > PARCEL_RANK[requiredSize]) requiredSize = size;
+      }
+      const chosenSize = serviceParcelSize(shippingSelection);
+      if (chosenSize !== null && PARCEL_RANK[chosenSize] > PARCEL_RANK[requiredSize]) {
+        return json({
+          error: 'That shipping option is too large for this order — please recalculate shipping.',
+        }, 400);
+      }
     }
 
     const lineItemResult = buildCheckoutLineItems(normalizedItems, (productId) => productsById.get(productId));

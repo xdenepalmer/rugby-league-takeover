@@ -17,6 +17,49 @@ const DEFAULT_SATCHEL_CM = { length: 35, width: 25, height: 2 }; // small satche
 
 const isPostcode = (value: unknown) => /^\d{4}$/.test(String(value || '').trim());
 
+// ── Parcel-size rules — mirror of tests/parcel-rules.mjs, keep in sync ──────
+// service.json returns every product that fits the declared dimensions: the two
+// weight-priced services plus every flat rate at or above that size. Offering all
+// of them let a shopper pick a $25.20 Large box for a single t-shirt, so anything
+// bigger than the cart's largest item is dropped here rather than in the UI.
+export const PARCEL_RANK: Record<string, number> = { satchel: 0, small: 1, medium: 2, large: 3 };
+const DEFAULT_PARCEL_SIZE = 'satchel';
+
+const normalizeParcelSize = (value: unknown) => {
+  const size = String(value ?? '').trim().toLowerCase();
+  return size in PARCEL_RANK ? size : DEFAULT_PARCEL_SIZE;
+};
+
+// The qualifier (small/medium/large) is the capacity; a bare "satchel" is the
+// baseline. Largest-first so "extra large" never matches as "large".
+const SIZE_WORDS: [string, string][] = [
+  ['extra large', 'large'],
+  ['extralarge', 'large'],
+  ['large', 'large'],
+  ['medium', 'medium'],
+  ['small', 'small'],
+  ['satchel', 'satchel'],
+];
+
+// deno-lint-ignore no-explicit-any
+function serviceParcelSize(service: any): string | null {
+  const haystack = `${service?.code ?? ''} ${service?.name ?? ''}`.toLowerCase();
+  for (const [word, size] of SIZE_WORDS) {
+    if (haystack.includes(word)) return size;
+  }
+  return null; // weight-priced (Parcel Post / Express Post) — always legitimate
+}
+
+// deno-lint-ignore no-explicit-any
+function allowedServices(services: any[], required: string) {
+  const ceiling = PARCEL_RANK[normalizeParcelSize(required)];
+  return (services || []).filter((service) => {
+    const size = serviceParcelSize(service);
+    if (size === null) return true;
+    return PARCEL_RANK[size] <= ceiling;
+  });
+}
+
 function authHeaders() {
   const key = Deno.env.get('AUSPOST_API_KEY');
   if (!key) throw new Error('AusPost is not configured (missing AUSPOST_API_KEY)');
@@ -48,13 +91,14 @@ Deno.serve(async (req) => {
     // in), falling back to a small satchel when products have no dimensions.
     let totalGrams = 0;
     let length = 0, width = 0, height = 0;
+    let requiredSize = DEFAULT_PARCEL_SIZE;
     for (const item of cart) {
       const productId = String(item?.productId || '').trim();
       const quantity = Math.max(1, Math.floor(Number(item?.quantity) || 1));
       if (!productId) continue;
       const { data: product } = await svc
         .from('products')
-        .select('weight_grams, length_cm, width_cm, height_cm')
+        .select('weight_grams, length_cm, width_cm, height_cm, parcel_size')
         .eq('id', productId)
         .maybeSingle();
       if (!product) continue;
@@ -62,6 +106,8 @@ Deno.serve(async (req) => {
       length = Math.max(length, Number(product.length_cm) || 0);
       width = Math.max(width, Number(product.width_cm) || 0);
       height = Math.max(height, Number(product.height_cm) || 0);
+      const size = normalizeParcelSize(product.parcel_size);
+      if (PARCEL_RANK[size] > PARCEL_RANK[requiredSize]) requiredSize = size;
     }
     if (totalGrams <= 0) totalGrams = 300;
     length = length || DEFAULT_SATCHEL_CM.length;
@@ -79,12 +125,16 @@ Deno.serve(async (req) => {
       return json({ error: 'Unable to fetch shipping services right now' }, 502);
     }
     const serviceData = await serviceRes.json();
-    const availableServices = serviceData?.services?.service
+    const allServices = serviceData?.services?.service
       ? (Array.isArray(serviceData.services.service) ? serviceData.services.service : [serviceData.services.service])
       : [];
 
+    // Filter BEFORE pricing: each surviving service costs one calculate.json
+    // round-trip, so dropping the oversized ones here also cuts the request count.
+    const availableServices = allowedServices(allServices, requiredSize);
+
     if (!availableServices.length) {
-      return json({ ok: true, services: [] });
+      return json({ ok: true, services: [], parcelSize: requiredSize });
     }
 
     const rated = [];
@@ -110,7 +160,7 @@ Deno.serve(async (req) => {
     }
 
     rated.sort((a, b) => a.price_aud - b.price_aud);
-    return json({ ok: true, services: rated });
+    return json({ ok: true, services: rated, parcelSize: requiredSize });
   } catch (error) {
     console.error('auspostRates error:', error);
     return json({ error: (error as Error).message }, 500);

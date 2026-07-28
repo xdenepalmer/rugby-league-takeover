@@ -19,7 +19,29 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel" };
+
+// The largest packaging an item needs. Checkout offers the cart's biggest item's
+// size and nothing above it, so a customer can't put a cap in a large box.
+const PARCEL_SIZE_OPTIONS = [
+  { value: "satchel", label: "Satchel — apparel, caps, flat items" },
+  { value: "small", label: "Small box" },
+  { value: "medium", label: "Medium box" },
+  { value: "large", label: "Large box — bulky items" },
+];
+
+const parcelSizeField = (draft, setDraft) => (
+  <select
+    value={draft.parcel_size || "satchel"}
+    onChange={(e) => setDraft({ ...draft, parcel_size: e.target.value })}
+    className="h-11 w-full rounded-none border border-border/40 bg-secondary/35 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:border-primary/65"
+    aria-label="Parcel size"
+  >
+    {PARCEL_SIZE_OPTIONS.map((opt) => (
+      <option key={opt.value} value={opt.value}>{opt.label}</option>
+    ))}
+  </select>
+);
 
 /* ── Product Card ── */
 function ProductCard({ product, onUpdate, onDelete, index, saving }) {
@@ -148,7 +170,8 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
               <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
               <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
-            <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel.</p>
+            <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
+            <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel. Parcel size caps what the customer can pick at checkout — nothing larger is offered.</p>
           </div>
 
           <div className="space-y-1">
@@ -366,7 +389,8 @@ export default function ProductsManager({ products, loading }) {
                     <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                     <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
-                  <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel.</p>
+                  <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
+                  <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel. Parcel size caps what the customer can pick at checkout — nothing larger is offered.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
