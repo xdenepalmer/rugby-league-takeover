@@ -1,12 +1,12 @@
 import React, { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User as UserIcon, ShieldCheck, LogOut, ShoppingBag } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
 import { scrollToAnchor } from "@/lib/scroll-to-anchor";
+import { signOut } from "@/lib/sign-out";
 
 const logoUrl = "/icons/icon-192.png";
 const NotificationBell = lazy(() => import("@/components/NotificationBell"));
@@ -237,7 +237,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem onClick={() => base44.auth.logout("/")} className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-destructive hover:text-destructive">
+            <DropdownMenuItem onClick={() => signOut("/")} className="rounded-none hover:bg-secondary/80 text-[10px] uppercase font-bold tracking-wider py-3 px-3.5 cursor-pointer text-destructive hover:text-destructive">
               <LogOut className="mr-2.5 h-4 w-4" /> Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -527,7 +527,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
                           </Link>
                         )}
                         <button 
-                          onClick={() => { setOpen(false); base44.auth.logout("/"); }} 
+                          onClick={() => { setOpen(false); signOut("/"); }} 
                           className="text-left font-display text-xl uppercase tracking-wider text-destructive flex items-center hover:text-destructive/80 cursor-pointer transition-all"
                         >
                           Log out

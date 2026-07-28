@@ -232,7 +232,8 @@ const ForumPostCard = memo(function ForumPostCard({
     const key = `rlt_viewed_${post.id}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
-    base44.functions.invoke("forumAction", { action: "view", postId: post.id }).catch(() => {});
+    base44.functions.invoke("forumAction", { action: "view", postId: post.id })
+      .catch((err) => console.warn("[RLT] View count ping failed:", err));
   }, [isInView, post.id]);
   const [cardOpen, setCardOpen] = useState(!!post.is_pinned);
   const [expanded, setExpanded] = useState(false);
@@ -1358,7 +1359,9 @@ export default function Forum() {
                       try {
                         localStorage.setItem("rlt_seat_claimed", q);
                         window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
-                      } catch (err) {}
+                      } catch (err) {
+                        console.warn("[RLT] Could not persist claimed seat:", err);
+                      }
                     }}
                     currentSearch={searchQuery}
                   />
@@ -1548,7 +1551,9 @@ export default function Forum() {
                             try {
                               localStorage.setItem("rlt_seat_claimed", q);
                               window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
-                            } catch (err) {}
+                            } catch (err) {
+                              console.warn("[RLT] Could not persist claimed seat:", err);
+                            }
                           }}
                           currentSearch={searchQuery}
                         />
@@ -1659,7 +1664,9 @@ export default function Forum() {
                   try {
                     localStorage.setItem("rlt_seat_claimed", q);
                     window.dispatchEvent(new CustomEvent("rlt_badge_event", { detail: { action: "claim_seat" } }));
-                  } catch (err) {}
+                  } catch (err) {
+                    console.warn("[RLT] Could not persist claimed seat:", err);
+                  }
                 }}
                 searchQuery={searchQuery}
                 onSharePrediction={(matchup, homeScore, awayScore) => {

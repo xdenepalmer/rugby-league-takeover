@@ -113,7 +113,8 @@ export async function fetchRecentResults() {
   try {
     const { recent } = await fetchNrlFixtures();
     return recent;
-  } catch {
+  } catch (err) {
+    console.warn("[nrl-api] Recent results unavailable:", err.message);
     return [];
   }
 }

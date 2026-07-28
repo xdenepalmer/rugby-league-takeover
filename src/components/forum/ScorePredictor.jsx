@@ -24,7 +24,7 @@ import {
 import { playLockSound, playSelectSound } from "@/components/forum/tipping/audio";
 import { useCountdown } from "@/components/forum/tipping/hooks";
 import { successImpact, selectionChanged, warningImpact } from "@/lib/native/haptics";
-import { enqueueTip, removeTipFromQueue, prunedTipQueue } from "@/lib/tip-sync-queue";
+import { enqueueTip, removeTipFromQueue, prunedTipQueue, isRetryableSyncError } from "@/lib/tip-sync-queue";
 import { toast } from "@/components/ui/use-toast";
 import ConfettiBurst from "@/components/forum/tipping/ConfettiBurst";
 import PointsPopup from "@/components/forum/tipping/PointsPopup";
@@ -882,7 +882,21 @@ export default function ScorePredictor({ onSharePrediction }) {
             removeTipFromQueue(payload.game_id);
             queryClient.invalidateQueries({ queryKey: ["tippingEntries"] });
           })
-          .catch(() => { /* still unreachable — stays queued */ });
+          .catch((err) => {
+            if (isRetryableSyncError(err)) {
+              console.warn("[RLT] Tip sync retry failed, staying queued:", err);
+              return;
+            }
+            // Definitively rejected (validation / deadline / duplicate) —
+            // retrying every mount would hide the failure forever.
+            console.error("[RLT] Tip rejected by server, dropping from queue:", err);
+            removeTipFromQueue(payload.game_id);
+            toast({
+              title: "A queued tip couldn't be saved",
+              description: err?.message || "The server rejected it, so it was removed from the sync queue.",
+              variant: "destructive",
+            });
+          });
       });
     };
     flush();

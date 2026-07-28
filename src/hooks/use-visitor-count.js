@@ -34,7 +34,11 @@ export function useVisitorCount() {
         .select("total_visits")
         .eq("id", 1)
         .maybeSingle();
-      if (error || !data) return null;
+      if (error) {
+        console.warn("[RLT] Visitor count read failed:", error.message || error);
+        return null;
+      }
+      if (!data) return null;
       return Number(data.total_visits);
     };
 
@@ -54,6 +58,7 @@ export function useVisitorCount() {
         }
 
         const { data, error } = await supabase.rpc("increment_site_visits");
+        if (error) console.warn("[RLT] Visitor count increment failed:", error.message || error);
         if (!cancelled && !error && data != null) {
           setCount(Number(data));
           try {
@@ -66,8 +71,9 @@ export function useVisitorCount() {
           const total = await readTotal();
           if (total !== null) setCount(total);
         }
-      } catch {
-        /* leave count null → the counter UI stays hidden */
+      } catch (err) {
+        // Leave count null → the counter UI stays hidden, but say why.
+        console.warn("[RLT] Visitor count unavailable:", err);
       }
     };
 
