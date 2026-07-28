@@ -38,6 +38,7 @@ import { toast } from "@/components/ui/use-toast";
 import { openExternalUrl } from "@/lib/native/open-external";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import { orderTotals, freeShippingThresholdAud, toCents, fromCents } from "@/lib/money-rules";
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -799,8 +800,9 @@ export default function Store() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price_aud || 0) * item.quantity), 0);
 
-  // Free shipping threshold logic
-  const shippingThreshold = 150;
+  // Free shipping threshold — read from settings so the storefront and
+  // createCheckout can never disagree about who qualifies.
+  const shippingThreshold = freeShippingThresholdAud(settingsRecords[0] || {});
   const progressPercent = Math.min(100, (cartSubtotal / shippingThreshold) * 100);
   const needsMore = Math.max(0, shippingThreshold - cartSubtotal);
   const isFreeShipping = cartSubtotal >= shippingThreshold;
@@ -842,6 +844,16 @@ export default function Store() {
   );
   const ratesStale = !shippingRates.length || shippingRatesFor !== `${shippingPostcode.trim()}::${cartSignature}`;
   const selectedRate = shippingRates.find((rate) => rate.code === selectedShippingCode);
+
+  // The same module createCheckout uses, so the summary shown here is the amount
+  // Stripe will charge. Until a rate is picked the shipping component is 0 and
+  // the total reads as goods + tax only.
+  const checkoutTotals = orderTotals({
+    subtotalCents: toCents(cartSubtotal),
+    shippingCents: !isPickup && selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0,
+    settings: storeSettings,
+    isPickup,
+  });
 
   const calculateShipping = async () => {
     const trimmed = shippingPostcode.trim();
@@ -909,7 +921,12 @@ export default function Store() {
               code: selectedRate.code,
               name: selectedRate.name,
               postcode: shippingPostcode.trim(),
-              price_aud: isFreeShipping ? 0 : selectedRate.price_aud,
+              // The quoted price and its signature, passed back untouched. The
+              // server verifies the signature and applies the free-shipping
+              // waiver itself — sending 0 here would just fail verification.
+              price_aud: selectedRate.price_aud,
+              signature: selectedRate.signature,
+              expires_at: selectedRate.expires_at,
             },
       });
 
@@ -1416,11 +1433,46 @@ export default function Store() {
                   </div>
                   )}
 
-                  <div className="flex items-center justify-between text-base font-bold uppercase tracking-wider mb-4 border-b border-border/30 pb-3">
-                    <span>Total</span>
-                    <span className="text-accent font-mono tracking-tight text-lg">
-                      ${(cartSubtotal + (!isPickup && selectedRate && !ratesStale ? (isFreeShipping ? 0 : Number(selectedRate.price_aud)) : 0)).toFixed(2)} AUD
-                    </span>
+                  {/* Order summary. Deliberately absent from the product grid —
+                      browsing shows the sticker price, tax is disclosed here. */}
+                  <div className="mb-4 space-y-1.5 border-b border-border/30 pb-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Subtotal</span>
+                      <span className="font-mono tabular-nums">${cartSubtotal.toFixed(2)}</span>
+                    </div>
+                    {!isPickup && checkoutTotals.shippingCents > 0 && (
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Shipping</span>
+                        <span className="font-mono tabular-nums">${fromCents(checkoutTotals.shippingCents).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {!isPickup && checkoutTotals.freeShippingApplied && (
+                      <div className="flex items-center justify-between text-xs text-accent">
+                        <span>Shipping</span>
+                        <span className="font-mono">FREE</span>
+                      </div>
+                    )}
+                    {checkoutTotals.gstCents > 0 && (
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          {checkoutTotals.gstLabel} ({checkoutTotals.gstRatePercent}%)
+                          {checkoutTotals.gstIncluded && <span className="ml-1 opacity-60">included</span>}
+                        </span>
+                        <span className="font-mono tabular-nums">${fromCents(checkoutTotals.gstCents).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {checkoutTotals.cardFeeCents > 0 && !checkoutTotals.cardFeeIncluded && (
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{checkoutTotals.cardFeeLabel}</span>
+                        <span className="font-mono tabular-nums">${fromCents(checkoutTotals.cardFeeCents).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between pt-1.5 text-base font-bold uppercase tracking-wider">
+                      <span>Total</span>
+                      <span className="text-accent font-mono tracking-tight text-lg">
+                        ${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD
+                      </span>
+                    </div>
                   </div>
 
                   <form onSubmit={handleCheckout} className="grid gap-3">
@@ -1476,10 +1528,10 @@ export default function Store() {
                         : cannotFulfil
                           ? "Not available outside Australia"
                           : isPickup
-                            ? `Checkout • $${cartSubtotal.toFixed(2)} AUD`
+                            ? `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`
                             : ratesStale || !selectedRate
                               ? "Calculate shipping to continue"
-                              : `Checkout • $${(cartSubtotal + (isFreeShipping ? 0 : Number(selectedRate.price_aud))).toFixed(2)} AUD`}
+                              : `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe

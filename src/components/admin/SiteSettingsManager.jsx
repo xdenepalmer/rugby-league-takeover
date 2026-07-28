@@ -61,6 +61,16 @@ const defaults = {
   pickup_audience: "international",
   pickup_label: "Collect in Las Vegas at the event",
   pickup_instructions: "",
+  free_shipping_threshold_aud: 150,
+  gst_enabled: true,
+  gst_rate_percent: 6.5,
+  gst_mode: "added",
+  gst_label: "GST",
+  card_fee_enabled: false,
+  card_fee_percent: 1.75,
+  card_fee_fixed_aud: 0.3,
+  card_fee_mode: "absorbed",
+  card_fee_label: "Card processing fee",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
   footer_powered_by: "DENEO.AI",
   contact_email: "",
@@ -674,6 +684,133 @@ export default function SiteSettingsManager({ settings }) {
                         {!draft.pickup_enabled && (
                           <p className="text-[10px] leading-relaxed text-amber-400/80">
                             While this is off, customers outside Australia cannot complete an order at all.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* ── Free shipping ──────────────────────────────── */}
+                      <div className="border-t border-border/60 pt-4 space-y-3">
+                        <LabeledField
+                          label="Free shipping over (AUD)"
+                          help="Carts of goods worth at least this much ship free. Postage itself doesn't count toward the threshold. Set 0 to make all shipping free."
+                        >
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={draft.free_shipping_threshold_aud ?? 150}
+                            onChange={(e) => update("free_shipping_threshold_aud", e.target.value === "" ? 150 : Number(e.target.value))}
+                          />
+                        </LabeledField>
+                      </div>
+
+                      {/* ── GST ────────────────────────────────────────── */}
+                      <div className="border-t border-border/60 pt-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-widest text-foreground">GST</p>
+                            <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
+                              Calculated on goods plus whatever shipping is charged. Never shown while browsing — it appears in the cart summary and on the Stripe page.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={draft.gst_enabled !== false}
+                            onCheckedChange={(v) => update("gst_enabled", v)}
+                          />
+                        </div>
+
+                        {draft.gst_enabled !== false && (
+                          <div className="grid grid-cols-1 gap-3 border border-border/40 bg-muted/5 p-3 sm:grid-cols-2">
+                            <LabeledField label="Rate (%)" help="Australian GST is 10%. Check any other value with your accountant before going live.">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={draft.gst_rate_percent ?? 6.5}
+                                onChange={(e) => update("gst_rate_percent", e.target.value === "" ? 0 : Number(e.target.value))}
+                              />
+                            </LabeledField>
+                            <LabeledField label="Pass on or absorb?" help="Pass on adds it to the total. Absorb means your listed prices already include it and you take it out of margin.">
+                              <select
+                                value={draft.gst_mode || "added"}
+                                onChange={(e) => update("gst_mode", e.target.value)}
+                                className="h-11 w-full rounded-none border border-border/40 bg-background px-3 text-sm"
+                              >
+                                <option value="added">Pass on — added at checkout</option>
+                                <option value="absorbed">Absorb — included in listed prices</option>
+                              </select>
+                            </LabeledField>
+                            <LabeledField label="Label" help="What the line is called at checkout.">
+                              <Input
+                                placeholder="GST"
+                                value={draft.gst_label || ""}
+                                onChange={(e) => update("gst_label", e.target.value)}
+                              />
+                            </LabeledField>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ── Card processing fee ────────────────────────── */}
+                      <div className="border-t border-border/60 pt-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-widest text-foreground">Card processing fee</p>
+                            <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
+                              Stripe&apos;s cut. Absorb it (you pay, shown here for your records) or pass it on as a surcharge.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={draft.card_fee_enabled === true}
+                            onCheckedChange={(v) => update("card_fee_enabled", v)}
+                          />
+                        </div>
+
+                        {draft.card_fee_enabled && (
+                          <div className="grid grid-cols-1 gap-3 border border-border/40 bg-muted/5 p-3 sm:grid-cols-2">
+                            <LabeledField label="Percent (%)" help="Stripe AU domestic cards are 1.75%. International cards cost more.">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="99"
+                                step="0.01"
+                                value={draft.card_fee_percent ?? 1.75}
+                                onChange={(e) => update("card_fee_percent", e.target.value === "" ? 0 : Number(e.target.value))}
+                              />
+                            </LabeledField>
+                            <LabeledField label="Fixed (AUD)" help="Stripe's per-transaction amount, normally $0.30.">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={draft.card_fee_fixed_aud ?? 0.3}
+                                onChange={(e) => update("card_fee_fixed_aud", e.target.value === "" ? 0 : Number(e.target.value))}
+                              />
+                            </LabeledField>
+                            <LabeledField label="Pass on or absorb?" help="Passing it on grosses up the amount so the fee actually covers itself — Stripe charges its percentage on the surcharged total too.">
+                              <select
+                                value={draft.card_fee_mode || "absorbed"}
+                                onChange={(e) => update("card_fee_mode", e.target.value)}
+                                className="h-11 w-full rounded-none border border-border/40 bg-background px-3 text-sm"
+                              >
+                                <option value="absorbed">Absorb — you pay it</option>
+                                <option value="added">Pass on — surcharge the customer</option>
+                              </select>
+                            </LabeledField>
+                            <LabeledField label="Label" help="What the surcharge is called at checkout.">
+                              <Input
+                                placeholder="Card processing fee"
+                                value={draft.card_fee_label || ""}
+                                onChange={(e) => update("card_fee_label", e.target.value)}
+                              />
+                            </LabeledField>
+                          </div>
+                        )}
+
+                        {draft.card_fee_enabled && draft.card_fee_mode === "added" && (
+                          <p className="text-[10px] leading-relaxed text-amber-400/80">
+                            In Australia a card surcharge must not exceed your actual cost of acceptance (RBA standard, enforced by the ACCC). Keep the percent and fixed amount matched to your real Stripe pricing.
                           </p>
                         )}
                       </div>

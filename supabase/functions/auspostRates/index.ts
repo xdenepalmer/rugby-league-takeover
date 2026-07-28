@@ -50,6 +50,39 @@ function serviceParcelSize(service: any): string | null {
   return null; // weight-priced (Parcel Post / Express Post) — always legitimate
 }
 
+// ── Signed quotes — mirror of tests/money-rules.mjs, keep in sync ──────────
+// Each quote is signed over (service, price, postcode, cart, expiry) so
+// createCheckout can charge the price WE quoted rather than the one the browser
+// hands back. Without this a crafted request names its own postage.
+const QUOTE_TTL_MS = 30 * 60 * 1000;
+
+// deno-lint-ignore no-explicit-any
+function cartFingerprint(items: any[]) {
+  return (items || [])
+    .map((i) => `${String(i?.productId ?? i?.product_id ?? '').trim()}:${Math.max(1, Math.floor(Number(i?.quantity) || 1))}`)
+    .filter((s) => !s.startsWith(':'))
+    .sort()
+    .join(',');
+}
+
+function quotePayload(code: string, priceCents: number, postcode: string, cartHash: string, expiresAt: number) {
+  return [code, priceCents, postcode, cartHash, expiresAt].join('|');
+}
+
+async function signQuote(payload: string) {
+  const secret = Deno.env.get('SHIPPING_QUOTE_SECRET');
+  if (!secret) throw new Error('Shipping quotes are not configured (missing SHIPPING_QUOTE_SECRET)');
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // deno-lint-ignore no-explicit-any
 function allowedServices(services: any[], required: string) {
   const ceiling = PARCEL_RANK[normalizeParcelSize(required)];
@@ -137,6 +170,9 @@ Deno.serve(async (req) => {
       return json({ ok: true, services: [], parcelSize: requiredSize });
     }
 
+    const cartHash = cartFingerprint(cart);
+    const expiresAt = Date.now() + QUOTE_TTL_MS;
+
     const rated = [];
     for (const svcOption of availableServices) {
       const code = svcOption?.code;
@@ -148,11 +184,15 @@ Deno.serve(async (req) => {
         const calcData = await calcRes.json();
         const result = calcData?.postage_result;
         if (!result) continue;
+        const priceAud = Number(result.total_cost || result.total_cost_ex_gst || 0);
+        const priceCents = Math.round(priceAud * 100);
         rated.push({
           code,
           name: svcOption?.name || code,
-          price_aud: Number(result.total_cost || result.total_cost_ex_gst || 0),
+          price_aud: priceAud,
           delivery_time: result.delivery_time || null,
+          expires_at: expiresAt,
+          signature: await signQuote(quotePayload(code, priceCents, destination, cartHash, expiresAt)),
         });
       } catch (error) {
         console.error(`AusPost calculate.json error for ${code}:`, error);
