@@ -14,6 +14,10 @@ import { json, preflight, serviceClient } from './shared.ts';
 
 const PAC_BASE = 'https://digitalapi.auspost.com.au/postage/parcel/domestic';
 const DEFAULT_SATCHEL_CM = { length: 35, width: 25, height: 2 }; // small satchel fallback
+// Only used when a product has no weight recorded. Multiplied by quantity, so it
+// overcharges multi-item orders — products missing a weight are logged and
+// flagged in the admin rather than left to quietly distort quotes.
+const ASSUMED_ITEM_WEIGHT_G = 300;
 
 const isPostcode = (value: unknown) => /^\d{4}$/.test(String(value || '').trim());
 
@@ -119,30 +123,55 @@ Deno.serve(async (req) => {
       return json({ error: 'Shipping is not configured yet — set a sender postcode in Site Settings' }, 503);
     }
 
-    // Sum weight across the cart; approximate a single parcel using the
-    // largest per-item footprint (a satchel/box that the whole order fits
-    // in), falling back to a small satchel when products have no dimensions.
+    // Everything goes in ONE parcel: weights add up, the footprint is the
+    // largest single item (whatever satchel or box the order fits in).
+    // Non-shippable items (memberships, anything digital) are skipped entirely
+    // so they neither add weight nor force a postage charge.
     let totalGrams = 0;
     let length = 0, width = 0, height = 0;
     let requiredSize = DEFAULT_PARCEL_SIZE;
+    let shippableUnits = 0;
+    const missingWeight: string[] = [];
     for (const item of cart) {
       const productId = String(item?.productId || '').trim();
       const quantity = Math.max(1, Math.floor(Number(item?.quantity) || 1));
       if (!productId) continue;
       const { data: product } = await svc
         .from('products')
-        .select('weight_grams, length_cm, width_cm, height_cm, parcel_size')
+        .select('name, weight_grams, length_cm, width_cm, height_cm, parcel_size, shipping_required')
         .eq('id', productId)
         .maybeSingle();
       if (!product) continue;
-      totalGrams += Number(product.weight_grams || 300) * quantity;
+      if (product.shipping_required === false) continue;
+
+      shippableUnits += quantity;
+      // A missing weight used to become 300g per unit silently, which is how two
+      // ~40g stubbie coolers declared 600g and crossed AusPost's 500g bracket.
+      // The assumption is still made (checkout must not hard-fail on a config
+      // gap) but it is now recorded and surfaced instead of hidden.
+      const grams = Number(product.weight_grams);
+      if (!Number.isFinite(grams) || grams <= 0) {
+        missingWeight.push(String(product.name || productId));
+        totalGrams += ASSUMED_ITEM_WEIGHT_G * quantity;
+      } else {
+        totalGrams += grams * quantity;
+      }
       length = Math.max(length, Number(product.length_cm) || 0);
       width = Math.max(width, Number(product.width_cm) || 0);
       height = Math.max(height, Number(product.height_cm) || 0);
       const size = normalizeParcelSize(product.parcel_size);
       if (PARCEL_RANK[size] > PARCEL_RANK[requiredSize]) requiredSize = size;
     }
-    if (totalGrams <= 0) totalGrams = 300;
+
+    // Nothing physical in the cart — there is no parcel to price.
+    if (shippableUnits === 0) {
+      return json({ ok: true, services: [], shippingRequired: false });
+    }
+    if (missingWeight.length) {
+      console.warn('auspostRates: products missing weight_grams, quote is an estimate:', missingWeight.join(', '));
+    }
+
+    if (totalGrams <= 0) totalGrams = ASSUMED_ITEM_WEIGHT_G;
     length = length || DEFAULT_SATCHEL_CM.length;
     width = width || DEFAULT_SATCHEL_CM.width;
     height = height || DEFAULT_SATCHEL_CM.height;

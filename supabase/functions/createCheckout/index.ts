@@ -112,7 +112,6 @@ function buildCheckoutLineItems(items: any[], getProduct: (id: string) => any) {
 }
 
 // deno-lint-ignore no-explicit-any
-// deno-lint-ignore no-explicit-any
 function buildShippingLineItem(shipping: any) {
   const code = toTrimmedString(shipping?.code);
   const name = toTrimmedString(shipping?.name) || 'Shipping';
@@ -416,19 +415,9 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const fulfilmentResult = resolveFulfilment({
-      method: fulfilment,
-      shipping,
-      country,
-      settings: siteSettings,
-    });
-    if (!fulfilmentResult.ok) {
-      return json({ error: fulfilmentResult.error }, 400);
-    }
-    const isPickup = fulfilmentResult.method === 'pickup';
-    // Pickup carries no shipping cost and no address to charge for.
-    const shippingSelection = fulfilmentResult.shipping || { code: 'PICKUP', name: 'Collect in Las Vegas', postcode: '', price_aud: 0, stripeLineItem: null };
-
+    // Products are loaded BEFORE fulfilment is resolved: a cart of only
+    // non-shippable items (a membership, anything digital) has no parcel, so it
+    // must not be made to buy postage or pick a collection point.
     const productsById = new Map();
     const unavailableProductIds = [];
     for (const item of normalizedItems) {
@@ -447,10 +436,34 @@ Deno.serve(async (req) => {
       }, 409);
     }
 
+    const cartRequiresShipping = [...productsById.values()].some((p) => p?.shipping_required !== false);
+
+    let fulfilmentResult;
+    if (!cartRequiresShipping) {
+      fulfilmentResult = { ok: true as const, method: 'none', shipping: null };
+    } else {
+      fulfilmentResult = resolveFulfilment({
+        method: fulfilment,
+        shipping,
+        country,
+        settings: siteSettings,
+      });
+      if (!fulfilmentResult.ok) {
+        return json({ error: fulfilmentResult.error }, 400);
+      }
+    }
+    const isPickup = fulfilmentResult.method === 'pickup';
+    // Neither pickup nor a digital-only order carries a postage cost.
+    const noParcel = isPickup || fulfilmentResult.method === 'none';
+    const shippingSelection = fulfilmentResult.shipping
+      || (isPickup
+        ? { code: 'PICKUP', name: 'Collect in Las Vegas', postcode: '', price_aud: 0, stripeLineItem: null }
+        : { code: 'NONE', name: 'No shipping required', postcode: '', price_aud: 0, stripeLineItem: null });
+
     // The storefront hides oversized packaging, but the rate list arrives from the
     // client, so the ceiling is re-derived from the saved products and enforced
     // here too. Without this a crafted request could still buy a Large box.
-    if (!isPickup) {
+    if (!noParcel) {
       let requiredSize = DEFAULT_PARCEL_SIZE;
       for (const product of productsById.values()) {
         const size = normalizeParcelSize(product?.parcel_size);
@@ -477,7 +490,7 @@ Deno.serve(async (req) => {
     // check. The free-shipping waiver is applied server-side too — it used to
     // be a hardcoded 150 in the browser, with the client simply sending 0.
     let quotedShippingCents = 0;
-    if (!isPickup) {
+    if (!noParcel) {
       const claimedCents = toCents(shippingSelection.price_aud);
       const cartHash = cartFingerprint(normalizedItems);
       const expiresAt = Number(shipping?.expires_at);
@@ -503,7 +516,7 @@ Deno.serve(async (req) => {
       subtotalCents,
       shippingCents: quotedShippingCents,
       settings: siteSettings,
-      isPickup,
+      isPickup: noParcel,
     });
     const totalAud = fromCents(totals.totalCents);
 
@@ -598,7 +611,7 @@ Deno.serve(async (req) => {
       // Domestic AU only — matches the AusPost rate calc, which only quotes
       // Australian postcodes. A pickup order is collected in person, so Stripe
       // must NOT ask for a delivery address it would never be shipped to.
-      ...(isPickup ? {} : { shipping_address_collection: { allowed_countries: ['AU'] as const } }),
+      ...(noParcel ? {} : { shipping_address_collection: { allowed_countries: ['AU'] as const } }),
       metadata: buildOrderMetadata({
         appId: Deno.env.get('RLT_APP_ID') || 'rugby-league-takeover',
         orderId: order.id,
