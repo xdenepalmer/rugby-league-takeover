@@ -19,6 +19,22 @@ export const json = (data: unknown, status = 200) =>
 
 export const preflight = () => new Response('ok', { headers: CORS });
 
+// Unexpected-failure response. The detail goes to the function log; the caller
+// only ever sees a generic message, so Postgres errors (table/column names,
+// constraint text, row contents) never reach the browser.
+export function serverError(scope: string, error: unknown, status = 500) {
+  console.error(`${scope} error:`, error);
+  return json({ error: 'Something went wrong. Please try again.' }, status);
+}
+
+/** Constant-time string compare, so a wrong value leaks nothing through timing. */
+export function timingSafeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 // Service-role client — bypasses RLS. SUPABASE_* env vars are injected by the
 // Supabase Edge runtime automatically.
 export function serviceClient() {

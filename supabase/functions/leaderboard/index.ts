@@ -1,7 +1,7 @@
 // Fan leaderboard. Authenticated users only; returns a privacy-safe projection
 // (display name + avatar + rank/xp/chips, NEVER email).
 // Scopes: alltime | weekly | team — see src/lib/leaderboard.js.
-import { json, preflight, serviceClient, getCaller, num } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, num, serverError } from './shared.ts';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -96,7 +96,6 @@ Deno.serve(async (req) => {
       total: ranked.length,
     });
   } catch (error) {
-    console.error('leaderboard error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('leaderboard', error);
   }
 });

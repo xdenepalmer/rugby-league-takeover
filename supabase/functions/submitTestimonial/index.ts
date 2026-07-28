@@ -1,6 +1,6 @@
 // Public visitors can submit a testimonial; it is created UNPUBLISHED so an
 // admin can moderate it before it appears on the homepage.
-import { json, preflight, serviceClient, getCaller, trimToLength, isLikelyBot, resolveClientIp, findActiveBan } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, trimToLength, isLikelyBot, resolveClientIp, findActiveBan, serverError } from './shared.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
@@ -40,7 +40,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true });
   } catch (error) {
-    console.error('submitTestimonial error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('submitTestimonial', error);
   }
 });

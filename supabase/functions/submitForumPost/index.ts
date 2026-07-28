@@ -4,7 +4,7 @@
 import {
   json, preflight, serviceClient, getCaller, trimToLength, isLikelyBot,
   resolveClientIp, findActiveBan, censorProfanity, FORUM_CATEGORIES,
-  awardForumReward, getForumPost,
+  awardForumReward, getForumPost, serverError,
 } from './shared.ts';
 
 // Extract unique lowercased @mention tokens from a body.
@@ -131,7 +131,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, id: post.id, reward });
   } catch (error) {
-    console.error('submitForumPost error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('submitForumPost', error);
   }
 });

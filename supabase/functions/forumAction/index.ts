@@ -2,7 +2,7 @@
 // Runs with the service role (with explicit ownership/role checks).
 import {
   json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp,
-  censorProfanity, FORUM_CATEGORIES, awardForumReward, getForumPost, num,
+  censorProfanity, FORUM_CATEGORIES, awardForumReward, getForumPost, num, serverError,
 } from './shared.ts';
 
 const ALLOWED_REACTIONS = ['❤️', '🏉', '🔥', '🎉', '👏'];
@@ -188,7 +188,6 @@ Deno.serve(async (req) => {
 
     return json({ error: 'Unknown action' }, 400);
   } catch (error) {
-    console.error('forumAction error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('forumAction', error);
   }
 });

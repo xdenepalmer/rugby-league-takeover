@@ -8,6 +8,7 @@
 // need to change during the Base44 → Supabase migration.
 import { supabase } from '@/api/supabaseClient';
 import { CANONICAL_WEB_ORIGIN, isNativeApp } from '@/lib/native/native-env';
+import { safeInternalPath } from '@/lib/safe-redirect';
 
 // Base origin for Supabase auth redirect links (email confirm, password
 // reset, OAuth). Inside the Capacitor shell window.location.origin is
@@ -259,9 +260,7 @@ const auth = {
   },
 
   loginWithProvider(provider, nextUrl) {
-    // Reject protocol-relative ("//evil.com") targets too — otherwise the
-    // redirect could resolve to another origin.
-    const next = typeof nextUrl === 'string' && nextUrl.startsWith('/') && !nextUrl.startsWith('//') ? nextUrl : '/account';
+    const next = safeInternalPath(nextUrl);
     return supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${redirectBase()}${next}` },
@@ -271,7 +270,7 @@ const auth = {
   async logout(redirectUrl) {
     await supabase.auth.signOut();
     if (typeof redirectUrl === 'string' && redirectUrl) {
-      window.location.assign(redirectUrl.startsWith('/') ? redirectUrl : '/');
+      window.location.assign(safeInternalPath(redirectUrl, '/'));
     }
   },
 

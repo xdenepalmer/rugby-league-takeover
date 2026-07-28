@@ -13,6 +13,7 @@ import { canUseGoogleOAuth } from "@/lib/native/auth-guards";
 import { isNativeApp } from "@/lib/native/native-env";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/AuthContext";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 // Framer motion variants
 const containerVariants = {
@@ -43,8 +44,7 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [searchParams] = useSearchParams();
-  const requestedNext = searchParams.get("next");
-  const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
+  const nextUrl = safeInternalPath(searchParams.get("next"));
   // Supabase Auth emails an 8-digit confirmation code, so the input must accept
   // all 8 — a 6-slot field silently truncated the code and every verification
   // failed with "token invalid", blocking signup on web and iOS alike.

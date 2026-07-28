@@ -10,7 +10,7 @@
 // Flow: GET .../parcel/domestic/service.json to discover which services are
 // available for this parcel (weight/dims/postcodes), then GET
 // .../parcel/domestic/calculate.json per service code to get its price + ETA.
-import { json, preflight, serviceClient } from './shared.ts';
+import { json, preflight, serviceClient, serverError } from './shared.ts';
 
 const PAC_BASE = 'https://digitalapi.auspost.com.au/postage/parcel/domestic';
 const DEFAULT_SATCHEL_CM = { length: 35, width: 25, height: 2 }; // small satchel fallback
@@ -202,7 +202,6 @@ Deno.serve(async (req) => {
     rated.sort((a, b) => a.price_aud - b.price_aud);
     return json({ ok: true, services: rated, parcelSize: requiredSize });
   } catch (error) {
-    console.error('auspostRates error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('auspostRates', error);
   }
 });

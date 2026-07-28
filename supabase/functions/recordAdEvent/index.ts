@@ -1,7 +1,7 @@
 // Server-side ad analytics. AdSlot enforces viewability + frequency/click caps
 // client-side, then calls this to durably aggregate counts on the site_ads row.
 // Body: { adId: string, type: 'impressions' | 'clicks' }
-import { json, preflight, serviceClient, num } from './shared.ts';
+import { json, preflight, serviceClient, num, serverError } from './shared.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, [field]: next });
   } catch (error) {
-    console.error('recordAdEvent error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('recordAdEvent', error);
   }
 });
