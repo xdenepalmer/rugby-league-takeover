@@ -13,6 +13,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:rugbyleaguetakeover.com</string>
+		<string>applinks:www.rugbyleaguetakeover.com</string>
 	</array>
 </dict>
 </plist>

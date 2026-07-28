@@ -3,12 +3,10 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { lightImpact, mediumImpact, successImpact, warningImpact } from "@/lib/native/haptics";
 import { Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/AuthContext";
 import {
   SLOT_BADGES,
   spinReels,
   evaluateReels,
-  parseBadgeIds,
   SPIN_COOLDOWN_MS,
   SLOT_BADGES_KEY,
   SLOT_LAST_SPIN_KEY,
@@ -19,7 +17,6 @@ import {
   STREAK_KEY,
   STREAK_DATE_KEY,
   MUTE_KEY,
-  VALID_BADGE_IDS,
   TIER_ORDER,
 } from "./slot/slotConstants";
 import {
@@ -52,7 +49,6 @@ import TierGroupHeader from "./slot/TierGroupHeader";
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
 export default function SlotMachineBadgeUnlock() {
-  const { user, isAuthenticated, updateProfile } = useAuth();
   const reducedMotion = useReducedMotion();
   const [loading, setLoading] = useState(true);
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
@@ -128,17 +124,6 @@ export default function SlotMachineBadgeUnlock() {
 
     setLoading(false);
   }, []);
-
-  // Merge server badge IDs
-  useEffect(() => {
-    const serverIds = parseBadgeIds(user?.badges);
-    if (serverIds.length) {
-      setOwnedIds((prev) => {
-        const merged = Array.from(new Set([...prev, ...serverIds])).filter((id) => VALID_BADGE_IDS.has(id));
-        return merged;
-      });
-    }
-  }, [user]);
 
   // ─── Cooldown timer with visibility change re-check ───
   useEffect(() => {
@@ -246,11 +231,8 @@ export default function SlotMachineBadgeUnlock() {
     setOwnedIds(next);
     safeSetItem(SLOT_BADGES_KEY, JSON.stringify(next));
     setBadgeWinTimestamp(badge.id);
-    if (isAuthenticated) {
-      try { Promise.resolve(updateProfile({ badges: next })).catch(() => {}); } catch { /* ignore */ }
-    }
     return true; // was newly awarded
-  }, [isAuthenticated, updateProfile]);
+  }, []);
 
   /* ─── Streak logic ─── */
   const updateStreak = useCallback(() => {
@@ -766,11 +748,9 @@ export default function SlotMachineBadgeUnlock() {
             })}
           </div>
 
-          {!isAuthenticated && earnedCount > 0 && (
-            <p className="mt-2.5 text-[10px] text-slate-500">
-              Log in to show your badges next to your name in the forum.
-            </p>
-          )}
+          <p className="mt-2.5 text-[10px] text-slate-500">
+            For-fun collection: badges, spins and cooldowns are saved only on this device and may be cleared with app or browser data.
+          </p>
         </div>
 
         {/* ─── Win History ─── */}

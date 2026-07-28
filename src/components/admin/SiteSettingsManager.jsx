@@ -23,6 +23,13 @@ const defaults = {
   hero_title: "The annual\nVegas takeover",
   hero_description: "Join the world's most passionate and loyal Rugby League supporter groups for an unforgettable global footy invasion of Las Vegas.",
   hero_button_label: "Enter the site",
+  ticker_items: [
+    "LAS VEGAS TAKEOVER 2027",
+    "RUGBY LEAGUE GLOBAL INVASION",
+    "VIP TRAVEL PACKAGES DROPPING SOON",
+    "EXCLUSIVE FAN EVENTS & MEETUPS",
+    "STADIUM SWIM PARTIES",
+  ],
   background_video_urls: [
     "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/7753542d9_b39f245c-2207-4f31-bd97-2cb52f47dc3a.mov",
     "https://ohytlrgfpcpvnqgdpqap.supabase.co/storage/v1/object/public/media/migrated/bf55ac1e7_allegiantstadiumparadisenevadaclaytonhaamallegiantallegiantstadiumparadis.mp4"
@@ -151,6 +158,7 @@ export default function SiteSettingsManager({ settings }) {
 
   const update = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
   const videoText = (draft.background_video_urls || []).join("\n");
+  const tickerText = (draft.ticker_items || []).map((item) => typeof item === "string" ? item : item?.text || "").join("\n");
 
   /* ── Unsaved changes guard (browser close/reload) ────── */
   useEffect(() => {
@@ -204,10 +212,10 @@ export default function SiteSettingsManager({ settings }) {
     },
     {
       id: "shipping",
-      title: "Shipping (AusPost)",
-      desc: "Sender/return address AusPost uses to calculate rates and generate labels.",
+      title: "Shipping & Fulfilment",
+      desc: "Review the public flat-rate shipping policy and manual fulfilment workflow.",
       icon: Truck,
-      summary: draft.shipping_sender_postcode ? "Configured" : "Not set up",
+      summary: "$15 AU / Free over $150",
     },
     {
       id: "footer",
@@ -401,6 +409,22 @@ export default function SiteSettingsManager({ settings }) {
                       <LabeledField label="Hero Description" help="Supporting paragraph below the title." fullWidth>
                         <Textarea placeholder="Join the world's most passionate supporter groups..." value={draft.hero_description || ""} onChange={(e) => update("hero_description", e.target.value)} className="min-h-24" />
                       </LabeledField>
+                      <LabeledField label="Scrolling Banner Text" help="One message per line. Up to 12 messages; colours alternate automatically." fullWidth>
+                        <Textarea
+                          placeholder={"LAS VEGAS TAKEOVER 2027\nRUGBY LEAGUE GLOBAL INVASION"}
+                          value={tickerText}
+                          maxLength={1200}
+                          onChange={(e) => update(
+                            "ticker_items",
+                            e.target.value
+                              .split("\n")
+                              .map((line) => line.trim().slice(0, 100))
+                              .filter(Boolean)
+                              .slice(0, 12)
+                          )}
+                          className="min-h-32 font-mono text-xs"
+                        />
+                      </LabeledField>
                     </div>
                   )}
 
@@ -571,40 +595,15 @@ export default function SiteSettingsManager({ settings }) {
                   {activeCategory === "shipping" && (
                     <div className="space-y-4">
                       <div className="border-b border-border/30 pb-2 mb-2">
-                        <h3 className="font-display text-lg uppercase text-primary">Shipping (AusPost)</h3>
+                        <h3 className="font-display text-lg uppercase text-primary">Shipping &amp; Fulfilment</h3>
                         <p className="text-[10px] text-muted-foreground">
-                          The sender/return address AusPost uses to calculate live shipping rates and generate labels. Domestic AU shipments only.
+                          Domestic Australian orders use a simple flat rate at checkout. Fulfilment and tracking are managed manually from each order.
                         </p>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <LabeledField label="Sender name" help="Shown on the label as the return-to contact.">
-                          <Input placeholder="e.g. Dene Palmer" value={draft.shipping_sender_name || ""} onChange={(e) => update("shipping_sender_name", e.target.value)} />
-                        </LabeledField>
-                        <LabeledField label="Business name (optional)">
-                          <Input placeholder="Rugby League Takeover" value={draft.shipping_sender_business_name || ""} onChange={(e) => update("shipping_sender_business_name", e.target.value)} />
-                        </LabeledField>
-                      </div>
-                      <LabeledField label="Address line 1" fullWidth>
-                        <Input placeholder="Street address" value={draft.shipping_sender_address_line1 || ""} onChange={(e) => update("shipping_sender_address_line1", e.target.value)} />
-                      </LabeledField>
-                      <LabeledField label="Address line 2 (optional)" fullWidth>
-                        <Input placeholder="Unit, suite, etc." value={draft.shipping_sender_address_line2 || ""} onChange={(e) => update("shipping_sender_address_line2", e.target.value)} />
-                      </LabeledField>
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <LabeledField label="Suburb">
-                          <Input placeholder="e.g. Brisbane" value={draft.shipping_sender_suburb || ""} onChange={(e) => update("shipping_sender_suburb", e.target.value)} />
-                        </LabeledField>
-                        <LabeledField label="State">
-                          <Input placeholder="e.g. QLD" value={draft.shipping_sender_state || ""} onChange={(e) => update("shipping_sender_state", e.target.value)} />
-                        </LabeledField>
-                        <LabeledField label="Postcode" help="Used as the origin postcode for all rate calculations.">
-                          <Input placeholder="e.g. 4000" inputMode="numeric" maxLength={4} value={draft.shipping_sender_postcode || ""} onChange={(e) => update("shipping_sender_postcode", e.target.value.replace(/\D/g, "").slice(0, 4))} />
-                        </LabeledField>
-                      </div>
-                      <div className="flex items-start gap-2 border border-amber-500/25 bg-amber-500/5 p-3">
-                        <Truck className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-2 border border-primary/25 bg-primary/5 p-4">
+                        <Truck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <p className="text-[10px] leading-relaxed text-slate-300">
-                          Live rates on the store page and label creation both fail until a sender postcode is set here. The AusPost account credentials themselves (API key, account number) are configured as Supabase Edge Function secrets, not here.
+                          <strong className="text-foreground">Current customer policy:</strong> $15 standard shipping Australia-wide, free shipping on orders over $150. Customers supply their address securely in Stripe Checkout. After payment, choose your carrier, add tracking, and update the order status from Orders.
                         </p>
                       </div>
                     </div>

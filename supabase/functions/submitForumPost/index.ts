@@ -80,6 +80,29 @@ Deno.serve(async (req) => {
     // Silently absorb honeypot bot submissions.
     if (isLikelyBot(input)) return json({ ok: true });
 
+    const user = await getCaller(req, svc);
+    if (!user?.id) {
+      return json({ error: 'Login required to post in the forum' }, 401);
+    }
+
+    // Account-based server-side throttle. This is deliberately enforced in the
+    // trusted function (rather than localStorage) so changing devices or
+    // clearing browser data cannot bypass it.
+    const rateWindowStart = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { count: recentPostCount, error: rateLimitError } = await svc
+      .from('forum_posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_date', rateWindowStart);
+    if (rateLimitError) throw rateLimitError;
+    if (Number(recentPostCount || 0) >= 5) {
+      return json({
+        error: 'You have posted several times recently. Please wait a few minutes before posting again.',
+        code: 'rate_limited',
+        retryAfterSeconds: 600,
+      }, 429);
+    }
+
     const category = trimToLength(input?.category || 'General', 32);
     if (!FORUM_CATEGORIES.includes(category)) {
       return json({ error: 'Forum category is not supported' }, 400);
@@ -89,8 +112,7 @@ Deno.serve(async (req) => {
     const body = censorProfanity(trimToLength(input?.body, 2000));
     if (!body) return json({ error: 'Message is required' }, 400);
 
-    const user = await getCaller(req, svc);
-    const authorName = trimToLength(user?.full_name || input?.author_name, 80) || 'Anonymous';
+    const authorName = trimToLength(user.full_name || user.email, 80) || 'Member';
     const ip = resolveClientIp(req);
 
     const mediaUrl = trimToLength(input?.media_url, 600);
@@ -114,9 +136,9 @@ Deno.serve(async (req) => {
         is_published: true,
         is_pinned: false,
         ip_address: ip,
-        user_email: user?.email || '',
-        user_id: user?.id || '',
-        author_avatar: trimToLength(user?.avatar_url, 600),
+        user_email: user.email || '',
+        user_id: user.id,
+        author_avatar: trimToLength(user.avatar_url, 600),
         media_url: mediaUrl,
         media_type: mediaType,
       })

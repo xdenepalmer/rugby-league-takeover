@@ -100,7 +100,6 @@ export default function AboutSection({ settings = {} }) {
 
   return (
     <section
-      id="about"
       ref={sectionRef}
       className="relative border-t border-border bg-secondary/80 overflow-hidden"
     >

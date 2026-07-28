@@ -19,7 +19,57 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, coming_soon: false, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null };
+
+function prepareProduct(input) {
+  const name = String(input?.name || "").trim();
+  const price = Number(input?.price_aud);
+  if (!name) throw new Error("Product name is required.");
+  if (name.length > 160) throw new Error("Product name must be 160 characters or fewer.");
+  if (!Number.isFinite(price) || price < 0.01 || price > 50000) throw new Error("Enter a valid price between $0.01 and $50,000.");
+
+  const seenSizes = new Set();
+  const sizes = (Array.isArray(input?.sizes) ? input.sizes : []).flatMap((entry) => {
+    const size = String(typeof entry === "string" ? entry : entry?.size || "").trim();
+    if (!size) return [];
+    if (size.length > 32) throw new Error("Size labels must be 32 characters or fewer.");
+    const key = size.toLowerCase();
+    if (seenSizes.has(key)) throw new Error(`Duplicate size: ${size}.`);
+    seenSizes.add(key);
+    const stock = Number(typeof entry === "string" ? 0 : entry?.stock_quantity);
+    if (!Number.isInteger(stock) || stock < 0 || stock > 1000000) throw new Error(`Enter valid whole-number stock for size ${size}.`);
+    return [{ size, stock_quantity: stock }];
+  });
+
+  const totalStock = sizes.length
+    ? sizes.reduce((sum, entry) => sum + entry.stock_quantity, 0)
+    : Number(input?.stock_quantity);
+  if (!Number.isInteger(totalStock) || totalStock < 0 || totalStock > 1000000) throw new Error("Stock must be a non-negative whole number.");
+
+  const positiveOptional = (value, label) => {
+    if (value === "" || value == null) return null;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0 || number > 10000) throw new Error(`${label} must be a positive number.`);
+    return number;
+  };
+
+  return {
+    ...input,
+    name,
+    description: String(input?.description || "").trim().slice(0, 5000),
+    details: String(input?.details || "").trim().slice(0, 5000),
+    price_aud: Math.round(price * 100) / 100,
+    stock_quantity: totalStock,
+    sizes,
+    sort_order: Math.max(0, Math.min(1000000, Math.floor(Number(input?.sort_order) || 0))),
+    weight_grams: positiveOptional(input?.weight_grams, "Weight"),
+    length_cm: positiveOptional(input?.length_cm, "Length"),
+    width_cm: positiveOptional(input?.width_cm, "Width"),
+    height_cm: positiveOptional(input?.height_cm, "Height"),
+    is_active: input?.is_active !== false,
+    coming_soon: input?.coming_soon === true,
+  };
+}
 
 /* ── Product Card ── */
 function ProductCard({ product, onUpdate, onDelete, index, saving }) {
@@ -29,8 +79,12 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
   const stock = stockBadge(product.stock_quantity);
 
   const handleSave = () => {
-    onUpdate(draft);
-    setEditing(false);
+    try {
+      onUpdate(prepareProduct(draft));
+      setEditing(false);
+    } catch (error) {
+      toast({ title: "Check product details", description: error.message, variant: "destructive" });
+    }
   };
 
   return (
@@ -118,19 +172,19 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Product Name</label>
-              <Input value={draft.name || ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input value={draft.name || ""} maxLength={160} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Price (AUD)</label>
-              <Input type="number" value={draft.price_aud || 0} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0.01" max="50000" step="0.01" value={draft.price_aud || 0} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Stock Quantity</label>
-              <Input type="number" value={draft.stock_quantity || 0} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0" max="1000000" step="1" disabled={(draft.sizes || []).length > 0} value={draft.stock_quantity || 0} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sort Order</label>
-              <Input type="number" value={draft.sort_order || 1} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0" max="1000000" step="1" value={draft.sort_order || 1} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
           </div>
 
@@ -141,14 +195,14 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping — weight &amp; dimensions (AusPost)</label>
+            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment reference — weight &amp; dimensions</label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-              <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-              <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-              <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0.01" max="10000" step="0.01" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0.01" max="10000" step="0.01" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0.01" max="10000" step="0.01" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <Input type="number" min="0.01" max="10000" step="0.01" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
             </div>
-            <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel.</p>
+            <p className="text-[8px] text-muted-foreground/40">Not used by the flat-rate checkout; keep these details for packing and any future carrier integration.</p>
           </div>
 
           <div className="space-y-1">
@@ -176,6 +230,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
                 <div key={i} className="flex items-center gap-2">
                   <Input
                     placeholder="e.g. S"
+                    maxLength={32}
                     value={sizeObj.size || ""}
                     onChange={(e) => {
                       const next = [...(draft.sizes || [])];
@@ -186,6 +241,9 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
                   />
                   <Input
                     type="number"
+                    min="0"
+                    max="1000000"
+                    step="1"
                     placeholder="Stock"
                     value={sizeObj.stock_quantity ?? 0}
                     onChange={(e) => {
@@ -215,6 +273,10 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
               {draft.is_active !== false ? <Eye className="h-3 w-3 text-emerald-400" /> : <EyeOff className="h-3 w-3 text-muted-foreground/30" />}
               Active
               <Switch checked={draft.is_active !== false} onCheckedChange={(v) => setDraft({ ...draft, is_active: v })} />
+            </label>
+            <label className="touch-target inline-flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+              Coming soon
+              <Switch checked={draft.coming_soon === true} onCheckedChange={(v) => setDraft({ ...draft, coming_soon: v })} />
             </label>
             <div className="flex-1" />
             <Button onClick={handleSave} disabled={saving} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
@@ -271,6 +333,13 @@ export default function ProductsManager({ products, loading }) {
   const activeCount = products.filter((p) => p.is_active !== false).length;
   const lowStockCount = products.filter((p) => Number(p.stock_quantity) > 0 && Number(p.stock_quantity) <= LOW_STOCK).length;
   const outOfStockCount = products.filter((p) => !(Number(p.stock_quantity) > 0)).length;
+  const createProduct = () => {
+    try {
+      createMutation.mutate(prepareProduct(draft));
+    } catch (error) {
+      toast({ title: "Check product details", description: error.message, variant: "destructive" });
+    }
+  };
 
   return (
     <div className="border border-border/60 bg-card/30 cmd-glass overflow-hidden">
@@ -336,11 +405,11 @@ export default function ProductsManager({ products, loading }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Product Name</label>
-                    <Input placeholder="e.g. Takeover Tee" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input placeholder="e.g. Takeover Tee" maxLength={160} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Price (AUD)</label>
-                    <Input type="number" value={draft.price_aud} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input type="number" min="0.01" max="50000" step="0.01" value={draft.price_aud} onChange={(e) => setDraft({ ...draft, price_aud: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                 </div>
                 <ImageField label="Product image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} />
@@ -351,22 +420,22 @@ export default function ProductsManager({ products, loading }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Stock Quantity</label>
-                    <Input type="number" value={draft.stock_quantity} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input type="number" min="0" max="1000000" step="1" disabled={(draft.sizes || []).length > 0} value={draft.stock_quantity} onChange={(e) => setDraft({ ...draft, stock_quantity: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Sort Order</label>
-                    <Input type="number" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <Input type="number" min="0" max="1000000" step="1" value={draft.sort_order} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping — weight &amp; dimensions (AusPost)</label>
+                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment reference — weight &amp; dimensions</label>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                     <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                     <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                     <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                   </div>
-                  <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel.</p>
+                  <p className="text-[8px] text-muted-foreground/40">Not used by the flat-rate checkout; keep these details for packing and any future carrier integration.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -383,6 +452,7 @@ export default function ProductsManager({ products, loading }) {
                       <div key={i} className="flex items-center gap-2">
                         <Input
                           placeholder="e.g. S"
+                          maxLength={32}
                           value={sizeObj.size || ""}
                           onChange={(e) => {
                             const next = [...(draft.sizes || [])];
@@ -393,6 +463,9 @@ export default function ProductsManager({ products, loading }) {
                         />
                         <Input
                           type="number"
+                          min="0"
+                          max="1000000"
+                          step="1"
                           placeholder="Stock"
                           value={sizeObj.stock_quantity ?? 0}
                           onChange={(e) => {
@@ -416,7 +489,11 @@ export default function ProductsManager({ products, loading }) {
                     <p className="text-[10px] text-muted-foreground/30 italic">No size variants — leave empty if sizing doesn't apply</p>
                   )}
                 </div>
-                <Button onClick={() => createMutation.mutate(draft)} disabled={!draft.name || createMutation.isPending} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
+                <label className="touch-target inline-flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Coming soon
+                  <Switch checked={draft.coming_soon === true} onCheckedChange={(v) => setDraft({ ...draft, coming_soon: v })} />
+                </label>
+                <Button onClick={createProduct} disabled={!draft.name || createMutation.isPending} size="mobile" className="rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider hover:bg-primary/90">
                   <Plus className="mr-1.5 h-3 w-3" /> {createMutation.isPending ? "Adding…" : "Add Product"}
                 </Button>
               </div>

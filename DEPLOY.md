@@ -19,13 +19,18 @@ Env vars (Vercel project settings): `VITE_SUPABASE_URL`,
 
 - **Migrations**: files in `supabase/migrations/` are the source of truth;
   apply new ones with `supabase db push` (or the SQL editor, in order).
+  Apply `0010_store_payments_hardening.sql` before deploying the checkout,
+  webhook, status, refund, or promo-code functions because those functions use
+  its RPCs and columns.
   ⚠️ `0009_user_push_tokens.sql` is committed but **not yet applied** — apply
   it when the push-notification story starts.
 - **Edge functions**: deploy changed functions from `supabase/functions/` with
-  `supabase functions deploy <name>`.
+  `supabase functions deploy <name> --no-verify-jwt` (the functions perform
+  their own public/admin authentication checks). The active store path requires
+  `createCheckout`, `checkoutStatus`, `stripeWebhook`, `refundOrder`, and
+  `promoCodes`.
 - **Secrets** (functions): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-  `SITE_URL`; optional `CHECKOUT_ALLOWED_ORIGINS`, `CHECKOUT_DEFAULT_ORIGIN`,
-  AusPost keys.
+  `SITE_URL`; optional `CHECKOUT_ALLOWED_ORIGINS`, `CHECKOUT_DEFAULT_ORIGIN`.
 - **Auth**: redirect allow-list must contain the production domain routes
   (`/account`, `/reset-password`). Native in-app auth return will add entries
   in a later story.
@@ -44,3 +49,12 @@ installed apps — ship a new build via `npm run ios:build` + Xcode archive.
 - Forum post succeeds and appears.
 - `/admin` panels load for an admin account.
 - Store checkout reaches Stripe and the webhook records the order.
+- Create a limited test promo in Command Centre → Store → Promo Codes, apply it
+  in the cart, and confirm Stripe, the paid order, confirmation email, and CSV
+  all show the same discount. Then deactivate the test code.
+- A paid test-mode Checkout becomes a paid order, decrements total and
+  per-size inventory once, and the return page says “Payment verified”.
+- Cancelling or allowing a Checkout to expire leaves the cart intact and does
+  not increase paid-order/revenue figures.
+- An admin test refund appears in Stripe, changes the order to Refunded, and
+  restores inventory only when the admin selected restocking.

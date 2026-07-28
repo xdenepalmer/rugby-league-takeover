@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   MAX_CHECKOUT_QUANTITY,
+  FLAT_DOMESTIC_SHIPPING_AUD,
+  FREE_DOMESTIC_SHIPPING_THRESHOLD_AUD,
   buildCheckoutLineItems,
   buildOrderMetadata,
+  buildDomesticShipping,
   buildShippingLineItem,
   calculateOrderTotalAud,
   getNextStockQuantity,
@@ -23,8 +26,8 @@ test("normalizes cart quantities and removes malformed items", () => {
   ]);
 
   assert.deepEqual(items, [
-    { productId: "shirt", quantity: 3 },
-    { productId: "hat", quantity: MAX_CHECKOUT_QUANTITY },
+    { productId: "shirt", size: "", quantity: 3 },
+    { productId: "hat", size: "", quantity: MAX_CHECKOUT_QUANTITY },
   ]);
 });
 
@@ -51,6 +54,22 @@ test("builds line items only when products are active, priced, and in stock", ()
   assert.equal(success.lineItems[0].price_aud, 49.95);
   assert.equal(success.stripeLineItems[0].price_data.unit_amount, 4995);
   assert.equal(calculateOrderTotalAud(success.lineItems), 99.9);
+});
+
+test("enforces canonical per-size stock and rejects arbitrary sizes", () => {
+  const product = {
+    id: "shirt",
+    name: "Vegas Shirt",
+    price_aud: 49.95,
+    stock_quantity: 4,
+    sizes: [{ size: "S", stock_quantity: 1 }, { size: "M", stock_quantity: 3 }],
+    is_active: true,
+  };
+  const selected = buildCheckoutLineItems([{ productId: "shirt", size: "m", quantity: 2 }], () => product);
+  assert.equal(selected.ok, true);
+  assert.equal(selected.lineItems[0].size, "M");
+  assert.equal(buildCheckoutLineItems([{ productId: "shirt", size: "XL", quantity: 1 }], () => product).ok, false);
+  assert.equal(buildCheckoutLineItems([{ productId: "shirt", size: "S", quantity: 2 }], () => product).ok, false);
 });
 
 test("resolves checkout redirects only to allowlisted origins", () => {
@@ -87,23 +106,30 @@ test("accepts paid webhook sessions only when order, amount, currency, app, and 
     id: "order_123",
     total_aud: 99.9,
     stripe_session_id: "cs_live_123",
+    expected_livemode: true,
   };
   const metadata = buildOrderMetadata({ appId: "app_123", orderId: order.id, totalAud: order.total_aud });
   const session = {
     id: "cs_live_123",
+    mode: "payment",
+    livemode: true,
+    client_reference_id: order.id,
     payment_status: "paid",
     amount_total: 9990,
     currency: "aud",
     metadata,
+    shipping_details: { address: { line1: "1 Caxton St", country: "AU" } },
   };
 
   assert.equal(isPaidSessionForOrder(session, order, "app_123").ok, true);
   assert.equal(isPaidSessionForOrder({ ...session, amount_total: 9991 }, order, "app_123").ok, false);
   assert.equal(isPaidSessionForOrder({ ...session, metadata: { ...metadata, rlt_app_id: "other" } }, order, "app_123").ok, false);
   assert.equal(isPaidSessionForOrder({ ...session, payment_status: "unpaid" }, order, "app_123").ok, false);
+  assert.equal(isPaidSessionForOrder({ ...session, livemode: false }, order, "app_123").ok, false);
+  assert.equal(isPaidSessionForOrder({ ...session, shipping_details: null }, order, "app_123").ok, false);
 });
 
-test("builds a priced AusPost shipping line item and rejects missing rate selections", () => {
+test("builds generic shipping line items and rejects incomplete selections", () => {
   const shipping = buildShippingLineItem({ code: "AUS_PARCEL_REGULAR", name: "Parcel Post", postcode: "4000", price_aud: 12.5 });
   assert.equal(shipping.price_aud, 12.5);
   assert.equal(shipping.stripeLineItem.price_data.unit_amount, 1250);
@@ -117,6 +143,18 @@ test("builds a priced AusPost shipping line item and rejects missing rate select
   assert.equal(buildShippingLineItem(undefined), null);
   assert.equal(buildShippingLineItem({ code: "X", name: "Y", postcode: "", price_aud: 5 }), null);
   assert.equal(buildShippingLineItem({ code: "X", name: "Y", postcode: "4000", price_aud: -1 }), null);
+});
+
+test("applies the approved flat domestic shipping policy", () => {
+  const standard = buildDomesticShipping(FREE_DOMESTIC_SHIPPING_THRESHOLD_AUD - 0.01);
+  assert.equal(standard.code, "DOMESTIC_STANDARD");
+  assert.equal(standard.name, "Standard shipping (4–7 business days)");
+  assert.equal(standard.price_aud, FLAT_DOMESTIC_SHIPPING_AUD);
+  assert.equal(standard.stripeLineItem.price_data.unit_amount, 1500);
+
+  const free = buildDomesticShipping(FREE_DOMESTIC_SHIPPING_THRESHOLD_AUD);
+  assert.equal(free.price_aud, 0);
+  assert.equal(free.stripeLineItem, null);
 });
 
 test("order total includes the selected shipping cost", () => {

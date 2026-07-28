@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { KeyRound, LogOut, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { KeyRound, LogOut, Mail, Lock, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -132,6 +133,16 @@ export default function SecurityTab() {
       <div className="flex justify-end">
         <Button variant="ghost" onClick={() => base44.auth.logout("/")} className="rounded-none text-muted-foreground hover:text-foreground">
           <LogOut className="mr-2 h-4 w-4" /> Log out
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-3 border border-destructive/30 bg-destructive/5 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-foreground">Delete account and data</p>
+          <p className="text-sm text-muted-foreground">Permanently remove your login, profile and associated app data.</p>
+        </div>
+        <Button asChild variant="destructive" className="rounded-none">
+          <Link to="/delete-account"><Trash2 className="mr-2 h-4 w-4" /> Delete account</Link>
         </Button>
       </div>
     </div>

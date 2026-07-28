@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Download, DollarSign, ShoppingCart, Clock, PackageCheck, BadgeCheck,
   ChevronDown, Package, CreditCard, Truck, XCircle, CheckCircle2, RotateCcw,
-  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays, Send, RefreshCw,
+  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays, Printer,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { downloadCsv } from "@/lib/csv";
@@ -17,9 +17,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 
-const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded"];
 const paidLike = ["paid", "packing", "shipped", "completed"];
 const toFulfil = ["paid", "packing"];
+const allowedTransitions = {
+  pending: ["cancelled"],
+  paid: ["packing", "shipped"],
+  packing: ["shipped"],
+  shipped: ["completed"],
+  completed: [],
+  cancelled: [],
+  refunded: [],
+};
 
 const statusConfig = {
   pending:   { label: "Pending",   icon: Clock,         color: "border-amber-500/30 text-amber-400 bg-amber-500/5",      dot: "bg-amber-400" },
@@ -35,9 +43,7 @@ const getStatusConfig = (s) => statusConfig[s] || statusConfig.pending;
 
 /* Shipping method config */
 const SHIPPING_METHODS = {
-  standard: { label: "Standard (7–10 business days)", days: 10 },
-  express:  { label: "Express (3–5 business days)",   days: 5 },
-  priority: { label: "Priority (1–2 business days)",  days: 2 },
+  standard: { label: "Standard (4–7 business days)", days: 7 },
 };
 
 /* Pipeline tabs */
@@ -63,6 +69,92 @@ function calcEstimatedDelivery(shippedAt, shippingMethod) {
   if (!shippedAt) return null;
   const method = SHIPPING_METHODS[shippingMethod] || SHIPPING_METHODS.standard;
   return format(addBusinessDays(new Date(shippedAt), method.days), "yyyy-MM-dd");
+}
+
+function safeTrackingUrl(value) {
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function isStalePending(order) {
+  if (order.status !== "pending") return false;
+  const expiry = order.checkout_expires_at || order.created_date;
+  if (!expiry) return false;
+  const expiryTime = new Date(expiry).getTime() + (order.checkout_expires_at ? 0 : 31 * 60 * 1000);
+  return Number.isFinite(expiryTime) && expiryTime < Date.now();
+}
+
+function shippingAddressLines(order) {
+  const structured = [
+    order.shipping_name || order.customer_name,
+    order.shipping_address_line1,
+    order.shipping_address_line2,
+    [order.shipping_suburb, order.shipping_state, order.shipping_postcode].filter(Boolean).join(" "),
+    order.shipping_country,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  if (order.shipping_address_line1 && structured.length > 1) return structured;
+
+  return String(order.shipping_address || "")
+    .split(/\r?\n|,\s*/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function printShippingAddressLabel(order, lines) {
+  const popup = window.open("", "_blank", "popup,width=700,height=850");
+  if (!popup) {
+    toast({ title: "Print window blocked", description: "Allow pop-ups for this site, then try again.", variant: "destructive" });
+    return;
+  }
+
+  const { document: doc } = popup;
+  doc.title = `RLT address label ${String(order.id || "").slice(-6).toUpperCase()}`;
+  const style = doc.createElement("style");
+  style.textContent = `
+    @page { size: 100mm 150mm; margin: 6mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: #111; font-family: Arial, sans-serif; }
+    .label { width: 88mm; min-height: 138mm; border: 2px solid #111; padding: 9mm; display: flex; flex-direction: column; }
+    .brand { font-size: 10pt; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 4mm; }
+    .to { margin-top: 9mm; font-size: 10pt; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .address { margin-top: 4mm; font-size: 18pt; font-weight: 700; line-height: 1.45; }
+    .order { margin-top: auto; border-top: 1px solid #111; padding-top: 4mm; font: 700 10pt monospace; }
+    .note { margin-top: 2mm; font-size: 8pt; color: #444; }
+    @media screen { body { padding: 20px; } }
+  `;
+  doc.head.appendChild(style);
+
+  const label = doc.createElement("main");
+  label.className = "label";
+  const brand = doc.createElement("div");
+  brand.className = "brand";
+  brand.textContent = "Rugby League Takeover";
+  const to = doc.createElement("div");
+  to.className = "to";
+  to.textContent = "Deliver to";
+  const address = doc.createElement("div");
+  address.className = "address";
+  lines.forEach((line) => {
+    const row = doc.createElement("div");
+    row.textContent = line;
+    address.appendChild(row);
+  });
+  const orderRef = doc.createElement("div");
+  orderRef.className = "order";
+  orderRef.textContent = `ORDER #${String(order.id || "").slice(-6).toUpperCase()}`;
+  const note = doc.createElement("div");
+  note.className = "note";
+  note.textContent = "Address label only — postage and carrier tracking must be purchased separately.";
+  label.append(brand, to, address, orderRef, note);
+  doc.body.replaceChildren(label);
+  doc.close();
+  popup.focus();
+  popup.setTimeout(() => popup.print(), 250);
 }
 
 /* ── Stat Card ── */
@@ -225,8 +317,7 @@ function OrderTimeline({ timeline }) {
 }
 
 /* ── Order Card ── */
-function OrderCard({ order, onUpdate, index, actorEmail }) {
-  const queryClient = useQueryClient();
+function OrderCard({ order, onUpdate, onRefund, refunding, index, actorEmail }) {
   const [expanded, setExpanded] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || "");
   const [trackingUrl, setTrackingUrl] = useState(order.tracking_url || "");
@@ -235,41 +326,26 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [customerNote, setCustomerNote] = useState(order.customer_status_note || "");
   const [confirmAction, setConfirmAction] = useState(null);
   const [showRefundForm, setShowRefundForm] = useState(false);
-  const [refundAmount, setRefundAmount] = useState(Number(order.total_aud || 0));
   const [refundReason, setRefundReason] = useState("");
-  const [freshLabelUrl, setFreshLabelUrl] = useState(null);
-
-  const createLabelMutation = useMutation({
-    mutationFn: () => base44.functions.invoke("auspostCreateLabel", { orderId: order.id }),
-    onSuccess: ({ data }) => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      if (data?.shipping_label_url) setFreshLabelUrl(data.shipping_label_url);
-      if (data?.status === "processing") {
-        toast({ title: "Label is rendering", description: data.message || "AusPost is still generating the label — try again shortly." });
-      } else {
-        toast({ title: "AusPost label ready", description: `Tracking number: ${data?.tracking_number || "pending"}` });
-      }
-    },
-    onError: (error) => toast({ title: "Could not create label", description: error.message, variant: "destructive" }),
-  });
-
-  const refreshTrackingMutation = useMutation({
-    mutationFn: () => base44.functions.invoke("auspostTrack", { orderId: order.id }),
-    onSuccess: ({ data }) => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      toast({ title: "Tracking refreshed", description: data?.latest_event || `Status: ${data?.status || "unknown"}` });
-    },
-    onError: (error) => toast({ title: "Could not refresh tracking", description: error.message, variant: "destructive" }),
-  });
-
+  const [restockRefund, setRestockRefund] = useState(["paid", "packing"].includes(order.status));
   const status = getStatusConfig(order.status || "pending");
   const StatusIcon = status.icon;
   const lineItems = order.line_items || [];
   const isFulfillable = paidLike.includes(order.status) && order.status !== "completed";
   const timeline = order.timeline || [];
+  const nextStatuses = allowedTransitions[order.status || "pending"] || [];
+  const stalePending = isStalePending(order);
+  const addressLines = shippingAddressLines(order);
+  const hasShippingAddress = addressLines.length > 1;
 
   const handleQuickAction = (newStatus) => {
-    if (newStatus === "shipped" && !trackingNumber) {
+    if (newStatus === "shipped" && !hasShippingAddress) {
+      toast({ title: "Shipping address required", description: "This order has no usable delivery address. Confirm the customer's address before marking it as shipped.", variant: "destructive" });
+      setExpanded(true);
+      return;
+    }
+    if (newStatus === "shipped" && (!trackingNumber.trim() || !carrier)) {
+      toast({ title: "Tracking details required", description: "Choose a carrier and enter the tracking number before shipping.", variant: "destructive" });
       setExpanded(true);
       return;
     }
@@ -284,8 +360,19 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     const existingTimeline = [...timeline];
 
     if (confirmAction.status === "shipped") {
-      data.tracking_number = trackingNumber;
-      data.tracking_url = trackingUrl;
+      if (!hasShippingAddress) {
+        toast({ title: "Shipping address required", description: "This order has no usable delivery address. Confirm the customer's address before marking it as shipped.", variant: "destructive" });
+        setConfirmAction(null);
+        setExpanded(true);
+        return;
+      }
+      const verifiedTrackingUrl = safeTrackingUrl(trackingUrl);
+      if (trackingUrl && !verifiedTrackingUrl) {
+        toast({ title: "Invalid tracking link", description: "Tracking links must be a full HTTPS URL.", variant: "destructive" });
+        return;
+      }
+      data.tracking_number = trackingNumber.trim().slice(0, 160);
+      data.tracking_url = verifiedTrackingUrl;
       data.carrier = carrier;
       data.shipped_at = new Date().toISOString();
       // Auto-calculate estimated delivery
@@ -310,10 +397,28 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   };
 
   const handleStatusChange = (value) => {
+    if (!nextStatuses.includes(value)) return;
+    if (value === "shipped" && !hasShippingAddress) {
+      toast({ title: "Shipping address required", description: "This order has no usable delivery address. Confirm the customer's address before marking it as shipped.", variant: "destructive" });
+      setExpanded(true);
+      return;
+    }
+    if (value === "shipped" && (!trackingNumber.trim() || !carrier)) {
+      toast({ title: "Tracking details required", description: "Choose a carrier and enter the tracking number before shipping.", variant: "destructive" });
+      return;
+    }
     const existingTimeline = [...timeline];
     const data = { status: value };
 
     if (value === "shipped" && !order.shipped_at) {
+      const verifiedTrackingUrl = safeTrackingUrl(trackingUrl);
+      if (trackingUrl && !verifiedTrackingUrl) {
+        toast({ title: "Invalid tracking link", description: "Tracking links must be a full HTTPS URL.", variant: "destructive" });
+        return;
+      }
+      data.tracking_number = trackingNumber.trim().slice(0, 160);
+      data.tracking_url = verifiedTrackingUrl;
+      data.carrier = carrier;
       data.shipped_at = new Date().toISOString();
       const method = order.shipping_method || "standard";
       if (!order.estimated_delivery) {
@@ -333,40 +438,32 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     onUpdate(order.id, data);
   };
 
-  const handleShippingMethodChange = (value) => {
-    const data = { shipping_method: value };
-    // If already shipped and no manual estimated_delivery override, recalculate
-    if (order.shipped_at) {
-      data.estimated_delivery = calcEstimatedDelivery(order.shipped_at, value);
-    }
-    onUpdate(order.id, data);
-  };
-
   const handleRefundConfirm = () => {
-    const existingTimeline = [...timeline];
-    existingTimeline.push(makeTimelineEntry(
-      "Status changed to Refunded",
-      actorEmail,
-      `Refund $${Number(refundAmount).toFixed(2)} AUD — ${refundReason || "No reason provided"}`
-    ));
-    onUpdate(order.id, {
-      status: "refunded",
-      refund_amount: Number(refundAmount),
-      refund_reason: refundReason,
-      refunded_at: new Date().toISOString(),
-      timeline: existingTimeline,
-    });
+    if (!refundReason.trim()) {
+      toast({ title: "Refund reason required", description: "Add a short reason before issuing the Stripe refund.", variant: "destructive" });
+      return;
+    }
+    onRefund({ orderId: order.id, reason: refundReason.trim(), restock: restockRefund });
     setShowRefundForm(false);
   };
 
   const copyOrderSummary = async () => {
     const items = lineItems.map((i) => `${i.quantity}x ${i.name}`).join(", ");
-    const summary = `Order #${String(order.id || "").slice(-6).toUpperCase()}\n${order.customer_name || "Customer"}\n${order.customer_email || ""}\n${order.shipping_address || ""}\nItems: ${items}\nTotal: $${Number(order.total_aud || 0).toFixed(2)} AUD`;
+    const summary = `Order #${String(order.id || "").slice(-6).toUpperCase()}\n${order.customer_name || "Customer"}\n${order.customer_email || ""}\n${order.shipping_address || ""}\nItems: ${items}\n${Number(order.discount_amount_aud || 0) > 0 ? `Promo ${order.promo_code || ""}: -$${Number(order.discount_amount_aud).toFixed(2)} AUD\n` : ""}Total: $${Number(order.total_aud || 0).toFixed(2)} AUD`;
     try {
       await navigator.clipboard.writeText(summary);
       toast({ title: "Copied", description: "Order summary copied to clipboard." });
     } catch (err) {
       toast({ title: "Copy failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const copyShippingAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(addressLines.join("\n"));
+      toast({ title: "Address copied", description: "The delivery address is ready to paste into your carrier booking." });
+    } catch {
+      toast({ title: "Copy failed", description: "Select the address and copy it manually.", variant: "destructive" });
     }
   };
 
@@ -410,9 +507,19 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   <BadgeCheck className="h-2.5 w-2.5" /> Verified
                 </span>
               )}
+              {stalePending && (
+                <span className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider text-slate-400">
+                  <AlertTriangle className="h-2.5 w-2.5" /> Abandoned / expired
+                </span>
+              )}
               {order.tracking_number && (
                 <span className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider text-blue-400">
                   <Truck className="h-2.5 w-2.5" /> Tracked
+                </span>
+              )}
+              {hasShippingAddress && (
+                <span className="inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wider text-primary">
+                  <MapPin className="h-2.5 w-2.5" /> Address ready
                 </span>
               )}
             </div>
@@ -500,68 +607,73 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                       <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/10 last:border-0">
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-mono text-muted-foreground/30">{item.quantity}×</span>
-                          <span className="text-sm text-foreground">{item.name}</span>
+                          <span className="text-sm text-foreground">{item.name}{item.size ? ` · Size ${item.size}` : ""}</span>
                         </div>
                         <span className="text-sm font-mono text-muted-foreground tabular-nums">
                           ${Number((item.price_aud || 0) * (item.quantity || 1)).toFixed(2)}
                         </span>
                       </div>
                     ))}
+                    {Number(order.discount_amount_aud || 0) > 0 && (
+                      <div className="flex items-center justify-between border-t border-border/20 pt-2 text-xs font-semibold text-emerald-400">
+                        <span>Promo ({order.promo_code || "discount"})</span>
+                        <span className="font-mono">−${Number(order.discount_amount_aud).toFixed(2)} AUD</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-border/20 pt-2 text-xs text-muted-foreground">
+                      <span>Shipping</span>
+                      <span className="font-mono">{Number(order.shipping_cost_aud || 0) === 0 ? "FREE" : `$${Number(order.shipping_cost_aud).toFixed(2)} AUD`}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm font-bold text-foreground">
+                      <span>Total paid</span>
+                      <span className="font-mono">${Number(order.total_aud || 0).toFixed(2)} AUD</span>
+                    </div>
                   </div>
                 )}
 
                 {/* Shipping address */}
-                {order.shipping_address && (
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 mb-1">Shipping Address</p>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground/40" />
-                      <span className="whitespace-pre-line">{order.shipping_address}</span>
+                <div className={`border p-4 ${hasShippingAddress ? "border-primary/35 bg-primary/[0.05]" : paidLike.includes(order.status) ? "border-destructive/35 bg-destructive/[0.06]" : "border-amber-500/25 bg-amber-500/[0.04]"}`}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-2 flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-primary" /> Delivery Address
+                      </p>
+                      {hasShippingAddress ? (
+                        <div className="space-y-0.5 text-sm font-semibold leading-5 text-foreground">
+                          {addressLines.map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}
+                        </div>
+                      ) : (
+                        <p className="max-w-2xl text-xs leading-5 text-muted-foreground">
+                          {paidLike.includes(order.status)
+                            ? "Payment is verified but no delivery address is stored. Do not ship this order until the address is confirmed in Stripe or with the customer."
+                            : "No delivery address yet. This checkout was not successfully paid; Stripe supplies the address only after payment completes."}
+                        </p>
+                      )}
                     </div>
+                    {hasShippingAddress && paidLike.includes(order.status) && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" onClick={copyShippingAddress} className="min-h-[44px] rounded-none border-border/50 text-[9px] font-bold uppercase tracking-wider">
+                          <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy Address
+                        </Button>
+                        <Button onClick={() => printShippingAddressLabel(order, addressLines)} className="min-h-[44px] rounded-none bg-primary text-[9px] font-bold uppercase tracking-wider">
+                          <Printer className="mr-1.5 h-3.5 w-3.5" /> Print Address Label
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {/* AusPost label + tracking actions */}
+                {/* Manual fulfilment reminder */}
                 <div className="border border-border/20 bg-muted/5 p-3 space-y-2">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
-                    <Truck className="h-3 w-3 text-primary" /> AusPost Shipping
+                    <Truck className="h-3 w-3 text-primary" /> Manual fulfilment
                   </p>
-                  {!order.shipping_postcode || !order.shipping_address_line1 ? (
-                    <p className="text-[10px] text-muted-foreground/40 italic">No structured shipping address on file yet for this order.</p>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => createLabelMutation.mutate()}
-                        disabled={createLabelMutation.isPending || !["paid", "packing"].includes(order.status)}
-                        className="h-9 rounded-none bg-primary/90 hover:bg-primary text-[9px] font-bold uppercase tracking-wider"
-                      >
-                        <Send className="mr-1.5 h-3 w-3" />
-                        {createLabelMutation.isPending ? "Creating…" : order.shipping_label_url ? "Refresh Label Link" : "Create AusPost Label"}
-                      </Button>
-                      {order.tracking_number && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => refreshTrackingMutation.mutate()}
-                          disabled={refreshTrackingMutation.isPending}
-                          className="h-9 rounded-none border-border/40 text-[9px] font-bold uppercase tracking-wider"
-                        >
-                          <RefreshCw className="mr-1.5 h-3 w-3" /> {refreshTrackingMutation.isPending ? "Refreshing…" : "Refresh Tracking"}
-                        </Button>
-                      )}
-                      {(freshLabelUrl || (order.shipping_label_url && /^https?:\/\//i.test(order.shipping_label_url))) && (
-                        <a
-                          href={freshLabelUrl || order.shipping_label_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex h-9 items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/5 px-3 text-[9px] font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500/10"
-                        >
-                          <Download className="h-3 w-3" /> Download Label
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    Pack the order, buy postage through your preferred carrier, then add the carrier and tracking details below before marking it as shipped.
+                  </p>
+                  <p className="text-[10px] leading-relaxed text-amber-300/80">
+                    “Print Address Label” fits a 4×6/A6 thermal label, but it is not paid postage. Without a carrier API, purchase postage separately online or at the counter.
+                  </p>
                 </div>
 
                 {/* Status + Carrier + Shipping Method */}
@@ -572,10 +684,11 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                       <Select
                         value={order.status || "pending"}
                         onValueChange={handleStatusChange}
+                        disabled={nextStatuses.length === 0}
                       >
                         <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {statuses.map((s) => {
+                          {[order.status || "pending", ...nextStatuses].map((s) => {
                             const conf = getStatusConfig(s);
                             return (
                               <SelectItem key={s} value={s}>
@@ -600,20 +713,12 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                       </Select>
                     </div>
 
-                    {/* Shipping Method Selector */}
+                    {/* Shipping Method */}
                     <div className="space-y-1">
                       <label htmlFor={`order-shipping-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping Method</label>
-                      <Select
-                        value={order.shipping_method || "standard"}
-                        onValueChange={handleShippingMethodChange}
-                      >
-                        <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(SHIPPING_METHODS).map(([key, { label }]) => (
-                            <SelectItem key={key} value={key}>{label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div id={`order-shipping-${order.id}`} className="h-11 flex items-center px-3 border border-border/40 bg-muted/5 text-sm text-muted-foreground">
+                        {SHIPPING_METHODS.standard.label}
+                      </div>
                     </div>
                   </div>
 
@@ -624,8 +729,9 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         id={`order-tracking-${order.id}`}
                         placeholder="e.g. AU123456789"
                         value={trackingNumber}
+                        maxLength={160}
                         onChange={(e) => setTrackingNumber(e.target.value)}
-                        onBlur={() => trackingNumber !== (order.tracking_number || "") && onUpdate(order.id, { tracking_number: trackingNumber })}
+                        onBlur={() => trackingNumber !== (order.tracking_number || "") && onUpdate(order.id, { tracking_number: trackingNumber.trim().slice(0, 160) })}
                         className="h-11 rounded-none border-border/40 text-sm font-mono"
                       />
                     </div>
@@ -636,12 +742,22 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                           id={`order-tracking-url-${order.id}`}
                           placeholder="https://track.auspost.com.au/..."
                           value={trackingUrl}
+                          maxLength={2000}
                           onChange={(e) => setTrackingUrl(e.target.value)}
-                          onBlur={() => trackingUrl !== (order.tracking_url || "") && onUpdate(order.id, { tracking_url: trackingUrl })}
+                          onBlur={() => {
+                            if (trackingUrl === (order.tracking_url || "")) return;
+                            const verified = safeTrackingUrl(trackingUrl);
+                            if (trackingUrl && !verified) {
+                              toast({ title: "Invalid tracking link", description: "Tracking links must be a full HTTPS URL.", variant: "destructive" });
+                              setTrackingUrl(order.tracking_url || "");
+                              return;
+                            }
+                            onUpdate(order.id, { tracking_url: verified });
+                          }}
                           className="h-11 rounded-none border-border/40 text-sm font-mono flex-1"
                         />
-                        {trackingUrl && (
-                          <a href={trackingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-11 w-11 border border-border/40 text-muted-foreground hover:text-primary transition-colors shrink-0">
+                        {safeTrackingUrl(trackingUrl) && (
+                          <a href={safeTrackingUrl(trackingUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-11 w-11 border border-border/40 text-muted-foreground hover:text-primary transition-colors shrink-0">
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         )}
@@ -670,6 +786,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                     id={`order-notes-${order.id}`}
                     placeholder="Add internal notes…"
                     value={notes}
+                    maxLength={2000}
                     onChange={(e) => setNotes(e.target.value)}
                     onBlur={() => notes !== (order.shipping_notes || "") && onUpdate(order.id, { shipping_notes: notes })}
                     className="min-h-20 resize-none rounded-none border-border/40 text-sm"
@@ -686,6 +803,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                     id={`order-customer-note-${order.id}`}
                     placeholder="e.g. Your order is being packed with care!"
                     value={customerNote}
+                    maxLength={500}
                     onChange={(e) => setCustomerNote(e.target.value)}
                     onBlur={() => customerNote !== (order.customer_status_note || "") && onUpdate(order.id, { customer_status_note: customerNote })}
                     className="min-h-16 resize-none rounded-none border-blue-500/30 bg-blue-500/[0.04] text-sm focus-visible:ring-blue-500/30"
@@ -693,7 +811,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                 </div>
 
                 {/* Refund Action */}
-                {order.status !== "refunded" && (
+                {paidLike.includes(order.status) && order.payment_verified_at && (
                   <div>
                     {!showRefundForm ? (
                       <Button
@@ -708,18 +826,15 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         <div className="flex items-center gap-2 text-xs font-bold text-destructive uppercase tracking-wider">
                           <AlertTriangle className="h-3.5 w-3.5" /> Issue Refund
                         </div>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          This sends a real full refund through Stripe for <strong className="text-foreground">${Number(order.total_aud || 0).toFixed(2)} AUD</strong>. Partial refunds are not supported here.
+                        </p>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div className="space-y-1">
                             <label htmlFor={`order-refund-amount-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Refund Amount (AUD)</label>
-                            <Input
-                              id={`order-refund-amount-${order.id}`}
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={refundAmount}
-                              onChange={(e) => setRefundAmount(e.target.value)}
-                              className="h-11 rounded-none border-border/40 text-sm font-mono"
-                            />
+                            <div id={`order-refund-amount-${order.id}`} className="h-11 flex items-center px-3 border border-border/40 bg-muted/5 text-sm font-mono">
+                              ${Number(order.total_aud || 0).toFixed(2)}
+                            </div>
                           </div>
                           <div className="space-y-1">
                             <label htmlFor={`order-refund-reason-${order.id}`} className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Reason</label>
@@ -727,22 +842,33 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                               id={`order-refund-reason-${order.id}`}
                               placeholder="Reason for refund…"
                               value={refundReason}
+                              maxLength={500}
                               onChange={(e) => setRefundReason(e.target.value)}
                               className="min-h-11 resize-none rounded-none border-border/40 text-sm"
                             />
                           </div>
                         </div>
+                        <label className="flex min-h-[44px] items-center gap-3 border border-border/30 bg-background/30 px-3 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={restockRefund}
+                            onChange={(event) => setRestockRefund(event.target.checked)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          Restore the purchased quantities to store inventory
+                        </label>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="destructive"
                             onClick={handleRefundConfirm}
+                            disabled={refunding || !refundReason.trim()}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px]"
                           >
-                            Confirm Refund
+                            {refunding ? "Refunding in Stripe..." : "Confirm Stripe Refund"}
                           </Button>
                           <Button
                             variant="outline"
-                            onClick={() => { setShowRefundForm(false); setRefundReason(""); setRefundAmount(Number(order.total_aud || 0)); }}
+                            onClick={() => { setShowRefundForm(false); setRefundReason(""); }}
                             className="rounded-none text-[9px] font-bold uppercase tracking-wider min-h-[44px] border-border/30"
                           >
                             Cancel
@@ -827,11 +953,27 @@ export default function OrdersManager({ orders }) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
     },
   });
+  const refundMutation = useMutation({
+    mutationFn: (payload) => base44.functions.invoke("refundOrder", payload),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({
+        title: response?.data?.status === "pending" ? "Refund submitted" : "Refund issued",
+        description: response?.data?.status === "pending"
+          ? "Stripe is processing the refund. The order will update when it succeeds."
+          : "Stripe confirmed the full refund and the order was updated.",
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Refund failed", description: error?.message || "Stripe did not confirm the refund.", variant: "destructive" });
+    },
+  });
 
   const handleUpdate = (id, data) => updateMutation.mutate({ id, data });
 
   const revenue = useMemo(() => orders.filter((o) => paidLike.includes(o.status)).reduce((s, o) => s + Number(o.total_aud || 0), 0), [orders]);
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
+  const paidOrderCount = orders.filter((o) => paidLike.includes(o.status)).length;
+  const pendingCount = orders.filter((o) => o.status === "pending" && !isStalePending(o)).length;
   const fulfilCount = orders.filter((o) => toFulfil.includes(o.status)).length;
 
   // Pipeline counts
@@ -852,16 +994,20 @@ export default function OrdersManager({ orders }) {
     const activeTab = PIPELINE_TABS.find((t) => t.key === pipelineTab);
     return orders.filter((o) => {
       if (activeTab && activeTab.statuses && !activeTab.statuses.includes(o.status || "pending")) return false;
-      const hay = `${o.customer_name || ""} ${o.customer_email || ""} ${o.tracking_number || ""} ${(o.line_items || []).map((i) => i.name).join(" ")}`.toLowerCase();
+      const hay = `${o.customer_name || ""} ${o.customer_email || ""} ${o.tracking_number || ""} ${o.promo_code || ""} ${(o.line_items || []).map((i) => i.name).join(" ")}`.toLowerCase();
       return hay.includes(term);
     });
   }, [orders, search, pipelineTab]);
 
   const exportCsv = () => {
-    const headers = ["Date", "Customer", "Email", "Account", "Status", "Total AUD", "Items", "Carrier", "Tracking", "Notes"];
+    const headers = ["Date", "Customer", "Email", "Account", "Status", "Merchandise AUD", "Promo Code", "Discount AUD", "Shipping AUD", "Total AUD", "Items", "Carrier", "Tracking", "Notes"];
     const rows = filtered.map((o) => [
       o.created_date ? format(new Date(o.created_date), "yyyy-MM-dd") : "",
       o.customer_name, o.customer_email, o.user_email || "guest", o.status || "pending",
+      Number(o.merchandise_subtotal_aud || 0).toFixed(2),
+      o.promo_code || "",
+      Number(o.discount_amount_aud || 0).toFixed(2),
+      Number(o.shipping_cost_aud || 0).toFixed(2),
       Number(o.total_aud || 0).toFixed(2),
       (o.line_items || []).map((i) => `${i.quantity}x ${i.name}`).join("; "),
       o.carrier || "", o.tracking_number || "", o.shipping_notes || "",
@@ -899,8 +1045,8 @@ export default function OrdersManager({ orders }) {
         {/* Stats */}
         <div className="grid gap-2 grid-cols-2 lg:grid-cols-4 mb-5">
           <StatCard icon={DollarSign} label="Revenue (paid)" value={`$${revenue.toFixed(2)}`} accent="text-emerald-400" />
-          <StatCard icon={ShoppingCart} label="Total orders" value={orders.length} />
-          <StatCard icon={Clock} label="Pending payment" value={pendingCount} accent={pendingCount > 0 ? "text-amber-400" : ""} />
+          <StatCard icon={ShoppingCart} label="Paid orders" value={paidOrderCount} />
+          <StatCard icon={Clock} label="Active checkouts" value={pendingCount} accent={pendingCount > 0 ? "text-amber-400" : ""} />
           <StatCard icon={PackageCheck} label="To fulfil" value={fulfilCount} accent={fulfilCount > 0 ? "text-sky-400" : ""} />
         </div>
 
@@ -951,6 +1097,8 @@ export default function OrdersManager({ orders }) {
               order={order}
               index={index}
               onUpdate={handleUpdate}
+              onRefund={(payload) => refundMutation.mutate(payload)}
+              refunding={refundMutation.isPending && refundMutation.variables?.orderId === order.id}
               actorEmail={user?.email}
             />
           ))}

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Activity, Package, HelpCircle } from "lucide-react";
+import { ShoppingBag, Activity, Package, HelpCircle, TicketPercent } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ProductsManager from "../ProductsManager";
 import OrdersManager from "../OrdersManager";
 import FaqManager from "../FaqManager";
+import PromoCodesManager from "../PromoCodesManager";
 
 export default function StorePanel() {
   const [activeTab, setActiveTab] = useState("products");
@@ -15,6 +16,7 @@ export default function StorePanel() {
 
   const tabs = [
     { id: "products", label: "Merch Products", icon: Package, count: products.length },
+    { id: "promos", label: "Promo Codes", icon: TicketPercent, count: null },
     { id: "orders", label: "Orders & Shipping", icon: ShoppingBag, count: orders.length },
     { id: "faqs", label: "Store FAQs", icon: HelpCircle, count: faqs.length },
   ];
@@ -66,9 +68,11 @@ export default function StorePanel() {
             >
               <Icon className={`h-4 w-4 ${isActive ? "text-accent" : "text-muted-foreground/60"}`} />
               <span>{tab.label}</span>
-              <span className={`text-[9px] font-mono px-1.5 py-0.25 ${isActive ? "bg-accent/20 text-accent border border-accent/25" : "bg-muted/30 text-muted-foreground border border-border/40"}`}>
-                {tab.count}
-              </span>
+              {tab.count !== null && (
+                <span className={`text-[9px] font-mono px-1.5 py-0.25 ${isActive ? "bg-accent/20 text-accent border border-accent/25" : "bg-muted/30 text-muted-foreground border border-border/40"}`}>
+                  {tab.count}
+                </span>
+              )}
               {isActive && (
                 <motion.div
                   layoutId="store-subtabs-glow"
@@ -105,6 +109,18 @@ export default function StorePanel() {
               transition={{ duration: 0.18 }}
             >
               <OrdersManager orders={orders} />
+            </motion.div>
+          )}
+
+          {activeTab === "promos" && (
+            <motion.div
+              key="promos-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              <PromoCodesManager />
             </motion.div>
           )}
 

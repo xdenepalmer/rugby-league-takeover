@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User as UserIcon, ShieldCheck, LogOut, ShoppingBag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { scrollToHashTarget } from "@/lib/scroll-to-hash";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -46,15 +47,9 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
     e.preventDefault();
     const hash = href.substring(1); // e.g. "#events"
 
-    const scrollToTarget = (attempt = 0) => {
-      const el = document.querySelector(hash);
-      if (el) {
-        setActiveHash(hash);
-        window.history.replaceState(null, "", `/${hash}`);
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      if (attempt < 6) setTimeout(() => scrollToTarget(attempt + 1), 150);
+    const scrollToTarget = () => {
+      setActiveHash(hash);
+      scrollToHashTarget(hash, { updateHistory: true });
     };
 
     if (location.pathname === "/") {
@@ -283,7 +278,7 @@ export default function SiteNav({ settings = {}, settingsLoading = false }) {
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-[200] w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${scrolled ? "bg-background/85 backdrop-blur-xl" : ""}`}>
+    <header data-site-header className={`fixed top-0 left-0 right-0 z-[200] w-full pointer-events-none transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${scrolled ? "bg-background/85 backdrop-blur-xl" : ""}`}>
       <div 
         className={`pointer-events-auto mx-auto flex items-center justify-between transition-[background-color,border-color,box-shadow,padding] duration-300 ${
           scrolled

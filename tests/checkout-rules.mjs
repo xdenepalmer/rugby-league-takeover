@@ -1,12 +1,14 @@
 export const MAX_CHECKOUT_QUANTITY = 20;
+export const FLAT_DOMESTIC_SHIPPING_AUD = 15;
+export const FREE_DOMESTIC_SHIPPING_THRESHOLD_AUD = 150;
 export const CHECKOUT_CURRENCY = "aud";
 export const DEFAULT_CHECKOUT_ORIGIN = "https://rugbyleagetakeover.base44.app";
 
 const toTrimmedString = (value) => String(value ?? "").trim();
 
-const toPositiveInteger = (value, fallback = 1) => {
-  const number = Math.floor(Number(value));
-  return Number.isFinite(number) && number > 0 ? number : fallback;
+const toPositiveInteger = (value, fallback = null) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
 };
 
 const toMoneyCents = (value) => {
@@ -23,16 +25,22 @@ const getTrackedStock = (product) => {
 export function normalizeCheckoutItems(rawItems) {
   if (!Array.isArray(rawItems)) return [];
 
+  if (rawItems.length > 40) return [];
   const byProductId = new Map();
   for (const item of rawItems) {
     const productId = toTrimmedString(item?.productId);
-    if (!productId) continue;
+    const quantity = toPositiveInteger(item?.quantity);
+    if (!productId || !quantity) continue;
 
-    const quantity = Math.min(toPositiveInteger(item?.quantity), MAX_CHECKOUT_QUANTITY);
-    byProductId.set(productId, Math.min((byProductId.get(productId) || 0) + quantity, MAX_CHECKOUT_QUANTITY));
+    const size = toTrimmedString(item?.size);
+    const key = `${productId}::${size.toLowerCase()}`;
+    const existing = byProductId.get(key) || { productId, size, quantity: 0 };
+    existing.quantity = Math.min(existing.quantity + quantity, MAX_CHECKOUT_QUANTITY);
+    byProductId.set(key, existing);
+    if (byProductId.size > 20) return [];
   }
 
-  return [...byProductId.entries()].map(([productId, quantity]) => ({ productId, quantity }));
+  return [...byProductId.values()];
 }
 
 export function buildCheckoutLineItems(items, getProduct) {
@@ -41,7 +49,7 @@ export function buildCheckoutLineItems(items, getProduct) {
 
   for (const item of items) {
     const product = getProduct(item.productId);
-    if (!product || product.is_active === false) {
+    if (!product || product.is_active === false || product.coming_soon === true) {
       return { ok: false, status: 404, error: `Product '${item.productId}' is not available` };
     }
 
@@ -55,9 +63,25 @@ export function buildCheckoutLineItems(items, getProduct) {
       return { ok: false, status: 409, error: `Not enough stock for product '${product.name || item.productId}'` };
     }
 
+    const variants = Array.isArray(product.sizes) ? product.sizes.map((entry) => ({
+      size: toTrimmedString(typeof entry === "string" ? entry : entry?.size),
+      stock_quantity: Math.max(0, Math.floor(Number(typeof entry === "string" ? 0 : entry?.stock_quantity) || 0)),
+    })).filter((entry) => entry.size) : [];
+    let canonicalSize = "";
+    if (variants.length) {
+      const variant = variants.find((entry) => entry.size.toLowerCase() === toTrimmedString(item.size).toLowerCase());
+      if (!variant || variant.stock_quantity < item.quantity) {
+        return { ok: false, status: 409, error: `Select an available size for '${product.name || item.productId}'` };
+      }
+      canonicalSize = variant.size;
+    } else if (item.size) {
+      return { ok: false, status: 409, error: `Product '${product.name || item.productId}' does not use sizes` };
+    }
+
     lineItems.push({
       product_id: product.id,
       name: product.name,
+      size: canonicalSize,
       quantity: item.quantity,
       price_aud: Number((unitAmount / 100).toFixed(2)),
     });
@@ -88,9 +112,7 @@ export function calculateOrderTotalAud(lineItems, shippingCostAud = 0) {
   return Number(((cents + Math.round(Number(shippingCostAud || 0) * 100)) / 100).toFixed(2));
 }
 
-// A priced AusPost shipping selection (from the auspostRates function) is
-// required before checkout — this builds its order-record fields and, when
-// the price is non-zero, the Stripe line item that charges for it.
+// Generic shipping line-item helper used by the flat-rate policy below.
 export function buildShippingLineItem(shipping) {
   const code = toTrimmedString(shipping?.code);
   const name = toTrimmedString(shipping?.name) || "Shipping";
@@ -110,11 +132,23 @@ export function buildShippingLineItem(shipping) {
           price_data: {
             currency: CHECKOUT_CURRENCY,
             unit_amount: unitAmount,
-            product_data: { name: `Shipping — ${name} (AusPost)` },
+            product_data: { name: `Shipping — ${name}` },
           },
         }
       : null,
   };
+}
+
+export function buildDomesticShipping(subtotalAud) {
+  const price = Number(subtotalAud) >= FREE_DOMESTIC_SHIPPING_THRESHOLD_AUD
+    ? 0
+    : FLAT_DOMESTIC_SHIPPING_AUD;
+  return buildShippingLineItem({
+    code: "DOMESTIC_STANDARD",
+    name: "Standard shipping (4–7 business days)",
+    postcode: "AU",
+    price_aud: price,
+  });
 }
 
 export function resolveCheckoutOrigin(originHeader, allowlistEnv, fallback = DEFAULT_CHECKOUT_ORIGIN) {
@@ -150,14 +184,20 @@ export function buildOrderMetadata({ appId, orderId, totalAud }) {
 
 export function isPaidSessionForOrder(session, order, expectedAppId = "") {
   if (!session || !order) return { ok: false, error: "Missing session or order" };
+  if (session.mode !== "payment") return { ok: false, error: "Unexpected Checkout mode" };
   if (session.payment_status !== "paid") return { ok: false, error: "Checkout session is not paid" };
-  if (order.stripe_session_id && session.id !== order.stripe_session_id) return { ok: false, error: "Checkout session does not match order" };
-  if (session.metadata?.order_id && session.metadata.order_id !== order.id) return { ok: false, error: "Session order metadata does not match order" };
-  if (expectedAppId && session.metadata?.rlt_app_id && session.metadata.rlt_app_id !== expectedAppId) return { ok: false, error: "Session app metadata does not match this app" };
+  if (session.id !== order.stripe_session_id) return { ok: false, error: "Checkout session does not match order" };
+  if (session.client_reference_id !== order.id) return { ok: false, error: "Session client reference does not match order" };
+  if (session.metadata?.order_id !== order.id) return { ok: false, error: "Session order metadata does not match order" };
+  if (expectedAppId && session.metadata?.rlt_app_id !== expectedAppId) return { ok: false, error: "Session app metadata does not match this app" };
+  if (Boolean(session.livemode) !== Boolean(order.expected_livemode)) return { ok: false, error: "Stripe mode does not match" };
   if (String(session.currency || "").toLowerCase() !== CHECKOUT_CURRENCY) return { ok: false, error: "Checkout currency does not match" };
 
   const expectedCents = Math.round(Number(order.total_aud || 0) * 100);
   if (Number(session.amount_total) !== expectedCents) return { ok: false, error: "Checkout amount does not match order total" };
+  if (!session.shipping_details?.address?.line1 || String(session.shipping_details.address.country).toUpperCase() !== "AU") {
+    return { ok: false, error: "Australian shipping address required" };
+  }
 
   return { ok: true };
 }

@@ -155,12 +155,12 @@ export default function Register() {
                 autoFocus
                 autoComplete="one-time-code"
               >
-                <InputOTPGroup className="gap-2.5">
+                <InputOTPGroup className="w-full justify-center gap-1 sm:gap-2.5">
                   {[0, 1, 2, 3, 4, 5].map((idx) => (
                     <InputOTPSlot 
                       key={idx}
                       index={idx} 
-                      className="w-12 h-14 text-lg font-bold border border-border bg-background/40 hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-none transition-all duration-300"
+                      className="h-12 w-9 text-base font-bold border border-border bg-background/40 hover:border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary rounded-none transition-all duration-300 sm:h-14 sm:w-12 sm:text-lg"
                     />
                   ))}
                 </InputOTPGroup>

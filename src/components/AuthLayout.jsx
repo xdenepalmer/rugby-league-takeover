@@ -79,7 +79,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
       </div>
 
       {/* ── RIGHT HALF: AUTH FORM (Full-width on mobile) ── */}
-      <div className="flex max-h-dvh items-center justify-center overflow-y-auto p-6 sm:p-10 md:p-16 z-10 relative">
+      <div className="flex max-h-dvh items-center justify-center overflow-y-auto p-4 sm:p-10 md:p-16 z-10 relative">
         {/* Mobile Background visual (Atmospheric Gradient behind card) */}
         <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/5 to-accent/5 z-0 lg:hidden" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:48px_48px] opacity-30 z-0 lg:hidden" />
@@ -108,7 +108,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
           </div>
 
           {/* Glassmorphic Form Wrapper Card */}
-          <div className="bg-card/50 border border-border cmd-glass p-8 relative overflow-hidden shadow-2xl">
+          <div className="bg-card/50 border border-border cmd-glass p-5 relative overflow-hidden shadow-2xl sm:p-8">
             {/* Top Accent Streamer Line */}
             <div className="absolute top-0 left-0 right-0 h-[2px] cmd-accent-bar" />
             

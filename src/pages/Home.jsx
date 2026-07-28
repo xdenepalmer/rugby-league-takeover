@@ -222,7 +222,7 @@ const defaultEvent = {
   is_coming_soon: true,
 };
 
-const tickerItems = [
+const DEFAULT_TICKER_ITEMS = [
   { text: "LAS VEGAS TAKEOVER 2027", type: "gold" },
   { text: "RUGBY LEAGUE GLOBAL INVASION", type: "red" },
   { text: "VIP TRAVEL PACKAGES DROPPING SOON", type: "gold" },
@@ -281,6 +281,18 @@ export default function Home() {
   const { data: events = [] } = useQuery({ queryKey: ["events"], queryFn: () => base44.entities.EventContent.list("-updated_date", 5), enabled: queriesEnabled });
 
   const settings = settingsRecords[0] || {};
+  const configuredTickerItems = Array.isArray(settings.ticker_items)
+    ? settings.ticker_items
+        .map((item, index) => ({
+          text: String(typeof item === "string" ? item : item?.text || "").trim().slice(0, 100),
+          type: typeof item === "object" && ["gold", "red"].includes(item?.type)
+            ? item.type
+            : index % 2 === 0 ? "gold" : "red",
+        }))
+        .filter((item) => item.text)
+        .slice(0, 12)
+    : [];
+  const tickerItems = configuredTickerItems.length ? configuredTickerItems : DEFAULT_TICKER_ITEMS;
   const visibleNews = (news.length ? news : defaultNews).filter((article) => article.is_published !== false).slice(0, 6);
   const visiblePackages = packages.length ? packages : defaultPackages;
   const event = events[0] || defaultEvent;
@@ -415,7 +427,7 @@ export default function Home() {
         {/* About Section */}
         <motion.div
           id="about"
-          style={{ scrollMarginTop: "80px" }}
+          className="scroll-mt-[calc(5.5rem+env(safe-area-inset-top,0px))]"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}

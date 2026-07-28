@@ -12,6 +12,7 @@ import ScrollProgressBar from "./ScrollProgressBar";
 import AdSlot from "@/components/ads/AdSlot";
 import PublicOfflineBanner from "@/components/PublicOfflineBanner";
 import { selectionChanged } from "@/lib/native/haptics";
+import { scrollToHashTarget } from "@/lib/scroll-to-hash";
 
 const MobileCommandSheet = lazy(() => import("./MobileCommandSheet"));
 
@@ -28,17 +29,9 @@ export default function PublicLayout() {
   const handleNavigate = (hash) => {
     if (location.pathname !== "/") {
       navigate("/");
-      setTimeout(() => {
-        const element = document.querySelector(hash);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 300);
+      setTimeout(() => scrollToHashTarget(hash, { updateHistory: true }), 150);
     } else {
-      const element = document.querySelector(hash);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
+      scrollToHashTarget(hash, { updateHistory: true });
     }
   };
   

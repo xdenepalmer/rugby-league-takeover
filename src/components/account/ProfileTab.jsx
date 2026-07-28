@@ -4,8 +4,6 @@ import { Save } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
 import { useAuth } from "@/lib/AuthContext";
-import { isNativeApp } from "@/lib/native/native-env";
-import PushNotificationToggle from "@/components/account/PushNotificationToggle";
 import { ALL_TEAMS } from "@/lib/nrl-teams";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -48,8 +46,6 @@ const profileFields = (user) => ({
   show_location_on_forum: user?.show_location_on_forum === true,
   show_team_on_forum: user?.show_team_on_forum === true,
   marketing_opt_in: user?.marketing_opt_in === true,
-  forum_mentions_opt_in: user?.forum_mentions_opt_in !== false,
-  push_opt_in: user?.push_opt_in === true,
 });
 
 export default function ProfileTab() {
@@ -202,24 +198,12 @@ export default function ProfileTab() {
             </div>
             <Switch checked={draft.marketing_opt_in} onCheckedChange={(value) => update("marketing_opt_in", value)} />
           </label>
-          <label className="flex items-center justify-between text-sm cursor-pointer select-none border-t border-border/10 pt-4">
+          <div className="flex items-start justify-between border-t border-border/10 pt-4 text-sm">
             <div className="space-y-0.5 pr-4">
-              <span className="font-semibold">Forum Mentions &amp; Replies</span>
-              <p className="text-xs text-muted-foreground">Receive instant alerts when someone mentions you or replies to your threads.</p>
+              <span className="font-semibold">Forum notifications</span>
+              <p className="text-xs text-muted-foreground">Mentions and replies appear in your in-app notification centre automatically.</p>
             </div>
-            <Switch checked={draft.forum_mentions_opt_in} onCheckedChange={(value) => update("forum_mentions_opt_in", value)} />
-          </label>
-          {isNativeApp() ? (
-            <PushNotificationToggle />
-          ) : (
-            <label className="flex items-center justify-between text-sm cursor-pointer select-none border-t border-border/10 pt-4">
-              <div className="space-y-0.5 pr-4">
-                <span className="font-semibold">Browser Push Notifications</span>
-                <p className="text-xs text-muted-foreground">Stay updated on match countdowns and ticket alerts even when you're offline.</p>
-              </div>
-              <Switch checked={draft.push_opt_in} onCheckedChange={(value) => update("push_opt_in", value)} />
-            </label>
-          )}
+          </div>
         </div>
       </div>
 

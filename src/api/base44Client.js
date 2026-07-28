@@ -50,6 +50,7 @@ const WRITE_TABLES = {
 const READ_TABLES = {
   ...WRITE_TABLES,
   ForumPost: 'forum_posts_view',
+  SiteSettings: 'site_settings_view',
   Testimonial: 'testimonials_view',
   TippingEntry: 'tipping_entries_view',
 };

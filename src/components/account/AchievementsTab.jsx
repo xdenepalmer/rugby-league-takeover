@@ -162,7 +162,7 @@ export default function AchievementsTab() {
       })}
 
       <p className="text-center text-[9px] text-muted-foreground/40">
-        Achievements unlock automatically as you post, react, keep streaks, climb ranks and collect slot badges — and they follow you across devices.
+        Account-backed forum, streak, rank and chip achievements follow you across devices. The for-fun slot collection is stored only on the device where you play.
       </p>
     </div>
   );

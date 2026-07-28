@@ -23,7 +23,9 @@ import {
   Info,
   Lock,
   Truck,
-  Ruler
+  Ruler,
+  Tag,
+  X
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -35,11 +37,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { openExternalUrl } from "@/lib/native/open-external";
+import { isNativeApp } from "@/lib/native/native-env";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
+const FLAT_DOMESTIC_SHIPPING_AUD = 15;
+const FREE_SHIPPING_THRESHOLD_AUD = 150;
+const STRIPE_CHECKOUT_SESSION_ID_PATTERN = /^cs_(test_|live_)[A-Za-z0-9]+$/;
 
 const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease, onOpenQuickView }) {
   const stock = Number(product.stock_quantity);
@@ -230,10 +236,46 @@ function normalizeSizeVariants(raw) {
   if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
   return raw
     .map(v => typeof v === "string" ? { size: v, stock_quantity: 0 } : v)
-    .filter(v => v && v.size && String(v.size).trim() !== "");
+    .map(v => ({ ...v, size: String(v?.size || "").trim(), stock_quantity: Math.max(0, Math.floor(Number(v?.stock_quantity) || 0)) }))
+    .filter(v => v.size !== "");
 }
 
-function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user }) {
+function getMaximumQuantity(product, size) {
+  const total = Math.max(0, Math.floor(Number(product?.stock_quantity) || 0));
+  const variants = normalizeSizeVariants(product?.sizes);
+  if (variants.length === 0) return Math.min(total, 20);
+  const variant = variants.find((entry) => entry.size === String(size || "").trim());
+  if (!variant) return 0;
+  return Math.min(total, variant.stock_quantity, 20);
+}
+
+function loadStoredCart() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("rlt_cart") || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, 20).flatMap((item) => {
+      const id = String(item?.id || "").trim();
+      const quantity = Math.max(1, Math.min(20, Math.floor(Number(item?.quantity) || 1)));
+      if (!id) return [];
+      const size = String(item?.size || "").trim();
+      return [{
+        cartItemId: `${id}${size ? `-${size}` : ""}`,
+        id,
+        name: String(item?.name || "Merch item").slice(0, 160),
+        price_aud: Math.max(0, Number(item?.price_aud) || 0),
+        image_url: String(item?.image_url || "").slice(0, 2000),
+        stock_quantity: Math.max(0, Math.floor(Number(item?.stock_quantity) || 0)),
+        max_quantity: Math.max(1, Math.min(20, Math.floor(Number(item?.max_quantity) || 20))),
+        quantity,
+        size: size || undefined,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function ProductQuickViewModal({ product, isOpen, onClose, addToCart }) {
   const [quantity, setQuantity] = useState(1);
   const variants = useMemo(() => normalizeSizeVariants(product?.sizes), [product?.sizes]);
   const variantLabels = useMemo(() => variants.map(v => v.size), [variants]);
@@ -241,7 +283,6 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
   const defaultSize = variantLabels.includes("M") ? "M" : variantLabels[0] || "M";
   const [selectedSize, setSelectedSize] = useState(defaultSize);
 
-  const selectedVariant = useMemo(() => variants.find(v => v.size === selectedSize), [variants, selectedSize]);
   const gallery = useMemo(() => [product?.image_url, product?.image_url_2].filter(Boolean), [product?.image_url, product?.image_url_2]);
   const [activeImg, setActiveImg] = useState("");
 
@@ -261,7 +302,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
   const totalStock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(totalStock) && totalStock <= 0;
-  const inCart = cart.find(item => item.id === product.id && item.size === (hasSizes ? selectedSize : undefined));
+  const maximumQuantity = getMaximumQuantity(product, hasSizes ? selectedSize : undefined);
 
   const handleAdd = () => {
     addToCart(product, hasSizes ? selectedSize : undefined);
@@ -449,15 +490,10 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                 <div className="flex items-center border border-border h-12 bg-background">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">-</button>
                   <span className="w-8 text-center font-mono font-bold">{quantity}</span>
-                  <button onClick={() => {
-                    const maxQty = selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)
-                      ? selectedVariant.stock_quantity
-                      : Number.isFinite(totalStock) ? totalStock : 99;
-                    setQuantity(q => Math.min(maxQty, q + 1));
-                  }} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
+                  <button onClick={() => setQuantity(q => Math.min(maximumQuantity, q + 1))} disabled={quantity >= maximumQuantity} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer disabled:opacity-30">+</button>
                 </div>
-                <Button onClick={handleAdd} disabled={quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99))} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
-                {quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99)) ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
+                <Button onClick={handleAdd} disabled={maximumQuantity <= 0 || quantity > maximumQuantity} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
+                {maximumQuantity <= 0 || quantity > maximumQuantity ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
                 </Button>
               </div>
             )}
@@ -602,14 +638,7 @@ function StoreSizeGuide() {
 /* ── Main Store Component ── */
 export default function Store() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [cart, setCart] = useState(() => {
-    try {
-      const stored = localStorage.getItem("rlt_cart");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [cart, setCart] = useState(loadStoredCart);
   const { user } = useAuth();
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutName, setCheckoutName] = useState("");
@@ -617,8 +646,31 @@ export default function Store() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutNotice, setCheckoutNotice] = useState("");
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const checkoutReturn = searchParams.get("checkout");
+  const checkoutSessionId = searchParams.get("session_id") || "";
+  const shouldVerifyCheckout = ["success", "processing"].includes(checkoutReturn)
+    && STRIPE_CHECKOUT_SESSION_ID_PATTERN.test(checkoutSessionId);
+
+  const {
+    data: checkoutResult,
+    isFetching: isCheckingCheckout,
+    isError: checkoutCheckFailed,
+  } = useQuery({
+    queryKey: ["checkoutStatus", checkoutSessionId],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("checkoutStatus", { sessionId: checkoutSessionId });
+      return response?.data;
+    },
+    enabled: appParams.hasBase44Config && shouldVerifyCheckout,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+    refetchInterval: (query) => ["open", "processing"].includes(query.state.data?.status) ? 2500 : false,
+  });
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -653,24 +705,24 @@ export default function Store() {
         changed = true;
         return [];
       }
-      const stock = Number(product.stock_quantity);
-      if (product.coming_soon === true || (Number.isFinite(stock) && stock <= 0)) {
+      const maxQuantity = getMaximumQuantity(product, item.size);
+      if (product.coming_soon === true || maxQuantity <= 0) {
         changed = true;
         return [];
       }
 
-      const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
-      const quantity = Math.min(item.quantity, maxQuantity);
+      const quantity = Math.max(1, Math.min(Math.floor(Number(item.quantity) || 1), maxQuantity));
       const updated = {
         ...item,
         name: product.name,
         price_aud: product.price_aud,
         image_url: product.image_url,
         stock_quantity: product.stock_quantity,
+        max_quantity: maxQuantity,
         quantity,
       };
 
-      if (quantity !== item.quantity || updated.name !== item.name || updated.price_aud !== item.price_aud || updated.stock_quantity !== item.stock_quantity) {
+      if (quantity !== item.quantity || maxQuantity !== item.max_quantity || updated.name !== item.name || updated.price_aud !== item.price_aud || updated.stock_quantity !== item.stock_quantity) {
         changed = true;
       }
       return [updated];
@@ -729,20 +781,7 @@ export default function Store() {
   const addToCart = useCallback((product, size) => {
     if (product.coming_soon === true) return;
 
-    // Determine max quantity: per-size stock takes priority, fall back to total stock
-    let maxQuantity = 20;
-    if (size) {
-      const variants = normalizeSizeVariants(product?.sizes);
-      const variant = variants.find(v => v.size === size);
-      if (variant) {
-        const vs = Number(variant.stock_quantity);
-        if (Number.isFinite(vs)) maxQuantity = Math.min(vs, 20);
-      }
-    }
-    if (maxQuantity === 20) {
-      const total = Number(product.stock_quantity);
-      if (Number.isFinite(total)) maxQuantity = Math.min(total, 20);
-    }
+    const maxQuantity = getMaximumQuantity(product, size);
     if (maxQuantity <= 0) return;
 
     lightImpact();
@@ -758,7 +797,7 @@ export default function Store() {
           item.cartItemId === cartItemId ? { ...item, quantity: Math.min(item.quantity + 1, maxQuantity) } : item
         );
       }
-      return [...curr, { cartItemId, id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, quantity: 1, size }];
+      return [...curr, { cartItemId, id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, max_quantity: maxQuantity, quantity: 1, size }];
     });
     setCartOpen(true);
   }, []);
@@ -778,85 +817,98 @@ export default function Store() {
   }, [user?.full_name]);
 
   const updateQuantity = useCallback((cartItemId, change) => {
+    const normalizedCartItemId = String(cartItemId || "");
     setCart((curr) => 
-      curr.map((item) => {
-        if (item.cartItemId === cartItemId) {
-          const stock = Number(item.stock_quantity);
-          const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
+      curr.flatMap((item) => {
+        if (String(item.cartItemId || "") === normalizedCartItemId) {
+          if (change < 0 && item.quantity <= 1) {
+            return [];
+          }
+          const maxQuantity = Math.max(1, Math.min(20, Math.floor(Number(item.max_quantity) || 1)));
           const newQty = Math.max(1, Math.min(item.quantity + change, maxQuantity));
-          return { ...item, quantity: newQty };
+          return [{ ...item, quantity: newQty }];
         }
-        return item;
+        return [item];
       })
     );
   }, []);
 
   const removeFromCart = useCallback((cartItemId) => {
-    setCart((curr) => curr.filter((item) => item.cartItemId !== cartItemId));
+    const normalizedCartItemId = String(cartItemId || "");
+    setCart((curr) => curr.filter(
+      (item) => String(item.cartItemId || "") !== normalizedCartItemId
+    ));
+    setCheckoutError("");
+    setCheckoutNotice("");
   }, []);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price_aud || 0) * item.quantity), 0);
 
   // Free shipping threshold logic
-  const shippingThreshold = 150;
+  const shippingThreshold = FREE_SHIPPING_THRESHOLD_AUD;
   const progressPercent = Math.min(100, (cartSubtotal / shippingThreshold) * 100);
   const needsMore = Math.max(0, shippingThreshold - cartSubtotal);
   const isFreeShipping = cartSubtotal >= shippingThreshold;
 
-  // AusPost live rate calculation — a real quote (or a $0 override once the
-  // free-shipping threshold is hit) is required before checkout can proceed.
-  const [shippingPostcode, setShippingPostcode] = useState("");
-  const [shippingRates, setShippingRates] = useState([]);
-  const [shippingRatesFor, setShippingRatesFor] = useState("");
-  const [selectedShippingCode, setSelectedShippingCode] = useState("");
-  const [shippingLoading, setShippingLoading] = useState(false);
-  const [shippingError, setShippingError] = useState("");
+  // A simple domestic policy avoids needing a carrier-rate API at checkout.
+  const shippingCost = isFreeShipping ? 0 : FLAT_DOMESTIC_SHIPPING_AUD;
+  const roundedCartSubtotal = Number(cartSubtotal.toFixed(2));
+  const appliedPromoIsCurrent = appliedPromo?.subtotalAud === roundedCartSubtotal;
+  const promoDiscount = appliedPromoIsCurrent ? Number(appliedPromo.discountAud || 0) : 0;
+  const checkoutTotal = Math.max(0, cartSubtotal - promoDiscount + shippingCost);
 
-  const cartSignature = useMemo(
-    () => cart.map((item) => `${item.id}:${item.quantity}`).sort().join("|"),
-    [cart]
-  );
-  const ratesStale = !shippingRates.length || shippingRatesFor !== `${shippingPostcode.trim()}::${cartSignature}`;
-  const selectedRate = shippingRates.find((rate) => rate.code === selectedShippingCode);
-
-  const calculateShipping = async () => {
-    const trimmed = shippingPostcode.trim();
-    if (!/^\d{4}$/.test(trimmed)) {
-      setShippingError("Enter a valid 4-digit Australian postcode.");
-      return;
+  useEffect(() => {
+    if (appliedPromo && appliedPromo.subtotalAud !== roundedCartSubtotal) {
+      setAppliedPromo(null);
     }
-    setShippingLoading(true);
-    setShippingError("");
+  }, [appliedPromo, roundedCartSubtotal]);
+
+  const applyPromoCode = async () => {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setApplyingPromo(true);
+    setCheckoutError("");
+    setCheckoutNotice("");
     try {
-      const response = await base44.functions.invoke("auspostRates", {
-        toPostcode: trimmed,
-        cart: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
+      const response = await base44.functions.invoke("promoCodes", {
+        action: "validate",
+        code,
+        subtotalAud: roundedCartSubtotal,
       });
-      const services = response?.data?.services || [];
-      if (!services.length) throw new Error("No AusPost shipping options are available for this postcode.");
-      setShippingRates(services);
-      setShippingRatesFor(`${trimmed}::${cartSignature}`);
-      setSelectedShippingCode(services[0].code);
-    } catch (err) {
-      const message = err?.response?.data?.error || err?.data?.error || err?.message || "Could not calculate shipping right now.";
-      setShippingError(message);
-      setShippingRates([]);
-      setShippingRatesFor("");
-      setSelectedShippingCode("");
+      if (!response?.data?.valid) {
+        setAppliedPromo(null);
+        setCheckoutError(response?.data?.error || "That promo code is not valid.");
+        return;
+      }
+      setPromoInput(response.data.code);
+      setAppliedPromo({
+        code: response.data.code,
+        description: response.data.description,
+        discountAud: Number(response.data.discountAud || 0),
+        subtotalAud: roundedCartSubtotal,
+      });
+      setCheckoutNotice(`${response.data.code} applied — ${response.data.description}. Stripe will verify it again at checkout.`);
+    } catch (error) {
+      setAppliedPromo(null);
+      setCheckoutError(error?.data?.error || "We couldn't check that promo code. Please try again.");
     } finally {
-      setShippingLoading(false);
+      setApplyingPromo(false);
     }
+  };
+
+  const removePromoCode = () => {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setCheckoutError("");
+    setCheckoutNotice("");
   };
 
   const handleCheckout = async (e) => {
     e.preventDefault();
-    if (cart.length === 0 || !checkoutEmail) return;
-
-    if (ratesStale || !selectedRate) {
-      setShippingError("Please calculate and select a shipping option before checkout.");
-      return;
-    }
+    const customerName = checkoutName.trim();
+    const customerEmail = checkoutEmail.trim().toLowerCase();
+    if (cart.length === 0 || !customerName || !customerEmail) return;
 
     if (window.self !== window.top) {
       // Info-style notice (not an error): the preview iframe blocks the Stripe redirect.
@@ -871,20 +923,29 @@ export default function Store() {
     try {
       const response = await base44.functions.invoke("createCheckout", {
         items: cart.map((item) => ({ productId: item.id, quantity: item.quantity, size: item.size || "" })),
-        customerName: checkoutName,
-        customerEmail: checkoutEmail,
-        shipping: {
-          code: selectedRate.code,
-          name: selectedRate.name,
-          postcode: shippingPostcode.trim(),
-          price_aud: isFreeShipping ? 0 : selectedRate.price_aud,
-        },
+        customerName,
+        customerEmail,
+        promoCode: appliedPromoIsCurrent ? appliedPromo.code : "",
+        checkoutRequestId: crypto.randomUUID(),
       });
 
       if (response?.data?.url) {
-        new URL(response.data.url);
+        const checkoutUrl = new URL(response.data.url);
+        if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com") {
+          throw new Error("The secure checkout link could not be verified.");
+        }
+        const returnedSessionId = String(response.data.sessionId || "");
+        if (!STRIPE_CHECKOUT_SESSION_ID_PATTERN.test(returnedSessionId)) {
+          throw new Error("The secure checkout session could not be verified.");
+        }
         // Native shell: hand off to the system browser sheet so the WebView
-        // stays on the local app; web keeps the full-page Stripe redirect.
+        // stays on the local app. Store the server-issued session first so this
+        // WebView polls payment status even if Stripe's Universal Link callback
+        // is interrupted or opens outside the app.
+        if (isNativeApp()) {
+          setSearchParams({ checkout: "processing", session_id: returnedSessionId });
+        }
+        // Web keeps the full-page Stripe redirect.
         mediumImpact();
         await openExternalUrl(response.data.url, { fallback: "navigate" });
       } else {
@@ -896,20 +957,25 @@ export default function Store() {
         setCart((curr) => curr.filter((item) => !errorData.unavailableProductIds.includes(item.id)));
         setCheckoutNotice("Some unavailable cart items were removed. Please review your cart before checkout.");
       }
-      setCheckoutError(errorData.error || err?.message || "An error occurred during checkout.");
+      if (errorData.promoCodeInvalid) setAppliedPromo(null);
+      setCheckoutError(errorData.error || "We couldn't start secure checkout. Please review your cart and try again.");
     } finally {
       setCheckingOut(false);
     }
   };
 
-  const isSuccess = searchParams.get("success") === "true";
-  const isCancelled = searchParams.get("cancelled") === "true";
+  const isVerifiedPaid = checkoutResult?.status === "paid";
+  const isCheckoutProcessing = shouldVerifyCheckout && !isVerifiedPaid
+    && !checkoutCheckFailed
+    && (isCheckingCheckout || !checkoutResult || ["open", "processing"].includes(checkoutResult?.status));
+  const isCheckoutExpired = checkoutResult?.status === "expired";
+  const isCancelled = checkoutReturn === "cancelled";
 
   useEffect(() => {
-    if (!isSuccess) return;
+    if (!isVerifiedPaid) return;
     try { localStorage.removeItem("rlt_cart"); } catch { /* private mode / quota */ }
     setCart([]);
-  }, [isSuccess]);
+  }, [isVerifiedPaid]);
 
   const clearAlerts = () => {
     setSearchParams({});
@@ -971,7 +1037,7 @@ export default function Store() {
 
         {/* Success/Cancel Banners */}
         <AnimatePresence>
-          {isSuccess && (
+          {isVerifiedPaid && (
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -981,15 +1047,24 @@ export default function Store() {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-display text-xl uppercase tracking-wider text-foreground">Order Placed Successfully!</h3>
-                  <p className="text-sm text-slate-200 mt-1">Thank you for your purchase. We've sent a detailed receipt to your email address.</p>
+                  <h3 className="font-display text-xl uppercase tracking-wider text-foreground">Payment verified</h3>
+                  <p className="text-sm text-slate-200 mt-1">
+                    Order {checkoutResult?.orderNumber || ""} has been paid. Your confirmation will be sent to your checkout email.
+                  </p>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-3 pt-2">
-                <Link to="/account" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
-                  <span>Track in My Orders</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
+                {checkoutResult?.hasAccountOrder ? (
+                  <Link to="/account" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
+                    <span>Track in My Orders</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                ) : (
+                  <div className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    <span>Keep your order email</span>
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                )}
                 <Link to="/forum" className="flex items-center justify-between border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 min-h-[44px] text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors">
                   <span>Join the Forum</span>
                   <ChevronRight className="h-4 w-4" />
@@ -999,6 +1074,45 @@ export default function Store() {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {isCheckoutProcessing && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 border border-sky-500/30 bg-sky-500/10 p-5 text-slate-100 cmd-glass shadow-lg"
+              role="status"
+            >
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-sky-400 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-display text-lg uppercase tracking-wider">Confirming payment</h3>
+                  <p className="mt-1 text-sm text-slate-200">Stripe is still confirming this checkout. Keep this page open; it will update automatically.</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {(checkoutCheckFailed || isCheckoutExpired || (["success", "processing"].includes(checkoutReturn) && !shouldVerifyCheckout)) && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 flex items-start justify-between gap-4 border border-amber-500/35 bg-amber-500/10 p-5 text-amber-300 cmd-glass shadow-lg"
+              role="alert"
+            >
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-display text-lg uppercase tracking-wider text-foreground">Payment not confirmed</h3>
+                  <p className="mt-1 text-sm text-slate-200">
+                    {isCheckoutExpired
+                      ? "This checkout expired without a confirmed payment. Your cart has been kept."
+                      : "We could not verify this checkout yet. Your cart has not been cleared; check your bank or Stripe receipt before trying again."}
+                  </p>
+                </div>
+              </div>
+              <button onClick={clearAlerts} className="min-h-[44px] px-3 text-xs font-bold uppercase tracking-wider hover:text-white">Dismiss</button>
             </motion.div>
           )}
 
@@ -1196,29 +1310,33 @@ export default function Store() {
                           </div>
                           <div className="mt-2 flex items-center justify-between">
                             <div className="flex items-center border border-border">
-                              <button
-                                onClick={() => updateQuantity(item.cartItemId, -1)}
-                                aria-label={`Decrease quantity of ${item.name}`}
-                                className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
-                              >
+                               <button
+                                 type="button"
+                                 onClick={() => updateQuantity(item.cartItemId, -1)}
+                                 aria-label={item.quantity <= 1 ? `Remove ${item.name} from cart` : `Decrease quantity of ${item.name}`}
+                                 className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
+                               >
                                 <Minus className="h-3 w-3" />
                               </button>
                               <span className="w-10 text-center text-xs font-mono font-bold text-foreground">{item.quantity}</span>
-                              <button
-                                onClick={() => updateQuantity(item.cartItemId, 1)}
-                                aria-label={`Increase quantity of ${item.name}`}
+                               <button
+                                 type="button"
+                                 onClick={() => updateQuantity(item.cartItemId, 1)}
+                                 aria-label={`Increase quantity of ${item.name}`}
                                 className="flex h-11 w-11 items-center justify-center bg-card text-slate-300 transition-colors hover:bg-muted hover:text-white cursor-pointer"
                               >
                                 <Plus className="h-3 w-3" />
                               </button>
                             </div>
-                            <button 
-                              onClick={() => removeFromCart(item.cartItemId)}
-                              className="touch-target flex items-center justify-center text-slate-400 transition-colors hover:text-destructive cursor-pointer"
-                              aria-label="Remove item"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                             <button
+                               type="button"
+                               onClick={() => removeFromCart(item.cartItemId)}
+                               className="touch-target flex min-h-11 items-center justify-center gap-1.5 px-2 text-slate-300 transition-colors hover:text-destructive cursor-pointer"
+                               aria-label={`Remove ${item.name} from cart`}
+                             >
+                               <Trash2 className="h-4 w-4" />
+                               <span className="text-[10px] font-bold uppercase tracking-wider">Remove</span>
+                             </button>
                           </div>
                         </div>
                       </motion.div>
@@ -1243,87 +1361,85 @@ export default function Store() {
                     </div>
                   </div>
 
-                  <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
+                  <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                        <Truck className="h-3 w-3 text-primary" /> Shipping (AusPost, domestic AU)
+                        <Truck className="h-3 w-3 text-primary" /> Shipping (Australia-wide)
                       </p>
-                      {selectedRate && !ratesStale && (
-                        <span className="font-mono text-xs font-bold text-emerald-400">
-                          {isFreeShipping ? "FREE" : `$${Number(selectedRate.price_aud).toFixed(2)} AUD`}
-                        </span>
-                      )}
+                      <span className="font-mono text-xs font-bold text-emerald-400">
+                        {isFreeShipping ? "FREE" : `$${shippingCost.toFixed(2)} AUD`}
+                      </span>
                     </div>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Standard delivery in 4–7 business days. Enter your delivery address securely in Stripe Checkout.
+                    </p>
+                  </div>
 
-                    <div className="flex gap-2">
-                      <label htmlFor="shipping-postcode" className="sr-only">Delivery postcode</label>
-                      <Input
-                        id="shipping-postcode"
-                        placeholder="Postcode e.g. 4000"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={shippingPostcode}
-                        onChange={(e) => setShippingPostcode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        className="h-10 rounded-none bg-background/50 border-border text-sm"
-                      />
-                      <Button
-                        type="button"
-                        onClick={calculateShipping}
-                        disabled={shippingLoading || shippingPostcode.length !== 4}
-                        variant="outline"
-                        className="h-10 shrink-0 rounded-none border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-3"
-                      >
-                        {shippingLoading ? "Calculating…" : "Calculate"}
-                      </Button>
-                    </div>
-
-                    {shippingError && (
-                      <p className="flex items-center gap-1.5 text-[10px] font-medium text-destructive" role="alert">
-                        <AlertCircle className="h-3 w-3 shrink-0" /> {shippingError}
-                      </p>
-                    )}
-
-                    {!ratesStale && shippingRates.length > 0 && (
-                      <div className="space-y-1.5">
-                        {shippingRates.map((rate) => (
-                          <label
-                            key={rate.code}
-                            className={`flex cursor-pointer items-center justify-between gap-2 border px-3 py-2 text-xs transition-colors ${
-                              selectedShippingCode === rate.code ? "border-primary bg-primary/5" : "border-border/40 hover:border-border"
-                            }`}
-                          >
-                            <span className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="shipping-rate"
-                                value={rate.code}
-                                checked={selectedShippingCode === rate.code}
-                                onChange={() => setSelectedShippingCode(rate.code)}
-                                className="h-3.5 w-3.5 accent-primary"
-                              />
-                              <span>
-                                <span className="block font-bold text-foreground">{rate.name}</span>
-                                {rate.delivery_time && <span className="block text-[10px] text-muted-foreground">{rate.delivery_time}</span>}
-                              </span>
-                            </span>
-                            <span className="shrink-0 font-mono font-bold text-accent">
-                              {isFreeShipping ? "FREE" : `$${Number(rate.price_aud).toFixed(2)}`}
-                            </span>
-                          </label>
-                        ))}
+                  <div className="mb-4 border border-border/40 bg-background/35 p-3">
+                    <label htmlFor="promo-code" className="mb-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                      <Tag className="h-3 w-3 text-primary" /> Promo code
+                    </label>
+                    {appliedPromoIsCurrent ? (
+                      <div className="flex items-center justify-between gap-3 border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="font-mono text-xs font-bold text-emerald-400">{appliedPromo.code}</p>
+                          <p className="truncate text-[10px] text-muted-foreground">{appliedPromo.description}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removePromoCode}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                          aria-label={`Remove promo code ${appliedPromo.code}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                    )}
-
-                    {ratesStale && shippingRates.length > 0 && (
-                      <p className="text-[10px] font-medium text-amber-400">Cart or postcode changed — recalculate shipping.</p>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          id="promo-code"
+                          value={promoInput}
+                          onChange={(event) => setPromoInput(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 32))}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              applyPromoCode();
+                            }
+                          }}
+                          autoComplete="off"
+                          placeholder="Enter code"
+                          className="h-11 rounded-none border-border bg-background/60 font-mono uppercase"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={applyingPromo || !promoInput.trim()}
+                          onClick={applyPromoCode}
+                          className="h-11 shrink-0 rounded-none border-primary/40 px-4 text-[10px] font-bold uppercase tracking-wider text-primary"
+                        >
+                          {applyingPromo ? "Checking…" : "Apply"}
+                        </Button>
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-base font-bold uppercase tracking-wider mb-4 border-b border-border/30 pb-3">
-                    <span>Total</span>
-                    <span className="text-accent font-mono tracking-tight text-lg">
-                      ${(cartSubtotal + (selectedRate && !ratesStale ? (isFreeShipping ? 0 : Number(selectedRate.price_aud)) : 0)).toFixed(2)} AUD
-                    </span>
+                  <div className="mb-4 space-y-2 border-b border-border/30 pb-3 text-xs font-bold uppercase tracking-wider">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Merchandise</span>
+                      <span className="font-mono">${cartSubtotal.toFixed(2)} AUD</span>
+                    </div>
+                    {promoDiscount > 0 && (
+                      <div className="flex items-center justify-between text-emerald-400">
+                        <span>Promo ({appliedPromo.code})</span>
+                        <span className="font-mono">−${promoDiscount.toFixed(2)} AUD</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-base text-foreground">
+                      <span>Total</span>
+                      <span className="text-accent font-mono tracking-tight text-lg">
+                        ${checkoutTotal.toFixed(2)} AUD
+                      </span>
+                    </div>
                   </div>
 
                   <form onSubmit={handleCheckout} className="grid gap-3">
@@ -1346,6 +1462,8 @@ export default function Store() {
                       <Input
                         id="checkout-name"
                         required
+                        maxLength={120}
+                        autoComplete="name"
                         placeholder="Your full name"
                         value={checkoutName}
                         onChange={(e) => setCheckoutName(e.target.value)}
@@ -1359,6 +1477,7 @@ export default function Store() {
                         id="checkout-email"
                         required
                         type="email"
+                        maxLength={254}
                         inputMode="email"
                         autoComplete="email"
                         placeholder="Receipt email address"
@@ -1370,15 +1489,13 @@ export default function Store() {
 
                     <Button
                       type="submit"
-                      disabled={checkingOut || ratesStale || !selectedRate}
+                      disabled={checkingOut}
                       className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       <CreditCard className="h-4 w-4" />
                       {checkingOut
                         ? "Connecting to Stripe..."
-                        : ratesStale || !selectedRate
-                          ? "Calculate shipping to continue"
-                          : `Checkout • $${(cartSubtotal + (isFreeShipping ? 0 : Number(selectedRate.price_aud))).toFixed(2)} AUD`}
+                        : `Checkout • $${checkoutTotal.toFixed(2)} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe

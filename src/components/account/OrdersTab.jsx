@@ -23,6 +23,15 @@ const statusConfig = {
 
 const getStatus = (s) => statusConfig[s] || statusConfig.pending;
 
+function safeExternalUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
 /* Shipping method badge config */
 const shippingMethodConfig = {
   standard: { label: "Standard", badgeClass: "border-border/30 bg-muted/10 text-muted-foreground" },
@@ -139,6 +148,7 @@ export default function OrdersTab() {
 
         // Shipping method badge
         const methodConf = shippingMethodConfig[order.shipping_method] || null;
+        const trackingUrl = safeExternalUrl(order.tracking_url);
 
         return (
           <motion.article
@@ -223,7 +233,7 @@ export default function OrdersTab() {
                   <div key={i} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-muted-foreground/40">{item.quantity}×</span>
-                      <span className="text-foreground">{item.name}</span>
+                      <span className="text-foreground">{item.name}{item.size ? ` · Size ${item.size}` : ""}</span>
                     </div>
                     <span className="font-mono text-muted-foreground tabular-nums">
                       ${Number((item.price_aud || 0) * (item.quantity || 1)).toFixed(2)}
@@ -232,8 +242,20 @@ export default function OrdersTab() {
                 ))}
               </div>
 
+              {Number(order.discount_amount_aud || 0) > 0 && (
+                <div className="flex items-center justify-between border-t border-border/10 pt-2 text-xs font-semibold text-emerald-400">
+                  <span>Promo ({order.promo_code || "discount"})</span>
+                  <span className="font-mono">−${Number(order.discount_amount_aud).toFixed(2)} AUD</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between border-t border-border/10 pt-2 text-xs text-muted-foreground">
+                <span>Shipping</span>
+                <span className="font-mono">{Number(order.shipping_cost_aud || 0) === 0 ? "FREE" : `$${Number(order.shipping_cost_aud).toFixed(2)} AUD`}</span>
+              </div>
+
               {/* Total */}
-              <div className="flex items-center justify-between border-t border-border/20 pt-3 mb-3">
+              <div className="flex items-center justify-between pt-3 mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</span>
                 <span className="font-display text-xl tabular-nums text-foreground">
                   ${Number(order.total_aud || 0).toFixed(2)} <span className="text-xs text-muted-foreground font-normal">AUD</span>
@@ -257,9 +279,9 @@ export default function OrdersTab() {
                         )}
                       </div>
                     </div>
-                    {order.tracking_url && (
+                    {trackingUrl && (
                       <a
-                        href={order.tracking_url}
+                        href={trackingUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-2 border border-blue-500/30 bg-blue-500/10 text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:bg-blue-500/20 transition-colors"
