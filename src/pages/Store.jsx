@@ -760,7 +760,7 @@ export default function Store() {
           item.cartItemId === cartItemId ? { ...item, quantity: Math.min(item.quantity + 1, maxQuantity) } : item
         );
       }
-      return [...curr, { cartItemId, id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, quantity: 1, size }];
+      return [...curr, { cartItemId, id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, shipping_required: product.shipping_required !== false, quantity: 1, size }];
     });
     setCartOpen(true);
   }, []);
@@ -827,9 +827,13 @@ export default function Store() {
     if (!shippingAvailable && pickupAvailable) setDeliveryMode("pickup");
     else if (!pickupAvailable && shippingAvailable) setDeliveryMode("shipping");
   }, [shippingAvailable, pickupAvailable]);
-  const isPickup = deliveryMode === "pickup" && pickupAvailable;
+  // A cart of only non-physical items (membership, anything digital) has no
+  // parcel: no postage to quote, no collection point, and no reason to block an
+  // overseas buyer. createCheckout re-derives this from the saved products.
+  const cartNeedsShipping = cart.length > 0 && cart.some((item) => item.shipping_required !== false);
+  const isPickup = !cartNeedsShipping ? false : deliveryMode === "pickup" && pickupAvailable;
   // Nothing can be ordered when we can neither ship nor let them collect.
-  const cannotFulfil = !shippingAvailable && !pickupAvailable;
+  const cannotFulfil = cartNeedsShipping && !shippingAvailable && !pickupAvailable;
 
   const [shippingPostcode, setShippingPostcode] = useState("");
   const [shippingRates, setShippingRates] = useState([]);
@@ -893,7 +897,7 @@ export default function Store() {
       return;
     }
     // A shipped order must always carry a priced rate; a pickup order needs none.
-    if (!isPickup && (ratesStale || !selectedRate)) {
+    if (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)) {
       setShippingError("Please calculate and select a shipping option before checkout.");
       return;
     }
@@ -1355,7 +1359,7 @@ export default function Store() {
 
                   {!pickupEnabled && !isAuOrder && null}
 
-                  {!isPickup && (
+                  {cartNeedsShipping && !isPickup && (
                   <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
@@ -1519,7 +1523,7 @@ export default function Store() {
 
                     <Button
                       type="submit"
-                      disabled={checkingOut || cannotFulfil || (!isPickup && (ratesStale || !selectedRate))}
+                      disabled={checkingOut || cannotFulfil || (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate))}
                       className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       <CreditCard className="h-4 w-4" />
@@ -1529,7 +1533,7 @@ export default function Store() {
                           ? "Not available outside Australia"
                           : isPickup
                             ? `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`
-                            : ratesStale || !selectedRate
+                            : cartNeedsShipping && (ratesStale || !selectedRate)
                               ? "Calculate shipping to continue"
                               : `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`}
                     </Button>

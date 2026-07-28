@@ -81,3 +81,29 @@ test("the edge functions carry the same rules as this module", () => {
     assert.ok(src.includes("serviceParcelSize"), `${fn} must classify services by packaging`);
   }
 });
+
+// ── Non-shippable stock + the placeholder weight ────────────────────────
+test("a digital-only cart is never charged postage", () => {
+  const rates = readFileSync(new URL("../supabase/functions/auspostRates/index.ts", import.meta.url), "utf8");
+  const checkout = readFileSync(new URL("../supabase/functions/createCheckout/index.ts", import.meta.url), "utf8");
+  const store = readFileSync(new URL("../src/pages/Store.jsx", import.meta.url), "utf8");
+
+  assert.ok(rates.includes("shipping_required === false"), "rate calc must skip non-shippable items");
+  assert.ok(rates.includes("shippingRequired: false"), "must tell the cart there is no parcel");
+  // Enforced server-side too: the client decides what to show, the server
+  // decides what is charged.
+  assert.ok(checkout.includes("cartRequiresShipping"), "checkout must re-derive this from saved products");
+  assert.ok(checkout.includes("noParcel"), "no-parcel orders must skip postage and address collection");
+  assert.ok(store.includes("cartNeedsShipping"), "storefront must hide the shipping block");
+});
+
+test("weight is per-unit and the placeholder is surfaced, not hidden", () => {
+  const rates = readFileSync(new URL("../supabase/functions/auspostRates/index.ts", import.meta.url), "utf8");
+  // The bug: `weight_grams || 300` silently invented 300g per unit, so two ~40g
+  // stubbie coolers declared 600g and crossed AusPost's 500g bracket — $11.70
+  // became $16.00. The assumption stays (checkout must not hard-fail) but it is
+  // now named, logged, and flagged rather than applied invisibly.
+  assert.ok(!/weight_grams \|\| 300/.test(rates), "must not silently default the weight inline");
+  assert.ok(rates.includes("ASSUMED_ITEM_WEIGHT_G"), "the assumption must be named");
+  assert.ok(rates.includes("missingWeight"), "products lacking a weight must be recorded");
+});
