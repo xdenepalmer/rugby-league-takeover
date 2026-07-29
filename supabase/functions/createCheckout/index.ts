@@ -400,7 +400,12 @@ Deno.serve(async (req) => {
   const user = await getCaller(req, svc);
   const resolvedName = toTrimmedString(input?.customerName || user?.full_name, 120);
   const resolvedEmail = toTrimmedString(input?.customerEmail || user?.email, 254).toLowerCase();
-  const checkoutRequestId = isUuid(input?.checkoutRequestId) ? String(input.checkoutRequestId).toLowerCase() : '';
+  // Older published web/native bundles predate checkoutRequestId. Generate a
+  // server-side UUID for those clients so valid buyers are not rejected while
+  // current clients still retain retry idempotency by supplying their own UUID.
+  const checkoutRequestId = isUuid(input?.checkoutRequestId)
+    ? String(input.checkoutRequestId).toLowerCase()
+    : crypto.randomUUID();
 
   if (!normalizedItems.length) {
     return responseJson(req, { error: 'Your cart contains invalid or too many items.' }, 400);
@@ -408,8 +413,8 @@ Deno.serve(async (req) => {
   if (resolvedName.length < 2) {
     return responseJson(req, { error: 'Please enter your full name.' }, 400);
   }
-  if (!isEmail(resolvedEmail) || !checkoutRequestId) {
-    return responseJson(req, { error: 'A valid email and checkout request are required.' }, 400);
+  if (!isEmail(resolvedEmail)) {
+    return responseJson(req, { error: 'Please enter a valid receipt email address.' }, 400);
   }
 
   try {
