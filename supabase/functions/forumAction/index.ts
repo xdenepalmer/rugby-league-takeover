@@ -2,7 +2,7 @@
 // Runs with the service role (with explicit ownership/role checks).
 import {
   json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp,
-  censorProfanity, FORUM_CATEGORIES, awardForumReward, getForumPost, num,
+  censorProfanity, FORUM_CATEGORIES, getForumPost, num,
 } from './shared.ts';
 
 const ALLOWED_REACTIONS = ['❤️', '🏉', '🔥', '🎉', '👏'];
@@ -36,8 +36,9 @@ Deno.serve(async (req) => {
       if (!post) return json({ error: 'Post not found' }, 404);
 
       const isOwner = post.user_id && String(post.user_id) === String(user.id);
-      if (!isOwner && user.role !== 'admin') {
-        return json({ error: 'You can only remove your own posts' }, 403);
+      const isModerator = user.role === 'admin' || user.role === 'moderator';
+      if (!isOwner && !isModerator) {
+        return json({ error: 'You can only remove your own posts unless you are a moderator' }, 403);
       }
 
       await deleteWithChildren(svc, postId);
@@ -177,10 +178,33 @@ Deno.serve(async (req) => {
       await svc.from('forum_posts').update({ reactions: cleaned, like_count: total, liked_by: cleaned['❤️'] || [] }).eq('id', postId);
       let reward = null;
       if (added && firstReactionOnPost) {
-        reward = await awardForumReward(svc, user, { kind: 'reaction_given', xp: 2, chips: 5, postId, note: `Reacted with ${emoji}`, counter: 'casino_total_reactions_given' });
+        const { data: claimedReward, error: rewardError } = await svc.rpc('claim_forum_reaction_reward', {
+          p_user_id: user.id,
+          p_user_email: user.email || '',
+          p_kind: 'reaction_given',
+          p_xp: 2,
+          p_chips: 5,
+          p_post_id: String(postId),
+          p_note: `Reacted with ${emoji}`,
+        });
+        if (rewardError) {
+          console.error('claim_forum_reaction_reward (given) error:', rewardError);
+        } else {
+          reward = claimedReward;
+        }
         if (post.user_id && String(post.user_id) !== id) {
-          const author = { id: post.user_id, email: post.user_email || '' };
-          await awardForumReward(svc, author, { kind: 'reaction_received', xp: 4, chips: 10, postId, note: `Received ${emoji} reaction`, counter: 'casino_total_reactions_received' });
+          const { error: authorRewardError } = await svc.rpc('claim_forum_reaction_reward', {
+            p_user_id: String(post.user_id),
+            p_user_email: post.user_email || '',
+            p_kind: 'reaction_received',
+            p_xp: 4,
+            p_chips: 10,
+            p_post_id: String(postId),
+            p_note: `Received ${emoji} reaction`,
+          });
+          if (authorRewardError) {
+            console.error('claim_forum_reaction_reward (received) error:', authorRewardError);
+          }
         }
       }
       return json({ reactions: cleaned, like_count: total, reward });

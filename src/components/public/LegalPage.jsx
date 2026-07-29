@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { appParams } from "@/lib/app-params";
+import { parseLegalContent } from "@/lib/legal-content";
 
 /**
  * Admin-editable legal page (Terms / Privacy). Content comes from SiteSettings
@@ -20,7 +21,7 @@ export default function LegalPage({ settingsKey, title, fallback }) {
   const settings = settingsRecords[0] || {};
   const content = (settings[settingsKey] || "").trim() || fallback;
 
-  const blocks = content.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  const blocks = parseLegalContent(content);
 
   return (
     <main className="relative min-h-dvh bg-background text-foreground">
@@ -29,14 +30,13 @@ export default function LegalPage({ settingsKey, title, fallback }) {
         <h1 className="mt-3 font-display text-3xl uppercase leading-none tracking-wide text-foreground md:text-5xl">{title}</h1>
         <div className="mt-8 space-y-4">
           {blocks.map((block, i) => {
-            const heading = block.match(/^\[(.+)\]$/);
-            if (heading) {
+            if (block.type === "heading") {
               return (
-                <h2 key={i} className="pt-4 font-display text-lg uppercase tracking-wide text-foreground">{heading[1]}</h2>
+                <h2 key={i} className="pt-4 font-display text-lg uppercase tracking-wide text-foreground">{block.text}</h2>
               );
             }
             return (
-              <p key={i} className="whitespace-pre-line text-sm leading-7 text-muted-foreground">{block}</p>
+              <p key={i} className="whitespace-pre-line text-sm leading-7 text-muted-foreground">{block.text}</p>
             );
           })}
         </div>

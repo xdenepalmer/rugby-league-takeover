@@ -177,7 +177,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping — weight &amp; dimensions (AusPost)</label>
+            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment — weight &amp; dimensions</label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
               <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
@@ -186,7 +186,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
             </div>
             <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
             <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
-            <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel. Parcel size caps what the customer can pick at checkout — nothing larger is offered.</p>
+            <p className="text-[8px] text-muted-foreground/40">Internal packing reference only. Checkout charges the published $15 flat Australia-wide rate (free from $150); no carrier-rate API is called.</p>
           </div>
 
           <div className="space-y-1">
@@ -397,7 +397,7 @@ export default function ProductsManager({ products, loading }) {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Shipping — weight &amp; dimensions (AusPost)</label>
+                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment — weight &amp; dimensions</label>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
                     <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
@@ -406,7 +406,7 @@ export default function ProductsManager({ products, loading }) {
                   </div>
                   <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
                   <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
-                  <p className="text-[8px] text-muted-foreground/40">Used to calculate live AusPost shipping rates. Leave dimensions blank to use a default small satchel. Parcel size caps what the customer can pick at checkout — nothing larger is offered.</p>
+                  <p className="text-[8px] text-muted-foreground/40">Internal packing reference only. Checkout charges the published $15 flat Australia-wide rate (free from $150); no carrier-rate API is called.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

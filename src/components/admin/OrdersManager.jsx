@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Download, DollarSign, ShoppingCart, Clock, PackageCheck, BadgeCheck,
   ChevronDown, Package, CreditCard, Truck, XCircle, CheckCircle2, RotateCcw,
-  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays, Send, RefreshCw,
+  User, Copy, ExternalLink, MapPin, Info, AlertTriangle, CalendarDays,
   Pencil, Printer, Ban,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -28,6 +28,13 @@ const paidLike = ["paid", "packing", "shipped", "completed"];
 // still owed and must be returnable afterwards.
 const refundable = ["paid", "packing", "shipped", "completed", "partially_refunded", "cancelled"];
 const toFulfil = ["paid", "packing"];
+const allowedTransitions = {
+  pending: [],
+  paid: ["packing", "shipped"],
+  packing: ["shipped"],
+  shipped: ["completed"],
+  completed: [],
+};
 
 const statusConfig = {
   pending:   { label: "Pending",   icon: Clock,         color: "border-amber-500/30 text-amber-400 bg-amber-500/5",      dot: "bg-amber-400" },
@@ -67,8 +74,7 @@ function makeTimelineEntry(action, actor, note) {
   return { action, timestamp: new Date().toISOString(), actor: actor || "system", ...(note ? { note } : {}) };
 }
 
-/* Prefer the structured destination fields (populated from the paid Stripe
-   address, and what the AusPost label needs); fall back to the freeform string. */
+/* Prefer the structured destination fields captured by paid Stripe Checkout. */
 function structuredAddressLines(order) {
   const line2Parts = [order.shipping_suburb, order.shipping_state, order.shipping_postcode].filter(Boolean).join(" ");
   const lines = [
@@ -81,12 +87,27 @@ function structuredAddressLines(order) {
   return lines;
 }
 function hasStructuredAddress(order) {
-  return !!(order.shipping_address_line1 && order.shipping_postcode);
+  return Boolean(
+    String(order.shipping_address_line1 || "").trim()
+    && String(order.shipping_suburb || "").trim()
+    && String(order.shipping_state || "").trim()
+    && /^\d{4}$/.test(String(order.shipping_postcode || "").trim())
+    && String(order.shipping_country || "").trim().toUpperCase() === "AU"
+  );
 }
 function orderAddressText(order) {
   const lines = structuredAddressLines(order);
   if (lines.length > 1) return lines.join("\n");
   return order.shipping_address || "";
+}
+function safeTrackingUrl(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
 }
 
 /* ── Prominent customer address block (with copy) ── */
@@ -94,8 +115,7 @@ function AddressBlock({ order }) {
   const structured = hasStructuredAddress(order);
   const text = orderAddressText(order);
 
-  // A pickup order is collected in person — there's deliberately no delivery
-  // address and no AusPost label, so don't nag about a "missing" one.
+  // A pickup order is collected in person, so it has no delivery address.
   if (order.fulfilment_method === "pickup") {
     return (
       <div className="border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
@@ -134,7 +154,7 @@ function AddressBlock({ order }) {
       )}
       {!structured && text && (
         <p className="mt-2 flex items-center gap-1 text-[10px] text-amber-400/80">
-          <AlertTriangle className="h-2.5 w-2.5" /> Unstructured address — an AusPost label can't be generated until it's edited into structured fields.
+          <AlertTriangle className="h-2.5 w-2.5" /> Complete the structured address fields before printing or marking this order shipped.
         </p>
       )}
     </div>
@@ -175,9 +195,12 @@ function OrderEditForm({ editFields, setEditFields, onSave, onCancel }) {
   );
 }
 
-/* Open a print-optimized packing slip / address label in a new window. Works
-   independently of the AusPost carrier label — always available for any order. */
+/* Browser-printable packing slip/address label. It is not paid carrier postage. */
 function printPackingSlip(order) {
+  if (order.fulfilment_method === "shipping" && !hasStructuredAddress(order)) {
+    toast({ title: "Complete address required", description: "Add the full structured Australian delivery address before printing.", variant: "destructive" });
+    return;
+  }
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const orderNo = String(order.id || "").slice(-6).toUpperCase();
   const address = orderAddressText(order) || order.shipping_address || "";
@@ -200,7 +223,7 @@ function printPackingSlip(order) {
     <div class="muted">Order #${orderNo}${order.created_date ? " · " + esc(new Date(order.created_date).toLocaleDateString()) : ""}</div>
     <div class="box"><div class="lbl">Ship to</div><div class="addr">${esc(address) || "(no address on file)"}</div></div>
     <table>${items}</table>
-    <div class="from">Rugby League Takeover &middot; rugbyleaguetakeover.com</div>
+    <div class="from">Rugby League Takeover &middot; Address/packing slip only &middot; Postage must be purchased separately</div>
     <script>window.onload=function(){setTimeout(function(){window.print();},150);};<\/script>
     </body></html>`);
   win.document.close();
@@ -385,7 +408,6 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundAmount, setRefundAmount] = useState(Math.max(0, Number(order.total_aud || 0) - Number(order.refund_amount || 0)));
   const [refundReason, setRefundReason] = useState("");
-  const [freshLabelUrl, setFreshLabelUrl] = useState(null);
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [editMode, setEditMode] = useState(false);
@@ -399,29 +421,6 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     shipping_state: order.shipping_state || "",
     shipping_postcode: order.shipping_postcode || "",
     shipping_country: order.shipping_country || "AU",
-  });
-
-  const createLabelMutation = useMutation({
-    mutationFn: () => base44.functions.invoke("auspostCreateLabel", { orderId: order.id }),
-    onSuccess: ({ data }) => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      if (data?.shipping_label_url) setFreshLabelUrl(data.shipping_label_url);
-      if (data?.status === "processing") {
-        toast({ title: "Label is rendering", description: data.message || "AusPost is still generating the label — try again shortly." });
-      } else {
-        toast({ title: "AusPost label ready", description: `Tracking number: ${data?.tracking_number || "pending"}` });
-      }
-    },
-    onError: (error) => toast({ title: "Could not create label", description: error.message, variant: "destructive" }),
-  });
-
-  const refreshTrackingMutation = useMutation({
-    mutationFn: () => base44.functions.invoke("auspostTrack", { orderId: order.id }),
-    onSuccess: ({ data }) => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      toast({ title: "Tracking refreshed", description: data?.latest_event || `Status: ${data?.status || "unknown"}` });
-    },
-    onError: (error) => toast({ title: "Could not refresh tracking", description: error.message, variant: "destructive" }),
   });
 
   // Real Stripe refund (server-authoritative). Replaces the old data-only write.
@@ -477,12 +476,30 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const refundRemaining = Math.max(0, Number(order.total_aud || 0) - refundedSoFar);
   const canRefund = refundable.includes(order.status) && refundRemaining > 0 && !!order.stripe_session_id;
   const canCancel = order.status !== "cancelled" && order.status !== "refunded";
+  const isDelivery = order.fulfilment_method === "shipping";
+  const hasShippingAddress = !isDelivery || hasStructuredAddress(order);
+  const nextStatuses = isDelivery
+    ? (allowedTransitions[order.status || "pending"] || [])
+    : ["paid", "packing"].includes(order.status) ? ["packing", "completed"] : allowedTransitions[order.status || "pending"] || [];
+  const manualOptions = [...new Set([order.status, ...nextStatuses])].filter((value) => MANUAL_STATUSES.includes(value));
+
+  const validateShipping = () => {
+    if (!isDelivery) return true;
+    if (!hasShippingAddress) {
+      toast({ title: "Complete shipping address required", description: "Add street, suburb, state, four-digit postcode and AU country before shipping.", variant: "destructive" });
+      setExpanded(true);
+      return false;
+    }
+    if (!trackingNumber.trim() || !carrier) {
+      toast({ title: "Tracking details required", description: "Choose a carrier and enter the tracking number before shipping.", variant: "destructive" });
+      setExpanded(true);
+      return false;
+    }
+    return true;
+  };
 
   const handleQuickAction = (newStatus) => {
-    if (newStatus === "shipped" && !trackingNumber) {
-      setExpanded(true);
-      return;
-    }
+    if (newStatus === "shipped" && !validateShipping()) return;
     setConfirmAction({
       status: newStatus,
       label: `Mark as ${getStatusConfig(newStatus).label}?`,
@@ -500,8 +517,17 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
     const existingTimeline = [...timeline];
 
     if (confirmAction.status === "shipped") {
-      data.tracking_number = trackingNumber;
-      data.tracking_url = trackingUrl;
+      if (!validateShipping()) {
+        setConfirmAction(null);
+        return;
+      }
+      const verifiedUrl = safeTrackingUrl(trackingUrl);
+      if (trackingUrl && !verifiedUrl) {
+        toast({ title: "Invalid tracking link", description: "Tracking links must use HTTPS.", variant: "destructive" });
+        return;
+      }
+      data.tracking_number = trackingNumber.trim().slice(0, 160);
+      data.tracking_url = verifiedUrl;
       data.carrier = carrier;
       data.shipped_at = new Date().toISOString();
       // Auto-calculate estimated delivery
@@ -526,10 +552,20 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   };
 
   const handleStatusChange = (value) => {
+    if (!manualOptions.includes(value) || value === order.status) return;
+    if (value === "shipped" && !validateShipping()) return;
     const existingTimeline = [...timeline];
     const data = { status: value };
 
     if (value === "shipped" && !order.shipped_at) {
+      const verifiedUrl = safeTrackingUrl(trackingUrl);
+      if (trackingUrl && !verifiedUrl) {
+        toast({ title: "Invalid tracking link", description: "Tracking links must use HTTPS.", variant: "destructive" });
+        return;
+      }
+      data.tracking_number = trackingNumber.trim().slice(0, 160);
+      data.tracking_url = verifiedUrl;
+      data.carrier = carrier;
       data.shipped_at = new Date().toISOString();
       const method = order.shipping_method || "standard";
       if (!order.estimated_delivery) {
@@ -666,13 +702,22 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   <Package className="mr-1 h-3 w-3" /> Pack
                 </Button>
               )}
-              {(order.status === "paid" || order.status === "packing") && (
+              {isDelivery && (order.status === "paid" || order.status === "packing") && (
                 <Button
                   size="sm"
                   onClick={() => handleQuickAction("shipped")}
                   className="h-8 rounded-none bg-blue-600 hover:bg-blue-500 text-[9px] font-bold uppercase tracking-wider text-white"
                 >
                   <Truck className="mr-1 h-3 w-3" /> Ship
+                </Button>
+              )}
+              {!isDelivery && (order.status === "paid" || order.status === "packing") && (
+                <Button
+                  size="sm"
+                  onClick={() => handleQuickAction("completed")}
+                  className="h-8 rounded-none bg-emerald-600 hover:bg-emerald-500 text-[9px] font-bold uppercase tracking-wider text-white"
+                >
+                  <CheckCircle2 className="mr-1 h-3 w-3" /> {order.fulfilment_method === "pickup" ? "Collected" : "Complete"}
                 </Button>
               )}
               {order.status === "shipped" && (
@@ -759,49 +804,27 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   )}
                 </div>
 
-                {/* AusPost label + tracking actions — nothing to post for a
-                    pickup order, so the whole block is hidden for those. */}
-                {order.fulfilment_method !== "pickup" && (
+                {/* Manual fulfilment only: no carrier API is called. */}
+                {isDelivery && (
                 <div className="border border-border/20 bg-muted/5 p-3 space-y-2">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-1.5">
-                    <Truck className="h-3 w-3 text-primary" /> AusPost Shipping
+                    <Truck className="h-3 w-3 text-primary" /> Shipping label &amp; tracking
                   </p>
-                  {!order.shipping_postcode || !order.shipping_address_line1 ? (
-                    <p className="text-[10px] text-muted-foreground/40 italic">No structured shipping address on file yet for this order.</p>
+                  {!hasShippingAddress ? (
+                    <p className="text-[10px] text-amber-400">Complete the structured Australian address before printing or shipping.</p>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => createLabelMutation.mutate()}
-                        disabled={createLabelMutation.isPending || !["paid", "packing"].includes(order.status)}
-                        className="h-9 rounded-none bg-primary/90 hover:bg-primary text-[9px] font-bold uppercase tracking-wider"
-                      >
-                        <Send className="mr-1.5 h-3 w-3" />
-                        {createLabelMutation.isPending ? "Creating…" : order.shipping_label_url ? "Refresh Label Link" : "Create AusPost Label"}
-                      </Button>
-                      {order.tracking_number && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => refreshTrackingMutation.mutate()}
-                          disabled={refreshTrackingMutation.isPending}
-                          className="h-9 rounded-none border-border/40 text-[9px] font-bold uppercase tracking-wider"
-                        >
-                          <RefreshCw className="mr-1.5 h-3 w-3" /> {refreshTrackingMutation.isPending ? "Refreshing…" : "Refresh Tracking"}
-                        </Button>
-                      )}
-                      {(freshLabelUrl || (order.shipping_label_url && /^https?:\/\//i.test(order.shipping_label_url))) && (
-                        <a
-                          href={freshLabelUrl || order.shipping_label_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex h-9 items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/5 px-3 text-[9px] font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500/10"
-                        >
-                          <Download className="h-3 w-3" /> Download Label
-                        </a>
-                      )}
-                    </div>
+                    <Button
+                      size="sm"
+                      type="button"
+                      onClick={() => printPackingSlip(order)}
+                      className="h-9 rounded-none bg-primary/90 hover:bg-primary text-[9px] font-bold uppercase tracking-wider"
+                    >
+                      <Printer className="mr-1.5 h-3 w-3" /> Print address / packing slip
+                    </Button>
                   )}
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    This browser printout is not paid postage. Purchase postage separately, then enter the carrier, tracking number and HTTPS tracking link below.
+                  </p>
                 </div>
                 )}
 
@@ -817,7 +840,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         >
                           <SelectTrigger className="h-11 rounded-none border-border/40 text-sm"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {MANUAL_STATUSES.map((s) => {
+                            {manualOptions.map((s) => {
                               const conf = getStatusConfig(s);
                               return (
                                 <SelectItem key={s} value={s}>
@@ -885,14 +908,14 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                       <div className="flex gap-1.5">
                         <Input
                           id={`order-tracking-url-${order.id}`}
-                          placeholder="https://track.auspost.com.au/..."
+                          placeholder="https://carrier.example/track/..."
                           value={trackingUrl}
                           onChange={(e) => setTrackingUrl(e.target.value)}
                           onBlur={() => trackingUrl !== (order.tracking_url || "") && onUpdate(order.id, { tracking_url: trackingUrl })}
                           className="h-11 rounded-none border-border/40 text-sm font-mono flex-1"
                         />
-                        {trackingUrl && (
-                          <a href={trackingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-11 w-11 border border-border/40 text-muted-foreground hover:text-primary transition-colors shrink-0">
+                        {safeTrackingUrl(trackingUrl) && (
+                          <a href={safeTrackingUrl(trackingUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center h-11 w-11 border border-border/40 text-muted-foreground hover:text-primary transition-colors shrink-0">
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         )}
@@ -1078,9 +1101,14 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                         <Package className="mr-1.5 h-4 w-4" /> Mark Packing
                       </Button>
                     )}
-                    {(order.status === "paid" || order.status === "packing") && (
+                    {isDelivery && (order.status === "paid" || order.status === "packing") && (
                       <Button onClick={() => handleQuickAction("shipped")} className="flex-1 min-h-[44px] rounded-none bg-blue-600 hover:bg-blue-500 text-xs font-bold uppercase tracking-wider">
                         <Truck className="mr-1.5 h-4 w-4" /> Mark Shipped
+                      </Button>
+                    )}
+                    {!isDelivery && (order.status === "paid" || order.status === "packing") && (
+                      <Button onClick={() => handleQuickAction("completed")} className="flex-1 min-h-[44px] rounded-none bg-emerald-600 hover:bg-emerald-500 text-xs font-bold uppercase tracking-wider">
+                        <CheckCircle2 className="mr-1.5 h-4 w-4" /> {order.fulfilment_method === "pickup" ? "Mark Collected" : "Mark Complete"}
                       </Button>
                     )}
                     {order.status === "shipped" && (

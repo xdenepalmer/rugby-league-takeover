@@ -3,6 +3,7 @@
  */
 import React, { lazy, Suspense } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   MessageSquare, MessageCircle, Send, Sparkles, Users, BarChart3,
 } from "lucide-react";
@@ -74,8 +75,17 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
             )}
           </AnimatePresence>
 
+          {!isAuthenticated ? (
+            <div className="space-y-3 border border-border/30 bg-muted/[0.04] p-4">
+              <p className="text-xs leading-relaxed text-slate-200">
+                Sign in to start a discussion. Requiring an account helps keep the community safer and reduces spam.
+              </p>
+              <Button asChild size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] text-white">
+                <Link to="/login?next=%2Fforum">Sign in to post</Link>
+              </Button>
+            </div>
+          ) : (
           <form onSubmit={onSubmit} className="space-y-3">
-            {isAuthenticated ? (
               <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
                 <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus src={user?.avatar_url} />
                 <div>
@@ -83,12 +93,6 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
                   <p className="text-[8px] text-slate-300 font-bold">Authenticated</p>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-1">
-                <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Your Name</label>
-                <Input required placeholder="e.g. Tommy R." value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
-              </div>
-            )}
 
             <div className="space-y-1">
               <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-200">Category</label>
@@ -126,7 +130,7 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
 
             <Button
               type="submit"
-              disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || isPending}
+              disabled={!appParams.hasBase44Config || !draft.title || !draft.body || isPending}
               size="mobile"
               className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] transition-all hover:bg-primary/95 hover:shadow-[0_0_18px_rgba(249,115,22,0.45)] group"
             >
@@ -135,6 +139,7 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
             </Button>
             <p className="text-[8px] text-center text-slate-400 font-bold">Posts appear instantly &amp; are public — please keep it civil</p>
           </form>
+          )}
         </div>
       </div>
 

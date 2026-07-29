@@ -62,38 +62,23 @@ Deno.serve(async (req) => {
 
     const metIds = ACHIEVEMENTS.filter((a) => num(stats[a.metric]) >= a.threshold).map((a) => a.id);
 
-    // Already-recorded unlocks for this user (dedup so rewards grant once).
-    const { data: existing } = await svc
-      .from('achievement_unlocks')
-      .select('achievement_id')
-      .eq('user_id', user.id)
-      .limit(500);
-    const recorded = new Set((existing || []).map((r) => r.achievement_id));
+    const claims = ACHIEVEMENTS
+      .filter((achievement) => metIds.includes(achievement.id))
+      .map(({ id, category, tier, reward_chips }) => ({
+        achievement_id: id,
+        category,
+        tier,
+        reward_chips,
+      }));
+    const { data: claimResult, error: claimError } = await svc.rpc('claim_achievement_unlocks', {
+      p_user_id: user.id,
+      p_user_email: user.email || '',
+      p_achievements: claims,
+    });
+    if (claimError) throw claimError;
 
-    const newly = metIds.filter((id) => !recorded.has(id));
-    const now = new Date().toISOString();
-    let awardedChips = 0;
-
-    for (const id of newly) {
-      const def = ACHIEVEMENTS.find((a) => a.id === id);
-      if (!def) continue;
-      await svc.from('achievement_unlocks').insert({
-        user_id: user.id,
-        user_email: user.email || '',
-        achievement_id: def.id,
-        category: def.category,
-        tier: def.tier,
-        reward_chips: def.reward_chips || 0,
-        unlocked_at: now,
-      });
-      awardedChips += num(def.reward_chips);
-    }
-
-    if (awardedChips > 0) {
-      await svc.from('profiles')
-        .update({ casino_chips: num(fullUser?.casino_chips) + awardedChips })
-        .eq('id', user.id);
-    }
+    const newly = Array.isArray(claimResult?.newlyUnlocked) ? claimResult.newlyUnlocked : [];
+    const awardedChips = num(claimResult?.awardedChips);
 
     return json({ ok: true, unlocked: metIds, newlyUnlocked: newly, awardedChips });
   } catch (error) {

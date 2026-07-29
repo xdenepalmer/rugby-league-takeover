@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { KeyRound, LogOut, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { KeyRound, LogOut, Mail, Lock, Eye, EyeOff, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -126,6 +127,16 @@ export default function SecurityTab() {
         </div>
         <Button variant="outline" onClick={() => resetMutation.mutate()} disabled={resetMutation.isPending} className="rounded-none">
           <Mail className="mr-2 h-4 w-4" /> {resetMutation.isPending ? "Sending..." : "Email reset link"}
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-3 border border-destructive/30 bg-destructive/[0.04] p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-foreground">Delete account</p>
+          <p className="text-sm text-muted-foreground">Permanently remove your login, profile and associated app data.</p>
+        </div>
+        <Button asChild variant="outline" className="rounded-none border-destructive/40 text-destructive hover:bg-destructive/10">
+          <Link to="/delete-account"><Trash2 className="mr-2 h-4 w-4" /> Delete account</Link>
         </Button>
       </div>
 

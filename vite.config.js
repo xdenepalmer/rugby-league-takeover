@@ -8,6 +8,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 // byte-different on every publish, so the browser's update check reliably detects
 // a new version and the in-app update prompt can offer a reload.
 const BUILD_ID = String(Date.now())
+const ANALYZE_BUNDLE = process.env.ANALYZE_BUNDLE === 'true'
 function stampServiceWorker() {
   return {
     name: 'rlt-stamp-sw',
@@ -38,15 +39,17 @@ export default defineConfig({
   plugins: [
     react(),
     stampServiceWorker(),
-    visualizer({
-      filename: 'dist/stats.html',
-      title: 'Rugby League Takeover Bundle Visualizer',
-      template: 'treemap',
-      gzipSize: true,
-      brotliSize: true,
-      open: false,
-    }),
-  ],
+    ANALYZE_BUNDLE
+      ? visualizer({
+          filename: 'dist/stats.html',
+          title: 'Rugby League Takeover Bundle Visualizer',
+          template: 'treemap',
+          gzipSize: true,
+          brotliSize: true,
+          open: false,
+        })
+      : null,
+  ].filter(Boolean),
   build: {
     chunkSizeWarningLimit: 900,
     rollupOptions: {
