@@ -40,15 +40,44 @@ test("email-local placeholders are never prefilled as delivery names", () => {
   assert.equal(trustedCheckoutName({ email: "t_mace@hotmail.com", full_name: "Tom Mace" }), "Tom Mace");
 });
 
-test("store is keyboard-safe and active commerce has no AusPost invocation", () => {
+test("store keeps keyboard hardening while restoring signed AusPost PAC quotes", () => {
   const store = readFileSync(new URL("../src/pages/Store.jsx", import.meta.url), "utf8");
   const orders = readFileSync(new URL("../src/components/admin/OrdersManager.jsx", import.meta.url), "utf8");
-  const checkout = readFileSync(new URL("../supabase/functions/createCheckout/index.ts", import.meta.url), "utf8");
   assert.ok(store.includes("window.visualViewport"));
   assert.ok(store.includes("scrollCheckoutFieldIntoView"));
   assert.ok(store.includes("getOrCreateCheckoutRequestId"));
-  for (const source of [store, orders, checkout]) {
-    assert.ok(!source.includes('functions.invoke("auspost'));
+  assert.ok(store.includes('functions.invoke("auspostRates"'));
+  assert.ok(store.includes("Shipping (AusPost PAC · domestic AU)"));
+  assert.ok(store.includes("selectedRate.signature"));
+  assert.ok(store.includes("selectedRate.expires_at"));
+  assert.ok(store.includes("Your full delivery address is collected securely in Stripe Checkout."));
+  assert.ok(!orders.includes('functions.invoke("auspost'), "order management must not buy or quote postage");
+});
+
+test("store requires a fresh PAC selection only for physical shipped carts", () => {
+  const store = readFileSync(new URL("../src/pages/Store.jsx", import.meta.url), "utf8");
+  assert.ok(store.includes("cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)"));
+  assert.ok(store.includes("shipping: !cartNeedsShipping || isPickup"));
+  assert.ok(store.includes("? null"));
+  assert.ok(store.includes("freeShippingThresholdAud(storeSettings)"));
+  assert.ok(store.includes("shippingCents: !hasNoDeliveryCharge && selectedRate && !ratesStale"));
+  assert.ok(!store.includes("FLAT_AU_SHIPPING_AUD"));
+  assert.ok(!store.includes("$15 flat-rate"));
+});
+
+test("PAC restoration preserves hardened checkout, promos and verified returns", () => {
+  const store = readFileSync(new URL("../src/pages/Store.jsx", import.meta.url), "utf8");
+  for (const token of [
+    "trustedCheckoutName(user)",
+    "scrollCheckoutFieldIntoView",
+    "promoCode: appliedPromoIsCurrent ? appliedPromo.code",
+    "checkoutRequestId",
+    "checkoutStatus",
+    "isVerifiedPaid",
+    'localStorage.removeItem("rlt_cart")',
+    'checkoutUrl.hostname !== "checkout.stripe.com"',
+  ]) {
+    assert.ok(store.includes(token), `Store must retain ${token}`);
   }
 });
 

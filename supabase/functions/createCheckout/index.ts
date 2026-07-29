@@ -1,5 +1,6 @@
 // Creates an idempotent Stripe-hosted Checkout Session from authoritative
-// product/settings data. Client prices, stock, shipping and totals are ignored.
+// product/settings data and a signed PAC/AusPost quote. Client product prices,
+// stock, tax, fees, discounts and unsigned shipping totals are ignored.
 import Stripe from 'npm:stripe@22.2.0';
 import {
   getCaller,
@@ -15,8 +16,7 @@ const MAX_REQUEST_BYTES = 16_384;
 const MAX_ORDER_TOTAL_AUD = 50_000;
 const CHECKOUT_CURRENCY = 'aud';
 const DEFAULT_CHECKOUT_ORIGIN = 'https://www.rugbyleaguetakeover.com';
-const FLAT_DOMESTIC_SHIPPING_CENTS = 1_500;
-const FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS = 15_000;
+const DEFAULT_FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS = 15_000;
 const CHECKOUT_SESSION_SECONDS = 30 * 60;
 const CHECKOUT_RATE_WINDOW_SECONDS = 10 * 60;
 const CHECKOUT_RATE_LIMIT = 8;
@@ -229,9 +229,136 @@ function calculateTotals(goods: number, shipping: number, settings: any) {
   };
 }
 
+// PAC quotes are signed by auspostRates over the service, price, postcode,
+// normalized cart and expiry. Checkout verifies that exact payload before
+// trusting the quoted amount, then independently applies any free-postage rule.
 // deno-lint-ignore no-explicit-any
-function resolveFulfilment(method: unknown, country: unknown, settings: any, requiresShipping: boolean) {
-  if (!requiresShipping) return { method: 'none', label: 'No shipping required', shippingCents: 0 };
+function cartFingerprint(items: any[]) {
+  return (items || [])
+    .map((item) => `${trim(item?.productId ?? item?.product_id, 128)}:${Math.max(1, Math.floor(Number(item?.quantity) || 1))}`)
+    .filter((entry) => !entry.startsWith(':'))
+    .sort()
+    .join(',');
+}
+
+function quotePayload(code: string, priceCents: number, postcode: string, cartHash: string, expiresAt: number) {
+  return [code, priceCents, postcode, cartHash, expiresAt].join('|');
+}
+
+function timingSafeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) {
+    difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+async function verifyQuoteSignature(payload: string, rawSignature: unknown) {
+  const secret = Deno.env.get('SHIPPING_QUOTE_SECRET');
+  const signature = trim(rawSignature, 128).toLowerCase();
+  if (!secret || !/^[0-9a-f]{64}$/.test(signature)) return false;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signed = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const expected = [...new Uint8Array(signed)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return timingSafeEqual(expected, signature);
+}
+
+type ShippingSelection = {
+  code: string;
+  name: string;
+  postcode: string;
+  priceCents: number;
+  expiresAt: number;
+  signature: string;
+};
+
+function canonicalShippingServiceName(code: string) {
+  const normalized = code.toUpperCase();
+  if (normalized === 'AUS_PARCEL_REGULAR') return 'Parcel Post';
+  if (normalized === 'AUS_PARCEL_EXPRESS') return 'Express Post';
+  if (normalized.startsWith('AUS_PARCEL_REGULAR_')) return 'Parcel Post';
+  if (normalized.startsWith('AUS_PARCEL_EXPRESS_')) return 'Express Post';
+  // The quote signature authenticates the code but not PAC's display name.
+  // Unknown future PAC service codes remain usable without persisting a
+  // shopper-controlled label into Stripe or the fulfilment dashboard.
+  return 'AusPost delivery';
+}
+
+// deno-lint-ignore no-explicit-any
+function normalizeShippingSelection(raw: any): ShippingSelection | null {
+  const code = trim(raw?.code, 100);
+  const name = canonicalShippingServiceName(code);
+  const postcode = trim(raw?.postcode, 4);
+  const price = Number(raw?.price_aud);
+  const priceCents = Math.round(price * 100);
+  const expiresAt = Number(raw?.expires_at);
+  const signature = trim(raw?.signature, 128).toLowerCase();
+  if (
+    !code
+    || !/^\d{4}$/.test(postcode)
+    || !Number.isFinite(price)
+    || !Number.isSafeInteger(priceCents)
+    || priceCents < 0
+    || priceCents > 100_000
+    || !Number.isSafeInteger(expiresAt)
+    || !/^[0-9a-f]{64}$/.test(signature)
+  ) {
+    return null;
+  }
+  return {
+    code,
+    name,
+    postcode,
+    priceCents,
+    expiresAt,
+    signature,
+  };
+}
+
+const PARCEL_RANK: Record<string, number> = { satchel: 0, small: 1, medium: 2, large: 3 };
+const DEFAULT_PARCEL_SIZE = 'satchel';
+const PARCEL_SIZE_WORDS: [string, string][] = [
+  ['extra large', 'large'],
+  ['extralarge', 'large'],
+  ['large', 'large'],
+  ['medium', 'medium'],
+  ['small', 'small'],
+  ['satchel', 'satchel'],
+];
+const normalizeParcelSize = (value: unknown) => {
+  const size = trim(value, 20).toLowerCase();
+  return size in PARCEL_RANK ? size : DEFAULT_PARCEL_SIZE;
+};
+function serviceParcelSize(service: Pick<ShippingSelection, 'code' | 'name'>): string | null {
+  const searchable = `${service.code} ${service.name}`.toLowerCase();
+  for (const [word, size] of PARCEL_SIZE_WORDS) {
+    if (searchable.includes(word)) return size;
+  }
+  return null;
+}
+function freeShippingThresholdCents(settings: any) {
+  const threshold = Number(settings?.free_shipping_threshold_aud);
+  return Number.isFinite(threshold) && threshold >= 0
+    ? toCents(threshold)
+    : DEFAULT_FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS;
+}
+
+// deno-lint-ignore no-explicit-any
+function resolveFulfilment(
+  method: unknown,
+  country: unknown,
+  settings: any,
+  requiresShipping: boolean,
+  rawShipping: unknown,
+) {
+  if (!requiresShipping) return { method: 'none', label: 'No shipping required', shipping: null };
   const choice = trim(method, 16).toLowerCase() || 'shipping';
   const australian = ['AU', 'AUS', 'AUSTRALIA'].includes(trim(country, 32).toUpperCase());
   const pickupEnabled = settings?.pickup_enabled === true;
@@ -241,7 +368,7 @@ function resolveFulfilment(method: unknown, country: unknown, settings: any, req
     if (pickupAudience === 'international' && australian) {
       return { error: 'Collection is for international orders only — please choose shipping.' };
     }
-    return { method: 'pickup', label: trim(settings?.pickup_label || 'Collect in Las Vegas', 120), shippingCents: 0 };
+    return { method: 'pickup', label: trim(settings?.pickup_label || 'Collect in Las Vegas', 120), shipping: null };
   }
   if (choice !== 'shipping') return { error: "Choose how you'd like to receive your order." };
   if (country && !australian) {
@@ -249,7 +376,11 @@ function resolveFulfilment(method: unknown, country: unknown, settings: any, req
       ? 'We only ship within Australia — choose collection in Las Vegas instead.'
       : 'We currently only ship within Australia.' };
   }
-  return { method: 'shipping', label: 'Standard shipping (Australia-wide)', shippingCents: FLAT_DOMESTIC_SHIPPING_CENTS };
+  const shipping = normalizeShippingSelection(rawShipping);
+  if (!shipping) {
+    return { error: 'A current AusPost shipping quote is required — please calculate shipping again.' };
+  }
+  return { method: 'shipping', label: shipping.name, shipping };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -355,16 +486,65 @@ Deno.serve(async (req) => {
     );
     const { data: settings, error: settingsError } = await svc
       .from('site_settings')
-      .select('pickup_enabled,pickup_audience,pickup_label,pickup_instructions,gst_enabled,gst_rate_percent,gst_mode,gst_label,card_fee_enabled,card_fee_percent,card_fee_fixed_aud,card_fee_mode,card_fee_label')
+      .select('pickup_enabled,pickup_audience,pickup_label,pickup_instructions,gst_enabled,gst_rate_percent,gst_mode,gst_label,card_fee_enabled,card_fee_percent,card_fee_fixed_aud,card_fee_mode,card_fee_label,free_shipping_threshold_aud')
       .order('updated_date', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (settingsError) throw settingsError;
     const requiresShipping = [...productsById.values()].some((product) => product.shipping_required !== false);
-    const fulfilment = resolveFulfilment(input?.fulfilment, input?.country, settings || {}, requiresShipping);
+    const fulfilment = resolveFulfilment(
+      input?.fulfilment,
+      input?.country,
+      settings || {},
+      requiresShipping,
+      input?.shipping,
+    );
     if ('error' in fulfilment) return responseJson(req, { error: fulfilment.error }, 400);
-    const shippingCents = fulfilment.method === 'shipping' && merchandiseSubtotal < FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS
-      ? FLAT_DOMESTIC_SHIPPING_CENTS
+
+    // Re-derive the maximum parcel size from the saved products. The storefront
+    // filters oversized PAC services too, but a crafted client must not be able
+    // to send a signed Large-box quote for a satchel-sized order.
+    if (fulfilment.method === 'shipping' && fulfilment.shipping) {
+      let requiredSize = DEFAULT_PARCEL_SIZE;
+      for (const product of productsById.values()) {
+        if (product.shipping_required === false) continue;
+        const productSize = normalizeParcelSize(product.parcel_size);
+        if (PARCEL_RANK[productSize] > PARCEL_RANK[requiredSize]) requiredSize = productSize;
+      }
+      const selectedSize = serviceParcelSize(fulfilment.shipping);
+      if (selectedSize !== null && PARCEL_RANK[selectedSize] > PARCEL_RANK[requiredSize]) {
+        return responseJson(req, {
+          error: 'That shipping option is too large for this order — please calculate shipping again.',
+        }, 400);
+      }
+    }
+
+    let quotedShippingCents = 0;
+    if (fulfilment.method === 'shipping' && fulfilment.shipping) {
+      const quote = fulfilment.shipping;
+      const payload = quotePayload(
+        quote.code,
+        quote.priceCents,
+        quote.postcode,
+        cartFingerprint(items),
+        quote.expiresAt,
+      );
+      const signatureValid = await verifyQuoteSignature(payload, quote.signature);
+      if (!signatureValid) {
+        return responseJson(req, {
+          error: 'Shipping quote could not be verified — please calculate shipping again.',
+        }, 400);
+      }
+      if (Date.now() > quote.expiresAt) {
+        return responseJson(req, {
+          error: 'That shipping quote has expired — please calculate shipping again.',
+        }, 400);
+      }
+      quotedShippingCents = quote.priceCents;
+    }
+    const shippingCents = fulfilment.method === 'shipping'
+      && merchandiseSubtotal < freeShippingThresholdCents(settings || {})
+      ? quotedShippingCents
       : 0;
     const totals = calculateTotals(merchandiseSubtotal, shippingCents, settings || {});
     const stripe = new Stripe(getStripeSecretKey());
@@ -381,6 +561,11 @@ Deno.serve(async (req) => {
     }
 
     const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_SESSION_SECONDS;
+    const shippingSelection = fulfilment.method === 'shipping' ? fulfilment.shipping : null;
+    const shippingCode = shippingSelection?.code
+      || (fulfilment.method === 'pickup' ? 'PICKUP' : 'NONE');
+    const shippingName = shippingSelection?.name || fulfilment.label;
+    const customerPostcode = shippingSelection?.postcode || '';
     const { data: existing, error: existingError } = await svc
       .from('store_orders').select('*').eq('checkout_request_id', checkoutRequestId).maybeSingle();
     if (existingError) throw existingError;
@@ -389,6 +574,9 @@ Deno.serve(async (req) => {
       const same = order.customer_email === customerEmail
         && order.customer_name === customerName
         && order.fulfilment_method === fulfilment.method
+        && String(order.customer_postcode || '') === customerPostcode
+        && String(order.shipping_service_code || '') === shippingCode
+        && Number(order.shipping_cost_aud || 0) === fromCents(shippingCents)
         && Number(order.merchandise_subtotal_aud) === fromCents(merchandiseSubtotal)
         && String(order.promo_code || '') === String(promotion.code || '')
         && JSON.stringify(order.line_items || []) === JSON.stringify(lines.orderLines);
@@ -409,9 +597,6 @@ Deno.serve(async (req) => {
         }, 409);
       }
     } else {
-      const shippingCode = fulfilment.method === 'shipping'
-        ? (shippingCents > 0 ? 'AU_STANDARD_FLAT' : 'AU_STANDARD_FREE')
-        : fulfilment.method === 'pickup' ? 'PICKUP' : 'NONE';
       const { data: created, error } = await svc.from('store_orders').insert({
         id: crypto.randomUUID(),
         checkout_request_id: checkoutRequestId,
@@ -428,8 +613,9 @@ Deno.serve(async (req) => {
         line_items: lines.orderLines,
         user_email: user?.email || customerEmail,
         user_id: user?.id || null,
+        customer_postcode: customerPostcode,
         shipping_service_code: shippingCode,
-        shipping_service_name: fulfilment.label,
+        shipping_service_name: shippingName,
         shipping_cost_aud: fromCents(shippingCents),
         fulfilment_method: fulfilment.method,
         gst_amount_aud: fromCents(totals.gst),
@@ -487,18 +673,16 @@ Deno.serve(async (req) => {
         cancel_url: `${origin}/store?checkout=cancelled`,
         expires_at: expiresAt,
         line_items: stripeLines,
-        ...(fulfilment.method === 'shipping' ? {
+        ...(fulfilment.method === 'shipping' && shippingSelection ? {
           shipping_address_collection: { allowed_countries: ['AU'] },
           shipping_options: [{
             shipping_rate_data: {
               type: 'fixed_amount',
-              display_name: shippingCents > 0 ? 'Standard delivery (Australia)' : 'Free standard delivery (Australia)',
+              display_name: shippingCents > 0
+                ? `${shippingName} (AusPost)`
+                : `Free ${shippingName} (AusPost)`,
               fixed_amount: { amount: shippingCents, currency: CHECKOUT_CURRENCY },
-              delivery_estimate: {
-                minimum: { unit: 'business_day', value: 4 },
-                maximum: { unit: 'business_day', value: 7 },
-              },
-              metadata: { rlt_shipping_code: shippingCents > 0 ? 'AU_STANDARD_FLAT' : 'AU_STANDARD_FREE' },
+              metadata: { rlt_shipping_code: shippingCode },
             },
           }],
         } : {}),

@@ -75,13 +75,15 @@ test("a hand-crafted request cannot select a filtered-out service", () => {
 
 // ── Mirror check ────────────────────────────────────────────────────────
 test("the edge functions carry the same rules as this module", () => {
-  const legacyRates = readFileSync(new URL("../supabase/functions/auspostRates/index.ts", import.meta.url), "utf8");
+  const rates = readFileSync(new URL("../supabase/functions/auspostRates/index.ts", import.meta.url), "utf8");
   const checkout = readFileSync(new URL("../supabase/functions/createCheckout/index.ts", import.meta.url), "utf8");
-  assert.ok(legacyRates.includes("PARCEL_RANK"), "the retained legacy rate function still classifies parcels");
-  assert.ok(!checkout.includes("auspostRates"), "active checkout must not call the legacy carrier-rate function");
-  assert.ok(!checkout.includes("serviceParcelSize"), "flat shipping does not accept client-selected parcel services");
-  assert.ok(checkout.includes("FLAT_DOMESTIC_SHIPPING_CENTS = 1_500"), "active checkout charges the $15 policy");
-  assert.ok(checkout.includes("FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS = 15_000"), "active checkout enforces free shipping at $150");
+  assert.ok(rates.includes("PARCEL_RANK"), "the PAC rate function must classify parcels");
+  assert.ok(rates.includes("signQuote"), "PAC must sign every returned rate");
+  assert.ok(checkout.includes("verifyQuoteSignature"), "checkout must verify the selected PAC rate");
+  assert.ok(checkout.includes("canonicalShippingServiceName"), "unsigned PAC display names must be canonicalized server-side");
+  assert.ok(checkout.includes("serviceParcelSize"), "checkout must reject an oversized selected parcel service");
+  assert.ok(checkout.includes("freeShippingThresholdCents"), "checkout must enforce the saved free-shipping threshold");
+  assert.ok(!checkout.includes("FLAT_DOMESTIC_SHIPPING_CENTS"), "active checkout must not replace PAC with a flat rate");
 });
 
 // ── Non-shippable stock + the placeholder weight ────────────────────────

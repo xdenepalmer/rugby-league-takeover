@@ -41,7 +41,7 @@ import { openExternalUrl } from "@/lib/native/open-external";
 import { isNativeApp } from "@/lib/native/native-env";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
-import { orderTotals, toCents, fromCents } from "@/lib/money-rules";
+import { orderTotals, freeShippingThresholdAud, toCents, fromCents } from "@/lib/money-rules";
 import {
   clearCheckoutRequestId,
   getOrCreateCheckoutRequestId,
@@ -49,8 +49,6 @@ import {
   trustedCheckoutName,
 } from "@/lib/store-checkout";
 
-const FLAT_AU_SHIPPING_AUD = 15;
-const FREE_AU_SHIPPING_THRESHOLD_AUD = 150;
 const PENDING_CHECKOUT_SESSION_KEY = "rlt_pending_checkout_session";
 const STRIPE_CHECKOUT_SESSION_ID_PATTERN = /^cs_(?:test|live)_[A-Za-z0-9_]{10,}$/;
 
@@ -490,7 +488,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart }) {
             <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-4 text-xs">
               <div className="space-y-1">
                 <span className="font-bold text-foreground">🚚 Free Shipping</span>
-                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Estimated delivery 4-7 business days.</p>
+                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Live AusPost options and estimates are shown in your cart.</p>
               </div>
               <div className="space-y-1">
                 <span className="font-bold text-foreground">🔄 30-Day Returns</span>
@@ -561,7 +559,7 @@ function StoreExperienceRail({ productCount, categoryCount, cartCount, onCartOpe
       icon: Truck,
       label: "Shipping",
       value: "Free over $150 AUD",
-      detail: "$15 Australia-wide",
+      detail: "Live AusPost rates",
       tone: "text-primary",
     },
     {
@@ -914,15 +912,15 @@ export default function Store() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price_aud || 0) * item.quantity), 0);
 
-  // Public shipping policy: $15 Australia-wide, free from $150 merchandise.
-  // createCheckout independently applies these constants from saved prices.
-  const shippingThreshold = FREE_AU_SHIPPING_THRESHOLD_AUD;
+  // The free-shipping threshold is saved alongside the other store settings so
+  // this progress bar and createCheckout make the same decision.
+  const storeSettings = settingsRecords[0] || {};
+  const shippingThreshold = freeShippingThresholdAud(storeSettings);
   const progressPercent = Math.min(100, (cartSubtotal / shippingThreshold) * 100);
   const needsMore = Math.max(0, shippingThreshold - cartSubtotal);
   const isFreeShipping = cartSubtotal >= shippingThreshold;
 
-  // ── Fulfilment: fixed-price Australia-wide shipping or Vegas collection ──
-  const storeSettings = settingsRecords[0] || {};
+  // ── Fulfilment: PAC-priced AusPost shipping or Vegas collection ────────
   const pickupEnabled = storeSettings.pickup_enabled === true;
   const pickupAudience = storeSettings.pickup_audience || "international";
   const pickupLabel = storeSettings.pickup_label || "Collect in Las Vegas at the event";
@@ -946,11 +944,26 @@ export default function Store() {
   // Nothing can be ordered when we can neither ship nor let them collect.
   const cannotFulfil = cartNeedsShipping && !shippingAvailable && !pickupAvailable;
 
-  const fixedShippingCents = cartNeedsShipping && !isPickup ? toCents(FLAT_AU_SHIPPING_AUD) : 0;
+  const [shippingPostcode, setShippingPostcode] = useState("");
+  const [shippingRates, setShippingRates] = useState([]);
+  const [shippingRatesFor, setShippingRatesFor] = useState("");
+  const [selectedShippingCode, setSelectedShippingCode] = useState("");
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState("");
+
+  const cartSignature = useMemo(
+    () => cart.map((item) => `${item.id}:${item.quantity}`).sort().join("|"),
+    [cart]
+  );
+  const ratesStale = !shippingRates.length || shippingRatesFor !== `${shippingPostcode.trim()}::${cartSignature}`;
+  const selectedRate = shippingRates.find((rate) => rate.code === selectedShippingCode);
+
+  // The summary uses the selected signed PAC quote. createCheckout independently
+  // verifies that quote, then applies the saved free-shipping threshold.
   const checkoutTotals = orderTotals({
     subtotalCents: toCents(cartSubtotal),
-    shippingCents: fixedShippingCents,
-    settings: { ...storeSettings, free_shipping_threshold_aud: FREE_AU_SHIPPING_THRESHOLD_AUD },
+    shippingCents: !hasNoDeliveryCharge && selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0,
+    settings: storeSettings,
     isPickup: hasNoDeliveryCharge,
   });
   const roundedCartSubtotal = Number(cartSubtotal.toFixed(2));
@@ -962,6 +975,39 @@ export default function Store() {
     if (appliedPromo && !appliedPromoIsCurrent) setAppliedPromo(null);
   }, [appliedPromo, appliedPromoIsCurrent]);
 
+  const calculateShipping = async () => {
+    const trimmed = shippingPostcode.trim();
+    if (!/^\d{4}$/.test(trimmed)) {
+      setShippingError("Enter a valid 4-digit Australian postcode.");
+      return;
+    }
+    setShippingLoading(true);
+    setShippingError("");
+    setCheckoutError("");
+    try {
+      const response = await base44.functions.invoke("auspostRates", {
+        toPostcode: trimmed,
+        cart: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
+      });
+      const services = Array.isArray(response?.data?.services) ? response.data.services : [];
+      if (!services.length) throw new Error("No AusPost shipping options are available for this postcode.");
+      setShippingRates(services);
+      setShippingRatesFor(`${trimmed}::${cartSignature}`);
+      setSelectedShippingCode(services[0].code);
+    } catch (error) {
+      const message = error?.response?.data?.error
+        || error?.data?.error
+        || error?.message
+        || "Could not calculate shipping right now.";
+      setShippingError(message);
+      setShippingRates([]);
+      setShippingRatesFor("");
+      setSelectedShippingCode("");
+    } finally {
+      setShippingLoading(false);
+    }
+  };
+
   const applyPromoCode = async () => {
     const code = promoInput.trim().toUpperCase();
     if (!code) return;
@@ -972,7 +1018,7 @@ export default function Store() {
       const response = await base44.functions.invoke("promoCodes", {
         action: "validate",
         code,
-        subtotalAud: fromCents(checkoutTotals.totalCents - checkoutTotals.shippingCents),
+        subtotalAud: roundedCartSubtotal,
       });
       if (!response?.data?.valid) {
         setAppliedPromo(null);
@@ -1005,6 +1051,10 @@ export default function Store() {
       setCheckoutError("We currently only ship within Australia.");
       return;
     }
+    if (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)) {
+      setShippingError("Please calculate and select an AusPost shipping option before checkout.");
+      return;
+    }
 
     if (window.self !== window.top) {
       // Info-style notice (not an error): the preview iframe blocks the Stripe redirect.
@@ -1024,6 +1074,16 @@ export default function Store() {
         customerEmail,
         fulfilment: isPickup ? "pickup" : "shipping",
         country: orderCountry,
+        shipping: !cartNeedsShipping || isPickup
+          ? null
+          : {
+              code: selectedRate.code,
+              name: selectedRate.name,
+              postcode: shippingPostcode.trim(),
+              price_aud: selectedRate.price_aud,
+              signature: selectedRate.signature,
+              expires_at: selectedRate.expires_at,
+            },
         promoCode: appliedPromoIsCurrent ? appliedPromo.code : "",
         checkoutRequestId,
       });
@@ -1464,7 +1524,8 @@ export default function Store() {
                     </div>
                   </div>
 
-                  {/* Australia-wide delivery, with optional Vegas collection. */}
+                  {/* AusPost ships domestically; optional Vegas collection is
+                      controlled in Site Settings for the configured audience. */}
                   {pickupEnabled && (
                     <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                       <label htmlFor="order-country" className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
@@ -1530,14 +1591,92 @@ export default function Store() {
                   <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                        <Truck className="h-3 w-3 text-primary" /> Standard shipping · Australia-wide
+                        <Truck className="h-3 w-3 text-primary" /> Shipping (AusPost PAC · domestic AU)
                       </p>
-                      <span className="font-mono text-xs font-bold text-emerald-400">
-                        {isFreeShipping ? "FREE" : "$15.00 AUD"}
-                      </span>
+                      {selectedRate && !ratesStale && (
+                        <span className="font-mono text-xs font-bold text-emerald-400">
+                          {isFreeShipping ? "FREE" : `$${Number(selectedRate.price_aud).toFixed(2)} AUD`}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[11px] leading-relaxed text-slate-300">
-                      $15 flat-rate delivery anywhere in Australia. Free when the merchandise subtotal reaches $150. Enter the delivery address securely in Stripe Checkout.
+
+                    <div className="flex gap-2">
+                      <div className="relative min-w-0 flex-1 scroll-mb-40">
+                        <label htmlFor="shipping-postcode" className="mb-1 block text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                          Delivery postcode
+                        </label>
+                        <Input
+                          id="shipping-postcode"
+                          placeholder="e.g. 4000"
+                          inputMode="numeric"
+                          autoComplete="postal-code"
+                          maxLength={4}
+                          value={shippingPostcode}
+                          onChange={(event) => {
+                            setShippingPostcode(event.target.value.replace(/\D/g, "").slice(0, 4));
+                            setShippingError("");
+                          }}
+                          onFocus={(event) => scrollCheckoutFieldIntoView(event.currentTarget)}
+                          className="h-11 scroll-mb-40 rounded-none bg-background/50 border-border text-sm"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={calculateShipping}
+                        disabled={shippingLoading || shippingPostcode.length !== 4}
+                        variant="outline"
+                        className="mt-[21px] h-11 shrink-0 rounded-none border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-3"
+                      >
+                        {shippingLoading ? "Calculating…" : "Calculate"}
+                      </Button>
+                    </div>
+
+                    {shippingError && (
+                      <p className="flex items-center gap-1.5 text-[10px] font-medium text-destructive" role="alert">
+                        <AlertCircle className="h-3 w-3 shrink-0" /> {shippingError}
+                      </p>
+                    )}
+
+                    {!ratesStale && shippingRates.length > 0 && (
+                      <div className="space-y-1.5" aria-label="AusPost shipping options">
+                        {shippingRates.map((rate) => (
+                          <label
+                            key={rate.code}
+                            className={`flex cursor-pointer items-center justify-between gap-2 border px-3 py-2 text-xs transition-colors ${
+                              selectedShippingCode === rate.code ? "border-primary bg-primary/5" : "border-border/40 hover:border-border"
+                            }`}
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              <input
+                                type="radio"
+                                name="shipping-rate"
+                                value={rate.code}
+                                checked={selectedShippingCode === rate.code}
+                                onChange={() => {
+                                  setSelectedShippingCode(rate.code);
+                                  setShippingError("");
+                                }}
+                                className="h-3.5 w-3.5 shrink-0 accent-primary"
+                              />
+                              <span className="min-w-0">
+                                <span className="block font-bold text-foreground">{rate.name}</span>
+                                {rate.delivery_time && <span className="block text-[10px] leading-4 text-muted-foreground">{rate.delivery_time}</span>}
+                              </span>
+                            </span>
+                            <span className="shrink-0 font-mono font-bold text-accent">
+                              {isFreeShipping ? "FREE" : `$${Number(rate.price_aud).toFixed(2)}`}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {ratesStale && shippingRates.length > 0 && (
+                      <p className="text-[10px] font-medium text-amber-400">Cart or postcode changed — recalculate shipping.</p>
+                    )}
+
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Rates and delivery estimates come from Australia Post PAC. Your full delivery address is collected securely in Stripe Checkout.
                     </p>
                   </div>
                   )}
@@ -1597,13 +1736,13 @@ export default function Store() {
                       <span>Subtotal</span>
                       <span className="font-mono tabular-nums">${cartSubtotal.toFixed(2)}</span>
                     </div>
-                    {!hasNoDeliveryCharge && checkoutTotals.shippingCents > 0 && (
+                    {!hasNoDeliveryCharge && selectedRate && !ratesStale && checkoutTotals.shippingCents > 0 && (
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Shipping</span>
                         <span className="font-mono tabular-nums">${fromCents(checkoutTotals.shippingCents).toFixed(2)}</span>
                       </div>
                     )}
-                    {!hasNoDeliveryCharge && checkoutTotals.freeShippingApplied && (
+                    {!hasNoDeliveryCharge && selectedRate && !ratesStale && checkoutTotals.freeShippingApplied && (
                       <div className="flex items-center justify-between text-xs text-accent">
                         <span>Shipping</span>
                         <span className="font-mono">FREE</span>
@@ -1685,7 +1824,7 @@ export default function Store() {
 
                     <Button
                       type="submit"
-                      disabled={checkingOut || cannotFulfil}
+                      disabled={checkingOut || cannotFulfil || (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate))}
                       className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       <CreditCard className="h-4 w-4" />
@@ -1695,7 +1834,9 @@ export default function Store() {
                           ? "Not available outside Australia"
                           : isPickup
                             ? `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`
-                            : `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`}
+                            : cartNeedsShipping && (ratesStale || !selectedRate)
+                              ? "Calculate shipping to continue"
+                              : `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe
