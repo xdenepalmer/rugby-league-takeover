@@ -14,9 +14,9 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 // Two halves must both hold: policies must not equate a blank identity with a
 // match, and writers must never store a blank owner in the first place.
 
-const MIGRATION = "../supabase/migrations/0012_rls_empty_identity_fix.sql";
+const MIGRATION = "../supabase/migrations/0026_rls_empty_identity_fix.sql";
 
-test("migration 0012 exists and rewrites every owner-scoped policy", () => {
+test("migration 0026 exists and rewrites every owner-scoped policy", () => {
   const sql = read(MIGRATION);
   for (const policy of [
     "orders_read",
@@ -27,30 +27,30 @@ test("migration 0012 exists and rewrites every owner-scoped policy", () => {
     "reward_events_read",
     "achievements_read",
   ]) {
-    assert.ok(sql.includes(`"${policy}"`), `0012 redefines ${policy}`);
+    assert.ok(sql.includes(`"${policy}"`), `0026 redefines ${policy}`);
   }
   assert.ok(
     /create or replace view public\.forum_posts_view/.test(sql),
-    "0012 also rebuilds forum_posts_view (its author arm leaked unpublished posts)"
+    "0026 also rebuilds forum_posts_view (its author arm leaked unpublished posts)"
   );
 });
 
-test("0012 never equates a blank identity with a match", () => {
+test("0026 never equates a blank identity with a match", () => {
   const sql = read(MIGRATION);
   // The bug idiom, in either helper's form. nullif() is the fix: `x = NULL` is
   // NULL, never TRUE, so an absent identity matches nothing.
   assert.ok(
     !/coalesce\(\s*\(?\s*select\s+public\.current_profile_(email|id)\(\)\s*\)?\s*,\s*''\s*\)/i.test(sql),
-    "0012 must not reintroduce coalesce(identity, '')"
+    "0026 must not reintroduce coalesce(identity, '')"
   );
-  assert.ok(sql.includes("nullif"), "0012 uses nullif() to neutralise a blank identity");
+  assert.ok(sql.includes("nullif"), "0026 uses nullif() to neutralise a blank identity");
   // Every owner comparison also asserts the row's own owner column is non-blank,
   // so an unowned row can never match any caller.
   const guards = sql.match(/<> ''/g) || [];
   assert.ok(guards.length >= 7, `each owner arm guards against a blank column (found ${guards.length})`);
 });
 
-test("0012 is idempotent — safe to re-run against a live database", () => {
+test("0026 is idempotent — safe to re-run against a live database", () => {
   const sql = read(MIGRATION);
   const creates = (sql.match(/^create policy/gim) || []).length;
   const drops = (sql.match(/^drop policy if exists/gim) || []).length;
