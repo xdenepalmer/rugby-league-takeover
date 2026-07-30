@@ -16,6 +16,7 @@ import DateTimePicker from "./DateTimePicker";
 import ImageField from "./ImageField";
 import AdminStickyActionBar from "./AdminStickyActionBar";
 import LabeledField from "./shared/LabeledField";
+import EmojiPicker from "./EmojiPicker";
 
 const defaults = {
   site_logo_url: "/icons/icon-192.png",
@@ -166,6 +167,28 @@ export default function SiteSettingsManager({ settings }) {
 
   const update = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
   const videoText = (draft.background_video_urls || []).join("\n");
+
+  // Insert an emoji at the ticker textarea's caret (or append if it isn't
+  // focused), preserving the surrounding text and re-placing the cursor after
+  // the inserted glyph.
+  const tickerRef = useRef(null);
+  const insertTickerEmoji = (emoji) => {
+    const el = tickerRef.current;
+    const current = draft.ticker_items ?? "";
+    if (!el || typeof el.selectionStart !== "number") {
+      update("ticker_items", current + emoji);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const next = current.slice(0, start) + emoji + current.slice(end);
+    update("ticker_items", next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const caret = start + emoji.length;
+      el.setSelectionRange(caret, caret);
+    });
+  };
 
   /* ── Unsaved changes guard (browser close/reload) ────── */
   useEffect(() => {
@@ -419,7 +442,11 @@ export default function SiteSettingsManager({ settings }) {
                         fullWidth
                         indicator={isCustom("ticker_items") ? "custom" : "default"}
                       >
+                        <div className="flex justify-end pb-1.5">
+                          <EmojiPicker onSelect={insertTickerEmoji} ariaLabel="Insert emoji into the scrolling banner" />
+                        </div>
                         <Textarea
+                          ref={tickerRef}
                           placeholder={"LAS VEGAS TAKEOVER 2027\n🏉 RUGBY LEAGUE GLOBAL INVASION\n🎰 STADIUM SWIM PARTIES"}
                           value={draft.ticker_items ?? ""}
                           onChange={(e) => update("ticker_items", e.target.value)}
