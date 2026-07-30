@@ -359,9 +359,15 @@ function freeShippingThresholdCents(settings: any) {
 function shippingModeOf(settings: any) {
   return settings?.shipping_mode === 'fixed' ? 'fixed' : 'calculated';
 }
+const FLAT_RATE_CAP_AUD = 1000; // guardrail against a fat-fingered postage value
 function clampFlatRateCents(value: unknown, fallbackAud: number) {
   const n = Number(value);
-  return Number.isFinite(n) && n >= 0 && n <= 1000 ? toCents(n) : toCents(fallbackAud);
+  return Number.isFinite(n) && n >= 0 && n <= FLAT_RATE_CAP_AUD ? toCents(n) : toCents(fallbackAud);
+}
+// Per-product override shares the store rate's [0, $1000] ceiling. 0 = none.
+function clampOverrideCents(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.min(toCents(n), toCents(FLAT_RATE_CAP_AUD)) : 0;
 }
 // deno-lint-ignore no-explicit-any
 function productShipsUnderMode(product: any, mode: string) {
@@ -383,11 +389,10 @@ function computeFixedShippingCents(items: any[], productsById: Map<string, any>,
     if (!product) continue;
     const qty = Math.max(0, Math.floor(Number(item?.quantity) || 0));
     if (qty <= 0) continue;
-    const overrideAud = Number(product.flat_shipping_aud);
-    const hasOverride = Number.isFinite(overrideAud) && overrideAud > 0;
-    if (product.shipping_required === false && !hasOverride) continue;
+    const overrideCents = clampOverrideCents(product.flat_shipping_aud);
+    if (product.shipping_required === false && overrideCents <= 0) continue;
     units += qty;
-    if (hasOverride) overrideMaxCents = Math.max(overrideMaxCents, toCents(overrideAud));
+    if (overrideCents > 0) overrideMaxCents = Math.max(overrideMaxCents, overrideCents);
   }
   if (units <= 0) return 0;
   return Math.max(units >= 2 ? multi : single, overrideMaxCents);

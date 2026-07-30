@@ -63,9 +63,16 @@ export function freeShippingThresholdAud(settings) {
 // rather than 0 — a $0 postage bug is worse than a slightly wrong price the
 // admin can see and correct. Capped at $1000 so a fat-fingered value can't
 // produce a nonsensical charge.
+const FLAT_RATE_CAP_AUD = 1000; // guardrail against a fat-fingered postage value
 const clampFlatRateCents = (value, fallbackAud) => {
   const n = Number(value);
-  return Number.isFinite(n) && n >= 0 && n <= 1000 ? toCents(n) : toCents(fallbackAud);
+  return Number.isFinite(n) && n >= 0 && n <= FLAT_RATE_CAP_AUD ? toCents(n) : toCents(fallbackAud);
+};
+// Per-product override shares the same [0, $1000] ceiling as the store rates so
+// a mistyped value can't produce a runaway postage charge. 0 = no override.
+const clampOverrideCents = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.min(toCents(n), toCents(FLAT_RATE_CAP_AUD)) : 0;
 };
 
 export function shippingModeSettings(settings) {
@@ -96,14 +103,12 @@ export function computeFlatShippingCents(items, settings) {
   for (const item of items || []) {
     const qty = Math.max(0, Math.floor(Number(item?.quantity) || 0));
     if (qty <= 0) continue;
-    const overrideAud = Number(item?.flat_shipping_aud);
-    const hasOverride = Number.isFinite(overrideAud) && overrideAud > 0;
+    const overrideCents = clampOverrideCents(item?.flat_shipping_aud);
     // An item ships if it's physical, or if it carries a flat override (a
     // digital membership that still posts a card, say).
-    const ships = item?.shipping_required !== false || hasOverride;
-    if (!ships) continue;
+    if (item?.shipping_required === false && overrideCents <= 0) continue;
     shippableUnits += qty;
-    if (hasOverride) overrideMaxCents = Math.max(overrideMaxCents, toCents(overrideAud));
+    if (overrideCents > 0) overrideMaxCents = Math.max(overrideMaxCents, overrideCents);
   }
   if (shippableUnits <= 0) return 0;
   const countRateCents = shippableUnits >= 2 ? flatMultiCents : flatSingleCents;

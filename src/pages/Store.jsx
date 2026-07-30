@@ -1773,13 +1773,13 @@ export default function Store() {
                       <span>Subtotal</span>
                       <span className="font-mono tabular-nums">${cartSubtotal.toFixed(2)}</span>
                     </div>
-                    {!hasNoDeliveryCharge && selectedRate && !ratesStale && checkoutTotals.shippingCents > 0 && (
+                    {!hasNoDeliveryCharge && (isFixedShipping || (selectedRate && !ratesStale)) && checkoutTotals.shippingCents > 0 && (
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Shipping</span>
                         <span className="font-mono tabular-nums">${fromCents(checkoutTotals.shippingCents).toFixed(2)}</span>
                       </div>
                     )}
-                    {!hasNoDeliveryCharge && selectedRate && !ratesStale && checkoutTotals.freeShippingApplied && (
+                    {!hasNoDeliveryCharge && (isFixedShipping || (selectedRate && !ratesStale)) && checkoutTotals.freeShippingApplied && (
                       <div className="flex items-center justify-between text-xs text-accent">
                         <span>Shipping</span>
                         <span className="font-mono">FREE</span>
@@ -1871,7 +1871,7 @@ export default function Store() {
                           ? "Not available outside Australia"
                           : isPickup
                             ? `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`
-                            : cartNeedsShipping && (ratesStale || !selectedRate)
+                            : !isFixedShipping && cartNeedsShipping && (ratesStale || !selectedRate)
                               ? "Calculate shipping to continue"
                               : `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`}
                     </Button>

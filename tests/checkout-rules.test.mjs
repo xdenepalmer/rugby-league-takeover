@@ -14,6 +14,9 @@ import {
   normalizeCheckoutItems,
   resolveCheckoutCustomer,
   resolveCheckoutOrigin,
+  shippingModeOf,
+  productShipsUnderMode,
+  computeFixedShippingCents,
 } from "./checkout-rules.mjs";
 
 test("normalizes cart quantities and removes malformed items", () => {
@@ -190,4 +193,68 @@ test("pickup obeys the admin toggle and its audience", () => {
 test("Australia is recognised however the client spells it", () => {
   for (const c of ["AU", "au", "AUS", "Australia"]) assert.equal(isAustralia(c), true, c);
   for (const c of ["US", "NZ", "GB", ""]) assert.equal(isAustralia(c), false, c);
+});
+
+// ── Fixed (flat-rate) shipping — the amount actually charged, server-side ────
+// These exercise the executable mirror of createCheckout's fixed-mode maths so
+// the charged postage has behavioural coverage, not just a source-string grep.
+const FIXED_SETTINGS = { shipping_mode: "fixed", shipping_flat_single_aud: 12.5, shipping_flat_multi_aud: 15.9 };
+const bagProducts = () => new Map([
+  ["tee", { id: "tee", shipping_required: true, flat_shipping_aud: null }],
+  ["cap", { id: "cap", shipping_required: true, flat_shipping_aud: null }],
+  ["membership", { id: "membership", shipping_required: false, flat_shipping_aud: 15.9 }],
+  ["ebook", { id: "ebook", shipping_required: false, flat_shipping_aud: null }],
+  ["freight", { id: "freight", shipping_required: true, flat_shipping_aud: 25 }],
+]);
+
+test("fixed shipping: single item is the single rate, two or more is the multi rate", () => {
+  const p = bagProducts();
+  assert.equal(computeFixedShippingCents([{ productId: "tee", quantity: 1 }], p, FIXED_SETTINGS), 1250);
+  assert.equal(computeFixedShippingCents([{ productId: "tee", quantity: 2 }], p, FIXED_SETTINGS), 1590);
+  assert.equal(computeFixedShippingCents([{ productId: "tee", quantity: 1 }, { productId: "cap", quantity: 1 }], p, FIXED_SETTINGS), 1590);
+});
+
+test("fixed shipping: the Membership Package override always ships at its flat rate, even alone/digital", () => {
+  const p = bagProducts();
+  // Digital membership (shipping_required false) alone → override floor, not free.
+  assert.equal(computeFixedShippingCents([{ productId: "membership", quantity: 1 }], p, FIXED_SETTINGS), 1590);
+  // Membership + a tee → two units → multi, matches the $15.90 override.
+  assert.equal(computeFixedShippingCents([{ productId: "membership", quantity: 1 }, { productId: "tee", quantity: 1 }], p, FIXED_SETTINGS), 1590);
+  // An override above the multi rate wins for a single item.
+  assert.equal(computeFixedShippingCents([{ productId: "freight", quantity: 1 }], p, FIXED_SETTINGS), 2500);
+});
+
+test("fixed shipping: an all-digital cart with no override ships nothing", () => {
+  const p = bagProducts();
+  assert.equal(computeFixedShippingCents([{ productId: "ebook", quantity: 3 }], p, FIXED_SETTINGS), 0);
+  assert.equal(computeFixedShippingCents([], p, FIXED_SETTINGS), 0);
+});
+
+test("fixed shipping: a per-product override is capped at $1000 like the store rates", () => {
+  const p = new Map([["oops", { id: "oops", shipping_required: true, flat_shipping_aud: 999999 }]]);
+  assert.equal(computeFixedShippingCents([{ productId: "oops", quantity: 1 }], p, FIXED_SETTINGS), 100000);
+});
+
+test("productShipsUnderMode treats an override as shippable only in fixed mode", () => {
+  const membership = { shipping_required: false, flat_shipping_aud: 15.9 };
+  assert.equal(productShipsUnderMode(membership, "fixed"), true);
+  assert.equal(productShipsUnderMode(membership, "calculated"), false);
+  assert.equal(productShipsUnderMode({ shipping_required: true }, "calculated"), true);
+  assert.equal(shippingModeOf({ shipping_mode: "fixed" }), "fixed");
+  assert.equal(shippingModeOf({}), "calculated");
+});
+
+test("fixed mode ships a physical AU cart with NO client quote; calculated mode still demands one", () => {
+  const settings = { pickup_enabled: false };
+  // Fixed: no signed quote, still resolves to shipping.
+  const fixed = resolveFulfilment({ method: "shipping", shipping: null, country: "AU", settings, shippingMode: "fixed" });
+  assert.equal(fixed.ok, true);
+  assert.equal(fixed.method, "shipping");
+  assert.equal(fixed.shipping, null);
+  // Calculated: a missing quote is refused.
+  const calc = resolveFulfilment({ method: "shipping", shipping: null, country: "AU", settings, shippingMode: "calculated" });
+  assert.equal(calc.ok, false);
+  // Fixed mode still refuses non-AU shipping and still honours pickup rules.
+  const overseas = resolveFulfilment({ method: "shipping", shipping: null, country: "US", settings, shippingMode: "fixed" });
+  assert.equal(overseas.ok, false);
 });

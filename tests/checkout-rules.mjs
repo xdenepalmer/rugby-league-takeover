@@ -131,7 +131,7 @@ export const isAustralia = (country) => {
   return c === "AU" || c === "AUS" || c === "AUSTRALIA";
 };
 
-export function resolveFulfilment({ method, shipping, country, settings } = {}) {
+export function resolveFulfilment({ method, shipping, country, settings, shippingMode = "calculated" } = {}) {
   const choice = toTrimmedString(method).toLowerCase() || "shipping";
   const pickupEnabled = settings?.pickup_enabled === true;
   const audience = toTrimmedString(settings?.pickup_audience).toLowerCase() || "international";
@@ -164,11 +164,63 @@ export function resolveFulfilment({ method, shipping, country, settings } = {}) 
     };
   }
 
+  // Fixed mode: no signed AusPost quote to verify — the flat rate is computed
+  // server-side. Mirrors createCheckout's resolveFulfilment fixed branch.
+  if (shippingMode === "fixed") {
+    return { ok: true, method: "shipping", shipping: null };
+  }
+
   const selection = buildShippingLineItem(shipping);
   if (!selection) {
     return { ok: false, error: "A shipping option is required — please choose a shipping method." };
   }
   return { ok: true, method: "shipping", shipping: selection };
+}
+
+// ── Fixed (flat-rate) shipping — executable mirror of createCheckout's
+// shippingModeOf / productShipsUnderMode / computeFixedShippingCents. Kept here
+// (not just grepped) so the amount actually charged has behavioural coverage.
+export function shippingModeOf(settings) {
+  return settings?.shipping_mode === "fixed" ? "fixed" : "calculated";
+}
+
+const clampFlatRateCents = (value, fallbackAud) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1000 ? Math.round(n * 100) : Math.round(fallbackAud * 100);
+};
+const clampOverrideCents = (value) => {
+  const n = Number(value);
+  // Per-product override shares the store rate's [0, $1000] guardrail so a
+  // fat-fingered value can't produce a runaway postage charge.
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.round(n * 100), 100000) : 0;
+};
+
+export function productShipsUnderMode(product, mode) {
+  if (product?.shipping_required !== false) return true;
+  if (mode === "fixed") {
+    const override = Number(product?.flat_shipping_aud);
+    return Number.isFinite(override) && override > 0;
+  }
+  return false;
+}
+
+export function computeFixedShippingCents(items, productsById, settings) {
+  const single = clampFlatRateCents(settings?.shipping_flat_single_aud, 12.5);
+  const multi = clampFlatRateCents(settings?.shipping_flat_multi_aud, 15.9);
+  let units = 0;
+  let overrideMaxCents = 0;
+  for (const item of items || []) {
+    const product = productsById.get(toTrimmedString(item?.productId ?? item?.product_id));
+    if (!product) continue;
+    const qty = Math.max(0, Math.floor(Number(item?.quantity) || 0));
+    if (qty <= 0) continue;
+    const overrideCents = clampOverrideCents(product.flat_shipping_aud);
+    if (product.shipping_required === false && overrideCents <= 0) continue;
+    units += qty;
+    if (overrideCents > 0) overrideMaxCents = Math.max(overrideMaxCents, overrideCents);
+  }
+  if (units <= 0) return 0;
+  return Math.max(units >= 2 ? multi : single, overrideMaxCents);
 }
 
 export function resolveCheckoutOrigin(originHeader, allowlistEnv, fallback = DEFAULT_CHECKOUT_ORIGIN) {
