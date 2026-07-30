@@ -47,6 +47,16 @@ export function scrollToAnchor(hash, { offset = DEFAULT_OFFSET, prescroll = null
   let prescrolled = false;
 
   const frame = () => {
+    // While the page is scroll-locked (a mobile nav drawer is still open or
+    // closing — it pins the body with position:fixed), any scroll we do here is
+    // undone by the drawer's scroll-restore when it closes. That's the "first
+    // tap does nothing, second tap works" bug. Wait for the lock to lift, then
+    // scroll — so the very first tap lands correctly.
+    if (typeof document !== "undefined" && document.body.style.position === "fixed") {
+      if (Date.now() - waitStart < WAIT_FOR_TARGET_MS) requestAnimationFrame(frame);
+      return;
+    }
+
     const top = topFor(hash);
 
     // Target not in the DOM yet (route still mounting, or it lives in a lazy
