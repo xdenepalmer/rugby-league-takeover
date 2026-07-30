@@ -52,6 +52,13 @@ const READ_TABLES = {
   ForumPost: 'forum_posts_view',
   Testimonial: 'testimonials_view',
   TippingEntry: 'tipping_entries_view',
+  // Public visitors (anon) can't read the base site_settings table — RLS there
+  // is admin-only — so reads must go through the sanitising view, or the whole
+  // site falls back to code defaults for logged-out users (wrong logo, ticker,
+  // hero text, eyebrow shown, etc.). The view masks the sender address/creator
+  // for non-admins and exposes everything else, including the pricing/pickup
+  // fields the store needs. Writes still go to the base table (WRITE_TABLES).
+  SiteSettings: 'site_settings_view',
 };
 
 const DEFAULT_LIMIT = 500;
