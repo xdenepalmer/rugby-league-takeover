@@ -1,8 +1,20 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { Hexagon, Sparkles } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
+  // The auth pages render standalone (outside the public layout), so they don't
+  // otherwise get the configured logo. Reuse the shared siteSettings query so
+  // this is a cache hit once the app has loaded it anywhere.
+  const { data: settingsRecords } = useQuery({
+    queryKey: ["siteSettings"],
+    queryFn: () => base44.entities.SiteSettings.list("-updated_date", 1),
+    staleTime: 5 * 60 * 1000,
+  });
+  const siteLogoUrl = settingsRecords?.[0]?.site_logo_url;
+
   return (
     <div className="min-h-dvh grid lg:grid-cols-2 bg-background relative overflow-hidden">
       {/* ── LEFT HALF: ATMOSPHERIC VEGAS STREAM (Hidden on mobile) ── */}
@@ -53,9 +65,17 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="flex justify-center mb-6"
           >
-            <div className="inline-flex p-3 bg-card/60 border border-border cmd-glass shadow-lg">
-              <Sparkles className="w-8 h-8 text-accent animate-pulse" />
-            </div>
+            {siteLogoUrl ? (
+              <img
+                src={siteLogoUrl}
+                alt="Rugby League Takeover"
+                className="h-28 w-28 object-contain drop-shadow-[0_0_25px_rgba(249,115,22,0.25)]"
+              />
+            ) : (
+              <div className="inline-flex p-3 bg-card/60 border border-border cmd-glass shadow-lg">
+                <Sparkles className="w-8 h-8 text-accent animate-pulse" />
+              </div>
+            )}
           </motion.div>
 
           <motion.h2 
