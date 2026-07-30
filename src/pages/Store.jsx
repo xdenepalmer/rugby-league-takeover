@@ -41,7 +41,7 @@ import { openExternalUrl } from "@/lib/native/open-external";
 import { isNativeApp } from "@/lib/native/native-env";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
-import { orderTotals, freeShippingThresholdAud, toCents, fromCents } from "@/lib/money-rules";
+import { orderTotals, freeShippingThresholdAud, toCents, fromCents, shippingModeSettings, computeFlatShippingCents } from "@/lib/money-rules";
 import {
   clearCheckoutRequestId,
   getOrCreateCheckoutRequestId,
@@ -488,7 +488,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart }) {
             <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-4 text-xs">
               <div className="space-y-1">
                 <span className="font-bold text-foreground">🚚 Free Shipping</span>
-                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Live AusPost options and estimates are shown in your cart.</p>
+                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Shipping options are shown in your cart at checkout.</p>
               </div>
               <div className="space-y-1">
                 <span className="font-bold text-foreground">🔄 30-Day Returns</span>
@@ -559,7 +559,7 @@ function StoreExperienceRail({ productCount, categoryCount, cartCount, onCartOpe
       icon: Truck,
       label: "Shipping",
       value: "Free over $150 AUD",
-      detail: "Live AusPost rates",
+      detail: "Domestic AU delivery",
       tone: "text-primary",
     },
     {
@@ -750,6 +750,7 @@ export default function Store() {
         image_url: product.image_url,
         stock_quantity: product.stock_quantity,
         shipping_required: product.shipping_required !== false,
+        flat_shipping_aud: product.flat_shipping_aud ?? null,
         max_quantity: maxQuantity,
         quantity,
       };
@@ -761,6 +762,7 @@ export default function Store() {
         || updated.price_aud !== item.price_aud
         || updated.stock_quantity !== item.stock_quantity
         || updated.shipping_required !== item.shipping_required
+        || updated.flat_shipping_aud !== item.flat_shipping_aud
       ) {
         changed = true;
       }
@@ -865,6 +867,7 @@ export default function Store() {
         image_url: product.image_url,
         stock_quantity: product.stock_quantity,
         shipping_required: product.shipping_required !== false,
+        flat_shipping_aud: product.flat_shipping_aud ?? null,
         max_quantity: maxQuantity,
         quantity: 1,
         size,
@@ -929,6 +932,10 @@ export default function Store() {
   const isAuOrder = orderCountry === "AU";
   const pickupAvailable = pickupEnabled && (pickupAudience === "everyone" || !isAuOrder);
   const shippingAvailable = isAuOrder;
+  // Fixed (flat-rate) mode vs live AusPost quotes. In fixed mode postage is
+  // deterministic, so the storefront skips the postcode calculator and shows
+  // the flat rate; createCheckout still computes the authoritative amount.
+  const isFixedShipping = shippingModeSettings(storeSettings).mode === "fixed";
   const [deliveryMode, setDeliveryMode] = useState("shipping");
   // Keep the choice legal whenever the country or the admin settings change.
   useEffect(() => {
@@ -938,7 +945,12 @@ export default function Store() {
   // A cart of only non-physical items (membership, anything digital) has no
   // parcel: no postage to quote, no collection point, and no reason to block an
   // overseas buyer. createCheckout re-derives this from the saved products.
-  const cartNeedsShipping = cart.length > 0 && cart.some((item) => item.shipping_required !== false);
+  const cartNeedsShipping = cart.length > 0 && cart.some((item) =>
+    item.shipping_required !== false || (isFixedShipping && Number(item.flat_shipping_aud) > 0)
+  );
+  // Flat postage for the current cart (fixed mode), before the free waiver —
+  // orderTotals applies the waiver. Mirrors the server calculation.
+  const flatShippingCents = computeFlatShippingCents(cart, storeSettings);
   const isPickup = !cartNeedsShipping ? false : deliveryMode === "pickup" && pickupAvailable;
   const hasNoDeliveryCharge = !cartNeedsShipping || isPickup;
   // Nothing can be ordered when we can neither ship nor let them collect.
@@ -962,7 +974,11 @@ export default function Store() {
   // verifies that quote, then applies the saved free-shipping threshold.
   const checkoutTotals = orderTotals({
     subtotalCents: toCents(cartSubtotal),
-    shippingCents: !hasNoDeliveryCharge && selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0,
+    shippingCents: hasNoDeliveryCharge
+      ? 0
+      : isFixedShipping
+        ? flatShippingCents
+        : (selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0),
     settings: storeSettings,
     isPickup: hasNoDeliveryCharge,
   });
@@ -1051,7 +1067,7 @@ export default function Store() {
       setCheckoutError("We currently only ship within Australia.");
       return;
     }
-    if (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)) {
+    if (!isFixedShipping && cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)) {
       setShippingError("Please calculate and select an AusPost shipping option before checkout.");
       return;
     }
@@ -1074,7 +1090,8 @@ export default function Store() {
         customerEmail,
         fulfilment: isPickup ? "pickup" : "shipping",
         country: orderCountry,
-        shipping: !cartNeedsShipping || isPickup
+        // Fixed mode carries no client quote — the server derives the flat rate.
+        shipping: !cartNeedsShipping || isPickup || isFixedShipping
           ? null
           : {
               code: selectedRate.code,
@@ -1587,7 +1604,27 @@ export default function Store() {
 
                   {!pickupEnabled && !isAuOrder && null}
 
-                  {cartNeedsShipping && !isPickup && (
+                  {/* Fixed (flat-rate) shipping — no postcode calculator; the
+                      rate is deterministic and re-verified server-side. */}
+                  {isFixedShipping && cartNeedsShipping && !isPickup && (
+                  <div className="mb-4 border border-border/40 bg-background/35 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                        <Truck className="h-3 w-3 text-primary" /> Shipping (flat rate · domestic AU)
+                      </p>
+                      <span className="font-mono text-xs font-bold text-emerald-400">
+                        {isFreeShipping ? "FREE" : `$${fromCents(flatShippingCents).toFixed(2)} AUD`}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                      {isFreeShipping
+                        ? "Your order qualifies for free shipping."
+                        : "Flat-rate Australia-wide postage. Your full delivery address is collected securely in Stripe Checkout."}
+                    </p>
+                  </div>
+                  )}
+
+                  {!isFixedShipping && cartNeedsShipping && !isPickup && (
                   <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
@@ -1824,7 +1861,7 @@ export default function Store() {
 
                     <Button
                       type="submit"
-                      disabled={checkingOut || cannotFulfil || (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate))}
+                      disabled={checkingOut || cannotFulfil || (!isFixedShipping && cartNeedsShipping && !isPickup && (ratesStale || !selectedRate))}
                       className="h-12 w-full rounded-none bg-primary hover:bg-primary/95 text-white font-bold uppercase tracking-widest text-xs mt-2 shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       <CreditCard className="h-4 w-4" />

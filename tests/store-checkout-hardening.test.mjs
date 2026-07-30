@@ -54,13 +54,19 @@ test("store keeps keyboard hardening while restoring signed AusPost PAC quotes",
   assert.ok(!orders.includes('functions.invoke("auspost'), "order management must not buy or quote postage");
 });
 
-test("store requires a fresh PAC selection only for physical shipped carts", () => {
+test("store requires a fresh PAC selection only for physical shipped carts in calculated mode", () => {
   const store = readFileSync(new URL("../src/pages/Store.jsx", import.meta.url), "utf8");
-  assert.ok(store.includes("cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)"));
-  assert.ok(store.includes("shipping: !cartNeedsShipping || isPickup"));
+  // Calculated (AusPost) mode still demands a fresh, selected quote…
+  assert.ok(store.includes("!isFixedShipping && cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)"));
+  // …while fixed mode sends no client quote (server derives the flat rate).
+  assert.ok(store.includes("shipping: !cartNeedsShipping || isPickup || isFixedShipping"));
   assert.ok(store.includes("? null"));
   assert.ok(store.includes("freeShippingThresholdAud(storeSettings)"));
-  assert.ok(store.includes("shippingCents: !hasNoDeliveryCharge && selectedRate && !ratesStale"));
+  // Summary postage: fixed → flatShippingCents, calculated → the signed PAC quote.
+  assert.ok(store.includes("flatShippingCents"));
+  assert.ok(store.includes("selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0"));
+  // No hardcoded flat constant — the flat rate is admin-configurable and
+  // recomputed server-side, not baked into the storefront.
   assert.ok(!store.includes("FLAT_AU_SHIPPING_AUD"));
   assert.ok(!store.includes("$15 flat-rate"));
 });

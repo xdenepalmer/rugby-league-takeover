@@ -63,6 +63,9 @@ const defaults = {
   pickup_label: "Collect in Las Vegas at the event",
   pickup_instructions: "",
   free_shipping_threshold_aud: 150,
+  shipping_mode: "calculated",
+  shipping_flat_single_aud: 12.5,
+  shipping_flat_multi_aud: 15.9,
   gst_enabled: true,
   gst_rate_percent: 6.5,
   gst_mode: "added",
@@ -712,6 +715,51 @@ export default function SiteSettingsManager({ settings }) {
                           <p className="text-[10px] leading-relaxed text-amber-400/80">
                             While this is off, customers outside Australia cannot complete an order at all.
                           </p>
+                        )}
+                      </div>
+
+                      {/* ── Shipping pricing (calculated vs fixed) ─────── */}
+                      <div className="border-t border-border/60 pt-4 space-y-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold uppercase tracking-widest text-foreground">Shipping pricing</p>
+                          <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
+                            Calculated uses live Australia Post rates (customers enter a postcode). Fixed charges a flat rate regardless of destination.
+                          </p>
+                        </div>
+                        <LabeledField label="Pricing mode" help="Switch between live AusPost quotes and flat rates. Applies to Australian delivery; the free-shipping threshold still applies.">
+                          <select
+                            value={draft.shipping_mode || "calculated"}
+                            onChange={(e) => update("shipping_mode", e.target.value)}
+                            className="h-11 w-full rounded-none border border-border/40 bg-background px-3 text-sm"
+                          >
+                            <option value="calculated">Calculated — live AusPost rates</option>
+                            <option value="fixed">Fixed — flat rate</option>
+                          </select>
+                        </LabeledField>
+                        {draft.shipping_mode === "fixed" && (
+                          <div className="grid grid-cols-1 gap-3 border border-border/40 bg-muted/5 p-3 sm:grid-cols-2">
+                            <LabeledField label="Flat rate — 1 item (AUD)" help="Charged when the cart has a single shippable item.">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={draft.shipping_flat_single_aud ?? 12.5}
+                                onChange={(e) => update("shipping_flat_single_aud", e.target.value === "" ? 0 : Number(e.target.value))}
+                              />
+                            </LabeledField>
+                            <LabeledField label="Flat rate — 2+ items (AUD)" help="Charged when the cart has two or more shippable items.">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={draft.shipping_flat_multi_aud ?? 15.9}
+                                onChange={(e) => update("shipping_flat_multi_aud", e.target.value === "" ? 0 : Number(e.target.value))}
+                              />
+                            </LabeledField>
+                            <p className="text-[10px] leading-relaxed text-slate-300 sm:col-span-2">
+                              Individual products can override this with their own flat postage (e.g. the Membership Package) in the Products screen.
+                            </p>
+                          </div>
                         )}
                       </div>
 

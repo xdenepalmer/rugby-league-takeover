@@ -350,6 +350,49 @@ function freeShippingThresholdCents(settings: any) {
     : DEFAULT_FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS;
 }
 
+// ── Fixed (flat-rate) shipping ──────────────────────────────────────────────
+// Mirror of shippingModeSettings/computeFlatShippingCents in
+// src/lib/money-rules.js — keep the two in sync. In fixed mode there is no
+// signed AusPost quote; postage is derived here from the saved products and
+// settings, never from anything the client sends.
+// deno-lint-ignore no-explicit-any
+function shippingModeOf(settings: any) {
+  return settings?.shipping_mode === 'fixed' ? 'fixed' : 'calculated';
+}
+function clampFlatRateCents(value: unknown, fallbackAud: number) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1000 ? toCents(n) : toCents(fallbackAud);
+}
+// deno-lint-ignore no-explicit-any
+function productShipsUnderMode(product: any, mode: string) {
+  if (product?.shipping_required !== false) return true;
+  if (mode === 'fixed') {
+    const override = Number(product?.flat_shipping_aud);
+    return Number.isFinite(override) && override > 0;
+  }
+  return false;
+}
+// deno-lint-ignore no-explicit-any
+function computeFixedShippingCents(items: any[], productsById: Map<string, any>, settings: any) {
+  const single = clampFlatRateCents(settings?.shipping_flat_single_aud, 12.5);
+  const multi = clampFlatRateCents(settings?.shipping_flat_multi_aud, 15.9);
+  let units = 0;
+  let overrideMaxCents = 0;
+  for (const item of items || []) {
+    const product = productsById.get(trim(item?.productId ?? item?.product_id, 128));
+    if (!product) continue;
+    const qty = Math.max(0, Math.floor(Number(item?.quantity) || 0));
+    if (qty <= 0) continue;
+    const overrideAud = Number(product.flat_shipping_aud);
+    const hasOverride = Number.isFinite(overrideAud) && overrideAud > 0;
+    if (product.shipping_required === false && !hasOverride) continue;
+    units += qty;
+    if (hasOverride) overrideMaxCents = Math.max(overrideMaxCents, toCents(overrideAud));
+  }
+  if (units <= 0) return 0;
+  return Math.max(units >= 2 ? multi : single, overrideMaxCents);
+}
+
 // deno-lint-ignore no-explicit-any
 function resolveFulfilment(
   method: unknown,
@@ -357,6 +400,7 @@ function resolveFulfilment(
   settings: any,
   requiresShipping: boolean,
   rawShipping: unknown,
+  shippingMode: string,
 ) {
   if (!requiresShipping) return { method: 'none', label: 'No shipping required', shipping: null };
   const choice = trim(method, 16).toLowerCase() || 'shipping';
@@ -375,6 +419,11 @@ function resolveFulfilment(
     return { error: pickupEnabled
       ? 'We only ship within Australia — choose collection in Las Vegas instead.'
       : 'We currently only ship within Australia.' };
+  }
+  // Fixed mode: no AusPost quote to verify — postage is computed server-side
+  // from the cart. Stripe still collects the delivery address.
+  if (shippingMode === 'fixed') {
+    return { method: 'shipping', label: 'Standard shipping', shipping: null };
   }
   const shipping = normalizeShippingSelection(rawShipping);
   if (!shipping) {
@@ -486,18 +535,20 @@ Deno.serve(async (req) => {
     );
     const { data: settings, error: settingsError } = await svc
       .from('site_settings')
-      .select('pickup_enabled,pickup_audience,pickup_label,pickup_instructions,gst_enabled,gst_rate_percent,gst_mode,gst_label,card_fee_enabled,card_fee_percent,card_fee_fixed_aud,card_fee_mode,card_fee_label,free_shipping_threshold_aud')
+      .select('pickup_enabled,pickup_audience,pickup_label,pickup_instructions,gst_enabled,gst_rate_percent,gst_mode,gst_label,card_fee_enabled,card_fee_percent,card_fee_fixed_aud,card_fee_mode,card_fee_label,free_shipping_threshold_aud,shipping_mode,shipping_flat_single_aud,shipping_flat_multi_aud')
       .order('updated_date', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (settingsError) throw settingsError;
-    const requiresShipping = [...productsById.values()].some((product) => product.shipping_required !== false);
+    const shippingMode = shippingModeOf(settings || {});
+    const requiresShipping = [...productsById.values()].some((product) => productShipsUnderMode(product, shippingMode));
     const fulfilment = resolveFulfilment(
       input?.fulfilment,
       input?.country,
       settings || {},
       requiresShipping,
       input?.shipping,
+      shippingMode,
     );
     if ('error' in fulfilment) return responseJson(req, { error: fulfilment.error }, 400);
 
@@ -541,6 +592,9 @@ Deno.serve(async (req) => {
         }, 400);
       }
       quotedShippingCents = quote.priceCents;
+    } else if (fulfilment.method === 'shipping' && shippingMode === 'fixed') {
+      // No signed quote in fixed mode — compute the flat rate from the cart.
+      quotedShippingCents = computeFixedShippingCents(items, productsById, settings || {});
     }
     const shippingCents = fulfilment.method === 'shipping'
       && merchandiseSubtotal < freeShippingThresholdCents(settings || {})
@@ -563,7 +617,7 @@ Deno.serve(async (req) => {
     const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_SESSION_SECONDS;
     const shippingSelection = fulfilment.method === 'shipping' ? fulfilment.shipping : null;
     const shippingCode = shippingSelection?.code
-      || (fulfilment.method === 'pickup' ? 'PICKUP' : 'NONE');
+      || (fulfilment.method === 'pickup' ? 'PICKUP' : fulfilment.method === 'shipping' ? 'FLAT' : 'NONE');
     const shippingName = shippingSelection?.name || fulfilment.label;
     const customerPostcode = shippingSelection?.postcode || '';
     const { data: existing, error: existingError } = await svc
@@ -673,14 +727,18 @@ Deno.serve(async (req) => {
         cancel_url: `${origin}/store?checkout=cancelled`,
         expires_at: expiresAt,
         line_items: stripeLines,
-        ...(fulfilment.method === 'shipping' && shippingSelection ? {
+        ...(fulfilment.method === 'shipping' ? {
           shipping_address_collection: { allowed_countries: ['AU'] },
           shipping_options: [{
             shipping_rate_data: {
               type: 'fixed_amount',
-              display_name: shippingCents > 0
-                ? `${shippingName} (AusPost)`
-                : `Free ${shippingName} (AusPost)`,
+              // AusPost quotes carry the carrier name; fixed rates don't.
+              display_name: (() => {
+                const suffix = shippingMode === 'fixed' ? '' : ' (AusPost)';
+                return shippingCents > 0
+                  ? `${shippingName}${suffix}`
+                  : `Free ${shippingName}${suffix}`;
+              })(),
               fixed_amount: { amount: shippingCents, currency: CHECKOUT_CURRENCY },
               metadata: { rlt_shipping_code: shippingCode },
             },

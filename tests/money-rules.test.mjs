@@ -8,6 +8,8 @@ import {
   qualifiesForFreeShipping,
   cartFingerprint,
   toCents,
+  shippingModeSettings,
+  computeFlatShippingCents,
 } from "../src/lib/money-rules.js";
 
 const ADDED = { gst_enabled: true, gst_rate_percent: 6.5, gst_mode: "added" };
@@ -140,4 +142,64 @@ test("createCheckout carries the same money rules as this module", () => {
     "the signed PAC price must only be waived from the saved merchandise threshold",
   );
   assert.ok(!src.includes("FLAT_DOMESTIC_SHIPPING_CENTS"), "checkout must not silently replace PAC with a flat rate");
+});
+
+// ── Fixed (flat-rate) shipping ────────────────────────────────────────────
+const FIXED = { shipping_mode: "fixed", shipping_flat_single_aud: 12.5, shipping_flat_multi_aud: 15.9 };
+const phys = (n = 1, extra = {}) => ({ quantity: n, shipping_required: true, ...extra });
+
+test("shippingModeSettings reads mode and clamps flat rates", () => {
+  assert.equal(shippingModeSettings({ shipping_mode: "fixed" }).mode, "fixed");
+  assert.equal(shippingModeSettings({}).mode, "calculated");
+  assert.equal(shippingModeSettings({ shipping_mode: "nonsense" }).mode, "calculated");
+  // Missing / malformed / out-of-range fall back to documented defaults, never 0.
+  assert.equal(shippingModeSettings({}).flatSingleCents, 1250);
+  assert.equal(shippingModeSettings({}).flatMultiCents, 1590);
+  assert.equal(shippingModeSettings({ shipping_flat_single_aud: -5 }).flatSingleCents, 1250);
+  assert.equal(shippingModeSettings({ shipping_flat_single_aud: 99999 }).flatSingleCents, 1250);
+  assert.equal(shippingModeSettings({ shipping_flat_single_aud: 9 }).flatSingleCents, 900);
+});
+
+test("flat shipping: one item is the single rate, two or more is the multi rate", () => {
+  assert.equal(computeFlatShippingCents([phys(1)], FIXED), 1250);
+  assert.equal(computeFlatShippingCents([phys(2)], FIXED), 1590);          // qty 2 of one line
+  assert.equal(computeFlatShippingCents([phys(1), phys(1)], FIXED), 1590); // two lines
+});
+
+test("flat shipping: a product flat override sets a floor and always counts as shippable", () => {
+  // Membership alone: digital (shipping_required false) but carries a $15.90 override.
+  const membership = { quantity: 1, shipping_required: false, flat_shipping_aud: 15.9 };
+  assert.equal(computeFlatShippingCents([membership], FIXED), 1590);
+  // Membership + a single tee → two units → multi, override matches.
+  assert.equal(computeFlatShippingCents([membership, phys(1)], FIXED), 1590);
+  // An override larger than the multi rate wins even for a single item.
+  assert.equal(computeFlatShippingCents([{ quantity: 1, shipping_required: true, flat_shipping_aud: 25 }], FIXED), 2500);
+});
+
+test("flat shipping: an all-digital cart with no override ships nothing", () => {
+  assert.equal(computeFlatShippingCents([{ quantity: 3, shipping_required: false }], FIXED), 0);
+  assert.equal(computeFlatShippingCents([], FIXED), 0);
+});
+
+test("flat shipping still honours the free-shipping threshold via orderTotals", () => {
+  // $200 of goods is over the $150 default threshold → postage waived to 0.
+  const flat = computeFlatShippingCents([phys(2)], FIXED); // 1590
+  const t = orderTotals({ subtotalCents: 20000, shippingCents: flat, settings: { ...FIXED, gst_enabled: false } });
+  assert.equal(t.shippingCents, 0);
+  assert.equal(t.freeShippingApplied, true);
+  // Under the threshold the flat rate is charged.
+  const u = orderTotals({ subtotalCents: 5000, shippingCents: flat, settings: { ...FIXED, gst_enabled: false } });
+  assert.equal(u.shippingCents, 1590);
+});
+
+test("createCheckout mirrors the fixed-mode flat shipping path", () => {
+  const src = readFileSync(new URL("../supabase/functions/createCheckout/index.ts", import.meta.url), "utf8");
+  for (const token of ["computeFixedShippingCents", "shippingModeOf", "productShipsUnderMode", "shipping_flat_single_aud"]) {
+    assert.ok(src.includes(token), `createCheckout must implement ${token}`);
+  }
+  // Fixed postage must still be gated by the free-shipping threshold.
+  assert.ok(
+    src.includes("merchandiseSubtotal < freeShippingThresholdCents"),
+    "fixed postage must be waived from the same merchandise threshold",
+  );
 });

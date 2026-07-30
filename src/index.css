@@ -71,6 +71,17 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Native <select> popups render their <option> list on the OS's default
+     (light) background, but the options inherit the app's near-white
+     foreground colour — white-on-white and unreadable in this dark theme
+     (the reported "sponsors sort dropdown text is white" bug). Pin the option
+     colours so every native select's list stays legible. */
+  select option,
+  select optgroup {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
     overscroll-behavior-y: contain;

@@ -19,7 +19,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true, flat_shipping_aud: null };
 
 // The largest packaging an item needs. Checkout offers the cart's biggest item's
 // size and nothing above it, so a customer can't put a cap in a large box.
@@ -55,6 +55,24 @@ const parcelSizeField = (draft, setDraft) => (
       <option key={opt.value} value={opt.value}>{opt.label}</option>
     ))}
   </select>
+);
+
+// Fixed-mode per-product flat postage override (e.g. a Membership Package that
+// always ships at $15.90). Blank = follow the store's item-count flat rate.
+// Only used while Shipping pricing is set to "Fixed" in Site Settings.
+const flatShippingField = (draft, setDraft) => (
+  <label className="block text-[10px] font-medium text-muted-foreground">
+    <span className="mb-1 block">Flat postage override (AUD)</span>
+    <Input
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="Blank = use flat rate"
+      value={draft.flat_shipping_aud ?? ""}
+      onChange={(e) => setDraft({ ...draft, flat_shipping_aud: e.target.value === "" ? null : Number(e.target.value) })}
+      className="h-11 rounded-none border-border/40 text-sm"
+    />
+  </label>
 );
 
 /* ── Product Card ── */
@@ -186,7 +204,8 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
             </div>
             <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
             <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
-            <p className="text-[8px] text-muted-foreground/40">Internal packing reference only. Checkout charges the published $15 flat Australia-wide rate (free from $150); no carrier-rate API is called.</p>
+            <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
+            <p className="text-[8px] text-muted-foreground/40">Weight/dimensions are used for live AusPost rates (calculated mode). The flat postage override applies only in fixed mode — set it in Site Settings → Shipping.</p>
           </div>
 
           <div className="space-y-1">
@@ -406,7 +425,8 @@ export default function ProductsManager({ products, loading }) {
                   </div>
                   <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
                   <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
-                  <p className="text-[8px] text-muted-foreground/40">Internal packing reference only. Checkout charges the published $15 flat Australia-wide rate (free from $150); no carrier-rate API is called.</p>
+                  <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
+                  <p className="text-[8px] text-muted-foreground/40">Weight/dimensions are used for live AusPost rates (calculated mode). The flat postage override applies only in fixed mode — set it in Site Settings → Shipping.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

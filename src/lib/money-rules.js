@@ -16,6 +16,10 @@ export const DEFAULT_GST_RATE_PERCENT = 6.5;
 export const DEFAULT_FREE_SHIPPING_THRESHOLD_AUD = 150;
 export const DEFAULT_CARD_FEE_PERCENT = 1.75;   // Stripe AU domestic card
 export const DEFAULT_CARD_FEE_FIXED_AUD = 0.3;
+// Flat-rate shipping (used when shipping_mode === "fixed"): one price for a
+// single-item order, a higher price once there are two or more items.
+export const DEFAULT_FLAT_SHIPPING_SINGLE_AUD = 12.5;
+export const DEFAULT_FLAT_SHIPPING_MULTI_AUD = 15.9;
 
 export const toCents = (aud) => Math.round(Number(aud || 0) * 100);
 export const fromCents = (cents) => Number((cents / 100).toFixed(2));
@@ -53,6 +57,57 @@ export function cardFeeSettings(settings) {
 export function freeShippingThresholdAud(settings) {
   const threshold = Number(settings?.free_shipping_threshold_aud);
   return Number.isFinite(threshold) && threshold >= 0 ? threshold : DEFAULT_FREE_SHIPPING_THRESHOLD_AUD;
+}
+
+// A flat rate that is missing or malformed falls back to its documented default
+// rather than 0 — a $0 postage bug is worse than a slightly wrong price the
+// admin can see and correct. Capped at $1000 so a fat-fingered value can't
+// produce a nonsensical charge.
+const clampFlatRateCents = (value, fallbackAud) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1000 ? toCents(n) : toCents(fallbackAud);
+};
+
+export function shippingModeSettings(settings) {
+  return {
+    mode: settings?.shipping_mode === "fixed" ? "fixed" : "calculated",
+    flatSingleCents: clampFlatRateCents(settings?.shipping_flat_single_aud, DEFAULT_FLAT_SHIPPING_SINGLE_AUD),
+    flatMultiCents: clampFlatRateCents(settings?.shipping_flat_multi_aud, DEFAULT_FLAT_SHIPPING_MULTI_AUD),
+  };
+}
+
+/**
+ * Flat postage for a cart in fixed shipping mode, in cents, BEFORE the
+ * free-shipping waiver (orderTotals applies that so storefront and server can't
+ * disagree). Deterministic — no AusPost quote involved.
+ *
+ * Rules (see the WhatsApp brief): one shippable item → single rate; two or more
+ * → multi rate. A product may carry its own `flat_shipping_aud` override (e.g.
+ * the Membership Package at $15.90); the charge is never below the highest
+ * override present, and an override-only item still counts toward the item
+ * total so it can't sneak the single rate.
+ *
+ * `items`: [{ quantity, shipping_required, flat_shipping_aud }]
+ */
+export function computeFlatShippingCents(items, settings) {
+  const { flatSingleCents, flatMultiCents } = shippingModeSettings(settings);
+  let shippableUnits = 0;
+  let overrideMaxCents = 0;
+  for (const item of items || []) {
+    const qty = Math.max(0, Math.floor(Number(item?.quantity) || 0));
+    if (qty <= 0) continue;
+    const overrideAud = Number(item?.flat_shipping_aud);
+    const hasOverride = Number.isFinite(overrideAud) && overrideAud > 0;
+    // An item ships if it's physical, or if it carries a flat override (a
+    // digital membership that still posts a card, say).
+    const ships = item?.shipping_required !== false || hasOverride;
+    if (!ships) continue;
+    shippableUnits += qty;
+    if (hasOverride) overrideMaxCents = Math.max(overrideMaxCents, toCents(overrideAud));
+  }
+  if (shippableUnits <= 0) return 0;
+  const countRateCents = shippableUnits >= 2 ? flatMultiCents : flatSingleCents;
+  return Math.max(countRateCents, overrideMaxCents);
 }
 
 /**
