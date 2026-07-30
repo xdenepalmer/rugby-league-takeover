@@ -1,11 +1,15 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
 import { shouldEnablePwa } from "@/lib/pwa-env";
 
-// Shows a friendly "new version available" prompt when a freshly published build
-// is detected, and reloads into it on the user's say-so. Reliability notes:
+// Detects a freshly published build and moves the installed PWA onto it so it
+// never gets stuck on a stale bundle. Reliability notes:
 //  - sw.js is byte-stamped per build (vite.config.js) so update() actually finds it.
-//  - We only reload after the user accepts (avoids first-install reload loops).
+//  - AUTO-APPLIES the update the next time the app is backgrounded — an invisible
+//    reload, so the user returns to the fresh version with no interruption. It is
+//    skipped on /store so an in-progress checkout form is never wiped; the manual
+//    "Update" button remains for always-foreground sessions.
+//  - We only reload after an update is accepted (avoids first-install reload loops).
 //  - We poll for updates on an interval and whenever the app regains focus, so an
 //    always-open installed PWA still notices a new publish.
 export default function PwaUpdatePrompt() {
@@ -19,7 +23,7 @@ export default function PwaUpdatePrompt() {
     let interval;
 
     const onControllerChange = () => {
-      // Only reload once the user has chosen to update.
+      // Only reload once an update has been accepted (manually or auto).
       if (accepted.current) window.location.reload();
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
@@ -59,16 +63,34 @@ export default function PwaUpdatePrompt() {
     };
   }, []);
 
-  const update = () => {
+  const applyUpdate = useCallback((worker) => {
     accepted.current = true;
-    if (waiting) {
-      waiting.postMessage({ type: "SKIP_WAITING" });
+    if (worker) {
+      worker.postMessage({ type: "SKIP_WAITING" });
       // Fallback in case controllerchange doesn't fire (rare).
       setTimeout(() => window.location.reload(), 2500);
     } else {
       window.location.reload();
     }
-  };
+  }, []);
+
+  // Auto-apply a ready update the next time the app is backgrounded: the reload
+  // happens while hidden, so the user comes back to the fresh version with no
+  // visible interruption. Skipped on /store so a half-filled checkout form
+  // (name/email — not persisted) is never wiped out from under the user.
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const onHidden = () => {
+      if (
+        document.visibilityState === "hidden" &&
+        !window.location.pathname.startsWith("/store")
+      ) {
+        applyUpdate(waiting);
+      }
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    return () => document.removeEventListener("visibilitychange", onHidden);
+  }, [waiting, applyUpdate]);
 
   if (!waiting) return null;
 
@@ -84,7 +106,7 @@ export default function PwaUpdatePrompt() {
         </div>
         <button
           type="button"
-          onClick={update}
+          onClick={() => applyUpdate(waiting)}
           className="shrink-0 rounded-none bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-primary/90"
         >
           Update
