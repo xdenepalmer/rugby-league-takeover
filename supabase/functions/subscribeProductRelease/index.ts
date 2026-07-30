@@ -1,5 +1,5 @@
 // Subscribe an email to a coming-soon product's release list.
-import { json, preflight, serviceClient, getCaller, isEmail } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, isEmail, serverError } from './shared.ts';
 
 const clean = (v: unknown) => String(v ?? '').trim();
 
@@ -50,7 +50,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, subscribed: true });
   } catch (error) {
-    console.error('subscribeProductRelease error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('subscribeProductRelease', error);
   }
 });

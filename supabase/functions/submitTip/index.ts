@@ -2,7 +2,7 @@
 // sole write path and re-checks the deadline server-side. For admin-managed
 // matchups the kickoff is read from the DB; for external-API fixtures we fall
 // back to the client-supplied kickoff.
-import { json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp, findActiveBan } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp, findActiveBan, serverError } from './shared.ts';
 
 const toScore = (value: unknown) => {
   const n = Math.floor(Number(value));
@@ -84,7 +84,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, id: entry.id });
   } catch (error) {
-    console.error('submitTip error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('submitTip', error);
   }
 });

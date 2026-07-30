@@ -1,6 +1,6 @@
 // Public travel-interest registration. Mirrors normalizeInterestRegistration()
 // in src/lib/public-forms.js — keep the two in sync.
-import { json, preflight, serviceClient, getCaller, trimToLength, isEmail, isLikelyBot, resolveClientIp, findActiveBan } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, trimToLength, isEmail, isLikelyBot, resolveClientIp, findActiveBan, serverError } from './shared.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
@@ -51,7 +51,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, id: registration.id });
   } catch (error) {
-    console.error('submitRegistration error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('submitRegistration', error);
   }
 });

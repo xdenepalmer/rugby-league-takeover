@@ -8,7 +8,7 @@
 //   correct winner            +3 pts · +50 chips · +20 XP
 //   correct winner + margin   +5 pts · +150 chips · +50 XP
 //   wrong                      0 pts (entry still marked settled)
-import { json, preflight, serviceClient, getCaller, num } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, num, serverError } from './shared.ts';
 
 const PTS_CORRECT = 3;
 const PTS_MARGIN_BONUS = 2;
@@ -96,7 +96,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, game_id: id, settled, winners });
   } catch (error) {
-    console.error('settleTips error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('settleTips', error);
   }
 });

@@ -1,6 +1,6 @@
 // Durably evaluates and records fan achievements.
 // The catalog + thresholds here MIRROR src/lib/achievements.js — keep in sync.
-import { json, preflight, serviceClient, getCaller, num } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, num, serverError } from './shared.ts';
 
 const LEGENDARY_SLOT_BADGE_IDS = ['crown', 'moneybag', 'seven'];
 const SLOT_BADGE_TOTAL = 12;
@@ -97,7 +97,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, unlocked: metIds, newlyUnlocked: newly, awardedChips });
   } catch (error) {
-    console.error('evaluateAchievements error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('evaluateAchievements', error);
   }
 });

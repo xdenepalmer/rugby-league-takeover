@@ -9,7 +9,7 @@
 //   All three complete → +100 chips, +40 XP, once per day.
 //
 // Request: { claim?: boolean } — omit/false just returns mission status.
-import { json, preflight, serviceClient, getCaller, num, todayKey } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, num, todayKey, serverError } from './shared.ts';
 
 const BONUS_CHIPS = 100;
 const BONUS_XP = 40;
@@ -86,7 +86,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, claimedNow: true, missions, allComplete: true, claimed: true, bonus: { chips: BONUS_CHIPS, xp: BONUS_XP } });
   } catch (error) {
-    console.error('claimDailyBonus error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('claimDailyBonus', error);
   }
 });

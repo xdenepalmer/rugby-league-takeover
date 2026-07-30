@@ -1,15 +1,33 @@
 // Notify release-list subscribers when a product goes live. Called by an admin
 // (or automation) with { data: { id: productId } }. Emails send via Resend when
 // RESEND_API_KEY is configured; in-app notifications are always created.
-import { json, preflight, serviceClient, sendBrandedEmail, siteUrl, escapeHtml } from './shared.ts';
+//
+// Privileged: it sends mail to every subscriber of a product and burns their
+// one-shot notified_at flag, so the caller must be an admin — or an automation
+// presenting RELEASE_NOTIFY_SECRET in the x-task-secret header.
+import {
+  json, preflight, serviceClient, getCaller, serverError, timingSafeEqual,
+  sendBrandedEmail, siteUrl, escapeHtml,
+} from './shared.ts';
 
 const clean = (v: unknown) => String(v ?? '').trim();
 const nowIso = () => new Date().toISOString();
+
+function hasTaskSecret(req: Request) {
+  const expected = clean(Deno.env.get('RELEASE_NOTIFY_SECRET'));
+  const presented = clean(req.headers.get('x-task-secret'));
+  return Boolean(expected) && timingSafeEqual(expected, presented);
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
   try {
     const svc = serviceClient();
+    if (!hasTaskSecret(req)) {
+      const me = await getCaller(req, svc);
+      if (!me) return json({ error: 'Sign in required' }, 401);
+      if (me.role !== 'admin') return json({ error: 'Admin access required' }, 403);
+    }
     const payload = await req.json().catch(() => ({}));
     const productId = clean(payload?.data?.id || payload?.productId);
 
@@ -68,7 +86,6 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, sent, product_id: product.id });
   } catch (error) {
-    console.error('notifyProductRelease error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('notifyProductRelease', error);
   }
 });

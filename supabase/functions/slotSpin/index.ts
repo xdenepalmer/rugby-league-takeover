@@ -9,7 +9,7 @@
 // Modes:
 //   daily  — one free spin per UTC day.
 //   extra  — costs EXTRA_SPIN_COST chips, up to MAX_EXTRA_PER_DAY per day.
-import { json, preflight, serviceClient, getCaller, num, todayKey } from './shared.ts';
+import { json, preflight, serviceClient, getCaller, num, todayKey, serverError } from './shared.ts';
 
 const SLOT_SYMBOLS = [
   { key: 'cherry', weight: 30 },
@@ -169,7 +169,6 @@ Deno.serve(async (req) => {
       },
     });
   } catch (error) {
-    console.error('slotSpin error:', error);
-    return json({ error: (error as Error).message }, 500);
+    return serverError('slotSpin', error);
   }
 });

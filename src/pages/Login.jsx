@@ -11,6 +11,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { canUseGoogleOAuth } from "@/lib/native/auth-guards";
 import { isNativeApp } from "@/lib/native/native-env";
 import { useAuth } from "@/lib/AuthContext";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 // Framer motion variants
 const containerVariants = {
@@ -37,8 +38,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
-  const requestedNext = searchParams.get("next");
-  const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
+  const nextUrl = safeInternalPath(searchParams.get("next"));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
