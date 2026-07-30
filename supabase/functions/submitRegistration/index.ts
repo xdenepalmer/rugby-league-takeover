@@ -42,8 +42,8 @@ Deno.serve(async (req) => {
         consent_timestamp: new Date().toISOString(),
         source: 'homepage_travel_form',
         ip_address: ip,
-        user_email: user?.email || '',
-        user_id: user?.id || '',
+        user_email: user?.email || null,
+        user_id: user?.id || null,
       })
       .select('id')
       .single();

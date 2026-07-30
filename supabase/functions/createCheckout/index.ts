@@ -242,8 +242,12 @@ Deno.serve(async (req) => {
         status: 'pending',
         total_aud: totalAud,
         line_items: lineItems,
-        user_email: user?.email || '',
-        user_id: user?.id || '',
+        // NULL, never '' — an empty owner column is not "no owner" to a policy
+        // that compares owner-to-caller, and blank values previously matched an
+        // anonymous caller's blank identity (see migration 0012). Guest orders
+        // are owned by nobody and must be admin-only.
+        user_email: user?.email || null,
+        user_id: user?.id || null,
         customer_postcode: shippingSelection.postcode,
         shipping_service_code: shippingSelection.code,
         shipping_service_name: shippingSelection.name,

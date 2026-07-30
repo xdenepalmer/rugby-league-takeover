@@ -73,8 +73,8 @@ Deno.serve(async (req) => {
         predicted_away_score: toScore(input?.predicted_away_score),
         margin,
         tipper_name: trimToLength(user?.full_name || input?.tipper_name, 80) || 'Vegas Fan',
-        user_id: user?.id || '',
-        user_email: user?.email || '',
+        user_id: user?.id || null,
+        user_email: user?.email || null,
         ip_address: ip || '',
         kickoff: kickoff || null,
       })

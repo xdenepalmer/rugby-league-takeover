@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       if (!def) continue;
       await svc.from('achievement_unlocks').insert({
         user_id: user.id,
-        user_email: user.email || '',
+        user_email: user.email || null,
         achievement_id: def.id,
         category: def.category,
         tier: def.tier,

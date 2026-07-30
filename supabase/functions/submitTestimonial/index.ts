@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
       sort_order: 100,
       is_published: false,
       ip_address: ip,
-      user_email: user?.email || '',
-      user_id: user?.id || '',
+      user_email: user?.email || null,
+      user_id: user?.id || null,
     });
 
     return json({ ok: true });

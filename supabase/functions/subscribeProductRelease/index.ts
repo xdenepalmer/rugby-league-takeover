@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
       product_name: clean(product.name),
       email: subscriberEmail,
       name: clean(name || user?.full_name),
-      user_id: user?.id || '',
-      user_email: user?.email || '',
+      user_id: user?.id || null,
+      user_email: user?.email || null,
       is_active: true,
     });
 
