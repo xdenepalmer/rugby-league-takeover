@@ -1522,6 +1522,18 @@ export default function Store() {
                         </div>
                       </motion.div>
                     ))}
+
+                    {/* Adding an item auto-opens this drawer, which covers the
+                        shop — without an obvious way back, shoppers assumed only
+                        one product could be bought per order. This returns them
+                        to browsing with the cart intact. */}
+                    <button
+                      type="button"
+                      onClick={() => setCartOpen(false)}
+                      className="flex min-h-11 w-full items-center justify-center gap-2 border border-primary/40 bg-primary/[0.06] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" /> Back to shop · add more items
+                    </button>
                   </div>
                 )}
 

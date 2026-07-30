@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Share2, Calendar, Clock, User, Check } from "lucide-react";
 import { useNativeShare } from "@/hooks/useNativeShare";
@@ -32,7 +33,18 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
     }
   };
 
-  return (
+  // Rendered through a portal to <body>, NOT in place. The home page wraps every
+  // section in <LazySection>, which sets `content-visibility: auto` — that applies
+  // layout+paint containment, and a contained element becomes the containing block
+  // for `position: fixed` descendants. Left inline, this overlay was therefore
+  // sized/positioned to the enclosing section (~2500px tall) instead of the
+  // viewport, so `bottom-0` parked the sheet below the fold: tapping an event or
+  // news card appeared to do nothing, and whether it happened to be visible
+  // depended purely on scroll position (the "Stadium Swim one works, the other two
+  // don't" bug). A portal escapes the containment entirely.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
       <div key="detail-sheet" className="fixed inset-0 z-50 pointer-events-none">
@@ -172,6 +184,7 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
         </motion.div>
       </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
