@@ -164,7 +164,20 @@ export default function NativeCartSheet({ open, onClose }) {
             <div className="ios-scroll flex-1 overflow-y-auto px-4 pb-[max(1rem,var(--safe-bottom))]">
               {cart.length === 0 ? (
                 <div className="py-8">
-                  <NativeEmptyState icon={ShoppingBag} title="Cart's empty" description="Add some takeover merch and it'll show up here." />
+                  <NativeEmptyState
+                    icon={ShoppingBag}
+                    title="Cart's empty"
+                    description="Add some takeover merch and it'll show up here."
+                    action={
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="ios-pressable min-h-11 border border-primary px-5 text-[10px] font-black uppercase tracking-widest text-primary"
+                      >
+                        Browse merch
+                      </button>
+                    }
+                  />
                 </div>
               ) : (
                 <>
@@ -201,6 +214,17 @@ export default function NativeCartSheet({ open, onClose }) {
                       );
                     })}
                   </div>
+
+                  {/* Same dead end as the web cart: with items in it, the only
+                      way back to the products was the X. */}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="ios-pressable mt-3 flex min-h-11 w-full items-center justify-center gap-2 border border-dashed border-border/70 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    Continue shopping
+                  </button>
 
                   <div className="border-t border-border/60 pt-3">
                     <p className="pb-2 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Delivery (Australia)</p>

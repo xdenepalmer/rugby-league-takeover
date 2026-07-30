@@ -1195,6 +1195,19 @@ export default function Store() {
                         </div>
                       </motion.div>
                     ))}
+
+                    {/* Without this the cart is a dead end: once it holds items
+                        the only way back to the products is the small Close
+                        link, and the free-shipping nudge above actively asks
+                        the buyer to add more. */}
+                    <button
+                      type="button"
+                      onClick={() => setCartOpen(false)}
+                      className="touch-target flex w-full items-center justify-center gap-2 border border-dashed border-border/70 bg-background/40 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300 transition-colors hover:border-primary/50 hover:text-primary cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      Continue shopping
+                    </button>
                   </div>
                 )}
               </div>
