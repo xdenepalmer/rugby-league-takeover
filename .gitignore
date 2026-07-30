@@ -39,3 +39,9 @@ ios/App/output
 ios/DerivedData
 ios/App/App.xcodeproj/xcuserdata
 ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
+
+# Local deployment/release helpers and accidentally nested working copies
+.vercel/
+play-console-testers.csv
+rugby-league-takeover/
+supabase/.temp/

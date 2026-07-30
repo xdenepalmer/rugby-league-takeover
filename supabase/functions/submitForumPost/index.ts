@@ -80,17 +80,76 @@ Deno.serve(async (req) => {
     // Silently absorb honeypot bot submissions.
     if (isLikelyBot(input)) return json({ ok: true });
 
+    const user = await getCaller(req, svc);
+    if (!user?.id) {
+      return json({ error: 'Login required to post in the forum' }, 401);
+    }
+
+    const rateWindowStart = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const dailyWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [
+      { count: recentPostCount, error: recentPostError },
+      { count: recentRewardCount, error: recentRewardError },
+      { count: dailyRewardCount, error: dailyRewardError },
+    ] = await Promise.all([
+      svc
+        .from('forum_posts')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_date', rateWindowStart),
+      // Reward events survive ordinary post deletion, so deleting five posts
+      // cannot immediately reset the spam/reward gate.
+      svc
+        .from('forum_reward_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .in('kind', ['thread', 'reply'])
+        .gte('created_date', rateWindowStart),
+      svc
+        .from('forum_reward_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .in('kind', ['thread', 'reply'])
+        .gte('created_date', dailyWindowStart),
+    ]);
+    if (recentPostError) throw recentPostError;
+    if (recentRewardError) throw recentRewardError;
+    if (dailyRewardError) throw dailyRewardError;
+    const recentActivityCount = Math.max(
+      Number(recentPostCount || 0),
+      Number(recentRewardCount || 0),
+    );
+    if (recentActivityCount >= 5) {
+      return json({
+        error: 'You have posted several times recently. Please wait a few minutes before posting again.',
+        code: 'rate_limited',
+        retryAfterSeconds: 600,
+      }, 429);
+    }
+    if (Number(dailyRewardCount || 0) >= 20) {
+      return json({
+        error: 'You have reached today’s forum posting limit. Please try again later.',
+        code: 'daily_rate_limited',
+        retryAfterSeconds: 86400,
+      }, 429);
+    }
+
     const category = trimToLength(input?.category || 'General', 32);
     if (!FORUM_CATEGORIES.includes(category)) {
       return json({ error: 'Forum category is not supported' }, 400);
     }
 
     const parentId = trimToLength(input?.parent_id, 120);
+    if (parentId) {
+      const parent = await getForumPost(svc, parentId);
+      if (!parent || parent.deleted_at || parent.is_published !== true) {
+        return json({ error: 'The discussion you are replying to is no longer available.' }, 404);
+      }
+    }
     const body = censorProfanity(trimToLength(input?.body, 2000));
     if (!body) return json({ error: 'Message is required' }, 400);
 
-    const user = await getCaller(req, svc);
-    const authorName = trimToLength(user?.full_name || input?.author_name, 80) || 'Anonymous';
+    const authorName = trimToLength(user.full_name || user.email, 80) || 'Member';
     const ip = resolveClientIp(req);
 
     const mediaUrl = trimToLength(input?.media_url, 600);
@@ -114,9 +173,9 @@ Deno.serve(async (req) => {
         is_published: true,
         is_pinned: false,
         ip_address: ip,
-        user_email: user?.email || '',
-        user_id: user?.id || '',
-        author_avatar: trimToLength(user?.avatar_url, 600),
+        user_email: user.email || '',
+        user_id: user.id,
+        author_avatar: trimToLength(user.avatar_url, 600),
         media_url: mediaUrl,
         media_type: mediaType,
       })

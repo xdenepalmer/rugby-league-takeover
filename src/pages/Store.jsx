@@ -24,7 +24,9 @@ import {
   Lock,
   Truck,
   Ruler,
-  MapPin
+  MapPin,
+  Tag,
+  X
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -36,9 +38,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { openExternalUrl } from "@/lib/native/open-external";
+import { isNativeApp } from "@/lib/native/native-env";
 import { lightImpact, mediumImpact } from "@/lib/native/haptics";
 import { hideBrokenImage } from "@/lib/img-fallback";
 import { orderTotals, freeShippingThresholdAud, toCents, fromCents } from "@/lib/money-rules";
+import {
+  clearCheckoutRequestId,
+  getOrCreateCheckoutRequestId,
+  scrollCheckoutFieldIntoView,
+  trustedCheckoutName,
+} from "@/lib/store-checkout";
+
+const PENDING_CHECKOUT_SESSION_KEY = "rlt_pending_checkout_session";
+const STRIPE_CHECKOUT_SESSION_ID_PATTERN = /^cs_(?:test|live)_[A-Za-z0-9_]{10,}$/;
 
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -232,10 +244,51 @@ function normalizeSizeVariants(raw) {
   if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
   return raw
     .map(v => typeof v === "string" ? { size: v, stock_quantity: 0 } : v)
-    .filter(v => v && v.size && String(v.size).trim() !== "");
+    .map(v => ({
+      ...v,
+      size: String(v?.size || "").trim(),
+      stock_quantity: Math.max(0, Math.floor(Number(v?.stock_quantity) || 0)),
+    }))
+    .filter(v => v.size !== "");
 }
 
-function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user }) {
+function getMaximumQuantity(product, size) {
+  const total = Math.max(0, Math.floor(Number(product?.stock_quantity) || 0));
+  const variants = normalizeSizeVariants(product?.sizes);
+  if (variants.length === 0) return Math.min(total, 20);
+  const variant = variants.find((entry) => entry.size === String(size || "").trim());
+  if (!variant) return 0;
+  return Math.min(total, variant.stock_quantity, 20);
+}
+
+function loadStoredCart() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("rlt_cart") || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, 20).flatMap((item) => {
+      const id = String(item?.id || "").trim();
+      const quantity = Math.max(1, Math.min(20, Math.floor(Number(item?.quantity) || 1)));
+      if (!id) return [];
+      const size = String(item?.size || "").trim();
+      return [{
+        cartItemId: `${id}${size ? `-${size}` : ""}`,
+        id,
+        name: String(item?.name || "Merch item").slice(0, 160),
+        price_aud: Math.max(0, Number(item?.price_aud) || 0),
+        image_url: String(item?.image_url || "").slice(0, 2000),
+        stock_quantity: Math.max(0, Math.floor(Number(item?.stock_quantity) || 0)),
+        shipping_required: item?.shipping_required !== false,
+        max_quantity: Math.max(1, Math.min(20, Math.floor(Number(item?.max_quantity) || 20))),
+        quantity,
+        size: size || undefined,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function ProductQuickViewModal({ product, isOpen, onClose, addToCart }) {
   const [quantity, setQuantity] = useState(1);
   const variants = useMemo(() => normalizeSizeVariants(product?.sizes), [product?.sizes]);
   const variantLabels = useMemo(() => variants.map(v => v.size), [variants]);
@@ -243,7 +296,6 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
   const defaultSize = variantLabels.includes("M") ? "M" : variantLabels[0] || "M";
   const [selectedSize, setSelectedSize] = useState(defaultSize);
 
-  const selectedVariant = useMemo(() => variants.find(v => v.size === selectedSize), [variants, selectedSize]);
   const gallery = useMemo(() => [product?.image_url, product?.image_url_2].filter(Boolean), [product?.image_url, product?.image_url_2]);
   const [activeImg, setActiveImg] = useState("");
 
@@ -263,7 +315,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
   const totalStock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(totalStock) && totalStock <= 0;
-  const inCart = cart.find(item => item.id === product.id && item.size === (hasSizes ? selectedSize : undefined));
+  const maximumQuantity = getMaximumQuantity(product, hasSizes ? selectedSize : undefined);
 
   const handleAdd = () => {
     addToCart(product, hasSizes ? selectedSize : undefined);
@@ -436,7 +488,7 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
             <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-4 text-xs">
               <div className="space-y-1">
                 <span className="font-bold text-foreground">🚚 Free Shipping</span>
-                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Estimated delivery 4-7 business days.</p>
+                <p className="text-slate-300 text-[11px] leading-relaxed">Free delivery on orders over $150. Live AusPost options and estimates are shown in your cart.</p>
               </div>
               <div className="space-y-1">
                 <span className="font-bold text-foreground">🔄 30-Day Returns</span>
@@ -451,15 +503,10 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart, cart, user
                 <div className="flex items-center border border-border h-12 bg-background">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">-</button>
                   <span className="w-8 text-center font-mono font-bold">{quantity}</span>
-                  <button onClick={() => {
-                    const maxQty = selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)
-                      ? selectedVariant.stock_quantity
-                      : Number.isFinite(totalStock) ? totalStock : 99;
-                    setQuantity(q => Math.min(maxQty, q + 1));
-                  }} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer">+</button>
+                  <button onClick={() => setQuantity(q => Math.min(maximumQuantity, q + 1))} disabled={quantity >= maximumQuantity} className="h-full w-10 text-slate-300 hover:text-white transition-colors cursor-pointer disabled:opacity-30">+</button>
                 </div>
-                <Button onClick={handleAdd} disabled={quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99))} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
-                {quantity > ((selectedVariant?.stock_quantity != null && Number.isFinite(selectedVariant.stock_quantity)) ? selectedVariant.stock_quantity : (Number.isFinite(totalStock) ? totalStock : 99)) ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
+                <Button onClick={handleAdd} disabled={maximumQuantity <= 0 || quantity > maximumQuantity} className="flex-1 h-12 rounded-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-xs disabled:bg-muted disabled:text-slate-400">
+                {maximumQuantity <= 0 || quantity > maximumQuantity ? "Not enough stock" : `Add to Cart • $${(Number(product.price_aud || 0) * quantity).toFixed(2)} AUD`}
                 </Button>
               </div>
             )}
@@ -512,7 +559,7 @@ function StoreExperienceRail({ productCount, categoryCount, cartCount, onCartOpe
       icon: Truck,
       label: "Shipping",
       value: "Free over $150 AUD",
-      detail: "Estimates at checkout",
+      detail: "Live AusPost rates",
       tone: "text-primary",
     },
     {
@@ -604,14 +651,7 @@ function StoreSizeGuide() {
 /* ── Main Store Component ── */
 export default function Store() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [cart, setCart] = useState(() => {
-    try {
-      const stored = localStorage.getItem("rlt_cart");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [cart, setCart] = useState(loadStoredCart);
   const { user } = useAuth();
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutName, setCheckoutName] = useState("");
@@ -619,8 +659,42 @@ export default function Store() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [checkoutNotice, setCheckoutNotice] = useState("");
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
+  const [cartViewport, setCartViewport] = useState(null);
+  const [pendingCheckoutSessionId, setPendingCheckoutSessionId] = useState(() => {
+    try {
+      return localStorage.getItem(PENDING_CHECKOUT_SESSION_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const checkoutReturn = searchParams.get("checkout");
+  const returnedCheckoutSessionId = searchParams.get("session_id") || "";
+  const checkoutSessionId = returnedCheckoutSessionId || pendingCheckoutSessionId;
+  const shouldVerifyCheckout = STRIPE_CHECKOUT_SESSION_ID_PATTERN.test(checkoutSessionId)
+    && ((Boolean(pendingCheckoutSessionId) && checkoutReturn !== "cancelled")
+      || ["success", "processing"].includes(checkoutReturn));
+
+  const {
+    data: checkoutResult,
+    isFetching: isCheckingCheckout,
+    isError: checkoutCheckFailed,
+  } = useQuery({
+    queryKey: ["checkoutStatus", checkoutSessionId],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("checkoutStatus", { sessionId: checkoutSessionId });
+      return response?.data;
+    },
+    enabled: appParams.hasBase44Config && shouldVerifyCheckout,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * (2 ** attempt), 5000),
+    refetchInterval: (query) => ["open", "processing"].includes(query.state.data?.status) ? 2500 : false,
+    refetchOnWindowFocus: true,
+  });
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
@@ -628,6 +702,8 @@ export default function Store() {
     enabled: appParams.hasBase44Config,
     staleTime: 60000, // Cache products list for 1 minute
     gcTime: 300000,   // Keep in cache garbage collection for 5 minutes
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
   const { data: settingsRecords = [] } = useQuery({
     queryKey: ["siteSettings"],
@@ -661,18 +737,31 @@ export default function Store() {
         return [];
       }
 
-      const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
-      const quantity = Math.min(item.quantity, maxQuantity);
+      const maxQuantity = getMaximumQuantity(product, item.size);
+      if (maxQuantity <= 0) {
+        changed = true;
+        return [];
+      }
+      const quantity = Math.max(1, Math.min(Math.floor(Number(item.quantity) || 1), maxQuantity));
       const updated = {
         ...item,
         name: product.name,
         price_aud: product.price_aud,
         image_url: product.image_url,
         stock_quantity: product.stock_quantity,
+        shipping_required: product.shipping_required !== false,
+        max_quantity: maxQuantity,
         quantity,
       };
 
-      if (quantity !== item.quantity || updated.name !== item.name || updated.price_aud !== item.price_aud || updated.stock_quantity !== item.stock_quantity) {
+      if (
+        quantity !== item.quantity
+        || maxQuantity !== item.max_quantity
+        || updated.name !== item.name
+        || updated.price_aud !== item.price_aud
+        || updated.stock_quantity !== item.stock_quantity
+        || updated.shipping_required !== item.shipping_required
+      ) {
         changed = true;
       }
       return [updated];
@@ -715,6 +804,27 @@ export default function Store() {
   }, [cartOpen]);
 
   useEffect(() => {
+    if (!cartOpen || !window.visualViewport) {
+      setCartViewport(null);
+      return undefined;
+    }
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      setCartViewport({
+        height: Math.max(320, Math.round(viewport.height)),
+        top: Math.max(0, Math.round(viewport.offsetTop)),
+      });
+    };
+    syncViewport();
+    viewport.addEventListener("resize", syncViewport);
+    viewport.addEventListener("scroll", syncViewport);
+    return () => {
+      viewport.removeEventListener("resize", syncViewport);
+      viewport.removeEventListener("scroll", syncViewport);
+    };
+  }, [cartOpen]);
+
+  useEffect(() => {
     const openCart = () => setCartOpen(true);
     window.addEventListener("rlt_open_cart", openCart);
     return () => window.removeEventListener("rlt_open_cart", openCart);
@@ -723,28 +833,15 @@ export default function Store() {
   // Prefill checkout details for signed-in buyers (they can still edit them).
   useEffect(() => {
     if (user?.email) {
-      setCheckoutName((current) => current || user.full_name || "");
+      setCheckoutName((current) => current || trustedCheckoutName(user));
       setCheckoutEmail((current) => current || user.email || "");
     }
-  }, [user?.email, user?.full_name]);
+  }, [user]);
 
   const addToCart = useCallback((product, size) => {
     if (product.coming_soon === true) return;
 
-    // Determine max quantity: per-size stock takes priority, fall back to total stock
-    let maxQuantity = 20;
-    if (size) {
-      const variants = normalizeSizeVariants(product?.sizes);
-      const variant = variants.find(v => v.size === size);
-      if (variant) {
-        const vs = Number(variant.stock_quantity);
-        if (Number.isFinite(vs)) maxQuantity = Math.min(vs, 20);
-      }
-    }
-    if (maxQuantity === 20) {
-      const total = Number(product.stock_quantity);
-      if (Number.isFinite(total)) maxQuantity = Math.min(total, 20);
-    }
+    const maxQuantity = getMaximumQuantity(product, size);
     if (maxQuantity <= 0) return;
 
     lightImpact();
@@ -760,7 +857,18 @@ export default function Store() {
           item.cartItemId === cartItemId ? { ...item, quantity: Math.min(item.quantity + 1, maxQuantity) } : item
         );
       }
-      return [...curr, { cartItemId, id: product.id, name: product.name, price_aud: product.price_aud, image_url: product.image_url, stock_quantity: product.stock_quantity, shipping_required: product.shipping_required !== false, quantity: 1, size }];
+      return [...curr, {
+        cartItemId,
+        id: product.id,
+        name: product.name,
+        price_aud: product.price_aud,
+        image_url: product.image_url,
+        stock_quantity: product.stock_quantity,
+        shipping_required: product.shipping_required !== false,
+        max_quantity: maxQuantity,
+        quantity: 1,
+        size,
+      }];
     });
     setCartOpen(true);
   }, []);
@@ -780,39 +888,39 @@ export default function Store() {
   }, [user?.full_name]);
 
   const updateQuantity = useCallback((cartItemId, change) => {
+    const normalizedCartItemId = String(cartItemId || "");
     setCart((curr) => 
-      curr.map((item) => {
-        if (item.cartItemId === cartItemId) {
-          const stock = Number(item.stock_quantity);
-          const maxQuantity = Number.isFinite(stock) ? Math.min(stock, 20) : 20;
+      curr.flatMap((item) => {
+        if (String(item.cartItemId || "") === normalizedCartItemId) {
+          if (change < 0 && item.quantity <= 1) return [];
+          const maxQuantity = Math.max(1, Math.min(20, Math.floor(Number(item.max_quantity) || 1)));
           const newQty = Math.max(1, Math.min(item.quantity + change, maxQuantity));
-          return { ...item, quantity: newQty };
+          return [{ ...item, quantity: newQty }];
         }
-        return item;
+        return [item];
       })
     );
   }, []);
 
   const removeFromCart = useCallback((cartItemId) => {
-    setCart((curr) => curr.filter((item) => item.cartItemId !== cartItemId));
+    const normalizedCartItemId = String(cartItemId || "");
+    setCart((curr) => curr.filter((item) => String(item.cartItemId || "") !== normalizedCartItemId));
+    setCheckoutError("");
+    setCheckoutNotice("");
   }, []);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + (Number(item.price_aud || 0) * item.quantity), 0);
 
-  // Free shipping threshold — read from settings so the storefront and
-  // createCheckout can never disagree about who qualifies.
-  const shippingThreshold = freeShippingThresholdAud(settingsRecords[0] || {});
+  // The free-shipping threshold is saved alongside the other store settings so
+  // this progress bar and createCheckout make the same decision.
+  const storeSettings = settingsRecords[0] || {};
+  const shippingThreshold = freeShippingThresholdAud(storeSettings);
   const progressPercent = Math.min(100, (cartSubtotal / shippingThreshold) * 100);
   const needsMore = Math.max(0, shippingThreshold - cartSubtotal);
   const isFreeShipping = cartSubtotal >= shippingThreshold;
 
-  // AusPost live rate calculation — a real quote (or a $0 override once the
-  // free-shipping threshold is hit) is required before checkout can proceed.
-  // ── Fulfilment: ship (AusPost, Australia only) or collect in Las Vegas ──
-  // AusPost is domestic-only, so overseas supporters can't buy shipping at all;
-  // collection is their route, and the admin controls whether it's offered.
-  const storeSettings = settingsRecords[0] || {};
+  // ── Fulfilment: PAC-priced AusPost shipping or Vegas collection ────────
   const pickupEnabled = storeSettings.pickup_enabled === true;
   const pickupAudience = storeSettings.pickup_audience || "international";
   const pickupLabel = storeSettings.pickup_label || "Collect in Las Vegas at the event";
@@ -832,6 +940,7 @@ export default function Store() {
   // overseas buyer. createCheckout re-derives this from the saved products.
   const cartNeedsShipping = cart.length > 0 && cart.some((item) => item.shipping_required !== false);
   const isPickup = !cartNeedsShipping ? false : deliveryMode === "pickup" && pickupAvailable;
+  const hasNoDeliveryCharge = !cartNeedsShipping || isPickup;
   // Nothing can be ordered when we can neither ship nor let them collect.
   const cannotFulfil = cartNeedsShipping && !shippingAvailable && !pickupAvailable;
 
@@ -849,15 +958,22 @@ export default function Store() {
   const ratesStale = !shippingRates.length || shippingRatesFor !== `${shippingPostcode.trim()}::${cartSignature}`;
   const selectedRate = shippingRates.find((rate) => rate.code === selectedShippingCode);
 
-  // The same module createCheckout uses, so the summary shown here is the amount
-  // Stripe will charge. Until a rate is picked the shipping component is 0 and
-  // the total reads as goods + tax only.
+  // The summary uses the selected signed PAC quote. createCheckout independently
+  // verifies that quote, then applies the saved free-shipping threshold.
   const checkoutTotals = orderTotals({
     subtotalCents: toCents(cartSubtotal),
-    shippingCents: !isPickup && selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0,
+    shippingCents: !hasNoDeliveryCharge && selectedRate && !ratesStale ? toCents(selectedRate.price_aud) : 0,
     settings: storeSettings,
-    isPickup,
+    isPickup: hasNoDeliveryCharge,
   });
+  const roundedCartSubtotal = Number(cartSubtotal.toFixed(2));
+  const appliedPromoIsCurrent = appliedPromo?.subtotalAud === roundedCartSubtotal;
+  const promoDiscountCents = appliedPromoIsCurrent ? toCents(appliedPromo.discountAud) : 0;
+  const checkoutTotalCents = Math.max(0, checkoutTotals.totalCents - promoDiscountCents);
+
+  useEffect(() => {
+    if (appliedPromo && !appliedPromoIsCurrent) setAppliedPromo(null);
+  }, [appliedPromo, appliedPromoIsCurrent]);
 
   const calculateShipping = async () => {
     const trimmed = shippingPostcode.trim();
@@ -867,18 +983,22 @@ export default function Store() {
     }
     setShippingLoading(true);
     setShippingError("");
+    setCheckoutError("");
     try {
       const response = await base44.functions.invoke("auspostRates", {
         toPostcode: trimmed,
         cart: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
       });
-      const services = response?.data?.services || [];
+      const services = Array.isArray(response?.data?.services) ? response.data.services : [];
       if (!services.length) throw new Error("No AusPost shipping options are available for this postcode.");
       setShippingRates(services);
       setShippingRatesFor(`${trimmed}::${cartSignature}`);
       setSelectedShippingCode(services[0].code);
-    } catch (err) {
-      const message = err?.response?.data?.error || err?.data?.error || err?.message || "Could not calculate shipping right now.";
+    } catch (error) {
+      const message = error?.response?.data?.error
+        || error?.data?.error
+        || error?.message
+        || "Could not calculate shipping right now.";
       setShippingError(message);
       setShippingRates([]);
       setShippingRatesFor("");
@@ -888,17 +1008,51 @@ export default function Store() {
     }
   };
 
+  const applyPromoCode = async () => {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setApplyingPromo(true);
+    setCheckoutError("");
+    setCheckoutNotice("");
+    try {
+      const response = await base44.functions.invoke("promoCodes", {
+        action: "validate",
+        code,
+        subtotalAud: roundedCartSubtotal,
+      });
+      if (!response?.data?.valid) {
+        setAppliedPromo(null);
+        setCheckoutError(response?.data?.error || "That promo code is not valid.");
+        return;
+      }
+      setPromoInput(response.data.code);
+      setAppliedPromo({
+        code: response.data.code,
+        description: response.data.description,
+        discountAud: Number(response.data.discountAud || 0),
+        subtotalAud: roundedCartSubtotal,
+      });
+      setCheckoutNotice(`${response.data.code} applied — ${response.data.description}. Stripe will verify it again at checkout.`);
+    } catch (error) {
+      setAppliedPromo(null);
+      setCheckoutError(error?.response?.data?.error || error?.data?.error || "We couldn't check that promo code. Please try again.");
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
   const handleCheckout = async (e) => {
     e.preventDefault();
-    if (cart.length === 0 || !checkoutEmail) return;
+    const customerName = checkoutName.trim();
+    const customerEmail = checkoutEmail.trim().toLowerCase();
+    if (cart.length === 0 || !customerName || !customerEmail) return;
 
     if (cannotFulfil) {
-      setShippingError("We currently only ship within Australia.");
+      setCheckoutError("We currently only ship within Australia.");
       return;
     }
-    // A shipped order must always carry a priced rate; a pickup order needs none.
     if (cartNeedsShipping && !isPickup && (ratesStale || !selectedRate)) {
-      setShippingError("Please calculate and select a shipping option before checkout.");
+      setShippingError("Please calculate and select an AusPost shipping option before checkout.");
       return;
     }
 
@@ -913,31 +1067,43 @@ export default function Store() {
     setCheckoutError("");
     setCheckoutNotice("");
     try {
+      const checkoutRequestId = getOrCreateCheckoutRequestId();
       const response = await base44.functions.invoke("createCheckout", {
         items: cart.map((item) => ({ productId: item.id, quantity: item.quantity, size: item.size || "" })),
-        customerName: checkoutName,
-        customerEmail: checkoutEmail,
+        customerName,
+        customerEmail,
         fulfilment: isPickup ? "pickup" : "shipping",
         country: orderCountry,
-        shipping: isPickup
+        shipping: !cartNeedsShipping || isPickup
           ? null
           : {
               code: selectedRate.code,
               name: selectedRate.name,
               postcode: shippingPostcode.trim(),
-              // The quoted price and its signature, passed back untouched. The
-              // server verifies the signature and applies the free-shipping
-              // waiver itself — sending 0 here would just fail verification.
               price_aud: selectedRate.price_aud,
               signature: selectedRate.signature,
               expires_at: selectedRate.expires_at,
             },
+        promoCode: appliedPromoIsCurrent ? appliedPromo.code : "",
+        checkoutRequestId,
       });
 
       if (response?.data?.url) {
-        new URL(response.data.url);
+        const checkoutUrl = new URL(response.data.url);
+        if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com") {
+          throw new Error("The secure checkout link could not be verified.");
+        }
+        const returnedSessionId = String(response?.data?.sessionId || "");
+        if (!STRIPE_CHECKOUT_SESSION_ID_PATTERN.test(returnedSessionId)) {
+          throw new Error("The secure checkout session could not be verified.");
+        }
+        setPendingCheckoutSessionId(returnedSessionId);
+        try { localStorage.setItem(PENDING_CHECKOUT_SESSION_KEY, returnedSessionId); } catch { /* private mode / quota */ }
         // Native shell: hand off to the system browser sheet so the WebView
         // stays on the local app; web keeps the full-page Stripe redirect.
+        if (isNativeApp()) {
+          setSearchParams({ checkout: "processing", session_id: returnedSessionId });
+        }
         mediumImpact();
         await openExternalUrl(response.data.url, { fallback: "navigate" });
       } else {
@@ -949,20 +1115,38 @@ export default function Store() {
         setCart((curr) => curr.filter((item) => !errorData.unavailableProductIds.includes(item.id)));
         setCheckoutNotice("Some unavailable cart items were removed. Please review your cart before checkout.");
       }
+      if (errorData.promoCodeInvalid) setAppliedPromo(null);
+      if (errorData.checkoutRequestInvalid) clearCheckoutRequestId();
       setCheckoutError(errorData.error || err?.message || "An error occurred during checkout.");
     } finally {
       setCheckingOut(false);
     }
   };
 
-  const isSuccess = searchParams.get("success") === "true";
-  const isCancelled = searchParams.get("cancelled") === "true";
+  const isVerifiedPaid = checkoutResult?.status === "paid";
+  const isCheckoutProcessing = shouldVerifyCheckout && !isVerifiedPaid
+    && !checkoutCheckFailed
+    && (isCheckingCheckout || !checkoutResult || ["open", "processing"].includes(checkoutResult?.status));
+  const isCheckoutExpired = checkoutResult?.status === "expired";
+  const isCancelled = checkoutReturn === "cancelled";
 
   useEffect(() => {
-    if (!isSuccess) return;
-    try { localStorage.removeItem("rlt_cart"); } catch { /* private mode / quota */ }
+    if (!isVerifiedPaid) return;
+    try {
+      localStorage.removeItem("rlt_cart");
+      localStorage.removeItem(PENDING_CHECKOUT_SESSION_KEY);
+      clearCheckoutRequestId();
+    } catch { /* private mode / quota */ }
+    setPendingCheckoutSessionId("");
     setCart([]);
-  }, [isSuccess]);
+  }, [isVerifiedPaid]);
+
+  useEffect(() => {
+    if (!isCheckoutExpired) return;
+    try { localStorage.removeItem(PENDING_CHECKOUT_SESSION_KEY); } catch { /* private mode / quota */ }
+    clearCheckoutRequestId();
+    setPendingCheckoutSessionId("");
+  }, [isCheckoutExpired]);
 
   const clearAlerts = () => {
     setSearchParams({});
@@ -1024,7 +1208,7 @@ export default function Store() {
 
         {/* Success/Cancel Banners */}
         <AnimatePresence>
-          {isSuccess && (
+          {isVerifiedPaid && (
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1034,8 +1218,10 @@ export default function Store() {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-display text-xl uppercase tracking-wider text-foreground">Order Placed Successfully!</h3>
-                  <p className="text-sm text-slate-200 mt-1">Thank you for your purchase. We've sent a detailed receipt to your email address.</p>
+                  <h3 className="font-display text-xl uppercase tracking-wider text-foreground">Payment confirmed</h3>
+                  <p className="text-sm text-slate-200 mt-1">
+                    Order #{checkoutResult?.orderNumber || "confirmed"} is paid. Your receipt and fulfilment updates are available from your account.
+                  </p>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-3 pt-2">
@@ -1052,6 +1238,41 @@ export default function Store() {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {isCheckoutProcessing && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mt-6 flex items-start gap-3 border border-sky-500/30 bg-sky-500/10 p-4 text-sky-200 cmd-glass shadow-lg"
+              role="status"
+            >
+              <Info className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">Checking your Stripe payment…</p>
+                <p className="mt-1 text-xs text-slate-300">Keep this page open. Your cart will only clear after Stripe confirms payment.</p>
+              </div>
+            </motion.div>
+          )}
+
+          {(checkoutCheckFailed || isCheckoutExpired || (checkoutReturn === "success" && !shouldVerifyCheckout)) && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mt-6 flex items-start justify-between gap-3 border border-amber-500/35 bg-amber-500/10 p-4 text-amber-300 cmd-glass shadow-lg"
+              role="alert"
+            >
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">{isCheckoutExpired ? "Checkout expired" : "Payment is not confirmed yet"}</p>
+                  <p className="mt-1 text-xs text-slate-300">Your cart has been kept. Check your Stripe receipt or try checkout again.</p>
+                </div>
+              </div>
+              <button onClick={clearAlerts} className="min-h-[44px] p-3 text-xs font-bold uppercase tracking-wider underline">Dismiss</button>
             </motion.div>
           )}
 
@@ -1172,8 +1393,13 @@ export default function Store() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
-              style={{ willChange: "transform" }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex h-dvh w-full flex-col border-l border-border/80 bg-card p-5 pb-safe shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md md:p-6"
+              style={{
+                willChange: "transform",
+                ...(cartViewport
+                  ? { top: `${cartViewport.top}px`, bottom: "auto", height: `${cartViewport.height}px` }
+                  : {}),
+              }}
+              className="fixed bottom-0 right-0 top-0 z-50 flex h-dvh max-h-[100dvh] w-full flex-col border-l border-border/80 bg-card p-5 pb-safe shadow-[0_0_50px_rgba(0,0,0,0.5)] md:max-w-md md:p-6"
               role="dialog"
               aria-modal="true"
               aria-label="Shopping cart"
@@ -1203,7 +1429,10 @@ export default function Store() {
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto cmd-scrollbar py-4 pr-1">
+              <div
+                data-cart-scroll
+                className="flex-1 overflow-y-auto overscroll-contain cmd-scrollbar py-4 pr-1 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]"
+              >
                 {cart.length === 0 ? (
                   <div className="flex h-64 flex-col items-center justify-center text-center px-4">
                     <motion.div
@@ -1295,8 +1524,8 @@ export default function Store() {
                     </div>
                   </div>
 
-                  {/* Where the order is going decides what's on offer: AusPost
-                      ships domestically only, so overseas orders can just collect. */}
+                  {/* AusPost ships domestically; optional Vegas collection is
+                      controlled in Site Settings for the configured audience. */}
                   {pickupEnabled && (
                     <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                       <label htmlFor="order-country" className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
@@ -1362,7 +1591,7 @@ export default function Store() {
                   <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                        <Truck className="h-3 w-3 text-primary" /> Shipping (AusPost, domestic AU)
+                        <Truck className="h-3 w-3 text-primary" /> Shipping (AusPost PAC · domestic AU)
                       </p>
                       {selectedRate && !ratesStale && (
                         <span className="font-mono text-xs font-bold text-emerald-400">
@@ -1372,22 +1601,31 @@ export default function Store() {
                     </div>
 
                     <div className="flex gap-2">
-                      <label htmlFor="shipping-postcode" className="sr-only">Delivery postcode</label>
-                      <Input
-                        id="shipping-postcode"
-                        placeholder="Postcode e.g. 4000"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={shippingPostcode}
-                        onChange={(e) => setShippingPostcode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        className="h-10 rounded-none bg-background/50 border-border text-sm"
-                      />
+                      <div className="relative min-w-0 flex-1 scroll-mb-40">
+                        <label htmlFor="shipping-postcode" className="mb-1 block text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                          Delivery postcode
+                        </label>
+                        <Input
+                          id="shipping-postcode"
+                          placeholder="e.g. 4000"
+                          inputMode="numeric"
+                          autoComplete="postal-code"
+                          maxLength={4}
+                          value={shippingPostcode}
+                          onChange={(event) => {
+                            setShippingPostcode(event.target.value.replace(/\D/g, "").slice(0, 4));
+                            setShippingError("");
+                          }}
+                          onFocus={(event) => scrollCheckoutFieldIntoView(event.currentTarget)}
+                          className="h-11 scroll-mb-40 rounded-none bg-background/50 border-border text-sm"
+                        />
+                      </div>
                       <Button
                         type="button"
                         onClick={calculateShipping}
                         disabled={shippingLoading || shippingPostcode.length !== 4}
                         variant="outline"
-                        className="h-10 shrink-0 rounded-none border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-3"
+                        className="mt-[21px] h-11 shrink-0 rounded-none border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold uppercase tracking-wider px-3"
                       >
                         {shippingLoading ? "Calculating…" : "Calculate"}
                       </Button>
@@ -1400,7 +1638,7 @@ export default function Store() {
                     )}
 
                     {!ratesStale && shippingRates.length > 0 && (
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5" aria-label="AusPost shipping options">
                         {shippingRates.map((rate) => (
                           <label
                             key={rate.code}
@@ -1408,18 +1646,21 @@ export default function Store() {
                               selectedShippingCode === rate.code ? "border-primary bg-primary/5" : "border-border/40 hover:border-border"
                             }`}
                           >
-                            <span className="flex items-center gap-2">
+                            <span className="flex min-w-0 items-center gap-2">
                               <input
                                 type="radio"
                                 name="shipping-rate"
                                 value={rate.code}
                                 checked={selectedShippingCode === rate.code}
-                                onChange={() => setSelectedShippingCode(rate.code)}
-                                className="h-3.5 w-3.5 accent-primary"
+                                onChange={() => {
+                                  setSelectedShippingCode(rate.code);
+                                  setShippingError("");
+                                }}
+                                className="h-3.5 w-3.5 shrink-0 accent-primary"
                               />
-                              <span>
+                              <span className="min-w-0">
                                 <span className="block font-bold text-foreground">{rate.name}</span>
-                                {rate.delivery_time && <span className="block text-[10px] text-muted-foreground">{rate.delivery_time}</span>}
+                                {rate.delivery_time && <span className="block text-[10px] leading-4 text-muted-foreground">{rate.delivery_time}</span>}
                               </span>
                             </span>
                             <span className="shrink-0 font-mono font-bold text-accent">
@@ -1433,8 +1674,60 @@ export default function Store() {
                     {ratesStale && shippingRates.length > 0 && (
                       <p className="text-[10px] font-medium text-amber-400">Cart or postcode changed — recalculate shipping.</p>
                     )}
+
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Rates and delivery estimates come from Australia Post PAC. Your full delivery address is collected securely in Stripe Checkout.
+                    </p>
                   </div>
                   )}
+
+                  <div className="mb-4 border border-border/40 bg-background/35 p-3">
+                    <label htmlFor="promo-code" className="mb-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                      <Tag className="h-3 w-3 text-primary" /> Promo code
+                    </label>
+                    {appliedPromoIsCurrent ? (
+                      <div className="flex items-center justify-between gap-3 border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="font-mono text-xs font-bold text-emerald-400">{appliedPromo.code}</p>
+                          <p className="truncate text-[10px] text-muted-foreground">{appliedPromo.description}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setAppliedPromo(null); setPromoInput(""); setCheckoutNotice(""); }}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                          aria-label={`Remove promo code ${appliedPromo.code}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          id="promo-code"
+                          value={promoInput}
+                          onChange={(event) => setPromoInput(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 32))}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              applyPromoCode();
+                            }
+                          }}
+                          autoComplete="off"
+                          placeholder="Enter code"
+                          className="h-11 rounded-none border-border bg-background/60 font-mono uppercase"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={applyingPromo || !promoInput.trim()}
+                          onClick={applyPromoCode}
+                          className="h-11 shrink-0 rounded-none border-primary/40 px-4 text-[10px] font-bold uppercase tracking-wider text-primary"
+                        >
+                          {applyingPromo ? "Checking…" : "Apply"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Order summary. Deliberately absent from the product grid —
                       browsing shows the sticker price, tax is disclosed here. */}
@@ -1443,16 +1736,22 @@ export default function Store() {
                       <span>Subtotal</span>
                       <span className="font-mono tabular-nums">${cartSubtotal.toFixed(2)}</span>
                     </div>
-                    {!isPickup && checkoutTotals.shippingCents > 0 && (
+                    {!hasNoDeliveryCharge && selectedRate && !ratesStale && checkoutTotals.shippingCents > 0 && (
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Shipping</span>
                         <span className="font-mono tabular-nums">${fromCents(checkoutTotals.shippingCents).toFixed(2)}</span>
                       </div>
                     )}
-                    {!isPickup && checkoutTotals.freeShippingApplied && (
+                    {!hasNoDeliveryCharge && selectedRate && !ratesStale && checkoutTotals.freeShippingApplied && (
                       <div className="flex items-center justify-between text-xs text-accent">
                         <span>Shipping</span>
                         <span className="font-mono">FREE</span>
+                      </div>
+                    )}
+                    {promoDiscountCents > 0 && (
+                      <div className="flex items-center justify-between text-xs text-emerald-400">
+                        <span>Promo ({appliedPromo.code})</span>
+                        <span className="font-mono tabular-nums">−${fromCents(promoDiscountCents).toFixed(2)}</span>
                       </div>
                     )}
                     {checkoutTotals.gstCents > 0 && (
@@ -1473,12 +1772,12 @@ export default function Store() {
                     <div className="flex items-center justify-between pt-1.5 text-base font-bold uppercase tracking-wider">
                       <span>Total</span>
                       <span className="text-accent font-mono tracking-tight text-lg">
-                        ${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD
+                        ${fromCents(checkoutTotalCents).toFixed(2)} AUD
                       </span>
                     </div>
                   </div>
 
-                  <form onSubmit={handleCheckout} className="grid gap-3">
+                  <form onSubmit={handleCheckout} className="grid gap-3 scroll-mb-40">
                     {checkoutError && (
                       <p className="border border-destructive/50 bg-destructive/10 p-3 text-xs font-semibold text-foreground flex items-center gap-2" role="alert" aria-live="polite">
                         <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
@@ -1492,20 +1791,22 @@ export default function Store() {
                       </p>
                     )}
 
-                    <div className="relative">
-                      <label htmlFor="checkout-name" className="sr-only">Your full name</label>
+                    <div className="relative scroll-mb-40">
+                      <label htmlFor="checkout-name" className="mb-1 block text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Full name (required)</label>
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
                         id="checkout-name"
                         required
+                        autoComplete="name"
                         placeholder="Your full name"
                         value={checkoutName}
                         onChange={(e) => setCheckoutName(e.target.value)}
-                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary text-foreground"
+                        onFocus={(event) => scrollCheckoutFieldIntoView(event.currentTarget)}
+                        className="h-11 scroll-mb-40 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary text-foreground"
                       />
                     </div>
-                    <div className="relative">
-                      <label htmlFor="checkout-email" className="sr-only">Receipt email address</label>
+                    <div className="relative scroll-mb-40">
+                      <label htmlFor="checkout-email" className="mb-1 block text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Receipt email (required)</label>
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
                         id="checkout-email"
@@ -1516,7 +1817,8 @@ export default function Store() {
                         placeholder="Receipt email address"
                         value={checkoutEmail}
                         onChange={(e) => setCheckoutEmail(e.target.value)}
-                        className="h-10 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary"
+                        onFocus={(event) => scrollCheckoutFieldIntoView(event.currentTarget)}
+                        className="h-11 scroll-mb-40 pl-9 rounded-none bg-background/50 border-border focus-visible:ring-primary"
                       />
                     </div>
 
@@ -1531,10 +1833,10 @@ export default function Store() {
                         : cannotFulfil
                           ? "Not available outside Australia"
                           : isPickup
-                            ? `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`
+                            ? `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`
                             : cartNeedsShipping && (ratesStale || !selectedRate)
                               ? "Calculate shipping to continue"
-                              : `Checkout • $${fromCents(checkoutTotals.totalCents).toFixed(2)} AUD`}
+                              : `Checkout • $${fromCents(checkoutTotalCents).toFixed(2)} AUD`}
                     </Button>
                     <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
                       <Lock className="h-3 w-3 text-emerald-400" /> Secure checkout by Stripe
@@ -1572,8 +1874,6 @@ export default function Store() {
         isOpen={!!quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
         addToCart={addToCart}
-        cart={cart}
-        user={user}
       />
     </main>
   );

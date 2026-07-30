@@ -892,7 +892,8 @@ export default function Forum() {
   const createMutation = useMutation({
     meta: { silent: true },
     mutationFn: async (data) => {
-      const authorName = isAuthenticated ? (user?.full_name || "Member") : data.author_name;
+      if (!isAuthenticated || !user?.id) throw new Error("Sign in to post in the forum.");
+      const authorName = user?.full_name || user?.email || "Member";
       const post = buildPendingForumPost({ ...data, author_name: authorName });
       const response = await base44.functions.invoke("submitForumPost", {
         author_name: post.author_name, title: post.title, body: post.body,
@@ -934,7 +935,7 @@ export default function Forum() {
 
   const handlePost = (e) => {
     e.preventDefault();
-    if ((!isAuthenticated && !draft.author_name) || !draft.title || !draft.body) return;
+    if (!isAuthenticated || !user?.id || !draft.title || !draft.body) return;
     if (editTarget) {
       updateMutation.mutate({ id: editTarget.id, data: { title: draft.title, body: draft.body, category: draft.category, media_url: draft.media_url || "" } });
     } else {
@@ -951,7 +952,7 @@ export default function Forum() {
     e.preventDefault();
     const parentId = String(post?.id || "").trim();
     const reply = replyDrafts[parentId] || emptyReply;
-    if (!parentId || (!isAuthenticated && !reply.author_name) || !reply.body) return;
+    if (!parentId || !isAuthenticated || !user?.id || !reply.body) return;
     createMutation.mutate({
       author_name: reply.author_name,
       title: `Re: ${post.title || "Discussion Thread"}`,
@@ -960,7 +961,7 @@ export default function Forum() {
       parent_id: parentId,
       media_url: reply.media_url || "",
     });
-  }, [isAuthenticated, createMutation, replyDrafts]);
+  }, [isAuthenticated, user?.id, createMutation, replyDrafts]);
 
   const deleteMutation = useMutation({
     mutationFn: (postId) => base44.functions.invoke("forumAction", { action: "delete", postId }),
@@ -992,8 +993,12 @@ export default function Forum() {
   }, []);
 
   const handleToggleReply = useCallback((postId) => {
+    if (!isAuthenticated) {
+      window.location.assign("/login?next=%2Fforum");
+      return;
+    }
     setActiveReplyId((curr) => (curr === postId ? null : postId));
-  }, []);
+  }, [isAuthenticated]);
 
   const handleOpenThread = useCallback((p) => {
     setThreadModalPost(p);
@@ -1768,24 +1773,27 @@ export default function Forum() {
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4 border border-emerald-500/25 bg-emerald-500/[0.07] p-3 overflow-hidden">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                        <p className="text-xs font-bold text-emerald-400">Post submitted for moderation!</p>
+                        <p className="text-xs font-bold text-emerald-400">Posted — you're live!</p>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
+                {!isAuthenticated ? (
+                  <div className="space-y-3 border border-border/30 bg-muted/[0.04] p-4">
+                    <p className="text-sm leading-relaxed text-slate-200">
+                      Sign in to start a discussion. Accounts help us keep the forum safe and reduce spam.
+                    </p>
+                    <Button asChild size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em]">
+                      <Link to="/login?next=%2Fforum">Sign in to post</Link>
+                    </Button>
+                  </div>
+                ) : (
                 <form onSubmit={handlePost} className="space-y-3">
-                  {isAuthenticated ? (
                     <div className="flex items-center gap-2 border border-border/30 bg-muted/[0.04] px-3 py-2">
                       <UserAvatar name={user?.full_name || user?.email} size="sm" showStatus src={user?.avatar_url} />
                       <span className="text-xs font-bold text-foreground">{user?.full_name || user?.email}</span>
                     </div>
-                  ) : (
-                    <>
-                      <label htmlFor="mobile-compose-name" className="sr-only">Your name</label>
-                      <Input id="mobile-compose-name" required placeholder="Your name" value={draft.author_name} onChange={(e) => setDraft({ ...draft, author_name: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
-                    </>
-                  )}
                   <Select value={draft.category} onValueChange={(v) => setDraft({ ...draft, category: v })}>
                     <SelectTrigger className="h-11 rounded-none border-border bg-background text-left text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{categories.filter((c) => c.value !== "All").map((c) => <SelectItem key={c.value} value={c.value}>{getCategoryMeta(c.value).label}</SelectItem>)}</SelectContent>
@@ -1794,13 +1802,14 @@ export default function Forum() {
                   <Input id="mobile-compose-title" required placeholder="Topic title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className="h-11 rounded-none border-border bg-background text-sm" />
                   <MentionTextarea required people={mentionPeople} placeholder="What's on your mind? Use @ to mention" value={draft.body} onChange={(val) => setDraft({ ...draft, body: val })} className="min-h-24 rounded-none border-border bg-background text-sm leading-relaxed resize-none" />
                   <MediaAttach value={draft.media_url} onChange={(url) => setDraft({ ...draft, media_url: url })} />
-                  <Button type="submit" disabled={!appParams.hasBase44Config || (!isAuthenticated && !draft.author_name) || !draft.title || !draft.body || createMutation.isPending || updateMutation.isPending} size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
+                  <Button type="submit" disabled={!appParams.hasBase44Config || !draft.title || !draft.body || createMutation.isPending || updateMutation.isPending} size="mobile" className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary/90">
                     <Send className="mr-2 h-3 w-3" />
                     {editTarget
                       ? updateMutation.isPending ? "Saving..." : "Save Changes"
-                      : createMutation.isPending ? "Submitting..." : "Submit for Review"}
+                      : createMutation.isPending ? "Posting..." : "Post to Community"}
                   </Button>
                 </form>
+                )}
               </div>
             </motion.div>
           </>

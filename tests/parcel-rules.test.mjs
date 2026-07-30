@@ -75,11 +75,15 @@ test("a hand-crafted request cannot select a filtered-out service", () => {
 
 // ── Mirror check ────────────────────────────────────────────────────────
 test("the edge functions carry the same rules as this module", () => {
-  for (const fn of ["auspostRates", "createCheckout"]) {
-    const src = readFileSync(new URL(`../supabase/functions/${fn}/index.ts`, import.meta.url), "utf8");
-    assert.ok(src.includes("PARCEL_RANK"), `${fn} must rank parcel sizes`);
-    assert.ok(src.includes("serviceParcelSize"), `${fn} must classify services by packaging`);
-  }
+  const rates = readFileSync(new URL("../supabase/functions/auspostRates/index.ts", import.meta.url), "utf8");
+  const checkout = readFileSync(new URL("../supabase/functions/createCheckout/index.ts", import.meta.url), "utf8");
+  assert.ok(rates.includes("PARCEL_RANK"), "the PAC rate function must classify parcels");
+  assert.ok(rates.includes("signQuote"), "PAC must sign every returned rate");
+  assert.ok(checkout.includes("verifyQuoteSignature"), "checkout must verify the selected PAC rate");
+  assert.ok(checkout.includes("canonicalShippingServiceName"), "unsigned PAC display names must be canonicalized server-side");
+  assert.ok(checkout.includes("serviceParcelSize"), "checkout must reject an oversized selected parcel service");
+  assert.ok(checkout.includes("freeShippingThresholdCents"), "checkout must enforce the saved free-shipping threshold");
+  assert.ok(!checkout.includes("FLAT_DOMESTIC_SHIPPING_CENTS"), "active checkout must not replace PAC with a flat rate");
 });
 
 // ── Non-shippable stock + the placeholder weight ────────────────────────
@@ -92,8 +96,8 @@ test("a digital-only cart is never charged postage", () => {
   assert.ok(rates.includes("shippingRequired: false"), "must tell the cart there is no parcel");
   // Enforced server-side too: the client decides what to show, the server
   // decides what is charged.
-  assert.ok(checkout.includes("cartRequiresShipping"), "checkout must re-derive this from saved products");
-  assert.ok(checkout.includes("noParcel"), "no-parcel orders must skip postage and address collection");
+  assert.ok(checkout.includes("requiresShipping"), "checkout must re-derive this from saved products");
+  assert.ok(checkout.includes("fulfilment.method === 'shipping'"), "no-parcel orders must skip postage and address collection");
   assert.ok(store.includes("cartNeedsShipping"), "storefront must hide the shipping block");
 });
 

@@ -8,6 +8,7 @@ test("detects preview and auth URLs that should not retain PWA caches", () => {
   assert.equal(isPreviewLikeUrl("https://rugbyleaguetakeover.com/?access_token=abc"), true);
   assert.equal(isPreviewLikeUrl("http://localhost:5173/"), true);
   assert.equal(isPreviewLikeUrl("https://preview.base44.app/apps/123"), true);
+  assert.equal(isPreviewLikeUrl("https://rugby-league-takeover-abc123.vercel.app/store"), true);
   assert.equal(isPreviewLikeUrl("https://rugbyleaguetakeover.com/forum"), false);
 });
 

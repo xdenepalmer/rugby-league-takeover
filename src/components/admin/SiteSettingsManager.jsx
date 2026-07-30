@@ -219,10 +219,10 @@ export default function SiteSettingsManager({ settings }) {
     },
     {
       id: "shipping",
-      title: "Shipping (AusPost)",
-      desc: "Sender/return address AusPost uses to calculate rates and generate labels.",
+      title: "Shipping & Collection",
+      desc: "Manual fulfilment details and the optional Las Vegas collection route.",
       icon: Truck,
-      summary: draft.shipping_sender_postcode ? "Configured" : "Not set up",
+      summary: "$15 AU · Free from $150",
     },
     {
       id: "footer",
@@ -599,13 +599,13 @@ export default function SiteSettingsManager({ settings }) {
                   {activeCategory === "shipping" && (
                     <div className="space-y-4">
                       <div className="border-b border-border/30 pb-2 mb-2">
-                        <h3 className="font-display text-lg uppercase text-primary">Shipping (AusPost)</h3>
+                        <h3 className="font-display text-lg uppercase text-primary">Shipping &amp; Collection</h3>
                         <p className="text-[10px] text-muted-foreground">
-                          The sender/return address AusPost uses to calculate live shipping rates and generate labels. Domestic AU shipments only.
+                          Store checkout charges $15 Australia-wide and becomes free from a $150 merchandise subtotal. Carrier postage is purchased separately; no carrier API is called.
                         </p>
                       </div>
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <LabeledField label="Sender name" help="Shown on the label as the return-to contact.">
+                        <LabeledField label="Sender name" help="Kept as a manual return-address reference.">
                           <Input placeholder="e.g. Dene Palmer" value={draft.shipping_sender_name || ""} onChange={(e) => update("shipping_sender_name", e.target.value)} />
                         </LabeledField>
                         <LabeledField label="Business name (optional)">
@@ -625,14 +625,14 @@ export default function SiteSettingsManager({ settings }) {
                         <LabeledField label="State">
                           <Input placeholder="e.g. QLD" value={draft.shipping_sender_state || ""} onChange={(e) => update("shipping_sender_state", e.target.value)} />
                         </LabeledField>
-                        <LabeledField label="Postcode" help="Used as the origin postcode for all rate calculations.">
+                        <LabeledField label="Postcode" help="Manual return-address reference.">
                           <Input placeholder="e.g. 4000" inputMode="numeric" maxLength={4} value={draft.shipping_sender_postcode || ""} onChange={(e) => update("shipping_sender_postcode", e.target.value.replace(/\D/g, "").slice(0, 4))} />
                         </LabeledField>
                       </div>
                       <div className="flex items-start gap-2 border border-amber-500/25 bg-amber-500/5 p-3">
                         <Truck className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
                         <p className="text-[10px] leading-relaxed text-slate-300">
-                          Live rates on the store page and label creation both fail until a sender postcode is set here. The AusPost account credentials themselves (API key, account number) are configured as Supabase Edge Function secrets, not here.
+                          The store does not calculate carrier rates or buy postage. Use the Orders screen to print an address/packing slip, purchase postage separately, then enter the carrier and tracking details.
                         </p>
                       </div>
 
@@ -642,7 +642,7 @@ export default function SiteSettingsManager({ settings }) {
                           <div className="min-w-0">
                             <p className="text-xs font-bold uppercase tracking-widest text-foreground">Collect in Las Vegas</p>
                             <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
-                              AusPost only ships within Australia, so overseas supporters can&apos;t buy shipping. Turn this on to let them collect their order at the event instead.
+                              Standard delivery is Australia-only. Turn this on to let overseas supporters collect their order at the event instead.
                             </p>
                           </div>
                           <Switch

@@ -1,253 +1,242 @@
-// Stripe checkout session creation. The canonical, unit-tested copy of these
-// rules lives in tests/checkout-rules.mjs — keep the two in sync when editing.
+// Creates an idempotent Stripe-hosted Checkout Session from authoritative
+// product/settings data and a signed PAC/AusPost quote. Client product prices,
+// stock, tax, fees, discounts and unsigned shipping totals are ignored.
 import Stripe from 'npm:stripe@22.2.0';
-import { json, preflight, serviceClient, getCaller, isEmail, getStripeSecretKey } from './shared.ts';
+import {
+  getCaller,
+  getStripeSecretKey,
+  isEmail,
+  resolveClientIp,
+  serviceClient,
+} from './shared.ts';
 
 const MAX_CHECKOUT_QUANTITY = 20;
+const MAX_CHECKOUT_LINE_ITEMS = 20;
+const MAX_REQUEST_BYTES = 16_384;
+const MAX_ORDER_TOTAL_AUD = 50_000;
 const CHECKOUT_CURRENCY = 'aud';
-const DEFAULT_CHECKOUT_ORIGIN = 'https://rugbyleaguetakeover.com';
+const DEFAULT_CHECKOUT_ORIGIN = 'https://www.rugbyleaguetakeover.com';
+const DEFAULT_FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS = 15_000;
+const CHECKOUT_SESSION_SECONDS = 30 * 60;
+const CHECKOUT_RATE_WINDOW_SECONDS = 10 * 60;
+const CHECKOUT_RATE_LIMIT = 8;
 
-const toTrimmedString = (value: unknown) => String(value ?? '').trim();
-
-const toPositiveInteger = (value: unknown, fallback = 1) => {
-  const number = Math.floor(Number(value));
-  return Number.isFinite(number) && number > 0 ? number : fallback;
-};
-
-const toMoneyCents = (value: unknown) => {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number <= 0) return null;
-  return Math.round(number * 100);
-};
-
-// deno-lint-ignore no-explicit-any
-const getTrackedStock = (product: any) => {
-  const stock = Number(product?.stock_quantity);
-  return Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : null;
-};
+const trim = (value: unknown, max = 10_000) => String(value ?? '').trim().slice(0, max);
+const toCents = (value: unknown) => Math.round(Number(value || 0) * 100);
+const fromCents = (value: number) => Number((value / 100).toFixed(2));
+const isUuid = (value: unknown) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+const normalizePromoCode = (value: unknown) => trim(value, 32).toUpperCase();
+const validPromoCode = (value: string) => /^[A-Z0-9][A-Z0-9-]{1,31}$/.test(value);
 
 const parseOrigin = (value: unknown) => {
   try {
-    return new URL(String(value || '')).origin;
+    const url = new URL(String(value || ''));
+    if (!['http:', 'https:', 'capacitor:', 'ionic:'].includes(url.protocol)) return '';
+    return url.origin === 'null' ? `${url.protocol}//${url.host}` : url.origin;
   } catch {
     return '';
   }
 };
-
-// deno-lint-ignore no-explicit-any
-function normalizeCheckoutItems(rawItems: any) {
-  if (!Array.isArray(rawItems)) return [];
-
-  const byCartKey = new Map();
-  for (const item of rawItems) {
-    const productId = toTrimmedString(item?.productId);
-    if (!productId) continue;
-
-    const size = toTrimmedString(item?.size).slice(0, 20);
-    const key = `${productId}::${size}`;
-    const quantity = Math.min(toPositiveInteger(item?.quantity), MAX_CHECKOUT_QUANTITY);
-    const existing = byCartKey.get(key) || { productId, size, quantity: 0 };
-    existing.quantity = Math.min(existing.quantity + quantity, MAX_CHECKOUT_QUANTITY);
-    byCartKey.set(key, existing);
+const isRltPreview = (origin: string) => {
+  try {
+    const url = new URL(origin);
+    return url.protocol === 'https:'
+      && url.hostname.startsWith('rugby-league-takeover-')
+      && url.hostname.endsWith('.vercel.app');
+  } catch {
+    return false;
   }
+};
+const allowedOrigins = () => new Set([
+  DEFAULT_CHECKOUT_ORIGIN,
+  'https://rugbyleaguetakeover.com',
+  'capacitor://localhost',
+  'ionic://localhost',
+  ...String(Deno.env.get('CHECKOUT_ALLOWED_ORIGINS') || '').split(',').map(parseOrigin).filter(Boolean),
+]);
+const originAllowed = (origin: string) => Boolean(origin && (allowedOrigins().has(origin) || isRltPreview(origin)));
+const requestOriginAllowed = (req: Request) => !req.headers.get('origin') || originAllowed(parseOrigin(req.headers.get('origin')));
+const corsHeaders = (req: Request) => {
+  const origin = parseOrigin(req.headers.get('origin'));
+  return {
+    'Access-Control-Allow-Origin': originAllowed(origin) ? origin : DEFAULT_CHECKOUT_ORIGIN,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '600',
+    'Cache-Control': 'no-store',
+    'Vary': 'Origin',
+  };
+};
+const responseJson = (req: Request, data: unknown, status = 200, extra: Record<string, string> = {}) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders(req), ...extra },
+  });
 
-  return [...byCartKey.values()];
+async function readJsonBody(req: Request) {
+  const declared = Number(req.headers.get('content-length') || 0);
+  if (declared > MAX_REQUEST_BYTES) throw new Error('REQUEST_TOO_LARGE');
+  const raw = await req.text();
+  if (!raw || new TextEncoder().encode(raw).byteLength > MAX_REQUEST_BYTES) {
+    throw new Error(raw ? 'REQUEST_TOO_LARGE' : 'INVALID_JSON');
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error('INVALID_JSON');
+  }
+}
+async function sha256(value: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 // deno-lint-ignore no-explicit-any
-function buildCheckoutLineItems(items: any[], getProduct: (id: string) => any) {
-  const lineItems = [];
-  const stripeLineItems = [];
-  const requestedByProductId = new Map();
+function normalizeSizeVariants(raw: any) {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  return raw.flatMap((entry) => {
+    const size = trim(typeof entry === 'string' ? entry : entry?.size, 20);
+    const key = size.toLowerCase();
+    if (!size || seen.has(key)) return [];
+    seen.add(key);
+    const stock = Number(typeof entry === 'string' ? 0 : entry?.stock_quantity);
+    return [{ size, stock_quantity: Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : 0 }];
+  });
+}
+// deno-lint-ignore no-explicit-any
+function normalizeItems(raw: any) {
+  if (!Array.isArray(raw) || raw.length > MAX_CHECKOUT_LINE_ITEMS * 2) return [];
+  const items = new Map<string, { productId: string; size: string; quantity: number }>();
+  for (const input of raw) {
+    const productId = trim(input?.productId, 128);
+    const quantity = Number(input?.quantity);
+    if (!productId || !Number.isInteger(quantity) || quantity <= 0) continue;
+    const size = trim(input?.size, 20);
+    const key = `${productId}::${size.toLowerCase()}`;
+    const current = items.get(key) || { productId, size, quantity: 0 };
+    current.quantity = Math.min(current.quantity + quantity, MAX_CHECKOUT_QUANTITY);
+    items.set(key, current);
+    if (items.size > MAX_CHECKOUT_LINE_ITEMS) return [];
+  }
+  return [...items.values()];
+}
+// deno-lint-ignore no-explicit-any
+function buildProductLines(items: any[], productsById: Map<string, any>) {
+  const orderLines = [];
+  const stripeLines: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+  const totalsByProduct = new Map<string, number>();
   for (const item of items) {
-    requestedByProductId.set(item.productId, (requestedByProductId.get(item.productId) || 0) + item.quantity);
+    totalsByProduct.set(item.productId, (totalsByProduct.get(item.productId) || 0) + item.quantity);
   }
 
   for (const item of items) {
-    const product = getProduct(item.productId);
-    if (!product || product.is_active === false) {
-      return { ok: false as const, status: 404, error: `Product '${item.productId}' is not available` };
+    const product = productsById.get(item.productId);
+    if (!product || product.is_active === false || product.coming_soon === true) {
+      return { error: 'An item in your cart is no longer available.', status: 409 };
+    }
+    const unitCents = toCents(product.price_aud);
+    if (!Number.isSafeInteger(unitCents) || unitCents <= 0) {
+      return { error: 'An item in your cart cannot be purchased right now.', status: 409 };
+    }
+    const totalStock = Number(product.stock_quantity);
+    const requestedTotal = totalsByProduct.get(item.productId) || item.quantity;
+    if (Number.isFinite(totalStock) && Math.max(0, Math.floor(totalStock)) < requestedTotal) {
+      return { error: `Not enough stock for ${trim(product.name, 120) || 'an item'}.`, status: 409 };
     }
 
-    const unitAmount = toMoneyCents(product.price_aud);
-    if (!unitAmount) {
-      return { ok: false as const, status: 400, error: `Product '${item.productId}' has an invalid price` };
+    const variants = normalizeSizeVariants(product.sizes);
+    let canonicalSize = '';
+    if (variants.length) {
+      const variant = variants.find((entry) => entry.size.toLowerCase() === item.size.toLowerCase());
+      if (!item.size || !variant) return { error: `Please select an available size for ${trim(product.name, 120)}.`, status: 409 };
+      if (variant.stock_quantity < item.quantity) return { error: `Not enough stock for ${trim(product.name, 120)} in size ${variant.size}.`, status: 409 };
+      canonicalSize = variant.size;
+    } else if (item.size) {
+      return { error: `${trim(product.name, 120)} does not use size options.`, status: 409 };
     }
 
-    const stock = getTrackedStock(product);
-    const requestedTotal = requestedByProductId.get(item.productId) || item.quantity;
-    if (stock !== null && stock < requestedTotal) {
-      return { ok: false as const, status: 409, error: `Not enough stock for product '${product.name || item.productId}'` };
-    }
-
-    const displayName = item.size ? `${product.name} — Size ${item.size}` : product.name;
-
-    lineItems.push({
+    const name = trim(product.name, 120);
+    let image: string | undefined;
+    try {
+      const url = new URL(String(product.image_url || ''));
+      if (url.protocol === 'https:') image = url.toString();
+    } catch { /* no safe image */ }
+    orderLines.push({
       product_id: product.id,
-      name: product.name,
-      size: item.size || '',
+      name,
+      size: canonicalSize,
       quantity: item.quantity,
-      price_aud: Number((unitAmount / 100).toFixed(2)),
+      price_aud: fromCents(unitCents),
     });
-
-    stripeLineItems.push({
+    stripeLines.push({
       quantity: item.quantity,
       price_data: {
         currency: CHECKOUT_CURRENCY,
-        unit_amount: unitAmount,
+        unit_amount: unitCents,
         product_data: {
-          name: displayName,
-          description: product.description || undefined,
-          images: product.image_url ? [product.image_url] : undefined,
+          name: canonicalSize ? `${name} — Size ${canonicalSize}` : name,
+          description: trim(product.description, 500) || undefined,
+          images: image ? [image] : undefined,
         },
       },
     });
   }
-
-  if (lineItems.length === 0) {
-    return { ok: false as const, status: 400, error: 'No valid products in cart' };
-  }
-
-  return { ok: true as const, lineItems, stripeLineItems };
+  return { orderLines, stripeLines };
 }
-
-// deno-lint-ignore no-explicit-any
-function buildShippingLineItem(shipping: any) {
-  const code = toTrimmedString(shipping?.code);
-  const name = toTrimmedString(shipping?.name) || 'Shipping';
-  const postcode = toTrimmedString(shipping?.postcode);
-  const price = Number(shipping?.price_aud);
-  if (!code || !postcode || !Number.isFinite(price) || price < 0) return null;
-
-  const unitAmount = Math.round(price * 100);
-  return {
-    code,
-    name,
-    postcode,
-    price_aud: Number((unitAmount / 100).toFixed(2)),
-    stripeLineItem: unitAmount > 0
-      ? {
-          quantity: 1,
-          price_data: {
-            currency: CHECKOUT_CURRENCY,
-            unit_amount: unitAmount,
-            product_data: { name: `Shipping — ${name} (AusPost)` },
-          },
-        }
-      : null, // free shipping: nothing to charge, still recorded on the order
-  };
-}
-
-// ── Money rules — mirror of tests/money-rules.mjs, keep in sync ────────────
-// All in integer cents. GST and the card fee are each either charged on top
-// ('added') or disclosed as a component of the price ('absorbed'), per the
-// saved settings. Order of operations: goods → shipping → GST → card fee.
-const DEFAULT_GST_RATE_PERCENT = 6.5;
-const DEFAULT_FREE_SHIPPING_THRESHOLD_AUD = 150;
-const DEFAULT_CARD_FEE_PERCENT = 1.75;
-const DEFAULT_CARD_FEE_FIXED_AUD = 0.3;
-
-const toCents = (aud: unknown) => Math.round(Number(aud || 0) * 100);
-const fromCents = (cents: number) => Number((cents / 100).toFixed(2));
 
 const clampPercent = (value: unknown, fallback: number) => {
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback;
 };
-
 // deno-lint-ignore no-explicit-any
-function gstSettings(settings: any) {
-  return {
-    enabled: settings?.gst_enabled !== false,
-    ratePercent: clampPercent(settings?.gst_rate_percent, DEFAULT_GST_RATE_PERCENT),
-    mode: settings?.gst_mode === 'absorbed' ? 'absorbed' : 'added',
-    label: String(settings?.gst_label || 'GST').trim() || 'GST',
-  };
-}
-
-// deno-lint-ignore no-explicit-any
-function cardFeeSettings(settings: any) {
-  const fixed = Number(settings?.card_fee_fixed_aud);
-  return {
-    enabled: settings?.card_fee_enabled === true,
-    percent: clampPercent(settings?.card_fee_percent, DEFAULT_CARD_FEE_PERCENT),
-    fixedCents: Number.isFinite(fixed) && fixed >= 0 ? toCents(fixed) : toCents(DEFAULT_CARD_FEE_FIXED_AUD),
-    mode: settings?.card_fee_mode === 'added' ? 'added' : 'absorbed',
-    label: String(settings?.card_fee_label || 'Card processing fee').trim() || 'Card processing fee',
-  };
-}
-
-// deno-lint-ignore no-explicit-any
-function freeShippingThresholdAud(settings: any) {
-  const threshold = Number(settings?.free_shipping_threshold_aud);
-  return Number.isFinite(threshold) && threshold >= 0 ? threshold : DEFAULT_FREE_SHIPPING_THRESHOLD_AUD;
-}
-
-// 'absorbed' is the tax already inside the price: rate/(100+rate), not rate/100.
-// deno-lint-ignore no-explicit-any
-function computeGstCents(taxableCents: number, settings: any) {
-  const { enabled, ratePercent, mode } = gstSettings(settings);
-  if (!enabled || ratePercent <= 0) return 0;
-  const base = Math.max(0, taxableCents);
-  return mode === 'absorbed'
-    ? Math.round((base * ratePercent) / (100 + ratePercent))
-    : Math.round((base * ratePercent) / 100);
-}
-
-// 'added' is grossed up: Stripe's percentage applies to the final amount
-// including the surcharge, so percent x base under-recovers on every order.
-// deno-lint-ignore no-explicit-any
-function computeCardFeeCents(baseCents: number, settings: any) {
-  const { enabled, percent, fixedCents, mode } = cardFeeSettings(settings);
-  if (!enabled) return 0;
-  const base = Math.max(0, baseCents);
-  if (base <= 0) return 0;
-  if (mode === 'added') {
-    const rate = percent / 100;
-    if (rate >= 1) return 0;
-    return Math.max(0, Math.round((base + fixedCents) / (1 - rate)) - base);
-  }
-  return Math.round((base * percent) / 100) + fixedCents;
-}
-
-// deno-lint-ignore no-explicit-any
-function orderTotals({ subtotalCents, shippingCents = 0, settings, isPickup = false }: any) {
-  const goods = Math.max(0, Math.round(Number(subtotalCents) || 0));
-  const quoted = isPickup ? 0 : Math.max(0, Math.round(Number(shippingCents) || 0));
-  const freeShippingApplied = !isPickup && goods >= toCents(freeShippingThresholdAud(settings));
-  const shipping = freeShippingApplied ? 0 : quoted;
-
-  const gst = gstSettings(settings);
+function calculateTotals(goods: number, shipping: number, settings: any) {
+  const gstEnabled = settings?.gst_enabled !== false;
+  const gstRate = clampPercent(settings?.gst_rate_percent, 6.5);
+  const gstIncluded = settings?.gst_mode === 'absorbed';
   const taxable = goods + shipping;
-  const gstCents = computeGstCents(taxable, settings);
-  const gstIncluded = gst.mode === 'absorbed';
-  const afterTax = taxable + (gstIncluded ? 0 : gstCents);
+  const gst = !gstEnabled || gstRate <= 0
+    ? 0
+    : gstIncluded
+      ? Math.round(taxable * gstRate / (100 + gstRate))
+      : Math.round(taxable * gstRate / 100);
+  const afterTax = taxable + (gstIncluded ? 0 : gst);
 
-  const card = cardFeeSettings(settings);
-  const cardFeeCents = computeCardFeeCents(afterTax, settings);
-  const cardFeeIncluded = card.mode !== 'added';
-
+  const cardEnabled = settings?.card_fee_enabled === true;
+  const cardPercent = clampPercent(settings?.card_fee_percent, 1.75);
+  const fixed = Math.max(0, toCents(settings?.card_fee_fixed_aud ?? 0.3));
+  const cardIncluded = settings?.card_fee_mode !== 'added';
+  let card = 0;
+  if (cardEnabled && afterTax > 0) {
+    if (cardIncluded) card = Math.round(afterTax * cardPercent / 100) + fixed;
+    else {
+      const rate = cardPercent / 100;
+      card = rate < 1 ? Math.max(0, Math.round((afterTax + fixed) / (1 - rate)) - afterTax) : 0;
+    }
+  }
   return {
-    subtotalCents: goods,
-    shippingCents: shipping,
-    freeShippingApplied,
-    gstCents,
+    goods,
+    shipping,
+    gst,
+    gstRate,
     gstIncluded,
-    gstLabel: gst.label,
-    gstRatePercent: gst.ratePercent,
-    cardFeeCents,
-    cardFeeIncluded,
-    cardFeeLabel: card.label,
-    totalCents: afterTax + (cardFeeIncluded ? 0 : cardFeeCents),
+    gstLabel: trim(settings?.gst_label || 'GST', 80),
+    card,
+    cardIncluded,
+    cardLabel: trim(settings?.card_fee_label || 'Card processing fee', 80),
+    total: afterTax + (cardIncluded ? 0 : card),
   };
 }
 
-// ── Signed shipping quotes ────────────────────────────────────────────────
+// PAC quotes are signed by auspostRates over the service, price, postcode,
+// normalized cart and expiry. Checkout verifies that exact payload before
+// trusting the quoted amount, then independently applies any free-postage rule.
 // deno-lint-ignore no-explicit-any
 function cartFingerprint(items: any[]) {
   return (items || [])
-    .map((i) => `${String(i?.productId ?? i?.product_id ?? '').trim()}:${Math.max(1, Math.floor(Number(i?.quantity) || 1))}`)
-    .filter((s) => !s.startsWith(':'))
+    .map((item) => `${trim(item?.productId ?? item?.product_id, 128)}:${Math.max(1, Math.floor(Number(item?.quantity) || 1))}`)
+    .filter((entry) => !entry.startsWith(':'))
     .sort()
     .join(',');
 }
@@ -256,17 +245,19 @@ function quotePayload(code: string, priceCents: number, postcode: string, cartHa
   return [code, priceCents, postcode, cartHash, expiresAt].join('|');
 }
 
-/** Constant-time compare so a wrong signature leaks nothing through timing. */
 function timingSafeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) {
+    difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
+  }
+  return difference === 0;
 }
 
-async function verifyQuoteSignature(payload: string, signature: string) {
+async function verifyQuoteSignature(payload: string, rawSignature: unknown) {
   const secret = Deno.env.get('SHIPPING_QUOTE_SECRET');
-  if (!secret || !signature) return false;
+  const signature = trim(rawSignature, 128).toLowerCase();
+  if (!secret || !/^[0-9a-f]{64}$/.test(signature)) return false;
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -274,25 +265,66 @@ async function verifyQuoteSignature(payload: string, signature: string) {
     false,
     ['sign'],
   );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-  const expected = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('');
-  return timingSafeEqual(expected, String(signature).trim().toLowerCase());
+  const signed = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const expected = [...new Uint8Array(signed)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return timingSafeEqual(expected, signature);
 }
 
-// ── Parcel-size rules — mirror of tests/parcel-rules.mjs, keep in sync ──────
-// auspostRates filters oversized packaging out of the quote; this is the
-// server-side half of that rule, applied to whatever the client sends back.
-export const PARCEL_RANK: Record<string, number> = { satchel: 0, small: 1, medium: 2, large: 3 };
-const DEFAULT_PARCEL_SIZE = 'satchel';
-
-const normalizeParcelSize = (value: unknown) => {
-  const size = String(value ?? '').trim().toLowerCase();
-  return size in PARCEL_RANK ? size : DEFAULT_PARCEL_SIZE;
+type ShippingSelection = {
+  code: string;
+  name: string;
+  postcode: string;
+  priceCents: number;
+  expiresAt: number;
+  signature: string;
 };
 
-// The qualifier (small/medium/large) is the capacity; a bare "satchel" is the
-// baseline. Largest-first so "extra large" never matches as "large".
-const SIZE_WORDS: [string, string][] = [
+function canonicalShippingServiceName(code: string) {
+  const normalized = code.toUpperCase();
+  if (normalized === 'AUS_PARCEL_REGULAR') return 'Parcel Post';
+  if (normalized === 'AUS_PARCEL_EXPRESS') return 'Express Post';
+  if (normalized.startsWith('AUS_PARCEL_REGULAR_')) return 'Parcel Post';
+  if (normalized.startsWith('AUS_PARCEL_EXPRESS_')) return 'Express Post';
+  // The quote signature authenticates the code but not PAC's display name.
+  // Unknown future PAC service codes remain usable without persisting a
+  // shopper-controlled label into Stripe or the fulfilment dashboard.
+  return 'AusPost delivery';
+}
+
+// deno-lint-ignore no-explicit-any
+function normalizeShippingSelection(raw: any): ShippingSelection | null {
+  const code = trim(raw?.code, 100);
+  const name = canonicalShippingServiceName(code);
+  const postcode = trim(raw?.postcode, 4);
+  const price = Number(raw?.price_aud);
+  const priceCents = Math.round(price * 100);
+  const expiresAt = Number(raw?.expires_at);
+  const signature = trim(raw?.signature, 128).toLowerCase();
+  if (
+    !code
+    || !/^\d{4}$/.test(postcode)
+    || !Number.isFinite(price)
+    || !Number.isSafeInteger(priceCents)
+    || priceCents < 0
+    || priceCents > 100_000
+    || !Number.isSafeInteger(expiresAt)
+    || !/^[0-9a-f]{64}$/.test(signature)
+  ) {
+    return null;
+  }
+  return {
+    code,
+    name,
+    postcode,
+    priceCents,
+    expiresAt,
+    signature,
+  };
+}
+
+const PARCEL_RANK: Record<string, number> = { satchel: 0, small: 1, medium: 2, large: 3 };
+const DEFAULT_PARCEL_SIZE = 'satchel';
+const PARCEL_SIZE_WORDS: [string, string][] = [
   ['extra large', 'large'],
   ['extralarge', 'large'],
   ['large', 'large'],
@@ -300,331 +332,403 @@ const SIZE_WORDS: [string, string][] = [
   ['small', 'small'],
   ['satchel', 'satchel'],
 ];
-
-// deno-lint-ignore no-explicit-any
-function serviceParcelSize(service: any): string | null {
-  const haystack = `${service?.code ?? ''} ${service?.name ?? ''}`.toLowerCase();
-  for (const [word, size] of SIZE_WORDS) {
-    if (haystack.includes(word)) return size;
-  }
-  return null; // weight-priced — always legitimate for the real parcel
-}
-
-// Mirror of resolveFulfilment in tests/checkout-rules.mjs — keep in sync.
-// Decides whether a (choice, country) pair may check out at all. The settings
-// come from the DATABASE, never the request, so a client cannot enable pickup
-// or dodge the Australia-only shipping rule by lying about the config.
-const isAustralia = (country: unknown) => {
-  const c = toTrimmedString(country).toUpperCase();
-  return c === 'AU' || c === 'AUS' || c === 'AUSTRALIA';
+const normalizeParcelSize = (value: unknown) => {
+  const size = trim(value, 20).toLowerCase();
+  return size in PARCEL_RANK ? size : DEFAULT_PARCEL_SIZE;
 };
+function serviceParcelSize(service: Pick<ShippingSelection, 'code' | 'name'>): string | null {
+  const searchable = `${service.code} ${service.name}`.toLowerCase();
+  for (const [word, size] of PARCEL_SIZE_WORDS) {
+    if (searchable.includes(word)) return size;
+  }
+  return null;
+}
+function freeShippingThresholdCents(settings: any) {
+  const threshold = Number(settings?.free_shipping_threshold_aud);
+  return Number.isFinite(threshold) && threshold >= 0
+    ? toCents(threshold)
+    : DEFAULT_FREE_DOMESTIC_SHIPPING_THRESHOLD_CENTS;
+}
 
 // deno-lint-ignore no-explicit-any
-function resolveFulfilment({ method, shipping, country, settings }: any) {
-  const choice = toTrimmedString(method).toLowerCase() || 'shipping';
+function resolveFulfilment(
+  method: unknown,
+  country: unknown,
+  settings: any,
+  requiresShipping: boolean,
+  rawShipping: unknown,
+) {
+  if (!requiresShipping) return { method: 'none', label: 'No shipping required', shipping: null };
+  const choice = trim(method, 16).toLowerCase() || 'shipping';
+  const australian = ['AU', 'AUS', 'AUSTRALIA'].includes(trim(country, 32).toUpperCase());
   const pickupEnabled = settings?.pickup_enabled === true;
-  const audience = toTrimmedString(settings?.pickup_audience).toLowerCase() || 'international';
-  const australian = isAustralia(country);
-
+  const pickupAudience = trim(settings?.pickup_audience || 'international', 20).toLowerCase();
   if (choice === 'pickup') {
-    if (!pickupEnabled) {
-      return { ok: false, error: 'Collection in Las Vegas is not currently available.' };
+    if (!pickupEnabled) return { error: 'Collection in Las Vegas is not currently available.' };
+    if (pickupAudience === 'international' && australian) {
+      return { error: 'Collection is for international orders only — please choose shipping.' };
     }
-    if (audience === 'international' && australian) {
-      return { ok: false, error: 'Collection is for international orders only — please choose a shipping method.' };
-    }
-    return { ok: true, method: 'pickup', shipping: null };
+    return { method: 'pickup', label: trim(settings?.pickup_label || 'Collect in Las Vegas', 120), shipping: null };
   }
-
-  if (choice !== 'shipping') {
-    return { ok: false, error: "Choose how you'd like to receive your order." };
-  }
-
+  if (choice !== 'shipping') return { error: "Choose how you'd like to receive your order." };
   if (country && !australian) {
-    return {
-      ok: false,
-      error: pickupEnabled
-        ? 'We only ship within Australia — choose collection in Las Vegas instead.'
-        : 'We currently only ship within Australia.',
-    };
+    return { error: pickupEnabled
+      ? 'We only ship within Australia — choose collection in Las Vegas instead.'
+      : 'We currently only ship within Australia.' };
   }
-
-  const selection = buildShippingLineItem(shipping);
-  if (!selection) {
-    return { ok: false, error: 'A shipping option is required — please choose a shipping method.' };
+  const shipping = normalizeShippingSelection(rawShipping);
+  if (!shipping) {
+    return { error: 'A current AusPost shipping quote is required — please calculate shipping again.' };
   }
-  return { ok: true, method: 'shipping', shipping: selection };
-}
-
-function resolveCheckoutOrigin(originHeader: unknown, allowlistEnv: unknown, fallback = DEFAULT_CHECKOUT_ORIGIN) {
-  const fallbackOrigin = parseOrigin(fallback) || DEFAULT_CHECKOUT_ORIGIN;
-  const requestedOrigin = parseOrigin(originHeader);
-  if (!requestedOrigin) return fallbackOrigin;
-
-  const allowedOrigins = new Set(
-    String(allowlistEnv || fallbackOrigin)
-      .split(',')
-      .map(parseOrigin)
-      .filter(Boolean)
-  );
-  allowedOrigins.add(fallbackOrigin);
-
-  return allowedOrigins.has(requestedOrigin) ? requestedOrigin : fallbackOrigin;
+  return { method: 'shipping', label: shipping.name, shipping };
 }
 
 // deno-lint-ignore no-explicit-any
-function resolveCheckoutCustomer({ customerName = '', customerEmail = '', user = null }: any = {}) {
-  return {
-    name: toTrimmedString(customerName || user?.full_name),
-    email: toTrimmedString(customerEmail || user?.email),
-  };
+function couponIdFor(promotion: any) {
+  const current = promotion?.promotion?.coupon;
+  if (typeof current === 'string') return current;
+  if (current?.id) return current.id;
+  const legacy = promotion?.coupon;
+  return typeof legacy === 'string' ? legacy : legacy?.id || '';
 }
-
 // deno-lint-ignore no-explicit-any
-function buildOrderMetadata({ appId, orderId, totalAud }: any) {
-  return {
-    rlt_app_id: toTrimmedString(appId),
-    order_id: toTrimmedString(orderId),
-    expected_total_aud: Number(totalAud || 0).toFixed(2),
-  };
+async function resolvePromotion(stripe: Stripe, rawCode: unknown, eligibleSubtotal: number) {
+  const code = normalizePromoCode(rawCode);
+  if (!code) return { code: '', id: '', discount: 0 };
+  if (!validPromoCode(code)) return { error: 'Enter a valid promo code.' };
+  const promotion = (await stripe.promotionCodes.list({ code, active: true, limit: 1 })).data[0];
+  const couponId = couponIdFor(promotion);
+  if (!promotion || !couponId) return { error: 'That promo code is not valid.' };
+  const coupon = await stripe.coupons.retrieve(couponId);
+  const now = Math.floor(Date.now() / 1000);
+  const minimum = Number(promotion.restrictions?.currency_options?.aud?.minimum_amount
+    ?? promotion.restrictions?.minimum_amount ?? 0);
+  if (!promotion.active || coupon.valid === false || (promotion.expires_at && promotion.expires_at <= now)
+    || (promotion.max_redemptions && Number(promotion.times_redeemed || 0) >= promotion.max_redemptions)) {
+    return { error: 'That promo code is no longer available.' };
+  }
+  if (minimum > eligibleSubtotal) return { error: `Spend at least $${(minimum / 100).toFixed(2)} AUD to use this code.` };
+  if (coupon.amount_off && String(coupon.currency || '').toLowerCase() !== CHECKOUT_CURRENCY) return { error: 'That promo code is not available for AUD orders.' };
+  const discount = Number(coupon.amount_off) > 0
+    ? Math.min(eligibleSubtotal, Number(coupon.amount_off))
+    : Math.min(eligibleSubtotal, Math.round(eligibleSubtotal * Number(coupon.percent_off || 0) / 100));
+  return discount > 0
+    ? { code: promotion.code || code, id: promotion.id, discount }
+    : { error: 'That promo code has no available discount.' };
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return preflight();
+  if (req.method === 'OPTIONS') {
+    return requestOriginAllowed(req)
+      ? new Response(null, { status: 204, headers: corsHeaders(req) })
+      : responseJson(req, { error: 'Origin is not allowed.' }, 403);
+  }
+  if (req.method !== 'POST') return responseJson(req, { error: 'Method not allowed.' }, 405, { Allow: 'POST, OPTIONS' });
+  if (!requestOriginAllowed(req)) return responseJson(req, { error: 'Origin is not allowed.' }, 403);
+
+  let input;
   try {
-    const svc = serviceClient();
-    const stripe = new Stripe(getStripeSecretKey());
-    const { items, customerName = '', customerEmail = '', shipping, fulfilment, country } = await req.json();
-    const normalizedItems = normalizeCheckoutItems(items);
+    input = await readJsonBody(req);
+  } catch (error) {
+    const tooLarge = (error as Error).message === 'REQUEST_TOO_LARGE';
+    return responseJson(req, { error: tooLarge ? 'Checkout request is too large.' : 'Invalid checkout request.' }, tooLarge ? 413 : 400);
+  }
 
-    const user = await getCaller(req, svc);
-    const { name: resolvedName, email: resolvedEmail } = resolveCheckoutCustomer({ customerName, customerEmail, user });
+  const items = normalizeItems(input?.items);
+  const svc = serviceClient();
+  const user = await getCaller(req, svc);
+  const customerName = trim(input?.customerName, 120);
+  const customerEmail = trim(input?.customerEmail || user?.email, 254).toLowerCase();
+  // New clients retain this UUID across retries. The server fallback keeps
+  // already-published clients compatible while the native update rolls out.
+  const checkoutRequestId = isUuid(input?.checkoutRequestId)
+    ? String(input.checkoutRequestId).toLowerCase()
+    : crypto.randomUUID();
 
-    if (!normalizedItems.length || !isEmail(resolvedEmail)) {
-      return json({ error: 'Cart items and a valid email are required' }, 400);
+  if (!items.length) return responseJson(req, { error: 'Your cart contains invalid or too many items.' }, 400);
+  if (customerName.length < 2) return responseJson(req, { error: 'Please enter your full name.' }, 400);
+  if (!isEmail(customerEmail)) return responseJson(req, { error: 'Please enter a valid receipt email.' }, 400);
+
+  try {
+    const ip = resolveClientIp(req);
+    for (const claim of [
+      { value: `email|${customerEmail}`, limit: CHECKOUT_RATE_LIMIT },
+      ...(ip ? [{ value: `ip|${ip}`, limit: 20 }] : []),
+    ]) {
+      const { data, error } = await svc.rpc('claim_checkout_attempt', {
+        p_key_hash: await sha256(claim.value),
+        p_limit: claim.limit,
+        p_window_seconds: CHECKOUT_RATE_WINDOW_SECONDS,
+      }).single();
+      if (error) throw error;
+      const throttle = data as { allowed?: boolean; retry_after_seconds?: number } | null;
+      if (!throttle?.allowed) {
+        const retryAfter = Math.max(1, Number(throttle?.retry_after_seconds || CHECKOUT_RATE_WINDOW_SECONDS));
+        return responseJson(req, { error: 'Too many checkout attempts. Please wait a few minutes and try again.', retryAfter }, 429, { 'Retry-After': String(retryAfter) });
+      }
     }
 
-    // Fulfilment is decided against the SAVED settings, not the request, so a
-    // client can't turn pickup on for itself or bypass Australia-only shipping.
-    // An order can never reach Stripe without a valid shipping selection or an
-    // allowed pickup.
-    const { data: siteSettings } = await svc
+    const productIds = [...new Set(items.map((item) => item.productId))];
+    const { data: products, error: productsError } = await svc.from('products').select('*').in('id', productIds);
+    if (productsError) throw productsError;
+    const productsById = new Map((products || []).map((product) => [product.id, product]));
+    const missing = productIds.filter((id) => !productsById.has(id));
+    if (missing.length) return responseJson(req, {
+      error: 'Some items in your cart are no longer available. Please review your cart.',
+      unavailableProductIds: missing,
+    }, 409);
+
+    const lines = buildProductLines(items, productsById);
+    if ('error' in lines) return responseJson(req, { error: lines.error }, lines.status);
+    const merchandiseSubtotal = lines.orderLines.reduce(
+      (sum, item) => sum + toCents(item.price_aud) * Number(item.quantity || 0),
+      0,
+    );
+    const { data: settings, error: settingsError } = await svc
       .from('site_settings')
-      .select('pickup_enabled, pickup_audience, pickup_label, pickup_instructions, gst_enabled, gst_rate_percent, gst_mode, gst_label, card_fee_enabled, card_fee_percent, card_fee_fixed_aud, card_fee_mode, card_fee_label, free_shipping_threshold_aud')
+      .select('pickup_enabled,pickup_audience,pickup_label,pickup_instructions,gst_enabled,gst_rate_percent,gst_mode,gst_label,card_fee_enabled,card_fee_percent,card_fee_fixed_aud,card_fee_mode,card_fee_label,free_shipping_threshold_aud')
       .order('updated_date', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (settingsError) throw settingsError;
+    const requiresShipping = [...productsById.values()].some((product) => product.shipping_required !== false);
+    const fulfilment = resolveFulfilment(
+      input?.fulfilment,
+      input?.country,
+      settings || {},
+      requiresShipping,
+      input?.shipping,
+    );
+    if ('error' in fulfilment) return responseJson(req, { error: fulfilment.error }, 400);
 
-    // Products are loaded BEFORE fulfilment is resolved: a cart of only
-    // non-shippable items (a membership, anything digital) has no parcel, so it
-    // must not be made to buy postage or pick a collection point.
-    const productsById = new Map();
-    const unavailableProductIds = [];
-    for (const item of normalizedItems) {
-      const { data: product } = await svc.from('products').select('*').eq('id', item.productId).maybeSingle();
-      if (!product) {
-        unavailableProductIds.push(item.productId);
-      } else {
-        productsById.set(item.productId, product);
-      }
-    }
-
-    if (unavailableProductIds.length > 0) {
-      return json({
-        error: 'Some items in your cart are no longer available. Please review your cart.',
-        unavailableProductIds,
-      }, 409);
-    }
-
-    const cartRequiresShipping = [...productsById.values()].some((p) => p?.shipping_required !== false);
-
-    let fulfilmentResult;
-    if (!cartRequiresShipping) {
-      fulfilmentResult = { ok: true as const, method: 'none', shipping: null };
-    } else {
-      fulfilmentResult = resolveFulfilment({
-        method: fulfilment,
-        shipping,
-        country,
-        settings: siteSettings,
-      });
-      if (!fulfilmentResult.ok) {
-        return json({ error: fulfilmentResult.error }, 400);
-      }
-    }
-    const isPickup = fulfilmentResult.method === 'pickup';
-    // Neither pickup nor a digital-only order carries a postage cost.
-    const noParcel = isPickup || fulfilmentResult.method === 'none';
-    const shippingSelection = fulfilmentResult.shipping
-      || (isPickup
-        ? { code: 'PICKUP', name: 'Collect in Las Vegas', postcode: '', price_aud: 0, stripeLineItem: null }
-        : { code: 'NONE', name: 'No shipping required', postcode: '', price_aud: 0, stripeLineItem: null });
-
-    // The storefront hides oversized packaging, but the rate list arrives from the
-    // client, so the ceiling is re-derived from the saved products and enforced
-    // here too. Without this a crafted request could still buy a Large box.
-    if (!noParcel) {
+    // Re-derive the maximum parcel size from the saved products. The storefront
+    // filters oversized PAC services too, but a crafted client must not be able
+    // to send a signed Large-box quote for a satchel-sized order.
+    if (fulfilment.method === 'shipping' && fulfilment.shipping) {
       let requiredSize = DEFAULT_PARCEL_SIZE;
       for (const product of productsById.values()) {
-        const size = normalizeParcelSize(product?.parcel_size);
-        if (PARCEL_RANK[size] > PARCEL_RANK[requiredSize]) requiredSize = size;
+        if (product.shipping_required === false) continue;
+        const productSize = normalizeParcelSize(product.parcel_size);
+        if (PARCEL_RANK[productSize] > PARCEL_RANK[requiredSize]) requiredSize = productSize;
       }
-      const chosenSize = serviceParcelSize(shippingSelection);
-      if (chosenSize !== null && PARCEL_RANK[chosenSize] > PARCEL_RANK[requiredSize]) {
-        return json({
-          error: 'That shipping option is too large for this order — please recalculate shipping.',
+      const selectedSize = serviceParcelSize(fulfilment.shipping);
+      if (selectedSize !== null && PARCEL_RANK[selectedSize] > PARCEL_RANK[requiredSize]) {
+        return responseJson(req, {
+          error: 'That shipping option is too large for this order — please calculate shipping again.',
         }, 400);
       }
     }
 
-    const lineItemResult = buildCheckoutLineItems(normalizedItems, (productId) => productsById.get(productId));
-    if (!lineItemResult.ok) {
-      return json({ error: lineItemResult.error }, lineItemResult.status);
-    }
-
-    const { lineItems, stripeLineItems } = lineItemResult;
-
-    // ── Postage price comes from OUR signed quote, never the request ────────
-    // auspostRates signs (service, price, postcode, cart, expiry). Re-deriving
-    // the cart hash here means an edited cart or an edited price fails the
-    // check. The free-shipping waiver is applied server-side too — it used to
-    // be a hardcoded 150 in the browser, with the client simply sending 0.
     let quotedShippingCents = 0;
-    if (!noParcel) {
-      const claimedCents = toCents(shippingSelection.price_aud);
-      const cartHash = cartFingerprint(normalizedItems);
-      const expiresAt = Number(shipping?.expires_at);
-      const payload = quotePayload(shippingSelection.code, claimedCents, shippingSelection.postcode, cartHash, expiresAt);
-      const signatureValid = Number.isFinite(expiresAt)
-        && await verifyQuoteSignature(payload, String(shipping?.signature || ''));
-
+    if (fulfilment.method === 'shipping' && fulfilment.shipping) {
+      const quote = fulfilment.shipping;
+      const payload = quotePayload(
+        quote.code,
+        quote.priceCents,
+        quote.postcode,
+        cartFingerprint(items),
+        quote.expiresAt,
+      );
+      const signatureValid = await verifyQuoteSignature(payload, quote.signature);
       if (!signatureValid) {
-        return json({ error: 'Shipping quote could not be verified — please recalculate shipping.' }, 400);
+        return responseJson(req, {
+          error: 'Shipping quote could not be verified — please calculate shipping again.',
+        }, 400);
       }
-      if (Date.now() > expiresAt) {
-        return json({ error: 'That shipping quote has expired — please recalculate shipping.' }, 400);
+      if (Date.now() > quote.expiresAt) {
+        return responseJson(req, {
+          error: 'That shipping quote has expired — please calculate shipping again.',
+        }, 400);
       }
-      quotedShippingCents = claimedCents;
+      quotedShippingCents = quote.priceCents;
+    }
+    const shippingCents = fulfilment.method === 'shipping'
+      && merchandiseSubtotal < freeShippingThresholdCents(settings || {})
+      ? quotedShippingCents
+      : 0;
+    const totals = calculateTotals(merchandiseSubtotal, shippingCents, settings || {});
+    const stripe = new Stripe(getStripeSecretKey());
+    const promotion = await resolvePromotion(stripe, input?.promoCode, totals.total - shippingCents);
+    if ('error' in promotion) return responseJson(req, { error: promotion.error, promoCodeInvalid: true }, 400);
+    const provisionalTotal = totals.total - promotion.discount;
+    if (provisionalTotal < 50 || provisionalTotal > MAX_ORDER_TOTAL_AUD * 100) {
+      return responseJson(req, {
+        error: promotion.id
+          ? 'This promo code would reduce the order below Stripe’s minimum checkout amount.'
+          : 'The cart total is outside the supported checkout range.',
+        ...(promotion.id ? { promoCodeInvalid: true } : {}),
+      }, 400);
     }
 
-    const subtotalCents = lineItems.reduce(
-      (sum: number, item: { price_aud?: number; quantity?: number }) =>
-        sum + toCents(item.price_aud) * Number(item.quantity || 0),
-      0,
-    );
-    const totals = orderTotals({
-      subtotalCents,
-      shippingCents: quotedShippingCents,
-      settings: siteSettings,
-      isPickup: noParcel,
-    });
-    const totalAud = fromCents(totals.totalCents);
-
-    const origin = resolveCheckoutOrigin(
-      req.headers.get('origin'),
-      Deno.env.get('CHECKOUT_ALLOWED_ORIGINS'),
-      Deno.env.get('CHECKOUT_DEFAULT_ORIGIN') || DEFAULT_CHECKOUT_ORIGIN
-    );
-
-    // Rebuild the postage line from the server's figure, so a waived or
-    // re-derived amount is what actually reaches Stripe.
-    const allStripeLineItems = [...stripeLineItems];
-    if (totals.shippingCents > 0) {
-      allStripeLineItems.push({
-        quantity: 1,
-        price_data: {
-          currency: CHECKOUT_CURRENCY,
-          unit_amount: totals.shippingCents,
-          product_data: { name: `Shipping — ${shippingSelection.name} (AusPost)` },
-        },
-      });
-    }
-    // Absorbed amounts are already inside the prices above — only charge the
-    // ones the shop has chosen to pass on.
-    if (!totals.gstIncluded && totals.gstCents > 0) {
-      allStripeLineItems.push({
-        quantity: 1,
-        price_data: {
-          currency: CHECKOUT_CURRENCY,
-          unit_amount: totals.gstCents,
-          product_data: { name: `${totals.gstLabel} (${totals.gstRatePercent}%)` },
-        },
-      });
-    }
-    if (!totals.cardFeeIncluded && totals.cardFeeCents > 0) {
-      allStripeLineItems.push({
-        quantity: 1,
-        price_data: {
-          currency: CHECKOUT_CURRENCY,
-          unit_amount: totals.cardFeeCents,
-          product_data: { name: totals.cardFeeLabel },
-        },
-      });
-    }
-
-    const { data: order, error: orderError } = await svc
-      .from('store_orders')
-      .insert({
-        customer_name: resolvedName,
-        customer_email: resolvedEmail,
+    const expiresAt = Math.floor(Date.now() / 1000) + CHECKOUT_SESSION_SECONDS;
+    const shippingSelection = fulfilment.method === 'shipping' ? fulfilment.shipping : null;
+    const shippingCode = shippingSelection?.code
+      || (fulfilment.method === 'pickup' ? 'PICKUP' : 'NONE');
+    const shippingName = shippingSelection?.name || fulfilment.label;
+    const customerPostcode = shippingSelection?.postcode || '';
+    const { data: existing, error: existingError } = await svc
+      .from('store_orders').select('*').eq('checkout_request_id', checkoutRequestId).maybeSingle();
+    if (existingError) throw existingError;
+    let order = existing;
+    if (order) {
+      const same = order.customer_email === customerEmail
+        && order.customer_name === customerName
+        && order.fulfilment_method === fulfilment.method
+        && String(order.customer_postcode || '') === customerPostcode
+        && String(order.shipping_service_code || '') === shippingCode
+        && Number(order.shipping_cost_aud || 0) === fromCents(shippingCents)
+        && Number(order.merchandise_subtotal_aud) === fromCents(merchandiseSubtotal)
+        && String(order.promo_code || '') === String(promotion.code || '')
+        && JSON.stringify(order.line_items || []) === JSON.stringify(lines.orderLines);
+      if (!same || order.status !== 'pending') {
+        return responseJson(req, {
+          error: 'This checkout request has already been used. Please try again.',
+          checkoutRequestInvalid: true,
+        }, 409);
+      }
+      if (order.stripe_session_id) {
+        const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+        if (session.status === 'open' && session.url) {
+          return responseJson(req, { url: session.url, sessionId: session.id, expiresAt: session.expires_at, reused: true });
+        }
+        return responseJson(req, {
+          error: 'This checkout session is no longer available. Please try again.',
+          checkoutRequestInvalid: true,
+        }, 409);
+      }
+    } else {
+      const { data: created, error } = await svc.from('store_orders').insert({
+        id: crypto.randomUUID(),
+        checkout_request_id: checkoutRequestId,
+        checkout_expires_at: new Date(expiresAt * 1000).toISOString(),
+        customer_name: customerName,
+        customer_email: customerEmail,
         status: 'pending',
-        total_aud: totalAud,
-        line_items: lineItems,
-        user_email: user?.email || '',
-        user_id: user?.id || '',
-        customer_postcode: shippingSelection.postcode,
-        shipping_service_code: shippingSelection.code,
-        shipping_service_name: shippingSelection.name,
-        // The server's figure, after the free-shipping waiver — not the claim.
-        shipping_cost_aud: fromCents(totals.shippingCents),
-        fulfilment_method: fulfilmentResult.method,
-        // Rate and mode are stored with the amount so a later settings change
-        // never rewrites the history of orders already placed.
-        subtotal_aud: fromCents(totals.subtotalCents),
-        gst_amount_aud: fromCents(totals.gstCents),
-        gst_rate_percent: totals.gstRatePercent,
+        total_aud: fromCents(provisionalTotal),
+        merchandise_subtotal_aud: fromCents(merchandiseSubtotal),
+        subtotal_aud: fromCents(merchandiseSubtotal),
+        discount_amount_aud: fromCents(promotion.discount),
+        promo_code: promotion.code || null,
+        stripe_promotion_code_id: promotion.id || null,
+        line_items: lines.orderLines,
+        user_email: user?.email || customerEmail,
+        user_id: user?.id || null,
+        customer_postcode: customerPostcode,
+        shipping_service_code: shippingCode,
+        shipping_service_name: shippingName,
+        shipping_cost_aud: fromCents(shippingCents),
+        fulfilment_method: fulfilment.method,
+        gst_amount_aud: fromCents(totals.gst),
+        gst_rate_percent: totals.gstRate,
         gst_included: totals.gstIncluded,
-        card_fee_aud: fromCents(totals.cardFeeCents),
-        card_fee_included: totals.cardFeeIncluded,
-        // A pickup order has no delivery address by design — record where to
-        // collect so the admin (and the customer's confirmation) has it.
-        ...(isPickup
-          ? {
-              shipping_address: siteSettings?.pickup_instructions
-                || siteSettings?.pickup_label
-                || 'Collect in Las Vegas at the event',
-              customer_status_note: 'Collect in Las Vegas at the event — bring your order number and ID.',
-            }
-          : {}),
-      })
-      .select('id')
-      .single();
-    if (orderError) throw orderError;
+        card_fee_aud: fromCents(totals.card),
+        card_fee_included: totals.cardIncluded,
+        ...(fulfilment.method === 'pickup' ? {
+          shipping_address: settings?.pickup_instructions || settings?.pickup_label || 'Collect in Las Vegas at the event',
+          customer_status_note: 'Collect in Las Vegas at the event — bring your order number and ID.',
+        } : { customer_status_note: 'Awaiting secure payment through Stripe.' }),
+        timeline: [{ action: 'checkout_started', timestamp: new Date().toISOString(), note: 'Stripe Checkout session requested', actor: 'system' }],
+      }).select('*').single();
+      if (error) throw error;
+      order = created;
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      customer_email: resolvedEmail,
-      success_url: `${origin}/store?success=true`,
-      cancel_url: `${origin}/store?cancelled=true`,
-      line_items: allStripeLineItems,
-      phone_number_collection: { enabled: true },
-      // Domestic AU only — matches the AusPost rate calc, which only quotes
-      // Australian postcodes. A pickup order is collected in person, so Stripe
-      // must NOT ask for a delivery address it would never be shipped to.
-      ...(noParcel ? {} : { shipping_address_collection: { allowed_countries: ['AU'] as const } }),
-      metadata: buildOrderMetadata({
-        appId: Deno.env.get('RLT_APP_ID') || 'rugby-league-takeover',
-        orderId: order.id,
-        totalAud,
-      }),
+    const stripeLines: Stripe.Checkout.SessionCreateParams.LineItem[] = [...lines.stripeLines];
+    if (!totals.gstIncluded && totals.gst > 0) stripeLines.push({
+      quantity: 1,
+      price_data: {
+        currency: CHECKOUT_CURRENCY,
+        unit_amount: totals.gst,
+        product_data: { name: `${totals.gstLabel} (${totals.gstRate}%)` },
+      },
     });
+    if (!totals.cardIncluded && totals.card > 0) stripeLines.push({
+      quantity: 1,
+      price_data: {
+        currency: CHECKOUT_CURRENCY,
+        unit_amount: totals.card,
+        product_data: { name: totals.cardLabel },
+      },
+    });
+    const metadata = {
+      rlt_app_id: trim(Deno.env.get('RLT_APP_ID') || 'rugby-league-takeover', 40),
+      order_id: order.id,
+      checkout_request_id: checkoutRequestId,
+      expected_total_aud: fromCents(provisionalTotal).toFixed(2),
+      promo_code: promotion.code || '',
+      fulfilment_method: fulfilment.method,
+    };
+    const origin = (() => {
+      const requested = parseOrigin(req.headers.get('origin'));
+      if (requested.startsWith('http') && originAllowed(requested)) return requested;
+      return parseOrigin(Deno.env.get('CHECKOUT_DEFAULT_ORIGIN') || DEFAULT_CHECKOUT_ORIGIN) || DEFAULT_CHECKOUT_ORIGIN;
+    })();
 
-    await svc.from('store_orders').update({ stripe_session_id: session.id }).eq('id', order.id);
-    return json({ url: session.url });
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        client_reference_id: order.id,
+        customer_email: customerEmail,
+        success_url: `${origin}/store?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/store?checkout=cancelled`,
+        expires_at: expiresAt,
+        line_items: stripeLines,
+        ...(fulfilment.method === 'shipping' && shippingSelection ? {
+          shipping_address_collection: { allowed_countries: ['AU'] },
+          shipping_options: [{
+            shipping_rate_data: {
+              type: 'fixed_amount',
+              display_name: shippingCents > 0
+                ? `${shippingName} (AusPost)`
+                : `Free ${shippingName} (AusPost)`,
+              fixed_amount: { amount: shippingCents, currency: CHECKOUT_CURRENCY },
+              metadata: { rlt_shipping_code: shippingCode },
+            },
+          }],
+        } : {}),
+        ...(promotion.id ? { discounts: [{ promotion_code: promotion.id }] } : {}),
+        phone_number_collection: { enabled: true },
+        metadata,
+        payment_intent_data: { metadata },
+      }, { idempotencyKey: `rlt_checkout_${checkoutRequestId}` });
+      if (!session.url) throw new Error('Stripe did not return a checkout URL');
+
+      const authoritativeTotal = Number(session.amount_total ?? provisionalTotal);
+      if (authoritativeTotal < 50 || authoritativeTotal > MAX_ORDER_TOTAL_AUD * 100) {
+        await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+        throw new Error('Stripe returned an invalid checkout total');
+      }
+      const { error } = await svc.from('store_orders').update({
+        stripe_session_id: session.id,
+        checkout_expires_at: new Date(session.expires_at * 1000).toISOString(),
+        total_aud: fromCents(authoritativeTotal),
+        discount_amount_aud: fromCents(Number(session.total_details?.amount_discount ?? promotion.discount)),
+        shipping_cost_aud: fromCents(Number(session.total_details?.amount_shipping ?? shippingCents)),
+      }).eq('id', order.id).eq('status', 'pending');
+      if (error) {
+        await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+        throw error;
+      }
+      return responseJson(req, { url: session.url, sessionId: session.id, expiresAt: session.expires_at });
+    } catch (error) {
+      console.error('createCheckout Stripe session error:', error);
+      await svc.from('store_orders').update({
+        status: 'cancelled',
+        customer_status_note: 'Checkout could not be started. No payment was taken.',
+        timeline: [...(Array.isArray(order.timeline) ? order.timeline : []), {
+          action: 'checkout_failed',
+          timestamp: new Date().toISOString(),
+          note: 'Stripe Checkout session could not be created',
+          actor: 'system',
+        }],
+      }).eq('id', order.id).eq('status', 'pending');
+      return responseJson(req, {
+        error: 'Unable to start secure checkout. Please try again.',
+        checkoutRequestInvalid: true,
+      }, 503);
+    }
   } catch (error) {
-    // Log the real cause server-side; never leak internals (Stripe keys, stack,
-    // DB errors) to the browser.
     console.error('createCheckout error:', error);
-    return json({ error: 'Checkout could not be started. Please try again.' }, 500);
+    return responseJson(req, { error: 'Checkout is temporarily unavailable. Please try again.' }, 500);
   }
 });

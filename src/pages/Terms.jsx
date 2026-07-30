@@ -1,33 +1,42 @@
 import React from "react";
 import LegalPage from "@/components/public/LegalPage";
 
-const FALLBACK = `Welcome to Rugby League Takeover ("RLT", "we", "us"). These Terms & Conditions govern your use of this website, our fan forum, merchandise store, and travel-interest registrations. By using the site you agree to these terms. Please review them with your own legal advisor before relying on them.
+const FALLBACK = `Effective date: 28 July 2026
 
-[Who we are]
-Rugby League Takeover is a fan-run community organising supporter travel, events and merchandise around NRL Las Vegas. Travel packages are provided in partnership with third-party travel and accommodation providers; bookings made through external links are subject to those providers' own terms.
+These Terms & Conditions apply when you use the Rugby League Takeover ("RLT", "we", "us") website or app, create an account, participate in the fan community, register interest in travel or events, or buy merchandise. By using the service you agree to these terms. You must be at least 18 years old.
 
-[Use of the site]
-You agree to use this site lawfully and not to post unlawful, abusive, infringing or misleading content in the forum. We may moderate, hide, or remove content and suspend accounts that breach these terms. You are responsible for keeping your account details secure.
+[Accounts and acceptable use]
+Provide accurate information, keep your login secure and tell us promptly if you suspect unauthorised access. You must not misuse the service, interfere with its operation, impersonate others, evade moderation or security controls, scrape or automate access without permission, or use the service for unlawful, abusive, deceptive or infringing activity.
+We may restrict, suspend or end access where reasonably necessary to protect users, enforce these terms, investigate abuse or comply with law. You may delete your account through /delete-account.
 
-[Merchandise & orders]
-Prices are shown in AUD and include applicable taxes where stated. Orders are confirmed once payment is processed. Availability is not guaranteed until your order is confirmed; if an item sells out we will contact you to arrange a refund or alternative. Shipping times are estimates. See our returns information for change-of-mind and faulty-item returns.
+[Community content and moderation]
+You retain ownership of content you submit. You give RLT a non-exclusive, worldwide, royalty-free licence to host, store, reproduce, display and adapt that content only as needed to operate, moderate and promote the service.
+Do not post content that is unlawful, threatening, hateful, defamatory, sexually exploitative, privacy-invasive, misleading, spam, or that infringes another person's rights. Public posts and profile information you choose to display can be seen and shared by others. We may edit, hide, remove, preserve or report content and may act on reports, but we do not promise to review every contribution. Opinions posted by users are their own.
 
-[Travel packages & bookings]
-Travel and accommodation offers are facilitated through third-party providers and may be subject to availability, change, and the provider's own booking terms, deposit and cancellation policies. RLT is not the travel agent of record unless expressly stated and is not liable for the acts or omissions of third-party providers.
+[Fan rewards, tipping and games]
+Badges, points, chips, streaks, tips and similar features are for entertainment and community recognition only. They have no cash value, cannot be redeemed or transferred, and are not gambling, wagering or a promise of prizes. We may correct errors, reverse abuse, adjust rules or retire a feature where reasonably required.
+
+[Merchandise, pricing and payment]
+Store prices and charges are displayed in Australian dollars. The checkout shows the merchandise total, applicable GST, card fee, discount and shipping before payment. Payment is processed by Stripe. An order is accepted after successful payment and confirmation, subject to stock and fraud checks. If we cannot supply an item, we will offer an appropriate refund or other remedy.
+Australian delivery is $15 per order, with free standard delivery when the merchandise subtotal is at least $150, unless a clearly disclosed promotion or collection option applies. Delivery dates are estimates. You are responsible for providing a complete and accurate delivery address.
+
+[Returns and Australian Consumer Law]
+For change-of-mind returns, contact support@rugbyleaguetakeover.com within 30 days after delivery. Items must be unworn, unused and in resalable condition with original packaging where reasonably possible. Original delivery charges and return postage are not refundable for change of mind unless we agree otherwise.
+Our products come with consumer guarantees that cannot be excluded under the Australian Consumer Law. Change-of-mind conditions do not limit your rights where goods are faulty, unsafe, incorrectly described or otherwise fail a consumer guarantee. Contact us and we will provide the remedy required by law.
+
+[Travel, tickets and third parties]
+Travel packages, accommodation, tickets, venues and event offers may be supplied or booked through third parties. Availability, pricing, deposits, changes, cancellations and fulfilment may be governed by the provider's terms. Unless RLT expressly states it is the contracting provider, your contract is with that third party. Review their terms, travel advice, insurance and entry requirements before paying or travelling.
+Links, sponsors and advertisements do not amount to an endorsement or guarantee. Third-party sites and services have their own terms and privacy practices.
 
 [Intellectual property]
-All site content, branding, logos and designs are owned by or licensed to RLT and may not be reproduced without permission.
+RLT branding, site design and original content are owned by or licensed to us. Except for normal personal use, you must not reproduce, sell, modify or exploit them without permission. Rugby league club, competition, venue and sponsor marks belong to their respective owners.
 
-[Liability]
-To the maximum extent permitted by law, RLT is not liable for indirect or consequential loss arising from use of the site. Nothing in these terms excludes rights you have under the Australian Consumer Law that cannot be excluded.
+[Service availability and liability]
+We aim to keep the service accurate and available but do not guarantee uninterrupted access, that user content is correct, or that every event, offer or feature will proceed. To the maximum extent permitted by law, we are not liable for indirect or consequential loss that was not reasonably foreseeable. Nothing in these terms excludes, restricts or modifies a right or remedy that cannot lawfully be excluded, including Australian Consumer Law rights.
 
-[Changes]
-We may update these terms from time to time. Continued use of the site after changes are posted constitutes acceptance.
-
-[Contact]
-Questions about these terms can be sent to support@rugbyleaguetakeover.com.
-
-Last updated: this is placeholder content — replace it in the admin panel with your finalised, legally reviewed Terms & Conditions.`;
+[Changes and contact]
+We may update these terms where the service, risks or legal requirements change. Material changes apply prospectively after the updated terms are posted. If you do not agree, stop using the service and delete your account.
+Questions, returns and complaints can be sent to support@rugbyleaguetakeover.com.`;
 
 export default function Terms() {
   return <LegalPage settingsKey="legal_terms" title="Terms & Conditions" fallback={FALLBACK} />;

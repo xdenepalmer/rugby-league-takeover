@@ -1,4 +1,5 @@
 import React from "react";
+import { safeUserHref } from "@/lib/safe-url";
 
 /**
  * Lightweight markdown-to-React renderer (zero npm dependencies).
@@ -31,17 +32,22 @@ const INLINE_RULES = [
   // links
   {
     re: /\[([^\]]+)\]\(([^)]+)\)/g,
-    render: (m, i) => (
-      <a
-        key={`a${i}`}
-        href={m[2]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-primary underline hover:text-primary/80"
-      >
-        {m[1]}
-      </a>
-    ),
+    render: (m, i) => {
+      const href = safeUserHref(m[2]);
+      if (!href) return <span key={`a${i}`}>{m[1]}</span>;
+      const external = /^https?:/i.test(href);
+      return (
+        <a
+          key={`a${i}`}
+          href={href}
+          target={external ? "_blank" : undefined}
+          rel={external ? "noopener noreferrer" : undefined}
+          className="text-primary underline hover:text-primary/80"
+        >
+          {m[1]}
+        </a>
+      );
+    },
   },
   // bold
   {

@@ -14,6 +14,7 @@ import { isNativeApp } from "./native/native-env.js";
 
 const PREVIEW_HOST_PATTERNS = [
   /(^|\.)base44\.app$/i,
+  /(^|\.)vercel\.app$/i,
   /preview/i,
   /^localhost$/i,
   /^127\.0\.0\.1$/i,

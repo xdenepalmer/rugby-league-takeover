@@ -1,7 +1,6 @@
 import React, { useState, memo } from "react";
 import { Reply, Trash2, Send, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import MentionTextarea from "./MentionTextarea";
 import MediaAttach from "./MediaAttach";
 import ForumMedia from "./ForumMedia";
@@ -119,11 +118,8 @@ const ReplyTree = memo(function ReplyTree({
                 )}
               </div>
 
-              {open && (
+              {open && isAuthenticated && (
                 <form onSubmit={(e) => onReply(reply, e)} className="mt-3 grid gap-2 border-t border-border/40 pt-3">
-                  {!isAuthenticated && (
-                    <Input required placeholder="Your name" value={draft.author_name} onChange={(e) => onUpdateReply(reply.id, { author_name: e.target.value })} className="h-11 rounded-none text-sm" />
-                  )}
                   <MentionTextarea required people={people} placeholder={`Reply to ${reply.author_name || "this comment"}… use @ to mention`} value={draft.body} onChange={(val) => onUpdateReply(reply.id, { body: val })} className="min-h-16 rounded-none text-sm" />
                   <MediaAttach value={draft.media_url} onChange={(url) => onUpdateReply(reply.id, { media_url: url })} />
                   <div className="flex justify-end gap-2">

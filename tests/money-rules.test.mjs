@@ -123,9 +123,21 @@ test("the cart fingerprint ignores ordering but not contents", () => {
 // ── Mirror check ────────────────────────────────────────────────────────
 test("createCheckout carries the same money rules as this module", () => {
   const src = readFileSync(new URL("../supabase/functions/createCheckout/index.ts", import.meta.url), "utf8");
-  for (const token of ["computeGstCents", "computeCardFeeCents", "orderTotals", "verifyQuoteSignature"]) {
+  for (const token of [
+    "calculateTotals",
+    "gstIncluded",
+    "cardIncluded",
+    "freeShippingThresholdCents",
+    "verifyQuoteSignature",
+    "cartFingerprint(items)",
+  ]) {
     assert.ok(src.includes(token), `createCheckout must implement ${token}`);
   }
   // The gross-up divisor is the part most likely to be "simplified" into a bug.
   assert.ok(src.includes("1 - rate"), "card fee must stay grossed up server-side");
+  assert.ok(
+    src.includes("merchandiseSubtotal < freeShippingThresholdCents"),
+    "the signed PAC price must only be waived from the saved merchandise threshold",
+  );
+  assert.ok(!src.includes("FLAT_DOMESTIC_SHIPPING_CENTS"), "checkout must not silently replace PAC with a flat rate");
 });

@@ -3,11 +3,11 @@
  */
 import React, { useState, useRef, useEffect, memo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Send, MessageCircle, X, Eye, Pencil, Flag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import ReplyTree from "@/components/forum/ReplyTree";
 import ReactionPicker from "@/components/forum/ReactionPicker";
@@ -187,27 +187,23 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
 
         {/* Sticky reply form at bottom */}
         <div className="ios-keyboard-spacer shrink-0 border-t border-border/30 bg-card/80 p-4 backdrop-blur-sm md:p-6">
+          {!isAuthenticated ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-300">Sign in to reply and join the discussion.</p>
+              <Button asChild size="mobile" className="rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider text-white">
+                <Link to="/login?next=%2Fforum">Sign in to reply</Link>
+              </Button>
+            </div>
+          ) : (
           <form onSubmit={(e) => onReply(post, e)} className="space-y-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-300">
               Write a Reply
             </p>
             <div className="flex gap-3">
               <div className="shrink-0 hidden sm:block">
-                <UserAvatar name={isAuthenticated ? (user?.full_name || user?.email) : replyDraft.author_name} size="sm" src={isAuthenticated ? user?.avatar_url : ""} />
+                <UserAvatar name={user?.full_name || user?.email} size="sm" src={user?.avatar_url} />
               </div>
               <div className="min-w-0 flex-1 space-y-2">
-                {!isAuthenticated && (
-                  <>
-                    <label htmlFor="modal-reply-name" className="sr-only">Your name</label>
-                    <Input
-                      id="modal-reply-name"
-                      required placeholder="Your name"
-                      value={replyDraft.author_name}
-                      onChange={(e) => onUpdateReply(post.id, { author_name: e.target.value })}
-                      className="h-11 rounded-none border-border bg-background text-sm"
-                    />
-                  </>
-                )}
                 <MentionTextarea
                   required
                   people={replyApi?.people}
@@ -222,13 +218,14 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
               <Button
                 type="submit"
                 size="mobile"
-                disabled={!appReady || (!isAuthenticated && !replyDraft.author_name) || !replyDraft.body || isSubmitting}
+                disabled={!appReady || !replyDraft.body || isSubmitting}
                 className="rounded-none bg-primary text-[10px] font-bold uppercase tracking-wider text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] transition-all hover:bg-primary/95 hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]"
               >
                 <Send className="mr-1.5 h-3.5 w-3.5" /> {isSubmitting ? "Sending…" : "Post Reply"}
               </Button>
             </div>
           </form>
+          )}
         </div>
       </motion.div>
     </>
