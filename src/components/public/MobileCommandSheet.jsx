@@ -383,7 +383,7 @@ export default function MobileCommandSheet({ isOpen, onClose, onNavigate, contex
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 220 }}
-            className="absolute inset-x-0 bottom-0 max-h-[85vh] border-t border-border bg-card/95 pb-safe cmd-glass pointer-events-auto flex flex-col overflow-hidden"
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] border-t border-border bg-card/95 pb-safe cmd-glass cmd-sheet pointer-events-auto flex flex-col overflow-hidden"
             role="dialog"
             aria-modal="true"
           >

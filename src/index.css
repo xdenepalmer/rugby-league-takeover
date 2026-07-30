@@ -566,6 +566,26 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* Many Android WebViews (and reduce-transparency / power-saving modes) don't
+   render backdrop-filter. Without it, every .cmd-glass surface is just a
+   40–80% translucent card — content behind it (the page, the fixed background
+   video) bleeds through and the surface looks like a "dull, blurred, blank"
+   screen. This was the reported bug where opening an event showed a washed-out
+   view. Where backdrop-filter is unavailable, fall back to a near-opaque card. */
+@supports not ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+  .cmd-glass {
+    background: hsl(var(--card) / 0.97);
+  }
+}
+
+/* Full-screen modal sheets (event/news detail, mobile command console) must stay
+   legible even where backdrop-filter is nominally supported but composites
+   badly. Pin an opaque card colour under the glass gradient so page/video never
+   bleeds through the panel. */
+.cmd-glass.cmd-sheet {
+  background-color: hsl(var(--card));
+}
+
 /* Grid background pattern */
 .cmd-grid-bg {
   background-image:

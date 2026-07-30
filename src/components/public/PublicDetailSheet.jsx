@@ -52,7 +52,7 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 220 }}
-          className="absolute inset-x-0 bottom-0 max-h-[90vh] border-t border-border bg-card/95 pb-safe cmd-glass pointer-events-auto flex flex-col overflow-hidden w-full max-w-3xl mx-auto"
+          className="absolute inset-x-0 bottom-0 max-h-[90vh] border-t border-border bg-card/95 pb-safe cmd-glass cmd-sheet pointer-events-auto flex flex-col overflow-hidden w-full max-w-3xl mx-auto"
           role="dialog"
           aria-modal="true"
         >
