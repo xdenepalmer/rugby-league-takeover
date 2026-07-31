@@ -50,17 +50,20 @@ test("forum creation and replies require an authenticated profile", () => {
 
 test("forum submissions have a server-side per-profile rate limit", () => {
   const submit = read("supabase/functions/submitForumPost/index.ts");
-  assert.match(submit, /10 \* 60 \* 1000/);
-  assert.match(submit, /\.eq\('user_id', user\.id\)/);
-  assert.match(submit, /\.from\('forum_reward_events'\)/);
-  assert.match(submit, /\.in\('kind', \['thread', 'reply'\]\)/);
-  assert.match(submit, /Math\.max\([\s\S]*Number\(recentPostCount \|\| 0\),[\s\S]*Number\(recentRewardCount \|\| 0\)/);
-  assert.match(submit, /recentActivityCount >= 5/);
+  // The limit is now claimed ATOMICALLY (RLT-FORUM-002). It used to be three
+  // COUNT queries followed several awaits later by the insert — a check-then-act
+  // race that a simultaneous burst walked straight through. Same limits (5 per
+  // 10 minutes, 20 per day) and same 429 codes; the enforcement is what changed.
+  assert.match(submit, /forum_claim_post_slot/);
+  assert.match(submit, /p_window_limit: 5/);
+  assert.match(submit, /p_window_seconds: 600/);
+  assert.match(submit, /p_day_limit: 20/);
   assert.match(submit, /code: 'rate_limited'/);
-  assert.match(submit, /24 \* 60 \* 60 \* 1000/);
-  assert.match(submit, /Number\(dailyRewardCount \|\| 0\) >= 20/);
   assert.match(submit, /code: 'daily_rate_limited'/);
   assert.match(submit, /}, 429\)/);
+  // The quota must not be derived from posts, or deleting them resets the gate.
+  const quota = read("supabase/migrations/0029_forum_post_quota.sql");
+  assert.match(quota, /create table if not exists public\.forum_post_quota/);
 });
 
 test("forum replies must target a live published discussion", () => {

@@ -85,52 +85,34 @@ Deno.serve(async (req) => {
       return json({ error: 'Login required to post in the forum' }, 401);
     }
 
-    const rateWindowStart = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const dailyWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const [
-      { count: recentPostCount, error: recentPostError },
-      { count: recentRewardCount, error: recentRewardError },
-      { count: dailyRewardCount, error: dailyRewardError },
-    ] = await Promise.all([
-      svc
-        .from('forum_posts')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_date', rateWindowStart),
-      // Reward events survive ordinary post deletion, so deleting five posts
-      // cannot immediately reset the spam/reward gate.
-      svc
-        .from('forum_reward_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .in('kind', ['thread', 'reply'])
-        .gte('created_date', rateWindowStart),
-      svc
-        .from('forum_reward_events')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .in('kind', ['thread', 'reply'])
-        .gte('created_date', dailyWindowStart),
-    ]);
-    if (recentPostError) throw recentPostError;
-    if (recentRewardError) throw recentRewardError;
-    if (dailyRewardError) throw dailyRewardError;
-    const recentActivityCount = Math.max(
-      Number(recentPostCount || 0),
-      Number(recentRewardCount || 0),
-    );
-    if (recentActivityCount >= 5) {
+    // Claim a posting slot ATOMICALLY. This used to be three COUNT queries
+    // followed — several awaits later — by the insert, which is a check-then-act
+    // race: a simultaneous burst all COUNTed before any of them inserted, so they
+    // all read "under the limit" and all went through. As the forum's only
+    // anti-spam control, that meant one script could fill it in a second.
+    // The check and the decrement are now a single statement under a row lock.
+    const { data: slot, error: slotError } = await svc.rpc('forum_claim_post_slot', {
+      p_user_id: String(user.id),
+      p_window_limit: 5,
+      p_day_limit: 20,
+      p_window_seconds: 600,
+    });
+    if (slotError) {
+      console.error('forum_claim_post_slot error:', slotError);
+      return json({ error: 'Unable to post right now. Please try again.' }, 503);
+    }
+    if (!slot?.allowed) {
+      if (slot?.reason === 'daily_rate_limited') {
+        return json({
+          error: 'You have reached today’s forum posting limit. Please try again later.',
+          code: 'daily_rate_limited',
+          retryAfterSeconds: 86400,
+        }, 429);
+      }
       return json({
         error: 'You have posted several times recently. Please wait a few minutes before posting again.',
         code: 'rate_limited',
         retryAfterSeconds: 600,
-      }, 429);
-    }
-    if (Number(dailyRewardCount || 0) >= 20) {
-      return json({
-        error: 'You have reached today’s forum posting limit. Please try again later.',
-        code: 'daily_rate_limited',
-        retryAfterSeconds: 86400,
       }, 429);
     }
 
@@ -173,7 +155,7 @@ Deno.serve(async (req) => {
         is_published: true,
         is_pinned: false,
         ip_address: ip,
-        user_email: user.email || '',
+        user_email: user.email || null,
         user_id: user.id,
         author_avatar: trimToLength(user.avatar_url, 600),
         media_url: mediaUrl,
@@ -181,7 +163,12 @@ Deno.serve(async (req) => {
       })
       .select('id')
       .single();
-    if (error) throw error;
+    if (error) {
+      // The slot was already consumed, so hand it back — a database hiccup must
+      // not silently cost the member one of their five posts.
+      await svc.rpc('forum_release_post_slot', { p_user_id: String(user.id) }).catch(() => {});
+      throw error;
+    }
 
     const reward = await awardForumReward(svc, user, parentId
       ? { kind: 'reply', xp: 12, chips: 25, postId: post.id, note: 'Posted a forum reply', counter: 'casino_total_replies' }

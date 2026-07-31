@@ -182,3 +182,52 @@ test("the forum feed window fits real threads with replies", () => {
     "the feed fetches enough rows that threads are not evicted by their own replies"
   );
 });
+
+test("the posting quota is claimed atomically, not counted then acted on", () => {
+  const submit = stripComments(read("../supabase/functions/submitForumPost/index.ts"));
+  const quota = read("../supabase/migrations/0029_forum_post_quota.sql");
+
+  // The old shape: COUNT queries, then an insert several awaits later. A
+  // simultaneous burst all read "under the limit" and all got through.
+  assert.ok(/forum_claim_post_slot/.test(submit), "a slot is claimed via the RPC");
+  assert.ok(
+    !/count: 'exact', head: true/.test(submit),
+    "the check-then-act COUNT queries are gone"
+  );
+  // Limits preserved exactly: 5 per 10 minutes, 20 per day.
+  assert.ok(/p_window_limit: 5/.test(submit) && /p_day_limit: 20/.test(submit), "limits unchanged");
+  assert.ok(/p_window_seconds: 600/.test(submit), "window unchanged");
+  // Both 429 codes still returned so existing clients keep working.
+  assert.ok(/code: 'daily_rate_limited'/.test(submit) && /code: 'rate_limited'/.test(submit), "error codes preserved");
+
+  // The claim must be a single statement that both tests and consumes.
+  assert.ok(
+    /where user_id = p_user_id\s*\n\s*and window_count < p_window_limit\s*\n\s*and day_count\s*< p_day_limit/.test(quota),
+    "the limits live in the UPDATE's WHERE, so check and decrement cannot interleave"
+  );
+  assert.ok(/on conflict \(user_id\) do update/.test(quota), "the upsert takes a row lock for the burst to queue on");
+});
+
+test("a failed insert hands the posting slot back", () => {
+  const submit = stripComments(read("../supabase/functions/submitForumPost/index.ts"));
+  assert.ok(/forum_release_post_slot/.test(submit), "the slot is released when the insert fails");
+  const quota = read("../supabase/migrations/0029_forum_post_quota.sql");
+  assert.ok(/greatest\(window_count - 1, 0\)/.test(quota), "release cannot drive a counter negative");
+});
+
+test("the quota cannot be reset by deleting posts, or driven by a client key", () => {
+  const quota = read("../supabase/migrations/0029_forum_post_quota.sql");
+  // Derived-from-forum_posts counting would let a spammer delete their way to a
+  // fresh allowance; a dedicated table cannot be reset that way.
+  assert.ok(/create table if not exists public\.forum_post_quota/.test(quota), "the quota has its own table");
+  assert.ok(
+    /alter table public\.forum_post_quota enable row level security/.test(quota),
+    "the quota table is RLS-denied to clients"
+  );
+  for (const fn of ["forum_claim_post_slot", "forum_release_post_slot"]) {
+    assert.ok(
+      new RegExp(`revoke all on function public\\.${fn}\\([^)]*\\) from public, anon, authenticated`).test(quota),
+      `${fn} is revoked from client roles`
+    );
+  }
+});
