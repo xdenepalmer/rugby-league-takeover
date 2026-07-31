@@ -11,11 +11,11 @@ test("AusPost rates reject unsafe requests and bound cart work", () => {
   assert.match(rates, /MAX_REQUEST_BYTES/);
   assert.match(rates, /MAX_CART_LINES/);
   assert.match(rates, /MAX_ITEM_QUANTITY/);
-  assert.match(rates, /MAX_TOTAL_UNITS/);
+  assert.match(rates, /MAX_CART_UNITS/);
   assert.match(rates, /claim_checkout_attempt/);
   assert.match(rates, /\.in\(['"]id['"], productIds\)/);
   assert.match(rates, /AbortSignal\.timeout/);
-  assert.match(rates, /Unable to calculate shipping right now/);
+  assert.match(rates, /Shipping rates are temporarily unavailable/);
 });
 
 test("PAC service switches are applied to quotes and rechecked at checkout", () => {
@@ -32,7 +32,7 @@ test("PAC service switches are applied to quotes and rechecked at checkout", () 
   }
 
   assert.ok(rates.includes("serviceEnabled"));
-  assert.ok(rates.includes("No Australia Post services are currently enabled"));
+  assert.ok(rates.includes("Australian delivery is temporarily unavailable"));
   assert.ok(checkout.includes("shippingServiceEnabled"));
   assert.ok(checkout.includes("is currently unavailable"));
   assert.match(settings, /Standard Post/);
