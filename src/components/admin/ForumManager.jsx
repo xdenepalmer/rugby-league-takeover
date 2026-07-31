@@ -497,7 +497,7 @@ export default function ForumManager({ posts }) {
       value: String(value).toLowerCase(),
       reason: reason || "Banned from forum moderation",
       banned_by: me?.email || "",
-      expires_at: expiresAt || "",
+      expires_at: expiresAt || null,  // "" would fail the timestamptz cast: a "Permanent" ban never inserted
       is_active: true,
     }),
     onSuccess: (data, variables) => { 
@@ -536,8 +536,10 @@ export default function ForumManager({ posts }) {
     updateMutation.mutate({
       id: postId,
       data: {
-        deleted_at: "",
-        deleted_by: "",
+        // null, not "" — PostgREST casts through the row type, so an empty
+        // string into timestamptz raises 22007 and the restore never lands.
+        deleted_at: null,
+        deleted_by: null,
         is_published: false, // still needs approval
       },
     });

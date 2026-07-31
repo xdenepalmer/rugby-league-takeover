@@ -113,3 +113,72 @@ test("moderators can still see why something was reported", () => {
     "reporter text is labelled as coming from users, not as a moderator note"
   );
 });
+
+test("deleting a post never destroys other members' replies or the evidence", () => {
+  // The old path hard-DELETEd the whole reply subtree: a reported member could
+  // erase reported_by/report_reasons/ip_address with one tap, and a thread
+  // starter could wipe out everyone else's replies with no way back.
+  const deleteBlock = ACTION_CODE.split("action === 'delete'")[1]?.split("action === 'update'")[0] || "";
+  assert.ok(/deleted_at:/.test(deleteBlock), "delete is a soft delete");
+  assert.ok(/is_published: false/.test(deleteBlock), "the post leaves the feed");
+  assert.ok(!/\.delete\(\)/.test(deleteBlock), "no hard delete remains in the handler");
+  assert.ok(
+    !/deleteWithChildren/.test(ACTION_CODE),
+    "the recursive hard-delete helper is gone, not just unused"
+  );
+});
+
+test("a banned member cannot keep editing their live posts", () => {
+  const updateBlock = ACTION_CODE.split("action === 'update'")[1]?.split("action === 'pin'")[0] || "";
+  assert.ok(/findActiveBan/.test(updateBlock), "the edit path checks for a ban");
+  // Must not match on IP: shared mobile CGNAT would block innocent users.
+  assert.ok(!/ip:\s*resolveClientIp/.test(updateBlock), "the edit ban check is identity-based, not IP-based");
+});
+
+test("forum media must be on a host we control", () => {
+  const shared = read("../supabase/functions/_shared/shared.ts");
+  assert.ok(/export function safeForumMediaUrl/.test(shared), "a media URL validator exists");
+  assert.ok(/protocol !== 'https:'/.test(shared), "only https is accepted");
+  assert.ok(/SUPABASE_URL/.test(shared), "the project's own storage host is allowed");
+  // Both write paths must use it, or the beacon just moves to the other one.
+  for (const fn of ["forumAction", "submitForumPost"]) {
+    const src = read(`../supabase/functions/${fn}/index.ts`);
+    assert.ok(/safeForumMediaUrl\(input\?\.media_url\)/.test(src), `${fn} validates media_url`);
+    assert.ok(
+      !/trimToLength\(input\?\.media_url/.test(src),
+      `${fn} no longer stores an unvalidated media_url`
+    );
+  }
+});
+
+test("moderator tooling writes null, not '', into timestamp columns", () => {
+  // PostgREST casts through the row type, so "" into timestamptz raises 22007
+  // and the write never lands — restore was a permanent no-op and the default
+  // "Permanent" ban never inserted.
+  for (const file of ["ForumManager", "UsersManager"]) {
+    const src = read(`../src/components/admin/${file}.jsx`);
+    assert.ok(
+      !/(deleted_at|expires_at)\s*:\s*[^,\n]*""\s*,/.test(src),
+      `${file} never writes an empty string into a timestamp column`
+    );
+  }
+  const forum = read("../src/components/admin/ForumManager.jsx");
+  assert.ok(/deleted_at: null/.test(forum), "restore clears deleted_at with null");
+});
+
+test("the thread-detail report button actually reports", () => {
+  const modal = read("../src/components/forum/feed/ThreadDetailModal.jsx");
+  const reportArea = modal.split('"Report this post"')[1]?.slice(0, 1800) || "";
+  assert.ok(
+    /forumAction[\s\S]{0,120}action: "report"/.test(reportArea),
+    "the report reasons call forumAction rather than only showing a toast"
+  );
+});
+
+test("the forum feed window fits real threads with replies", () => {
+  const forum = read("../src/pages/Forum.jsx");
+  assert.ok(
+    /ForumPost\.list\("-created_date", 500\)/.test(forum),
+    "the feed fetches enough rows that threads are not evicted by their own replies"
+  );
+});

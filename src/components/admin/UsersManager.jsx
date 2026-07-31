@@ -215,7 +215,7 @@ export default function UsersManager() {
 
   const banUser = useMutation({
     mutationFn: async ({ targetUser, reason, expiresAt }) => {
-      const common = { reason: reason || "Banned by admin", banned_by: me?.email || "", expires_at: expiresAt || "", is_active: true };
+      const common = { reason: reason || "Banned by admin", banned_by: me?.email || "", expires_at: expiresAt || null, is_active: true };
       await base44.functions.invoke("adminUsers", { action: "update", userId: targetUser.id, data: { disabled: true } });
       await base44.entities.Ban.create({ ban_type: "email", value: String(targetUser.email || "").toLowerCase(), ...common });
       await base44.entities.Ban.create({ ban_type: "user", value: String(targetUser.id).toLowerCase(), ...common });

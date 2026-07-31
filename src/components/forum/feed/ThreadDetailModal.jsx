@@ -158,7 +158,17 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
                         className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-muted/20 hover:text-foreground transition-colors"
                         onClick={() => {
                           setReportOpen(false);
-                          toast({ title: "Report submitted", description: `Reason: ${reason}` });
+                          // This used to only toast — the report never reached the
+                          // server. This modal is where the push-notification deep
+                          // link lands, so it is the path an abuse victim's friend
+                          // takes; a fake confirmation suppressed the escalation.
+                          base44.functions
+                            .invoke("forumAction", { action: "report", postId: post.id, reason })
+                            .then(() => {
+                              queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+                              toast({ title: "Report submitted", description: `Reason: ${reason}` });
+                            })
+                            .catch(() => toast({ title: "Report failed", description: "Please try again." }));
                         }}
                       >
                         {reason}

@@ -74,7 +74,13 @@ test("moderators can remove posts through the checked backend path", () => {
   const action = read("supabase/functions/forumAction/index.ts");
   assert.match(action, /user\.role === 'admin' \|\| user\.role === 'moderator'/);
   assert.match(action, /if \(!isOwner && !isModerator\)/);
-  assert.match(action, /await deleteWithChildren\(svc, postId\)/);
+  // Removal is now a SOFT delete (RLT-FORUM-001). The previous recursive hard
+  // delete let a reported member erase the evidence against them and let any
+  // thread starter destroy every other member's replies, with no restore path
+  // anywhere in the product. Authorisation is unchanged; only the destructiveness is.
+  assert.match(action, /deleted_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(action, /is_published: false/);
+  assert.doesNotMatch(action, /deleteWithChildren/);
 });
 
 test("community migration hides anonymous identity and reaction details", () => {

@@ -831,7 +831,11 @@ export default function Forum() {
 
   const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
     queryKey: ["forumPosts"],
-    queryFn: () => base44.entities.ForumPost.list("-created_date", 100),
+    // 100 covered threads AND replies, so at ~10 replies per thread only about
+    // nine threads were reachable — and buildForumThreads silently drops replies
+    // whose root has aged out, so whole active threads vanished from the feed
+    // and ?thread= deep links to them did nothing. 500 is the client default.
+    queryFn: () => base44.entities.ForumPost.list("-created_date", 500),
     enabled: appParams.hasBase44Config,
     refetchInterval: 30000,
   });

@@ -271,3 +271,34 @@ export async function getForumPost(svc: any, postId: unknown) {
   const { data } = await svc.from('forum_posts').select('*').eq('id', id).maybeSingle();
   return data || null;
 }
+
+// Forum media must live on storage we control. It was previously stored with
+// only a length trim, and MediaAttach is a free-text URL field, so any member
+// could point every forum page load at their own server — turning the feed into
+// an IP/User-Agent beacon for everyone who scrolled past, and letting them swap
+// the bytes for something else after a moderator had already approved the post.
+// Returns '' for anything not on an allowed host, so the post still saves
+// without the attachment rather than failing the whole submission.
+export function safeForumMediaUrl(value: unknown) {
+  const raw = String(value ?? '').trim().slice(0, 600);
+  if (!raw) return '';
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return '';
+  }
+  if (url.protocol !== 'https:') return '';
+
+  const allowed = new Set<string>();
+  try {
+    const project = new URL(Deno.env.get('SUPABASE_URL') || '');
+    if (project.hostname) allowed.add(project.hostname.toLowerCase());
+  } catch { /* project host unavailable — fall through to extras */ }
+  for (const host of String(Deno.env.get('FORUM_MEDIA_ALLOWED_HOSTS') || '').split(',')) {
+    const clean = host.trim().toLowerCase();
+    if (clean) allowed.add(clean);
+  }
+
+  return allowed.has(url.hostname.toLowerCase()) ? url.toString() : '';
+}

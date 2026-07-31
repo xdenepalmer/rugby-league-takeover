@@ -2,23 +2,14 @@
 // Runs with the service role (with explicit ownership/role checks).
 import {
   json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp,
-  censorProfanity, FORUM_CATEGORIES, getForumPost, num, findActiveBan,
+  censorProfanity, FORUM_CATEGORIES, getForumPost, num, findActiveBan, safeForumMediaUrl,
 } from './shared.ts';
 
 const ALLOWED_REACTIONS = ['❤️', '🏉', '🔥', '🎉', '👏'];
 
-// deno-lint-ignore no-explicit-any
-async function deleteWithChildren(svc: any, postId: string) {
-  const { data: children } = await svc
-    .from('forum_posts')
-    .select('id')
-    .eq('parent_id', postId)
-    .limit(200);
-  for (const child of children || []) {
-    if (child?.id) await deleteWithChildren(svc, child.id);
-  }
-  await svc.from('forum_posts').delete().eq('id', postId);
-}
+// NOTE: a recursive hard-delete helper used to live here. It was removed with
+// the destructive delete path — nothing in the product hard-deletes forum
+// content, and reinstating one would make moderation evidence unrecoverable.
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return preflight();
@@ -41,7 +32,21 @@ Deno.serve(async (req) => {
         return json({ error: 'You can only remove your own posts unless you are a moderator' }, 403);
       }
 
-      await deleteWithChildren(svc, postId);
+      // Soft delete the target row ONLY. This used to hard-DELETE the whole
+      // reply subtree, which meant:
+      //   • a reported member could erase the evidence against them
+      //     (reported_by, report_reasons, ip_address, body) with one tap, and
+      //   • any thread starter could permanently destroy every other member's
+      //     replies underneath them.
+      // Nothing else in the product hard-deletes a post, so there was no way
+      // back. Replies are preserved in the database and simply fall out of the
+      // feed as orphans (buildForumThreads drops replies whose parent is not
+      // visible), so a moderator can still restore the thread intact.
+      await svc.from('forum_posts').update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: String(user.email || user.id || 'member'),
+        is_published: false,
+      }).eq('id', postId);
       return json({ ok: true });
     }
 
@@ -58,10 +63,19 @@ Deno.serve(async (req) => {
         return json({ error: 'You can only edit your own posts' }, 403);
       }
 
+      // A banned member could still rewrite every live post they owned with
+      // fresh abuse — the ban only gated NEW posts. Matched on identity, not IP:
+      // findActiveBan checks IP first, and an IP ban behind mobile CGNAT would
+      // stop innocent users editing their own posts.
+      if (!isModerator) {
+        const ban = await findActiveBan(svc, { emails: [user?.email], userId: user?.id });
+        if (ban) return json({ error: 'Your account has been blocked.', code: 'blocked' }, 403);
+      }
+
       const title = censorProfanity(trimToLength(input?.title, 120));
       const body = censorProfanity(trimToLength(input?.body, 2000));
       const category = trimToLength(input?.category || post.category || 'General', 32);
-      const mediaUrl = trimToLength(input?.media_url, 600);
+      const mediaUrl = safeForumMediaUrl(input?.media_url);
       if (!body) return json({ error: 'Message is required' }, 400);
       if (!FORUM_CATEGORIES.includes(category)) return json({ error: 'Forum category is not supported' }, 400);
 

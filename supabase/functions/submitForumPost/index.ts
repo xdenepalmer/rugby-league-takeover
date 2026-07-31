@@ -3,7 +3,7 @@
 // The forum sanitisation mirrors buildPendingForumPost() in src/lib/public-forms.js.
 import {
   json, preflight, serviceClient, getCaller, trimToLength, isLikelyBot,
-  resolveClientIp, findActiveBan, censorProfanity, FORUM_CATEGORIES,
+  resolveClientIp, findActiveBan, censorProfanity, FORUM_CATEGORIES, safeForumMediaUrl,
   awardForumReward, getForumPost,
 } from './shared.ts';
 
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     const authorName = trimToLength(user.full_name || user.email, 80) || 'Member';
     const ip = resolveClientIp(req);
 
-    const mediaUrl = trimToLength(input?.media_url, 600);
+    const mediaUrl = safeForumMediaUrl(input?.media_url);
     const mediaExt = mediaUrl.split('?')[0].split('.').pop()?.toLowerCase();
     const mediaType = trimToLength(input?.media_type, 16)
       || (mediaUrl ? (['mp4', 'webm', 'mov', 'ogg'].includes(mediaExt || '') ? 'video' : mediaExt === 'gif' ? 'gif' : 'image') : '');
