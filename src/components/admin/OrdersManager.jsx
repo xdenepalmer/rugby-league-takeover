@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
+import OrderLabelSheet from "./OrderLabelSheet";
 
 const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded", "partially_refunded"];
 // Statuses an admin sets by hand via the dropdown. Cancel/refund states are
@@ -195,38 +196,15 @@ function OrderEditForm({ editFields, setEditFields, onSave, onCancel }) {
   );
 }
 
-/* Browser-printable packing slip/address label. It is not paid carrier postage. */
-function printPackingSlip(order) {
+/* Guard before opening the label preview. The label itself is rendered in-page
+   by OrderLabelSheet — the old pop-up printer opened a blank about:blank tab in
+   Android WebViews with no way to print. */
+function canPrintPackingSlip(order) {
   if (order.fulfilment_method === "shipping" && !hasStructuredAddress(order)) {
     toast({ title: "Complete address required", description: "Add the full structured Australian delivery address before printing.", variant: "destructive" });
-    return;
+    return false;
   }
-  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const orderNo = String(order.id || "").slice(-6).toUpperCase();
-  const address = orderAddressText(order) || order.shipping_address || "";
-  const items = (order.line_items || [])
-    .map((i) => `<tr><td style="width:32px">${esc(i.quantity)}×</td><td>${esc(i.name)}${i.size ? ` (Size ${esc(i.size)})` : ""}</td></tr>`)
-    .join("");
-  const win = window.open("", "_blank", "width=440,height=680");
-  if (!win) {
-    toast({ title: "Pop-up blocked", description: "Allow pop-ups for this site to print the label.", variant: "destructive" });
-    return;
-  }
-  win.document.write(`<!doctype html><html><head><title>Order ${orderNo}</title>
-    <style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box} body{padding:24px;color:#111;margin:0}
-    h1{font-size:15px;text-transform:uppercase;letter-spacing:1px;margin:0 0 2px} .muted{color:#666;font-size:11px}
-    .box{border:2px solid #111;padding:16px;margin:14px 0} .lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-    .addr{font-size:19px;line-height:1.5;white-space:pre-line;font-weight:bold} table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
-    td{padding:5px 0;border-bottom:1px solid #ddd;vertical-align:top} .from{font-size:10px;color:#666;margin-top:12px}
-    @media print{@page{margin:10mm}}</style></head><body>
-    <h1>Rugby League Takeover</h1>
-    <div class="muted">Order #${orderNo}${order.created_date ? " · " + esc(new Date(order.created_date).toLocaleDateString()) : ""}</div>
-    <div class="box"><div class="lbl">Ship to</div><div class="addr">${esc(address) || "(no address on file)"}</div></div>
-    <table>${items}</table>
-    <div class="from">Rugby League Takeover &middot; Address/packing slip only &middot; Postage must be purchased separately</div>
-    <script>window.onload=function(){setTimeout(function(){window.print();},150);};<\/script>
-    </body></html>`);
-  win.document.close();
+  return true;
 }
 
 /* Helper: calculate estimated delivery */
@@ -410,6 +388,8 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
   const [refundReason, setRefundReason] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [labelOpen, setLabelOpen] = useState(false);
+  const openLabel = () => { if (canPrintPackingSlip(order)) setLabelOpen(true); };
   const [editMode, setEditMode] = useState(false);
   const [editFields, setEditFields] = useState({
     customer_name: order.customer_name || "",
@@ -783,7 +763,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Customer &amp; Shipping</p>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => printPackingSlip(order)} className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 hover:text-primary">
+                      <button type="button" onClick={openLabel} className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 hover:text-primary">
                         <Printer className="h-2.5 w-2.5" /> Print slip
                       </button>
                       <button type="button" onClick={() => setEditMode(!editMode)} className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 hover:text-primary">
@@ -816,7 +796,7 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
                     <Button
                       size="sm"
                       type="button"
-                      onClick={() => printPackingSlip(order)}
+                      onClick={openLabel}
                       className="h-9 rounded-none bg-primary/90 hover:bg-primary text-[9px] font-bold uppercase tracking-wider"
                     >
                       <Printer className="mr-1.5 h-3 w-3" /> Print address / packing slip
@@ -1151,6 +1131,15 @@ function OrderCard({ order, onUpdate, index, actorEmail }) {
         onConfirm={executeAction}
         onCancel={() => setConfirmAction(null)}
       />
+
+      {/* Address label / packing slip — rendered in-page and printed from this
+          document, so it works where the old pop-up printer opened a blank tab. */}
+      <OrderLabelSheet
+        open={labelOpen}
+        order={order}
+        addressText={orderAddressText(order)}
+        onClose={() => setLabelOpen(false)}
+      />
     </>
   );
 }
@@ -1203,12 +1192,31 @@ export default function OrdersManager({ orders }) {
   }, [orders, search, pipelineTab]);
 
   const exportCsv = () => {
-    const headers = ["Date", "Customer", "Email", "Account", "Status", "Total AUD", "Items", "Carrier", "Tracking", "Notes"];
+    // The delivery address is the whole point of exporting orders for a postage
+    // run, but it was missing entirely — admins had to open every order by hand.
+    // Split into per-field columns (so the sheet can feed a carrier upload or a
+    // mail merge) plus one combined column for quick copy/paste.
+    const headers = [
+      "Date", "Order", "Customer", "Email", "Account", "Status", "Total AUD", "Items",
+      "Fulfilment", "Ship To Name", "Address 1", "Address 2", "Suburb", "State", "Postcode", "Country",
+      "Shipping Address", "Carrier", "Tracking", "Notes",
+    ];
     const rows = filtered.map((o) => [
       o.created_date ? format(new Date(o.created_date), "yyyy-MM-dd") : "",
+      String(o.id || "").slice(-6).toUpperCase(),
       o.customer_name, o.customer_email, o.user_email || "guest", o.status || "pending",
       Number(o.total_aud || 0).toFixed(2),
-      (o.line_items || []).map((i) => `${i.quantity}x ${i.name}`).join("; "),
+      (o.line_items || []).map((i) => `${i.quantity}x ${i.name}${i.size ? ` (${i.size})` : ""}`).join("; "),
+      o.fulfilment_method || "",
+      o.shipping_name || o.customer_name || "",
+      o.shipping_address_line1 || "",
+      o.shipping_address_line2 || "",
+      o.shipping_suburb || "",
+      o.shipping_state || "",
+      o.shipping_postcode || "",
+      o.shipping_country || "",
+      // Newlines break the row apart in some spreadsheet importers.
+      orderAddressText(o).replace(/\n/g, ", "),
       o.carrier || "", o.tracking_number || "", o.shipping_notes || "",
     ]);
     downloadCsv("rugby-league-takeover-orders.csv", headers, rows);

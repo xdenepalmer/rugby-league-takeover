@@ -843,3 +843,43 @@
 .cmd-card-cascade > *:nth-child(4) { animation-delay: 0.2s; }
 .cmd-card-cascade > *:nth-child(5) { animation-delay: 0.25s; }
 .cmd-card-cascade > *:nth-child(6) { animation-delay: 0.3s; }
+/* ── Address label / packing slip printing ──────────────────────────────────
+   The label preview (OrderLabelSheet) is portalled to <body>, so it is a
+   SIBLING of #root. Printing therefore just means hiding the app and letting
+   the label own the page — no pop-up window, no about:blank tab, and no
+   reliance on an injected auto-print script (which silently never ran inside
+   Android WebViews, leaving admins with a blank page and no print button).
+   The @page size itself is injected by the component per selected stock. */
+@media print {
+  #root { display: none !important; }
+
+  html, body {
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .rlt-print-root {
+    position: static !important;
+    display: block !important;
+    inset: auto !important;
+    z-index: auto !important;
+    background: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Toolbar (size picker, print/close buttons) never appears on the label. */
+  .rlt-print-chrome { display: none !important; }
+
+  .rlt-print-label {
+    width: auto !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+}
