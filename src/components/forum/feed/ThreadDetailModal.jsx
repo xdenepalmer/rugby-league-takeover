@@ -168,7 +168,16 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
                               queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
                               toast({ title: "Report submitted", description: `Reason: ${reason}` });
                             })
-                            .catch(() => toast({ title: "Report failed", description: "Please try again." }));
+                            .catch((err) =>
+                              toast(
+                                // The report button is not auth-gated, and the
+                                // server now requires an account. Without this a
+                                // logged-out fan just gets "try again" forever.
+                                err?.status === 401
+                                  ? { title: "Sign in to report", description: "Reporting a post needs an account." }
+                                  : { title: "Report failed", description: "Please try again." }
+                              )
+                            );
                         }}
                       >
                         {reason}
