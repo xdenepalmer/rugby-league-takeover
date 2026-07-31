@@ -80,7 +80,7 @@ test("fixed and PAC modes remain selectable while PAC services can be toggled in
   assert.ok(settings.includes('value="calculated"'));
   assert.ok(settings.includes("shipping_standard_enabled"));
   assert.ok(settings.includes("shipping_express_enabled"));
-  assert.ok(settings.includes("Both Australia Post services are disabled"));
+  assert.ok(settings.includes("Both PAC services are off"));
   assert.ok(rates.includes("shipping_standard_enabled"));
   assert.ok(rates.includes("shipping_express_enabled"));
   assert.ok(rates.includes("serviceEnabled"));
