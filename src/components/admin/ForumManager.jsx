@@ -229,11 +229,27 @@ function PostCard({
               </button>
             )}
 
-            {/* Moderation reason display */}
+            {/* Moderation reason display — admin-authored only. Reporter text is
+                deliberately NOT shown here (see report_reasons below): a reporter
+                writing into this field could put words in a moderator's mouth. */}
             {post.moderation_reason && (
               <p className="mt-2 text-[9px] font-mono text-destructive/50 border-l-2 border-destructive/20 pl-2">
                 Mod reason: {post.moderation_reason}
               </p>
+            )}
+
+            {/* What reporters actually said, clearly marked as untrusted user text. */}
+            {Array.isArray(post.report_reasons) && post.report_reasons.length > 0 && (
+              <div className="mt-2 border-l-2 border-amber-500/30 pl-2">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-500/70">
+                  Reported by users ({post.report_reasons.length})
+                </p>
+                {post.report_reasons.slice(-3).map((entry, i) => (
+                  <p key={i} className="text-[9px] font-mono text-amber-500/50">
+                    “{String(entry?.reason || "").slice(0, 160)}”
+                  </p>
+                ))}
+              </div>
             )}
 
             {/* Deleted by info */}

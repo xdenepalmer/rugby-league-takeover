@@ -2,7 +2,7 @@
 // Runs with the service role (with explicit ownership/role checks).
 import {
   json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp,
-  censorProfanity, FORUM_CATEGORIES, getForumPost, num,
+  censorProfanity, FORUM_CATEGORIES, getForumPost, num, findActiveBan,
 } from './shared.ts';
 
 const ALLOWED_REACTIONS = ['❤️', '🏉', '🔥', '🎉', '👏'];
@@ -84,29 +84,64 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'report') {
+      // Reporting requires an account. Anonymous reporting let anyone drive the
+      // moderation queue from behind a rotating IP, and the reporter identity
+      // fell back to an IP — which is shared by everyone behind mobile CGNAT,
+      // so one reporter could silently consume the whole street's report.
       const user = await getCaller(req, svc);
+      if (!user) return json({ error: 'Login required to report a post' }, 401);
+
+      // A banned user does not get to keep driving moderation.
+      const ban = await findActiveBan(svc, { ip: resolveClientIp(req), emails: [user?.email], userId: user?.id });
+      if (ban) return json({ error: 'Your account has been blocked.', code: 'blocked' }, 403);
+
       const post = await getForumPost(svc, postId);
       if (!post) return json({ error: 'Post not found' }, 404);
 
-      const ip = resolveClientIp(req);
-      const reporter = String(user?.id || user?.email || ip || 'anonymous').toLowerCase();
+      const reporter = String(user.id || user.email).toLowerCase();
       const reportedBy = Array.isArray(post.reported_by) ? post.reported_by.map(String) : [];
-      const alreadyReported = reportedBy.includes(reporter);
-      const nextReportedBy = alreadyReported ? reportedBy : [...reportedBy, reporter];
+      if (reportedBy.includes(reporter)) {
+        // Idempotent: re-reporting is a no-op rather than another count.
+        return json({ ok: true, reported_count: reportedBy.length, already_reported: true });
+      }
+      const nextReportedBy = [...reportedBy, reporter];
+
+      // Reporter text is UNTRUSTED and goes in its own column. It must never be
+      // written to moderation_reason: that field is rendered to moderators as
+      // "Mod reason: …", so writing to it let a reporter put words in a
+      // moderator's mouth and erase a note a moderator had already written.
+      const reason = censorProfanity(trimToLength(input?.reason, 160));
+      const existingReports = Array.isArray(post.report_reasons) ? post.report_reasons : [];
+      const nextReports = [
+        ...existingReports.slice(-49),
+        { reporter, reason: reason || 'Reported by user', at: new Date().toISOString() },
+      ];
+
       await svc.from('forum_posts').update({
         reported_by: nextReportedBy,
         reported_count: nextReportedBy.length,
-        moderation_reason: censorProfanity(trimToLength(input?.reason || post.moderation_reason || 'Reported by user', 160)),
+        report_reasons: nextReports,
       }).eq('id', postId);
       return json({ ok: true, reported_count: nextReportedBy.length });
     }
 
     if (action === 'view') {
-      const post = await getForumPost(svc, postId);
-      if (!post) return json({ error: 'Post not found' }, 404);
-      const next = num(post.view_count) + 1;
-      await svc.from('forum_posts').update({ view_count: next }).eq('id', postId);
-      return json({ view_count: next });
+      // Atomic + de-duplicated per viewer per post per hour. Previously this was
+      // an unauthenticated read-modify-write fired on every render, so a loop
+      // could inflate the count and drive unbounded writes.
+      const user = await getCaller(req, svc);
+      const viewerKey = String(user?.id || resolveClientIp(req) || '').toLowerCase();
+      if (!viewerKey) return json({ view_count: 0 });
+
+      const { data: viewCount, error: viewError } = await svc.rpc('forum_register_view', {
+        p_post_id: String(postId),
+        p_viewer_key: viewerKey,
+      });
+      if (viewError) {
+        console.error('forum_register_view error:', viewError);
+        return json({ error: 'Unable to record view' }, 500);
+      }
+      return json({ view_count: num(viewCount) });
     }
 
     if (action === 'like') {
@@ -116,19 +151,19 @@ Deno.serve(async (req) => {
       const post = await getForumPost(svc, postId);
       if (!post) return json({ error: 'Post not found' }, 404);
 
-      const likedBy = Array.isArray(post.liked_by) ? post.liked_by.slice() : [];
-      const id = String(user.id);
-      const index = likedBy.indexOf(id);
-      let liked;
-      if (index >= 0) {
-        likedBy.splice(index, 1);
-        liked = false;
-      } else {
-        likedBy.push(id);
-        liked = true;
+      // Toggled under a row lock in Postgres. The old read-modify-write lost one
+      // of any two concurrent likes and let like_count drift permanently away
+      // from liked_by; the count is now derived from the array inside the same
+      // statement, so the two cannot disagree.
+      const { data: result, error: likeError } = await svc.rpc('forum_toggle_like', {
+        p_post_id: String(postId),
+        p_user_id: String(user.id),
+      });
+      if (likeError) {
+        console.error('forum_toggle_like error:', likeError);
+        return json({ error: 'Unable to update like' }, 500);
       }
-      await svc.from('forum_posts').update({ liked_by: likedBy, like_count: likedBy.length }).eq('id', postId);
-      return json({ liked, like_count: likedBy.length });
+      return json({ liked: Boolean(result?.liked), like_count: num(result?.like_count) });
     }
 
     if (action === 'react') {
