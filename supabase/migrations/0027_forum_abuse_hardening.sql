@@ -28,9 +28,10 @@
 alter table public.forum_posts
   add column if not exists report_reasons jsonb not null default '[]'::jsonb;
 
+-- Single-line literal on purpose: implicit concatenation of adjacent string
+-- literals is valid SQL but obscure, and this file is pasted by hand.
 comment on column public.forum_posts.report_reasons is
-  'User-submitted report reasons: [{reporter, reason, at}]. Untrusted input — render as '
-  'quoted user text, never as the moderator''s own note. moderation_reason stays admin-authored.';
+  'Untrusted user-submitted report reasons: [{reporter, reason, at}]. Render as quoted user text. moderation_reason stays admin-authored.';
 
 -- ---------------------------------------------------------------------------
 -- 2. View de-duplication + atomic increment.
@@ -177,8 +178,11 @@ select
   case when (select auth.role()) = 'authenticated' then reactions else '{}'::jsonb end as reactions,
   view_count, deleted_at, deleted_by, moderation_reason, reported_count,
   case when (select public.is_admin()) then reported_by else '[]'::jsonb end as reported_by,
-  case when (select public.is_admin()) then report_reasons else '[]'::jsonb end as report_reasons,
-  created_date, updated_date
+  created_date, updated_date,
+  -- MUST be last: CREATE OR REPLACE VIEW can only APPEND columns. Inserting it
+  -- mid-list makes Postgres read it as renaming created_date and it fails with
+  -- 42P16. Position is irrelevant to the app (PostgREST returns JSON by name).
+  case when (select public.is_admin()) then report_reasons else '[]'::jsonb end as report_reasons
 from public.forum_posts
 where
   is_published
