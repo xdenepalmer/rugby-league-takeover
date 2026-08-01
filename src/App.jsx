@@ -12,6 +12,7 @@ import ScrollToTop from './components/ScrollToTop';
 import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import NativeAppBootstrap from '@/components/NativeAppBootstrap';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 
 // Lazy-loaded pages
 const PageNotFound = lazy(() => import('./lib/PageNotFound'));
