@@ -16,21 +16,24 @@ import NativeAppBootstrap from '@/components/NativeAppBootstrap';
 // Lazy-loaded pages
 const PageNotFound = lazy(() => import('./lib/PageNotFound'));
 const UserNotRegisteredError = lazy(() => import('@/components/UserNotRegisteredError'));
-const Home = lazy(() => import("./pages/Home"));
-const Admin = lazy(() => import("./pages/Admin"));
-const Account = lazy(() => import("./pages/Account"));
-const Store = lazy(() => import("./pages/Store"));
-const Forum = lazy(() => import("./pages/Forum"));
-const News = lazy(() => import("./pages/News"));
-const Faq = lazy(() => import("./pages/Faq"));
-const Gallery = lazy(() => import("./pages/Gallery"));
-const Terms = lazy(() => import("./pages/Terms"));
-const Privacy = lazy(() => import("./pages/Privacy"));
-const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
-const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+// lazyWithRetry (not bare lazy): on launch night's repeated deploys, an open tab
+// navigating to a cold route after a deploy would fetch an old-hash chunk that
+// now 404s and white-screen into RootErrorBoundary. This reloads once instead.
+const Home = lazyWithRetry(() => import("./pages/Home"), "home");
+const Admin = lazyWithRetry(() => import("./pages/Admin"), "admin");
+const Account = lazyWithRetry(() => import("./pages/Account"), "account");
+const Store = lazyWithRetry(() => import("./pages/Store"), "store");
+const Forum = lazyWithRetry(() => import("./pages/Forum"), "forum");
+const News = lazyWithRetry(() => import("./pages/News"), "news");
+const Faq = lazyWithRetry(() => import("./pages/Faq"), "faq");
+const Gallery = lazyWithRetry(() => import("./pages/Gallery"), "gallery");
+const Terms = lazyWithRetry(() => import("./pages/Terms"), "terms");
+const Privacy = lazyWithRetry(() => import("./pages/Privacy"), "privacy");
+const DeleteAccount = lazyWithRetry(() => import("./pages/DeleteAccount"), "delete-account");
+const Login = lazyWithRetry(() => import("./pages/Login"), "login");
+const Register = lazyWithRetry(() => import("./pages/Register"), "register");
+const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"), "forgot-password");
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"), "reset-password");
 const DeferredToaster = lazy(() => import("@/components/ui/toaster").then((module) => ({ default: module.Toaster })));
 const InstallAppPrompt = lazy(() => import("@/components/InstallAppPrompt"));
 const PwaUpdatePrompt = lazy(() => import("@/components/PwaUpdatePrompt"));

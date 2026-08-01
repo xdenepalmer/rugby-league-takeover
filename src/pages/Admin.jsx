@@ -1,31 +1,7 @@
-import React, { lazy, Suspense } from "react";
+import React, { Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-
-const lazyWithRetry = (factory, key) => lazy(async () => {
-  try {
-    const module = await factory();
-    try { sessionStorage.removeItem(`rlt_lazy_reload_${key}`); } catch { /* noop */ }
-    return module;
-  } catch (error) {
-    const message = String(error?.message || error || "");
-    const isChunkLoadError = message.includes("Failed to fetch dynamically imported module") || message.includes("Importing a module script failed");
-    const storageKey = `rlt_lazy_reload_${key}`;
-    let alreadyRetried = false;
-
-    try {
-      alreadyRetried = sessionStorage.getItem(storageKey) === "1";
-      if (isChunkLoadError && !alreadyRetried) sessionStorage.setItem(storageKey, "1");
-    } catch { /* noop */ }
-
-    if (isChunkLoadError && !alreadyRetried) {
-      window.location.reload();
-      return new Promise(() => {});
-    }
-
-    throw error;
-  }
-});
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 const OverviewPanel = lazyWithRetry(() => import("@/components/admin/panels/OverviewPanel"), "overview");
 const ContentPanel = lazyWithRetry(() => import("@/components/admin/panels/ContentPanel"), "content");
