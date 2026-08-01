@@ -98,6 +98,19 @@ const defaultPackages = [
 ];
 
 export default function TravelSection({ packages, settings = {} }) {
+  // Admin-editable in Site Content → Travel. Falls back to the long-standing
+  // address so the "Email agent" button is never dead if the setting is blank.
+  // Anything that isn't a plain address is ignored rather than pasted into a
+  // mailto: (a stray newline there is a header-injection vector).
+  const agentEmail = (() => {
+    const value = String(settings.travel_agent_email || "").trim();
+    return /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(value)
+      ? value
+      : "Claire.Mccallum@ind-flightcentre.com.au";
+  })();
+  // The address is used literally (the regex above already rejects anything
+  // needing escaping); percent-encoding "@" trips up some mail clients.
+  const agentMailto = `mailto:${agentEmail}?subject=${encodeURIComponent("Vegas Travel Package Enquiry")}`;
   const emptyForm = { 
     name: "", 
     phone: "", 
@@ -276,7 +289,7 @@ export default function TravelSection({ packages, settings = {} }) {
                     Register Interest
                   </a>
                   <a
-                    href="mailto:Claire.Mccallum@ind-flightcentre.com.au?subject=Vegas%20Travel%20Package%20Enquiry"
+                    href={agentMailto}
                     className="flex items-center justify-center gap-1.5 border border-border bg-muted/10 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:border-accent hover:text-accent transition-all"
                   >
                     Email Agent

@@ -48,3 +48,21 @@ test("order CSV export includes the shipping address", () => {
     "the combined address column must be flattened so newlines don't split the CSV row"
   );
 });
+
+// The "Email agent" button used to be a hardcoded mailto:, so changing the
+// travel agent required a code deploy.
+test("travel agent email is admin-editable and safely built", () => {
+  const travel = read("../src/components/public/TravelSection.jsx");
+  assert.ok(travel.includes("settings.travel_agent_email"), "the agent address must come from settings");
+  assert.ok(
+    !travel.includes("mailto:Claire.Mccallum@ind-flightcentre.com.au?subject="),
+    "the mailto must no longer hardcode the agent address"
+  );
+  // A blank/invalid setting must not produce a dead or injectable mailto.
+  assert.ok(/\/\^\[\^\\s@<>"'\]\+@/.test(travel), "the address must be validated before use");
+  assert.ok(travel.includes("Claire.Mccallum@ind-flightcentre.com.au"), "a fallback address must remain");
+
+  const admin = read("../src/components/admin/SiteSettingsManager.jsx");
+  assert.ok(admin.includes("travel_agent_email"), "admin must expose a travel agent email field");
+  assert.ok(admin.includes("Travel Agent Email"), "the field needs a clear label");
+});

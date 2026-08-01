@@ -45,6 +45,7 @@ const defaults = {
   travel_eyebrow: "Travel Packages",
   travel_title: "Your Vegas base camp",
   travel_description: "Air, accommodation, events and more are coming soon. Register your interest to be first in line.",
+  travel_agent_email: "",
   registration_eyebrow: "Register interest",
   registration_title: "Don't miss the drop.",
   registration_description: "Leave your details and the team will contact you when packages go live.",
@@ -551,6 +552,20 @@ export default function SiteSettingsManager({ settings }) {
                       </div>
                       <LabeledField label="Travel Description" fullWidth>
                         <Textarea placeholder="Air, accommodation, events and more..." value={draft.travel_description || ""} onChange={(e) => update("travel_description", e.target.value)} />
+                      </LabeledField>
+                      <LabeledField
+                        label="Travel Agent Email"
+                        help='Where the "Email agent" button on each travel package card sends enquiries. Leave blank to use the built-in default.'
+                        fullWidth
+                        indicator={isCustom("travel_agent_email") ? "custom" : "default"}
+                      >
+                        <Input
+                          type="email"
+                          inputMode="email"
+                          placeholder="agent@example.com.au"
+                          value={draft.travel_agent_email || ""}
+                          onChange={(e) => update("travel_agent_email", e.target.value.trim())}
+                        />
                       </LabeledField>
 
                       {/* Merch */}
