@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Not useful in search results — keep crawlers on the content.
+Disallow: /admin
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /delete-account
+Disallow: /store/checkout
+
+Sitemap: https://rugbyleaguetakeover.com/sitemap.xml
