@@ -41,6 +41,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
+  const [existingAccount, setExistingAccount] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [searchParams] = useSearchParams();
   const requestedNext = searchParams.get("next");
@@ -59,7 +60,16 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
+      const data = await base44.auth.register({ email, password });
+      // Supabase returns a user with an EMPTY identities array when the email
+      // already has an account (it won't confirm existence outright). Without
+      // this check we'd show the code-entry screen for an account that already
+      // exists, and the fan would wait for a confirmation email that never comes.
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setError("This email already has an account. Please log in instead.");
+        setExistingAccount(true);
+        return;
+      }
       setShowOtp(true);
     } catch (err) {
       setError(err.message || "Registration failed");
@@ -264,6 +274,16 @@ export default function Register() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Existing-account signups get a real way forward, not a phantom code. */}
+        {existingAccount && (
+          <Link
+            to={`/login?next=${encodeURIComponent(nextUrl)}`}
+            className="block w-full bg-primary text-primary-foreground text-center font-bold uppercase tracking-widest text-sm py-3 hover:bg-primary/90 transition-colors"
+          >
+            Log in instead
+          </Link>
+        )}
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

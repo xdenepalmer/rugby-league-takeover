@@ -36,6 +36,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [resendState, setResendState] = useState("idle"); // idle | sending | sent | error
   const [searchParams] = useSearchParams();
   const requestedNext = searchParams.get("next");
   const nextUrl = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/account";
@@ -53,8 +55,21 @@ export default function Login() {
       window.location.assign(nextUrl);
     } catch (err) {
       setError(err.message || "Invalid email or password");
+      // A fan who never clicked the confirmation link hits a dead end here —
+      // the raw "Email not confirmed" with no way forward. Offer a resend.
+      setNeedsConfirm(/email not confirmed/i.test(err?.message || ""));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirm = async () => {
+    setResendState("sending");
+    try {
+      await base44.auth.resendOtp(email);
+      setResendState("sent");
+    } catch {
+      setResendState("error");
     }
   };
 
@@ -127,6 +142,25 @@ export default function Login() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Unconfirmed-email remediation: a resend, so the fan isn't stuck. */}
+        {needsConfirm && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-sm space-y-2">
+            <p>Your email hasn’t been confirmed yet. Check your inbox for the link, or resend it.</p>
+            {resendState === "sent" ? (
+              <p className="font-semibold text-emerald-400">Confirmation email sent — check your inbox.</p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleResendConfirm}
+                disabled={resendState === "sending" || !email}
+                className="font-bold uppercase tracking-widest text-xs underline underline-offset-4 disabled:opacity-50"
+              >
+                {resendState === "sending" ? "Sending…" : resendState === "error" ? "Failed — try again" : "Resend confirmation email"}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Email & Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
