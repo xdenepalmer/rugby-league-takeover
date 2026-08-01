@@ -11,7 +11,7 @@ import PromoCodesManager from "../PromoCodesManager";
 export default function StorePanel() {
   const [activeTab, setActiveTab] = useState("products");
   const { data: products = [], isLoading: productsLoading } = useQuery({ queryKey: ["products"], queryFn: () => base44.entities.Product.list("sort_order", 200) });
-  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 200) });
+  const { data: orders = [] } = useQuery({ queryKey: ["orders"], queryFn: () => base44.entities.StoreOrder.list("-created_date", 1000) });
   const { data: faqs = [] } = useQuery({ queryKey: ["faqs"], queryFn: () => base44.entities.Faq.list("sort_order", 200), retry: false, meta: { silent: true } });
 
   const tabs = [

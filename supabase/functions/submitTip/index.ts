@@ -37,9 +37,17 @@ Deno.serve(async (req) => {
     // value for external-API fixtures that have no DB row.
     let kickoff = trimToLength(input?.kickoff, 40);
     const { data: matchup } = await svc.from('matchups').select('*').eq('id', gameId).maybeSingle();
-    if (matchup?.kickoff) kickoff = matchup.kickoff;
-    if (matchup && (matchup.status === 'finished' || matchup.status === 'live')) {
-      return json({ error: 'This game is no longer open for tips.', code: 'locked' }, 403);
+    if (matchup) {
+      // Admin-managed game: the DB is authoritative. Only a 'scheduled' game is
+      // open for tips. The status CHECK constraint (migration 0001) only allows
+      // 'scheduled' or 'final', so the old guard — comparing against 'finished'
+      // and 'live', values that can never exist — was dead code, and a 'final'
+      // game (whose score is public) was tippable: a guaranteed perfect
+      // prediction. Trust the DB kickoff, never the client value, for a known game.
+      if (matchup.status !== 'scheduled') {
+        return json({ error: 'This game is no longer open for tips.', code: 'locked' }, 403);
+      }
+      kickoff = matchup.kickoff || '';
     }
     if (kickoff) {
       const kickoffMs = new Date(kickoff).getTime();
