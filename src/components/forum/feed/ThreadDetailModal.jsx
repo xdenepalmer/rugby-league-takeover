@@ -21,7 +21,7 @@ import AuthorBadge from "./AuthorBadge";
 import AuthorMeta from "./AuthorMeta";
 import UserAchievements from "./UserAchievements";
 import { ShareButton, SaveButton } from "./ShareSaveButtons";
-import { getCategoryMeta, getEngagement, timeAgo } from "./forumHelpers";
+import { getCategoryMeta, getEngagement, timeAgo, parseForumDate } from "./forumHelpers";
 
 const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAuthenticated, user, isModerator, appReady, isSubmitting, replyDraft, onUpdateReply, onReply, onEditPost, replyApi, activeReplyDraft, authorPostCounts, authorReplyCounts, resolveAvatar, resolveMeta, reactionProfiles }) {
   const meta = getCategoryMeta(post.category);
@@ -107,7 +107,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
                   <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
                   <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
                   <span className="text-[10px] text-slate-300 font-bold">•</span>
-                  <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+                  <span title={parseForumDate(post.created_date)?.toLocaleString("en-AU") || undefined} className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
                   {isEdited && <span className="text-[10px] italic text-muted-foreground">(edited)</span>}
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-300 font-semibold">

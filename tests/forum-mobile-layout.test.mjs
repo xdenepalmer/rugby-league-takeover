@@ -23,7 +23,8 @@ test("forum page uses mobile-first layout hooks that prevent horizontal clipping
 
   assert.ok(!source.includes("forum-filter-rail -mx-3"), "forum filters must not use negative mobile margins");
   assert.ok(!source.includes("forum-filter-rail") || !source.includes("overflow-x-auto"), "forum filters must fit inside the viewport instead of hiding overflow");
-  assert.ok(source.includes("pb-[calc(7rem+var(--safe-bottom))]"), "forum feed needs bottom browser/FAB breathing room");
+  // 9rem: the last card previously ended ~32px under the floating compose FAB.
+  assert.ok(source.includes("pb-[calc(9rem+var(--safe-bottom))]"), "forum feed needs bottom browser/FAB breathing room");
 });
 
 test("forum mobile CSS defines clipping and readability safeguards", () => {

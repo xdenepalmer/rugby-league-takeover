@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FORUM_CATEGORIES } from "@/lib/public-forms";
 import { getCategoryMeta } from "./forumHelpers";
 
-export default function EmptyState({ onClearFilters, onSelectCategory, category, searchQuery }) {
+export default function EmptyState({ onClearFilters, onSelectCategory, onStartDiscussion, category, searchQuery }) {
   const isSearch = !!searchQuery;
   const isSpecificCat = category && category !== "All";
   const catMeta = isSpecificCat ? getCategoryMeta(category) : null;
@@ -17,7 +17,7 @@ export default function EmptyState({ onClearFilters, onSelectCategory, category,
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border border-border/30 bg-card/20 p-16 text-center"
+      className="border border-border/30 bg-card/20 p-8 sm:p-16 text-center"
     >
       <motion.div
         className="inline-flex p-5 bg-gradient-to-br from-primary/10 to-accent/5 border border-border/30 mb-5"
@@ -33,7 +33,7 @@ export default function EmptyState({ onClearFilters, onSelectCategory, category,
       >
         <Search className="h-10 w-10 text-primary" />
       </motion.div>
-      <p className="font-display text-2xl uppercase text-slate-200 tracking-wide">
+      <p className="font-display text-2xl uppercase text-slate-200 tracking-wide break-words">
         {isSearch 
           ? `No matches for "${searchQuery}"` 
           : isSpecificCat 
@@ -47,6 +47,15 @@ export default function EmptyState({ onClearFilters, onSelectCategory, category,
             ? `Be the first to start a conversation in the ${catMeta?.label} board! Share tips, plan events, or ask questions:` 
             : "Try adjusting your filters, or be the first to spark a conversation in one of these categories:"}
       </p>
+      {onStartDiscussion && (
+        <Button
+          onClick={onStartDiscussion}
+          size="mobile"
+          className="mt-6 rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:bg-primary/90"
+        >
+          Start the first discussion
+        </Button>
+      )}
       <div className="flex flex-wrap justify-center gap-2 mt-6">
         {FORUM_CATEGORIES.slice(0, 3).map((cat) => {
           const m = getCategoryMeta(cat);

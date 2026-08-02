@@ -25,13 +25,12 @@ import { MarkdownBody } from "@/lib/markdown";
 import MediaAttach from "@/components/forum/MediaAttach";
 import { topBadge, parseBadgeIds, SPIN_COOLDOWN_MS, SLOT_LAST_SPIN_KEY } from "@/lib/slot-badges";
 
-import { getCategoryMeta, timeAgo, getRecencyScore } from "@/components/forum/feed/forumHelpers";
+import { getCategoryMeta, timeAgo, getRecencyScore, parseForumDate } from "@/components/forum/feed/forumHelpers";
 import { ShareButton, SaveButton } from "@/components/forum/feed/ShareSaveButtons";
 import AnimatedNumber from "@/components/forum/feed/AnimatedNumber";
 import FloatingParticles from "@/components/forum/feed/FloatingParticles";
 import UserAvatar from "@/components/forum/feed/UserAvatar";
 import UserProfileHoverCard from "@/components/forum/feed/UserProfileHoverCard";
-import UserAchievements from "@/components/forum/feed/UserAchievements";
 import AuthorBadge from "@/components/forum/feed/AuthorBadge";
 import AuthorMeta from "@/components/forum/feed/AuthorMeta";
 import LiveActivityTicker from "@/components/forum/feed/LiveActivityTicker";
@@ -63,6 +62,38 @@ const ComposeSidebar = lazy(() => import("@/components/forum/feed/ComposeSidebar
 const emptyPost = { author_name: "", title: "", body: "", category: "General", media_url: "" };
 const emptyReply = { author_name: "", body: "", media_url: "" };
 const DRAFT_STORAGE_KEY = "rlt_forum_draft";
+// Reply drafts persist too — on phones, backgrounding the app mid-reply is the
+// COMMON case, and pure state lost the text every time. Capped and TTL'd so
+// abandoned scraps don't accumulate forever.
+const REPLY_DRAFTS_KEY = "rlt_forum_reply_drafts";
+const REPLY_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+const REPLY_DRAFT_MAX = 20;
+
+function loadReplyDrafts() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(REPLY_DRAFTS_KEY) || "{}");
+    const now = Date.now();
+    const fresh = {};
+    for (const [id, entry] of Object.entries(raw)) {
+      if (entry && entry.body && now - (entry.savedAt || 0) < REPLY_DRAFT_TTL_MS) {
+        fresh[id] = { ...emptyReply, author_name: entry.author_name || "", body: entry.body, media_url: entry.media_url || "" };
+      }
+    }
+    return fresh;
+  } catch { return {}; }
+}
+
+function persistReplyDrafts(drafts) {
+  try {
+    const now = Date.now();
+    const entries = Object.entries(drafts)
+      .filter(([, d]) => d && d.body)
+      .slice(-REPLY_DRAFT_MAX)
+      .map(([id, d]) => [id, { author_name: d.author_name || "", body: d.body, media_url: d.media_url || "", savedAt: now }]);
+    if (entries.length === 0) localStorage.removeItem(REPLY_DRAFTS_KEY);
+    else localStorage.setItem(REPLY_DRAFTS_KEY, JSON.stringify(Object.fromEntries(entries)));
+  } catch { /* storage unavailable */ }
+}
 const SAVED_POSTS_KEY = "rlt_saved_posts";
 const getSavedPostIds = () => { try { return JSON.parse(localStorage.getItem(SAVED_POSTS_KEY) || "[]"); } catch { return []; } };
 
@@ -173,16 +204,18 @@ function ForumQuickActionRail({ onStartDiscussion, onOpenTools }) {
 
   const renderContent = ({ icon: Icon, label, body, action, tone }) => (
     <>
-      <div className="flex min-w-0 items-start gap-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center border ${tone}`}>
+      <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center border sm:h-10 sm:w-10 ${tone}`}>
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="font-display text-lg uppercase leading-none tracking-wide text-foreground">{label}</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
+          <p className="font-display text-sm uppercase leading-tight tracking-wide text-foreground sm:text-lg sm:leading-none">{label}</p>
+          {/* Body copy and the footer CTA row only from sm — four full-height
+              cards stacked ~540px of chrome above the first post on phones. */}
+          <p className="mt-1 hidden text-xs leading-5 text-muted-foreground sm:block">{body}</p>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-border/30 pt-3">
+      <div className="mt-3 hidden items-center justify-between border-t border-border/30 pt-3 sm:flex">
         <span className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-foreground">{action}</span>
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
       </div>
@@ -190,9 +223,9 @@ function ForumQuickActionRail({ onStartDiscussion, onOpenTools }) {
   );
 
   return (
-    <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Forum quick actions">
+    <section className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-3 xl:grid-cols-4" aria-label="Forum quick actions">
       {quickActions.map((item) => {
-        const className = `group min-w-0 border p-4 text-left transition-colors hover:border-primary/45 hover:bg-card/35 ${item.tone}`;
+        const className = `group min-w-0 border p-3 text-left transition-colors hover:border-primary/45 hover:bg-card/35 sm:p-4 ${item.tone}`;
         if (item.to) {
           return (
             <Link key={item.label} to={item.to} className={className}>
@@ -225,7 +258,9 @@ const ForumPostCard = memo(function ForumPostCard({
   const queryClient = useQueryClient();
   const reactMutation = useMutation({
     mutationFn: (emoji) => base44.functions.invoke("forumAction", { action: "react", postId: post.id, emoji }),
-    onSuccess: (res) => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] }); if (res?.data?.reward) toast({ title: `+${res.data.reward.xp} XP · +${res.data.reward.chips} chips`, description: res.data.reward.rank }); },
+    // No toast here: a pop-up for every emoji tap was reward spam. The XP
+    // still banks server-side; posting/replying keeps its celebratory toast.
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] }); },
   });
   const onReact = (emoji) => { if (!reactMutation.isPending) reactMutation.mutate(emoji); };
   useEffect(() => {
@@ -347,9 +382,8 @@ const ForumPostCard = memo(function ForumPostCard({
                 </span>
               )}
               <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
-              <UserAchievements isMe={user && String(post.user_id) === String(user.id)} />
               <span className="text-[10px] text-slate-300 font-bold">•</span>
-              <span className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+              <span title={parseForumDate(post.created_date)?.toLocaleString("en-AU") || undefined} className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
               {isEdited && <span className="text-[10px] italic text-muted-foreground">(edited)</span>}
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -409,8 +443,8 @@ const ForumPostCard = memo(function ForumPostCard({
                 <Eye className="h-2.5 w-2.5 text-primary" /> {engagement.views}
               </span>
               {(post.body || "").length > 0 && (
-                <span className="text-muted-foreground/50 truncate max-w-[200px] sm:max-w-xs">
-                  {(post.body || "").slice(0, 80)}{(post.body || "").length > 80 ? "…" : ""}
+                <span className="line-clamp-2 w-full text-slate-300/80">
+                  {(post.body || "").slice(0, 200)}{(post.body || "").length > 200 ? "…" : ""}
                 </span>
               )}
             </div>
@@ -679,17 +713,26 @@ const ForumPostCard = memo(function ForumPostCard({
 /* ━━━ Mobile Floating Action Button ━━━━━━━━━━━━━━━━━━━━━━ */
 function MobileFAB({ onClick }) {
   const [scrollDir, setScrollDir] = useState("up");
+  // Hidden near the top of the page: the header already offers "Ask the
+  // crowd" and the feed its own compose button there, and the disc otherwise
+  // permanently covers a 56px circle of content (it sat over the Travel
+  // planning card in the bug report). It fades in once those are off screen.
+  const [pastFold, setPastFold] = useState(false);
   const lastScrollY = useRef(0);
 
   useEffect(() => {
     const onScroll = () => {
       const current = window.scrollY;
       setScrollDir(current > lastScrollY.current ? "down" : "up");
+      setPastFold(current > 600);
       lastScrollY.current = current;
     };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  if (!pastFold) return null;
 
   return (
     <motion.button
@@ -778,7 +821,12 @@ export default function Forum() {
   }, [sortBy]);
   const [submittedForReview, setSubmittedForReview] = useState(false);
   const [activeReplyId, setActiveReplyId] = useState(null);
-  const [replyDrafts, setReplyDrafts] = useState({});
+  const [replyDrafts, setReplyDrafts] = useState(loadReplyDrafts);
+  // Debounced persist of reply drafts (see loadReplyDrafts above).
+  useEffect(() => {
+    const timer = setTimeout(() => persistReplyDrafts(replyDrafts), 1500);
+    return () => clearTimeout(timer);
+  }, [replyDrafts]);
   const [editTarget, setEditTarget] = useState(null);
   const [showMobileCompose, setShowMobileCompose] = useState(false);
   // The "Posted — you're live!" banner had no reset: after the first post of a
@@ -833,6 +881,32 @@ export default function Forum() {
   useEffect(() => {
     if (!showMobileCompose) return undefined;
     return lockBodyScroll();
+  }, [showMobileCompose]);
+
+  // iOS WKWebView does not shrink the layout viewport for the keyboard, so a
+  // bottom-anchored dvh sheet keeps ~330px — including the Post button —
+  // hidden behind it. Track the VISUAL viewport (same pattern as the Store
+  // cart drawer) and size the sheet to what is actually visible.
+  const [composeViewport, setComposeViewport] = useState(null);
+  useEffect(() => {
+    if (!showMobileCompose || !window.visualViewport) {
+      setComposeViewport(null);
+      return undefined;
+    }
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      setComposeViewport({
+        height: Math.max(320, Math.round(viewport.height)),
+        top: Math.max(0, Math.round(viewport.offsetTop)),
+      });
+    };
+    syncViewport();
+    viewport.addEventListener("resize", syncViewport);
+    viewport.addEventListener("scroll", syncViewport);
+    return () => {
+      viewport.removeEventListener("resize", syncViewport);
+      viewport.removeEventListener("scroll", syncViewport);
+    };
   }, [showMobileCompose]);
   // Only the thread ID is stored; the post object is derived from the live
   // list further down. Storing the object froze a snapshot: a reply posted
@@ -1192,7 +1266,7 @@ export default function Forum() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-background" />
         <FloatingParticles />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-3 pb-5 pt-[calc(6.5rem+env(safe-area-inset-top,0px))] sm:px-5 sm:pb-10 sm:pt-[calc(8rem+env(safe-area-inset-top,0px))] md:px-8 md:pt-[calc(8.5rem+env(safe-area-inset-top,0px))] md:pb-12">
+        <div className="relative z-10 mx-auto max-w-6xl px-3 pb-4 pt-[calc(4.5rem+env(safe-area-inset-top,0px))] sm:px-5 sm:pb-10 sm:pt-[calc(8rem+env(safe-area-inset-top,0px))] md:px-8 md:pt-[calc(8.5rem+env(safe-area-inset-top,0px))] md:pb-12">
           {/* Breadcrumb */}
           <motion.nav initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-5 hidden items-center gap-2 sm:flex">
             <Link to="/" className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/30 hover:text-primary transition-colors">Home</Link>
@@ -1209,11 +1283,13 @@ export default function Forum() {
                   <Activity className="h-2 w-2" /> Live
                 </span>
               </div>
-              <h1 className="font-display text-4xl sm:text-6xl md:text-7xl uppercase tracking-tight leading-[0.92]">
-                <span className="block">Footy Fan</span>
-                <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">Forum</span>
+              {/* One line on phones — at two stacked lines plus the intro
+                  paragraph, the first real post sat 2–3 screens down. */}
+              <h1 className="font-display text-3xl sm:text-6xl md:text-7xl uppercase tracking-tight leading-[0.92]">
+                <span className="sm:block">Footy Fan </span>
+                <span className="sm:block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">Forum</span>
               </h1>
-              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground/60 sm:mt-4 sm:leading-relaxed">
+              <p className="mt-3 hidden max-w-md text-sm leading-6 text-muted-foreground/60 sm:mt-4 sm:block sm:leading-relaxed">
                 Connect with fellow Rugby League fans heading to Las Vegas. Share tips, plan meetups, and get the inside word on the takeover.
               </p>
             </motion.div>
@@ -1223,7 +1299,7 @@ export default function Forum() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.5 }}
-              className="grid w-full grid-cols-3 border border-border/40 bg-card/20 cmd-glass divide-x divide-border/30 lg:w-auto"
+              className="hidden w-full grid-cols-3 border border-border/40 bg-card/20 cmd-glass divide-x divide-border/30 sm:grid lg:w-auto"
             >
               {[
                 { icon: MessageSquare, value: allThreads.length, label: "Threads" },
@@ -1236,19 +1312,28 @@ export default function Forum() {
                   </div>
                   <div>
                     <p className="font-display text-xl tabular-nums text-foreground leading-none">
-                      <AnimatedNumber value={value} />
+                      {isLoadingPosts ? <span className="text-muted-foreground/40">—</span> : <AnimatedNumber value={value} />}
                     </p>
                     <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">{label}</p>
                   </div>
                 </div>
               ))}
             </motion.div>
+            {/* Phones get the same numbers as one quiet line instead of a
+                three-cell bordered grid (~110px saved). While loading, show
+                nothing rather than animating 0 THREADS · 0 MEMBERS — a brand
+                new visitor's first impression shouldn't be a dead forum. */}
+            {!isLoadingPosts && (
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-muted-foreground/50 sm:hidden">
+                {allThreads.length} threads · {totalReplies} replies · {uniqueMembers} members
+              </p>
+            )}
           </div>
         </div>
       </section>
 
       {/* ━━━ MAIN CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="forum-mobile-content mx-auto max-w-6xl px-2 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
+      <div className="forum-mobile-content mx-auto max-w-6xl px-2 pb-[calc(9rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
         <ForumQuickActionRail
           onStartDiscussion={openDiscussionComposer}
           onOpenTools={() => {
@@ -1268,13 +1353,15 @@ export default function Forum() {
           }}
         />
 
-        {/* Trending */}
-        {allThreads.length >= 3 && (
+        {/* Trending — desktop only, and only once there are enough threads
+            that "top 3 by likes" isn't just the same three cards the phone
+            reader is about to scroll past anyway. */}
+        {allThreads.length >= 8 && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="border border-border/40 bg-card/20 cmd-glass overflow-hidden mb-6"
+            className="hidden border border-border/40 bg-card/20 cmd-glass overflow-hidden mb-6 lg:block"
           >
             <div className="h-[2px] w-full bg-gradient-to-r from-primary via-accent to-primary" />
             <div className="p-4">
@@ -1292,11 +1379,6 @@ export default function Forum() {
             </div>
           </motion.div>
         )}
-
-        {/* Sponsored */}
-        <div className="mb-6">
-          <AdSlot position="in-feed" size="leaderboard" className="w-full" />
-        </div>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,_1fr)_320px]">
           {/* ━━━ LEFT: Feed ━━━ */}
@@ -1640,8 +1722,12 @@ export default function Forum() {
                   const activeReplyDraft = isActiveThread ? (replyDrafts[activeReplyId] || emptyReply) : emptyReply;
 
                   return (
+                    <React.Fragment key={post.id}>
+                    {/* The "in-feed" ad now actually sits in the feed (it used
+                        to render as a leaderboard ABOVE the first post). */}
+                    {index === 3 && <AdSlot position="in-feed" size="leaderboard" className="w-full" />}
                     <ForumPostCard
-                      key={post.id} post={post} index={index}
+                      post={post} index={index}
                       isAuthenticated={isAuthenticated} user={user} isModerator={isModerator}
                       appReady={appParams.hasBase44Config} isSubmitting={createMutation.isPending || updateMutation.isPending}
                       replyOpen={activeReplyId === post.id}
@@ -1660,6 +1746,7 @@ export default function Forum() {
                       resolveMeta={forumMetaFor}
                       reactionProfiles={profileById}
                     />
+                    </React.Fragment>
                   );
                 })}
 
@@ -1679,6 +1766,7 @@ export default function Forum() {
                   <EmptyState
                     onClearFilters={clearAllFilters}
                     onSelectCategory={(cat) => { setSelectedCategory(cat); setSearchQuery(""); setSortBy("latest"); }}
+                    onStartDiscussion={openDiscussionComposer}
                     category={selectedCategory}
                     searchQuery={searchQuery}
                   />
@@ -1790,7 +1878,12 @@ export default function Forum() {
               animate={{ y: 0 }} 
               exit={{ y: "100%" }}
               transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.3 }}
-              style={{ willChange: "transform" }}
+              style={{
+                willChange: "transform",
+                ...(composeViewport
+                  ? { top: `${composeViewport.top}px`, bottom: "auto", maxHeight: `${composeViewport.height}px` }
+                  : {}),
+              }}
               className="ios-sheet ios-scroll fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto border-t border-border bg-card/95 pb-[calc(1.25rem+var(--safe-bottom))] cmd-scrollbar lg:hidden"
               role="dialog"
               aria-modal="true"
