@@ -1224,7 +1224,21 @@ export default function Forum() {
       <div className="forum-mobile-content mx-auto max-w-6xl px-2 pb-[calc(7rem+var(--safe-bottom))] pt-4 sm:px-5 sm:py-6 md:px-8 md:py-8">
         <ForumQuickActionRail
           onStartDiscussion={openDiscussionComposer}
-          onOpenTools={() => setMobileTab("tools")}
+          onOpenTools={() => {
+            // Switching the tab alone looked like a dead tap (the reported
+            // "Fan tools doesn't go anywhere" bug on the apps): on phones the
+            // tools panel mounts BELOW the rail + Trending + ad blocks, well
+            // under the fold, and on desktop that panel is lg:hidden entirely
+            // (the tools live in the right sidebar). Scroll to whichever
+            // container actually hosts the tools on this breakpoint.
+            setMobileTab("tools");
+            requestAnimationFrame(() => {
+              const desktop = window.matchMedia?.("(min-width: 1024px)")?.matches;
+              document
+                .getElementById(desktop ? "forum-compose-sidebar" : "forum-mobile-tabs")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          }}
         />
 
         {/* Trending */}
@@ -1283,7 +1297,7 @@ export default function Forum() {
             </AnimatePresence>
 
             {/* Mobile Tab Selector Segmented Control */}
-            <div className="flex border border-border bg-card/30 p-1 mb-4 lg:hidden">
+            <div id="forum-mobile-tabs" className="flex scroll-mt-[calc(4.5rem+var(--safe-top))] border border-border bg-card/30 p-1 mb-4 lg:hidden">
               <button
                 type="button"
                 onClick={() => setMobileTab("feed")}
