@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Lock } from "lucide-react";
 import { TIER_STYLES } from "./slotConstants";
@@ -7,6 +7,10 @@ import { TIER_STYLES } from "./slotConstants";
 export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
   const tier = TIER_STYLES[badge.tier] || TIER_STYLES.Common;
   const [showTooltip, setShowTooltip] = useState(false);
+  // The touch-dismiss timer must be tracked: the untracked setTimeout kept
+  // firing setState on unmounted cards (the wall collapses/expands now).
+  const hideTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(hideTimerRef.current), []);
 
   return (
     <div
@@ -14,7 +18,10 @@ export default function BadgeCard({ badge, owned, isNewWin, isRecentlyWon }) {
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       onTouchStart={() => setShowTooltip(true)}
-      onTouchEnd={() => setTimeout(() => setShowTooltip(false), 2000)}
+      onTouchEnd={() => {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = setTimeout(() => setShowTooltip(false), 2000);
+      }}
     >
       <motion.div
         layout

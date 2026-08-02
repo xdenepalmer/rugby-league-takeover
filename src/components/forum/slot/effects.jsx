@@ -105,22 +105,31 @@ export function WinCelebration({ show, isJackpot, reduced = false }) {
           exit={{ opacity: 0, transition: { duration: 0.5 } }}
           className="pointer-events-none fixed inset-0 z-[100] overflow-hidden"
         >
-          {/* Golden flash — more dramatic for jackpot */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isJackpot ? [0, 0.6, 0.15, 0.4, 0.1, 0] : [0, 0.35, 0.1, 0.25, 0] }}
-            transition={{ duration: isJackpot ? 2 : 1.5 }}
-            className="absolute inset-0 bg-amber-400"
-          />
+          {/* Full-viewport flashes are exactly what prefers-reduced-motion
+              opts out of — under it, show a single static amber tint instead
+              of the pulsing amber + 0.9-opacity white strobe. */}
+          {reduced ? (
+            <div className="absolute inset-0 bg-amber-400/15" />
+          ) : (
+            <>
+              {/* Golden flash — more dramatic for jackpot */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isJackpot ? [0, 0.6, 0.15, 0.4, 0.1, 0] : [0, 0.35, 0.1, 0.25, 0] }}
+                transition={{ duration: isJackpot ? 2 : 1.5 }}
+                className="absolute inset-0 bg-amber-400"
+              />
 
-          {/* Screen-wide white flash for jackpot */}
-          {isJackpot && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.9, 0] }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-white z-50"
-            />
+              {/* Screen-wide white flash for jackpot */}
+              {isJackpot && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.9, 0] }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute inset-0 bg-white z-50"
+                />
+              )}
+            </>
           )}
 
           {!reduced && (<>

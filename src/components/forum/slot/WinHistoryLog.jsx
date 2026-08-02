@@ -6,9 +6,11 @@ import { TIER_STYLES } from "./slotConstants";
 import { getWinHistory } from "./slotStorage";
 
 /* ─── Win History Log ─── */
-export default function WinHistoryLog() {
+export default function WinHistoryLog({ refreshKey = 0 }) {
   const [expanded, setExpanded] = useState(false);
-  const history = useMemo(() => getWinHistory(), []);
+  // Re-read whenever the parent records a new win — a one-time memo showed
+  // stale history until the component remounted.
+  const history = useMemo(() => getWinHistory(), [refreshKey]);
   if (history.length === 0) return null;
 
   return (

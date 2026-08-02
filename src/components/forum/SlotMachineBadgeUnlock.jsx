@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { lightImpact, mediumImpact, successImpact, warningImpact } from "@/lib/native/haptics";
 import { Coins, Gem, Lock, Sparkles, Trophy, Volume2, VolumeX } from "lucide-react";
@@ -23,6 +24,7 @@ import {
   MUTE_KEY,
   VALID_BADGE_IDS,
   TIER_ORDER,
+  TIER_STYLES,
 } from "./slot/slotConstants";
 import {
   safeGetItem,
@@ -61,7 +63,7 @@ const msToNextUtcMidnight = () => {
 };
 
 export default function SlotMachineBadgeUnlock() {
-  const { user, isAuthenticated, updateProfile, refreshUser } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const reducedMotion = useReducedMotion();
   const [loading, setLoading] = useState(true);
   const [reels, setReels] = useState(["🎰", "🎰", "🎰"]);
@@ -86,6 +88,12 @@ export default function SlotMachineBadgeUnlock() {
   const [streak, setStreak] = useState(0);
   const [screenShake, setScreenShake] = useState(false);
   const [hasSpunToday, setHasSpunToday] = useState(false);
+  // Bumped after each win so the history log / stats re-read localStorage —
+  // their useMemo(..., []) otherwise showed stale data until a remount.
+  const [historyVersion, setHistoryVersion] = useState(0);
+  // The 12-card prize wall is ~670px of locked "???" tiles on a phone; it
+  // ships collapsed behind a tier summary until the player asks for it.
+  const [wallExpanded, setWallExpanded] = useState(false);
 
   // Server-backed spin state (signed-in users): the daily limit, streak and
   // chip payouts are decided by the slotSpin edge function, not the browser.
@@ -102,10 +110,21 @@ export default function SlotMachineBadgeUnlock() {
 
   useEffect(() => { ownedIdsRef.current = ownedIds; }, [ownedIds]);
 
-  // Cleanup ALL timers on unmount
+  // finishSpin runs from a timer, so it must read the CURRENT spin count via a
+  // ref — the closure's totalSpins is stale, which made the Lucky Meter report
+  // "56 spins since last badge win" immediately after a jackpot.
+  const totalSpinsRef = useRef(totalSpins);
+  useEffect(() => { totalSpinsRef.current = totalSpins; }, [totalSpins]);
+
+  // Cleanup ALL timers on unmount. The AudioContext must be closed too: this
+  // component lazy-mounts every time the Fan Tools tab opens, browsers cap
+  // concurrent contexts (~6), and leaking one per visit silently kills sound
+  // for the rest of the session.
   useEffect(() => () => {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
+    try { audioCtxRef.current?.close?.(); } catch { /* already closed */ }
+    audioCtxRef.current = null;
   }, []);
 
   // ─── Initialize from localStorage ───
@@ -116,25 +135,9 @@ export default function SlotMachineBadgeUnlock() {
     ownedIdsRef.current = ids;
     setTotalSpins(safeGetNumber(SPINS_KEY, 0));
 
-    // Validate streak date
-    const streakDate = safeGetItem(STREAK_DATE_KEY, null);
-    const storedStreak = safeGetNumber(STREAK_KEY, 0);
-    if (streakDate) {
-      // If streak date is in the future (clock shenanigans), reset
-      const today = getDateStr();
-      const todayDate = new Date();
-      // Simple check: if the stored date looks like it's ahead of today, reset
-      try {
-        // We can't perfectly parse our format, so just trust if non-null
-        // But check for future by seeing if it matches a date > today
-        setStreak(storedStreak);
-      } catch {
-        setStreak(0);
-        safeSetItem(STREAK_KEY, "0");
-      }
-    } else {
-      setStreak(storedStreak);
-    }
+    // Local streak is display-only (the server recomputes it for signed-in
+    // users), so a stale/odd stored date is harmless — just show the number.
+    setStreak(safeGetNumber(STREAK_KEY, 0));
 
     // Check if user has spun today
     const lastSpinTs = safeGetNumber(SLOT_LAST_SPIN_KEY, 0);
@@ -176,8 +179,11 @@ export default function SlotMachineBadgeUnlock() {
   // ─── Cooldown timer with visibility change re-check ───
   useEffect(() => {
     const tick = () => {
-      // Signed in: the server's daily gate (UTC day) is the authority.
-      if (isAuthenticated && serverSpunDateRef.current) {
+      // Signed in: the server's daily gate (UTC day) is the ONLY authority.
+      // Falling through to the localStorage 24h cooldown here locked out
+      // signed-in users who still had a stale guest-spin timestamp — while
+      // offering them the paid extra-spin button the server then rejects.
+      if (isAuthenticated) {
         const spunToday = serverSpunDateRef.current === todayUtc();
         setHasSpunToday(spunToday);
         setCooldownLeft(spunToday ? msToNextUtcMidnight() : 0);
@@ -247,38 +253,43 @@ export default function SlotMachineBadgeUnlock() {
     } catch { /* ignore */ }
   }, [soundEnabled, initAudio]);
 
-  // Mechanical click sound when a reel stops
+  // All fanfare timers are tracked so an unmount mid-jingle can't fire beeps
+  // against a closed AudioContext.
   const playReelClick = useCallback(() => {
     playBeep(1200, 0.04, "square", 0.06);
-    setTimeout(() => playBeep(800, 0.03, "square", 0.04), 30);
+    timersRef.current.push(setTimeout(() => playBeep(800, 0.03, "square", 0.04), 30));
   }, [playBeep]);
 
   const playVictory = useCallback(() => {
     [392, 523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) =>
-      setTimeout(() => playBeep(f, 0.34, "square", 0.12), i * 95)
+      timersRef.current.push(setTimeout(() => playBeep(f, 0.34, "square", 0.12), i * 95))
     );
   }, [playBeep]);
 
   const playJackpotVictory = useCallback(() => {
     // More dramatic fanfare for new badge wins
     [261.63, 329.63, 392, 523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) =>
-      setTimeout(() => playBeep(f, 0.4, "square", 0.14), i * 80)
+      timersRef.current.push(setTimeout(() => playBeep(f, 0.4, "square", 0.14), i * 80))
     );
     // Add a bass boom
-    setTimeout(() => playBeep(80, 0.5, "sine", 0.15), 50);
+    timersRef.current.push(setTimeout(() => playBeep(80, 0.5, "sine", 0.15), 50));
   }, [playBeep]);
 
   const playBuzzer = useCallback(() => {
     playBeep(170, 0.26, "sawtooth", 0.09);
-    setTimeout(() => playBeep(126, 0.36, "sawtooth", 0.08), 130);
+    timersRef.current.push(setTimeout(() => playBeep(126, 0.36, "sawtooth", 0.08), 130));
   }, [playBeep]);
 
   const playNearMiss = useCallback(() => {
     playBeep(523.25, 0.18, "triangle", 0.1);
-    setTimeout(() => playBeep(440, 0.15, "triangle", 0.08), 200);
+    timersRef.current.push(setTimeout(() => playBeep(440, 0.15, "triangle", 0.08), 200));
   }, [playBeep]);
 
-  /* ─── Badge award ─── */
+  /* ─── Badge award ───
+     Signed-in wins are already recorded server-side by slotSpin (and synced
+     back via refreshUser in finishSpin) — writing the local list to the
+     profile here could clobber badges earned on another device, so the
+     client-side profile write is guests-never/server-only by design. */
   const awardBadge = useCallback((badge) => {
     if (ownedIdsRef.current.includes(badge.id)) return false;
     const next = Array.from(new Set([...ownedIdsRef.current, badge.id]));
@@ -286,11 +297,8 @@ export default function SlotMachineBadgeUnlock() {
     setOwnedIds(next);
     safeSetItem(SLOT_BADGES_KEY, JSON.stringify(next));
     setBadgeWinTimestamp(badge.id);
-    if (isAuthenticated) {
-      try { Promise.resolve(updateProfile({ badges: next })).catch(() => {}); } catch { /* ignore */ }
-    }
     return true; // was newly awarded
-  }, [isAuthenticated, updateProfile]);
+  }, []);
 
   /* ─── Streak logic ─── */
   const updateStreak = useCallback(() => {
@@ -345,9 +353,12 @@ export default function SlotMachineBadgeUnlock() {
       setLastWonBadgeId(result.badge.id);
       setNearMissResult(null);
 
-      // Track win history and pity system
+      // Track win history and dry-spell tracker. totalSpins already includes
+      // this spin (both spin paths bump it before the animation), and it must
+      // be read through the ref — the closure value is stale here.
       if (isNew) addWinHistory(result.badge.id);
-      setLastWinSpin(totalSpins + 1);
+      setLastWinSpin(totalSpinsRef.current);
+      setHistoryVersion((v) => v + 1);
 
       if (isNew) {
         // Dramatic delay for new badge reveal
@@ -356,6 +367,12 @@ export default function SlotMachineBadgeUnlock() {
       } else {
         playVictory();
       }
+
+      // The celebration overlay covers the whole viewport — without this it
+      // stayed up until the NEXT spin, i.e. until tomorrow. Clear it after the
+      // fanfare; the badge card keeps its golden pulse via lastWonBadgeId.
+      const tEnd = setTimeout(() => { setIsWin(false); setIsNewBadgeWin(false); }, isNew ? 3500 : 2500);
+      timersRef.current.push(tEnd);
 
       setMessageType("win");
       setMessage(
@@ -523,6 +540,15 @@ export default function SlotMachineBadgeUnlock() {
       spinLockRef.current = false;
       const payload = err?.data || {};
       if (payload.extra) setExtraInfo(payload.extra);
+      // "Daily spin already used" (429): bring the client into agreement with
+      // the server. Without this the SPIN button stayed green after the error,
+      // the player tapped into the same wall repeatedly, and the extra-spin
+      // offer (gated on cooldownLeft > 0) never appeared.
+      if (mode === "daily" && err?.status === 429) {
+        serverSpunDateRef.current = todayUtc();
+        setHasSpunToday(true);
+        setCooldownLeft(msToNextUtcMidnight());
+      }
       setMessageType("loss");
       setMessage(payload.error || err?.message || "Spin failed — please try again.");
     }
@@ -545,8 +571,17 @@ export default function SlotMachineBadgeUnlock() {
   // Streak at-risk: user has a streak but hasn't spun today
   const streakAtRisk = streak > 0 && !hasSpunToday && cooldownLeft <= 0;
 
-  // Pity system: spins since last win
-  const spinsSinceWin = totalSpins - getLastWinSpin();
+  // Dry-spell tracker: spins since the last badge win (clamped — server spin
+  // counts can arrive ahead of the locally-recorded last-win spin).
+  const spinsSinceWin = Math.max(0, totalSpins - getLastWinSpin());
+
+  // One localStorage read per win, not 12 JSON.parses per second: the 1Hz
+  // cooldown tick re-renders this component, and isBadgeNew() hit storage for
+  // every badge on every render.
+  const recentlyWonIds = useMemo(() => {
+    void historyVersion; // re-read after each win
+    return new Set(SLOT_BADGES.filter((b) => isBadgeNew(b.id)).map((b) => b.id));
+  }, [historyVersion]);
 
   // Group badges by tier
   const badgesByTier = useMemo(() => {
@@ -569,9 +604,10 @@ export default function SlotMachineBadgeUnlock() {
   return (
     <motion.div
       ref={containerRef}
+      id="slot-machine"
       animate={screenShake && !reducedMotion ? { x: [0, -6, 6, -4, 4, -2, 2, 0], y: [0, -3, 3, -2, 2, 0] } : { x: 0, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="relative overflow-hidden border border-purple-500/20 bg-[linear-gradient(145deg,rgba(88,28,135,0.3),rgba(3,0,15,0.98)_40%,rgba(30,0,50,0.95))] shadow-[0_0_50px_rgba(88,28,135,0.12)]"
+      className="relative scroll-mt-[calc(4.5rem+var(--safe-top))] overflow-hidden border border-purple-500/20 bg-[linear-gradient(145deg,rgba(88,28,135,0.3),rgba(3,0,15,0.98)_40%,rgba(30,0,50,0.95))] shadow-[0_0_50px_rgba(88,28,135,0.12)]"
     >
       {/* Ambient glow effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.15),transparent_40%),radial-gradient(circle_at_5%_25%,rgba(236,72,153,0.10),transparent_30%),radial-gradient(circle_at_95%_20%,rgba(251,191,36,0.10),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(88,28,135,0.12),transparent_40%)]" />
@@ -652,6 +688,24 @@ export default function SlotMachineBadgeUnlock() {
           </div>
         </div>
 
+        {/* ─── Guest practice-mode ribbon ───
+            Guests can spin for fun, but nothing banks: no chips, no XP, and
+            the badge only lives in this browser. Say so up front instead of
+            letting them find out after a "win". */}
+        {!isAuthenticated && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border border-amber-300/25 bg-amber-950/20 px-3 py-2">
+            <p className="text-[10px] leading-4 text-amber-200/80">
+              <strong className="font-bold uppercase tracking-wider">Practice mode</strong> — sign in to bank chips, earn XP and keep your badges on your account.
+            </p>
+            <Link
+              to="/login"
+              className="min-h-[36px] shrink-0 inline-flex items-center border border-amber-300/40 bg-amber-400/10 px-2.5 text-[10px] font-bold uppercase tracking-wider text-amber-200 transition-colors hover:bg-amber-400/20"
+            >
+              Sign in
+            </Link>
+          </div>
+        )}
+
         {/* ─── Streak At Risk Warning ─── */}
         <AnimatePresence>
           {streakAtRisk && (
@@ -710,17 +764,21 @@ export default function SlotMachineBadgeUnlock() {
                 key={i}
                 className="h-1.5 flex-1"
                 animate={{
-                  backgroundColor: spinning || isWin
+                  // Under prefers-reduced-motion the marquee holds a steady
+                  // lit state instead of strobing three colours at 0.6s.
+                  backgroundColor: (spinning || isWin) && !reducedMotion
                     ? i % 3 === 0
                       ? ["rgba(236,72,153,0.9)", "rgba(251,191,36,0.9)", "rgba(168,85,247,0.9)"]
                       : i % 3 === 1
                       ? ["rgba(251,191,36,0.9)", "rgba(168,85,247,0.9)", "rgba(236,72,153,0.9)"]
                       : ["rgba(168,85,247,0.9)", "rgba(236,72,153,0.9)", "rgba(251,191,36,0.9)"]
+                    : spinning || isWin
+                    ? "rgba(251,191,36,0.8)"
                     : i % 2
                     ? "rgba(168,85,247,0.25)"
                     : "rgba(251,191,36,0.20)",
                 }}
-                transition={spinning || isWin ? { duration: 0.6, repeat: Infinity } : { duration: 0.5 }}
+                transition={(spinning || isWin) && !reducedMotion ? { duration: 0.6, repeat: Infinity } : { duration: 0.5 }}
                 style={{ boxShadow: spinning || isWin ? "0 0 6px currentColor" : "none" }}
               />
             ))}
@@ -765,7 +823,7 @@ export default function SlotMachineBadgeUnlock() {
               type="button"
               disabled={!canSpin}
               onClick={() => handleSpin("daily")}
-              aria-label={spinning ? "Reels are spinning" : cooldownLeft > 0 ? `Next spin in ${fmtCountdown(cooldownLeft)}` : "Pull the lever to spin"}
+              aria-label={spinning ? "Reels are spinning" : cooldownLeft > 0 ? `Next spin in ${fmtCountdown(cooldownLeft)}` : "Spin the reels"}
               className={`h-12 min-h-[44px] w-full select-none rounded-none font-mono text-[11px] font-black uppercase tracking-[0.24em] transition-all ${
                 canSpin
                   ? "border border-amber-200/40 bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 text-black shadow-[0_0_25px_rgba(251,191,36,0.35)] hover:shadow-[0_0_40px_rgba(251,191,36,0.6)] active:scale-[0.98]"
@@ -781,8 +839,11 @@ export default function SlotMachineBadgeUnlock() {
               ) : cooldownLeft > 0 ? (
                 <span className="flex items-center justify-center gap-2">
                   <Lock className="h-4 w-4" />
+                  {/* The daily gate resets at UTC midnight — mid-morning in
+                      Australia — so name the actual local time rather than
+                      leaving fans to wonder why the wait varies. */}
                   {cooldownLeft > 3600000
-                    ? `Come back in ${Math.ceil(cooldownLeft / 3600000)}h`
+                    ? `Next spin ${new Date(Date.now() + cooldownLeft).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
                     : cooldownLeft > 60000
                     ? `${Math.ceil(cooldownLeft / 60000)} min left`
                     : `${Math.ceil(cooldownLeft / 1000)}s left`
@@ -790,11 +851,15 @@ export default function SlotMachineBadgeUnlock() {
                 </span>
               ) : (
                 <motion.span
-                  animate={{ scale: [1, 1.02, 1] }}
+                  animate={reducedMotion ? {} : { scale: [1, 1.02, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   className="flex items-center justify-center gap-2"
                 >
-                  <Sparkles className="h-4 w-4" /> Pull the lever
+                  {/* The physical lever only renders at xl — on phones the
+                      button IS the machine, so say what it does. */}
+                  <Sparkles className="h-4 w-4" />
+                  <span className="xl:hidden">Spin the reels</span>
+                  <span className="hidden xl:inline">Pull the lever</span>
                 </motion.span>
               )}
             </Button>
@@ -854,30 +919,79 @@ export default function SlotMachineBadgeUnlock() {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-            {TIER_ORDER.map((tierName) => {
-              const group = badgesByTier[tierName];
-              if (!group) return null;
-              return (
-                <React.Fragment key={tierName}>
-                  <TierGroupHeader
-                    tierName={tierName}
-                    ownedCount={group.ownedCount}
-                    totalCount={group.totalCount}
-                  />
-                  {group.badges.map((badge) => (
+          {/* Collapsed by default: the full wall is ~670px of locked "???"
+              tiles on a phone. The summary keeps the collect-them-all shape
+              (six tier chips with fill bars) and shows any badges actually
+              owned; the full grid is one tap away. */}
+          {!wallExpanded ? (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                {TIER_ORDER.map((tierName) => {
+                  const group = badgesByTier[tierName];
+                  if (!group) return null;
+                  const style = TIER_STYLES[tierName] || TIER_STYLES.Common;
+                  const pct = group.totalCount > 0 ? group.ownedCount / group.totalCount : 0;
+                  return (
+                    <div key={tierName} className={`min-w-[30%] flex-1 border ${style.border} ${style.bg} px-2 py-1.5`}>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className={`min-w-0 truncate text-[8px] font-mono font-bold uppercase ${style.text}`}>{tierName}</span>
+                        <span className="shrink-0 text-[8px] font-mono text-slate-400">{group.ownedCount}/{group.totalCount}</span>
+                      </div>
+                      <div className="mt-1 h-1 w-full overflow-hidden bg-black/50">
+                        <div className="h-full" style={{ width: `${pct * 100}%`, backgroundColor: style.glow }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {earnedCount > 0 && (
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                  {SLOT_BADGES.filter((b) => ownedIds.includes(b.id)).map((badge) => (
                     <BadgeCard
                       key={badge.id}
                       badge={badge}
-                      owned={ownedIds.includes(badge.id)}
+                      owned
                       isNewWin={lastWonBadgeId === badge.id}
-                      isRecentlyWon={ownedIds.includes(badge.id) && isBadgeNew(badge.id)}
+                      isRecentlyWon={recentlyWonIds.has(badge.id)}
                     />
                   ))}
-                </React.Fragment>
-              );
-            })}
-          </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {TIER_ORDER.map((tierName) => {
+                const group = badgesByTier[tierName];
+                if (!group) return null;
+                return (
+                  <React.Fragment key={tierName}>
+                    <TierGroupHeader
+                      tierName={tierName}
+                      ownedCount={group.ownedCount}
+                      totalCount={group.totalCount}
+                    />
+                    {group.badges.map((badge) => (
+                      <BadgeCard
+                        key={badge.id}
+                        badge={badge}
+                        owned={ownedIds.includes(badge.id)}
+                        isNewWin={lastWonBadgeId === badge.id}
+                        isRecentlyWon={ownedIds.includes(badge.id) && recentlyWonIds.has(badge.id)}
+                      />
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setWallExpanded((p) => !p)}
+            className="mt-2.5 flex min-h-[44px] w-full items-center justify-center gap-1.5 border border-purple-400/20 bg-black/40 text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-purple-200/70 transition-colors hover:text-purple-100"
+          >
+            {wallExpanded ? "Hide the full ladder" : `Show all ${totalBadges} rewards`}
+          </button>
 
           {!isAuthenticated && earnedCount > 0 && (
             <p className="mt-2.5 text-[10px] text-slate-500">
@@ -887,10 +1001,11 @@ export default function SlotMachineBadgeUnlock() {
         </div>
 
         {/* ─── Win History ─── */}
-        <WinHistoryLog />
+        <WinHistoryLog refreshKey={historyVersion} />
 
         {/* ─── Statistics ─── */}
         <StatsPanel
+          refreshKey={historyVersion}
           totalSpins={totalSpins}
           ownedCount={earnedCount}
           totalBadges={totalBadges}

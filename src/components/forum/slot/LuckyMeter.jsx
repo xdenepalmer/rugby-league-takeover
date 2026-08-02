@@ -2,11 +2,15 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
-/* ─── Lucky Meter (pity system display) ─── */
+/* ─── Dry-spell tracker ───
+   Honest version of the old "Lucky Meter": the server rolls three independent
+   reels with NO pity mechanism, so a bar that filled up and announced "Almost
+   there!" promised rising odds that flatly don't exist. Keep the fun of a
+   tracker, drop the false promise: this shows the actual dry spell and says
+   outright that every spin is an independent roll. */
 export default function LuckyMeter({ spinsSinceWin }) {
   if (spinsSinceWin < 3) return null;
-  const fill = Math.min(spinsSinceWin / 12, 1); // fills up over ~12 spins
-  const label = fill >= 0.8 ? "Almost there!" : fill >= 0.5 ? "Getting lucky..." : "Building luck...";
+  const fill = Math.min(spinsSinceWin / 12, 1);
 
   return (
     <motion.div
@@ -16,9 +20,11 @@ export default function LuckyMeter({ spinsSinceWin }) {
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-[8px] font-mono uppercase tracking-wider text-amber-300/60 flex items-center gap-1">
-          <Sparkles className="h-2.5 w-2.5" /> Lucky Meter
+          <Sparkles className="h-2.5 w-2.5" /> Dry spell
         </span>
-        <span className="text-[9px] font-bold text-amber-200/70">{label}</span>
+        <span className="text-[9px] font-bold text-amber-200/70">
+          {spinsSinceWin} spin{spinsSinceWin === 1 ? "" : "s"} without a badge
+        </span>
       </div>
       <div className="h-2 w-full overflow-hidden bg-black/60 border border-amber-500/10">
         <motion.div
@@ -26,10 +32,11 @@ export default function LuckyMeter({ spinsSinceWin }) {
           animate={{ width: `${fill * 100}%` }}
           transition={{ duration: 1, ease: "easeOut" }}
           className="h-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-200"
-          style={{ boxShadow: fill > 0.6 ? "0 0 12px rgba(251,191,36,0.5)" : "none" }}
         />
       </div>
-      <p className="mt-1 text-[9px] text-amber-300/60">{spinsSinceWin} spins since last badge win</p>
+      <p className="mt-1 text-[9px] text-amber-300/60">
+        Every spin is an independent roll — rarer symbols simply land less often. Good luck!
+      </p>
     </motion.div>
   );
 }

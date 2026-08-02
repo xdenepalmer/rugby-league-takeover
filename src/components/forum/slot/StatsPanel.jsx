@@ -5,9 +5,9 @@ import { MAX_HISTORY } from "./slotConstants";
 import { getWinHistory } from "./slotStorage";
 
 /* ─── Statistics Panel ─── */
-export default function StatsPanel({ totalSpins, ownedCount, totalBadges, streak, topBadge }) {
+export default function StatsPanel({ refreshKey = 0, totalSpins, ownedCount, totalBadges, streak, topBadge }) {
   const [expanded, setExpanded] = useState(false);
-  const winHistory = useMemo(() => getWinHistory(), []);
+  const winHistory = useMemo(() => getWinHistory(), [refreshKey]);
   const winRate = totalSpins > 0 ? Math.round((winHistory.length / Math.min(totalSpins, MAX_HISTORY)) * 100) : 0;
   const collPct = totalBadges > 0 ? Math.round((ownedCount / totalBadges) * 100) : 0;
 

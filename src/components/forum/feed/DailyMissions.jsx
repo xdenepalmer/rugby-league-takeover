@@ -90,27 +90,43 @@ export default function DailyMissions() {
         </div>
 
         <div className="mt-3 space-y-1.5">
-          {rows.map((row, i) => (
-            <motion.div
-              key={row.key}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`flex items-center gap-2.5 border px-3 py-2 ${
-                row.done ? "border-emerald-500/25 bg-emerald-500/[0.05]" : "border-border/30 bg-background/25"
-              }`}
-            >
-              {row.done
-                ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                : <Circle className="h-4 w-4 shrink-0 text-slate-500" />}
-              <span className={`flex-1 text-xs font-semibold ${row.done ? "text-emerald-300 line-through decoration-emerald-500/40" : "text-slate-300"}`}>
-                {row.label}
-              </span>
-              {row.progress && !row.done && (
-                <span className="text-[10px] font-mono text-slate-400">{row.progress}</span>
-              )}
-            </motion.div>
-          ))}
+          {rows.map((row, i) => {
+            // A mission you can't act on is just a nag. The unfinished spin
+            // row jumps straight to the slot machine (rendered further down
+            // the same tab / sidebar).
+            const actionable = row.key === "spin" && !row.done;
+            const goToSlot = () => {
+              document.getElementById("slot-machine")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            };
+            const Row = actionable ? motion.button : motion.div;
+            return (
+              <Row
+                key={row.key}
+                {...(actionable ? { type: "button", onClick: goToSlot } : {})}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`flex w-full items-center gap-2.5 border px-3 py-2 text-left ${
+                  row.done
+                    ? "border-emerald-500/25 bg-emerald-500/[0.05]"
+                    : actionable
+                    ? "border-border/30 bg-background/25 cursor-pointer transition-colors hover:border-primary/40"
+                    : "border-border/30 bg-background/25"
+                }`}
+              >
+                {row.done
+                  ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  : <Circle className="h-4 w-4 shrink-0 text-slate-500" />}
+                <span className={`flex-1 text-xs font-semibold ${row.done ? "text-emerald-300 line-through decoration-emerald-500/40" : "text-slate-300"}`}>
+                  {row.label}
+                </span>
+                {row.progress && !row.done && (
+                  <span className="text-[10px] font-mono text-slate-400">{row.progress}</span>
+                )}
+                {actionable && <span className="text-[9px] font-bold uppercase tracking-wider text-primary">Go →</span>}
+              </Row>
+            );
+          })}
         </div>
 
         {claimed ? (

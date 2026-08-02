@@ -2,7 +2,14 @@ import { SLOT_SYMBOLS, SLOT_BADGES } from "@/lib/slot-badges";
 
 /* ─── constants ─── */
 export const ALL_EMOJIS = SLOT_SYMBOLS.map((s) => s.emoji);
-export const REEL_CELL = 90;
+// Smaller cells on phones: at 90px the 270px reel window pushed the SPIN
+// button ~570px down the card, below the fold on a 390px screen. Evaluated
+// once at load — the reel maths (targetY, window height, lever, skeleton) all
+// derive from this, and phones don't cross the 640px boundary mid-session.
+const narrowViewport = typeof window !== "undefined"
+  && typeof window.matchMedia === "function"
+  && window.matchMedia("(max-width: 639px)").matches;
+export const REEL_CELL = narrowViewport ? 64 : 90;
 export const VISIBLE_ROWS = 3;
 export const REEL_WINDOW_H = REEL_CELL * VISIBLE_ROWS;
 export const REEL_DURATIONS = [1.8, 2.4, 3.0];

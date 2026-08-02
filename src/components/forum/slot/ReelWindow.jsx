@@ -6,9 +6,11 @@ import { REEL_CELL, REEL_WINDOW_H, REEL_DURATIONS } from "./slotConstants";
 export default function ReelWindow({ track, index, spinning, stopped, highlight, nearMissPulse }) {
   const finalIdx = track.length - 2;
   const targetY = -REEL_CELL * (finalIdx - 1);
-
-  // Dynamic blur: varies by reel index for staggered feel
-  const blurAmount = spinning && !stopped ? `blur-[${0.5 + index * 0.2}px]` : "";
+  // At rest the track is a single cell in a 3-cell-tall window. Left at y:0 it
+  // sat in the TOP third — 90px above the payline and half under the top fade —
+  // so every result visibly jumped off the line the moment a spin resolved.
+  // Push a lone cell down one row so the landed symbol sits ON the payline.
+  const restY = track.length === 1 ? REEL_CELL : 0;
 
   return (
     <div className="relative">
@@ -71,8 +73,8 @@ export default function ReelWindow({ track, index, spinning, stopped, highlight,
 
         <motion.div
           key={`reel-${index}-${track.join("")}`}
-          initial={{ y: 0 }}
-          animate={{ y: spinning ? [0, targetY - 14, targetY] : 0 }}
+          initial={{ y: restY }}
+          animate={{ y: spinning ? [0, targetY - 14, targetY] : restY }}
           transition={
             spinning
               ? {
