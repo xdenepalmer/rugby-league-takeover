@@ -957,9 +957,12 @@ export default function Forum() {
     const parentId = String(post?.id || "").trim();
     const reply = replyDrafts[parentId] || emptyReply;
     if (!parentId || !isAuthenticated || !user?.id || !reply.body) return;
+    // Replying to a reply must not compound the prefix into "Re: Re: Re: …" —
+    // strip any existing chain before adding a single "Re:".
+    const rootTitle = String(post.title || "Discussion Thread").replace(/^(\s*Re:\s*)+/i, "").trim() || "Discussion Thread";
     createMutation.mutate({
       author_name: reply.author_name,
-      title: `Re: ${post.title || "Discussion Thread"}`,
+      title: `Re: ${rootTitle}`,
       body: reply.body,
       category: post.category || "General",
       parent_id: parentId,
