@@ -19,7 +19,7 @@ export default function PostsTab() {
   });
 
   const { data: allPosts = [], isLoading: allPostsLoading } = useQuery({
-    queryKey: ["forumPosts"],
+    queryKey: ["forumPosts", "account"], // distinct fn/limit — sharing the feed key overwrote its cache
     queryFn: () => base44.entities.ForumPost.list("-created_date", 200),
     enabled: true,
   });

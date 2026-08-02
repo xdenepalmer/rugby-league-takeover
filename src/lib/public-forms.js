@@ -46,7 +46,12 @@ export function buildPendingForumPost(input) {
 }
 
 const forumDateValue = (post) => {
-  const value = new Date(post?.created_date || 0).getTime();
+  // Same UTC normalisation as parseForumDate: the backend emits tz-less UTC,
+  // and parsing it as local time made sort order disagree with displayed ages.
+  const raw = String(post?.created_date || "").trim();
+  if (!raw) return 0;
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(raw);
+  const value = new Date(hasTz ? raw : `${raw.replace(" ", "T")}Z`).getTime();
   return Number.isFinite(value) ? value : 0;
 };
 

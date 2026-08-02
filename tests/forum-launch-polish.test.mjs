@@ -23,7 +23,9 @@ test("read tracker parses backend dates as UTC and scans the whole reply tree", 
 test("posting and replying carry an in-flight guard against double submits", () => {
   const source = forum();
   assert.ok(source.includes("if (createMutation.isPending || updateMutation.isPending) return;"), "handlePost needs a double-tap guard");
-  assert.ok(source.includes("if (createMutation.isPending) return; // double-tap guard"), "handleReply needs a double-tap guard");
+  // handleReply reads the in-flight flag via a ref so the callback stays
+  // referentially stable (memoised feed cards).
+  assert.ok(source.includes("if (createPendingRef.current) return; // double-tap guard"), "handleReply needs a double-tap guard");
 });
 
 test("edit mode never leaks into the new-thread draft autosave", () => {

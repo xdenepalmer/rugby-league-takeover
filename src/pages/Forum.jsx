@@ -20,7 +20,7 @@ import { toast } from "@/components/ui/use-toast";
 import ReplyTree from "@/components/forum/ReplyTree";
 import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
-import MentionTextarea from "@/components/forum/MentionTextarea";
+import MentionTextarea, { toHandle } from "@/components/forum/MentionTextarea";
 import { MarkdownBody } from "@/lib/markdown";
 import MediaAttach from "@/components/forum/MediaAttach";
 import { topBadge, parseBadgeIds, SPIN_COOLDOWN_MS, SLOT_LAST_SPIN_KEY } from "@/lib/slot-badges";
@@ -406,10 +406,14 @@ const ForumPostCard = memo(function ForumPostCard({
           </div>
         </div>
 
-        {/* Title + compact stats row — always visible, clickable to expand */}
-        <div
-          className="mt-3 cursor-pointer select-none"
-          onClick={(e) => { if (e.target.closest('button, a')) return; if (!cardOpen) markThreadRead(post.id); setCardOpen(!cardOpen); }}
+        {/* Title + compact stats row — always visible, expands the card. A
+            real <button> (not a click-catching div): keyboard and switch
+            users previously could not open, read, or reply to ANY thread. */}
+        <button
+          type="button"
+          aria-expanded={cardOpen}
+          className="mt-3 w-full cursor-pointer select-none text-left"
+          onClick={() => { if (!cardOpen) markThreadRead(post.id); setCardOpen(!cardOpen); }}
         >
           <div className="flex items-start gap-2">
             <h3 className="flex-1 font-display text-lg md:text-xl uppercase tracking-wide text-foreground leading-tight group-hover:text-primary transition-colors duration-300 break-words">
@@ -449,7 +453,7 @@ const ForumPostCard = memo(function ForumPostCard({
               )}
             </div>
           )}
-        </div>
+        </button>
 
         {/* Expandable content — body, engagement, replies */}
         <AnimatePresence>
@@ -594,7 +598,7 @@ const ForumPostCard = memo(function ForumPostCard({
 
         {/* Replies */}
         <AnimatePresence>
-          {replies.length > 0 && (replyOpen || replies.length <= 2) && (
+          {replies.length > 0 && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
@@ -1040,16 +1044,26 @@ export default function Forum() {
     setReplyDrafts((c) => ({ ...c, [postId]: { ...emptyReply, ...c[postId], ...updates } }));
   }, []);
 
+  // Drafts and the in-flight flag are read through refs so this callback stays
+  // REFERENTIALLY STABLE: with the mutation object or replyDrafts in the deps,
+  // every keystroke minted a new handleReply → new replyApi → props changed on
+  // every card → React.memo defeated for the whole feed on a phone keyboard.
+  const replyDraftsRef = useRef(replyDrafts);
+  useEffect(() => { replyDraftsRef.current = replyDrafts; }, [replyDrafts]);
+  const createPendingRef = useRef(false);
+  useEffect(() => { createPendingRef.current = createMutation.isPending; }, [createMutation.isPending]);
+  const createReply = createMutation.mutate; // stable across renders
+
   const handleReply = useCallback((post, e) => {
     e.preventDefault();
     const parentId = String(post?.id || "").trim();
-    const reply = replyDrafts[parentId] || emptyReply;
-    if (createMutation.isPending) return; // double-tap guard
+    const reply = replyDraftsRef.current[parentId] || emptyReply;
+    if (createPendingRef.current) return; // double-tap guard
     if (!parentId || !isAuthenticated || !user?.id || !reply.body) return;
     // Replying to a reply must not compound the prefix into "Re: Re: Re: …" —
     // strip any existing chain before adding a single "Re:".
     const rootTitle = String(post.title || "Discussion Thread").replace(/^(\s*Re:\s*)+/i, "").trim() || "Discussion Thread";
-    createMutation.mutate({
+    createReply({
       author_name: reply.author_name,
       title: `Re: ${rootTitle}`,
       body: reply.body,
@@ -1057,7 +1071,7 @@ export default function Forum() {
       parent_id: parentId,
       media_url: reply.media_url || "",
     });
-  }, [isAuthenticated, user?.id, createMutation, replyDrafts]);
+  }, [isAuthenticated, user?.id, createReply]);
 
   const deleteMutation = useMutation({
     mutationFn: (postId) => base44.functions.invoke("forumAction", { action: "delete", postId }),
@@ -1105,6 +1119,14 @@ export default function Forum() {
   const handleEditPost = useCallback((post) => {
     setDraft({ author_name: post.author_name || "", title: post.title || "", body: post.body || "", category: post.category || "General", media_url: post.media_url || "" });
     setEditTarget(post);
+    // The mobile sheet is lg:hidden — opening it on desktop showed nothing
+    // while still locking body scroll. Desktop edits use the sidebar composer.
+    if (typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches) {
+      requestAnimationFrame(() => {
+        document.getElementById("forum-compose-sidebar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
     setShowMobileCompose(true);
   }, []);
 
@@ -1168,7 +1190,11 @@ export default function Forum() {
   const threadParam = searchParams.get("thread");
   useEffect(() => {
     if (!threadParam || !posts.length) return;
-    const target = buildForumThreads(posts).find((t) => t.id === threadParam);
+    const threads = buildForumThreads(posts);
+    // Older notifications linked reply IDs (not roots) — resolve the thread
+    // that CONTAINS the id so those taps still land somewhere.
+    const containsId = (replies) => (replies || []).some((r) => r.id === threadParam || containsId(r.replies));
+    const target = threads.find((t) => t.id === threadParam) || threads.find((t) => containsId(t.replies));
     if (target) {
       setThreadModalId(target.id);
       markThreadRead(target.id);
@@ -1219,19 +1245,25 @@ export default function Forum() {
       if (userFilter === "my_threads") {
         result = result.filter((p) => String(p.user_id) === String(user.id));
       } else if (userFilter === "mentions") {
-        const myName = (user.full_name || "").toLowerCase();
-        const myEmail = (user.email || "").toLowerCase();
-        result = result.filter((p) => {
-          const bodyLower = (p.body || "").toLowerCase();
-          const titleLower = (p.title || "").toLowerCase();
-          const hasMention = (myName && (bodyLower.includes(`@${myName}`) || titleLower.includes(`@${myName}`))) ||
-                            (myEmail && (bodyLower.includes(`@${myEmail}`) || titleLower.includes(`@${myEmail}`)));
-          const hasReplyMention = (p.replies || []).some((r) => {
-            const rBodyLower = (r.body || "").toLowerCase();
-            return (myName && rBodyLower.includes(`@${myName}`)) || (myEmail && rBodyLower.includes(`@${myEmail}`));
-          });
-          return hasMention || hasReplyMention;
-        });
+        // Match what the composer actually INSERTS: the autocomplete writes
+        // @handles with whitespace stripped ("@johnsmith"), so filtering on
+        // the raw spaced display name matched nothing for anyone with a
+        // space in their name. Match the handle, the raw name (hand-typed
+        // mentions), and the email local-part.
+        const needles = [
+          toHandle(user.full_name || ""),
+          (user.full_name || "").toLowerCase(),
+          (user.email || "").toLowerCase().split("@")[0],
+        ].filter(Boolean).map((n) => `@${n}`);
+        const mentionsMe = (text) => {
+          const lower = (text || "").toLowerCase();
+          return needles.some((n) => lower.includes(n));
+        };
+        const anyReplyMentionsMe = (replies) => (replies || []).some(
+          (r) => mentionsMe(r.body) || anyReplyMentionsMe(r.replies)
+        );
+        result = result.filter((p) =>
+          mentionsMe(p.body) || mentionsMe(p.title) || anyReplyMentionsMe(p.replies));
       }
     }
 
@@ -1782,6 +1814,7 @@ export default function Forum() {
             <AdSlot position="sidebar" size="medium-rectangle" className="mb-6 w-full" />
             <Suspense fallback={<div className="h-96 bg-card/10 animate-pulse border border-border/10" />}>
               <ComposeSidebar
+                editTarget={editTarget}
                 draft={draft} setDraft={setDraft}
                 isAuthenticated={isAuthenticated} user={user}
                 submittedForReview={submittedForReview}

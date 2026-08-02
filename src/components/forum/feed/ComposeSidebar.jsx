@@ -37,7 +37,7 @@ const categories = [
   ...FORUM_CATEGORIES.map((value) => ({ value })),
 ];
 
-export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, allThreads, people = [], onFilterSearch, onClaimSeat, searchQuery, onSharePrediction }) {
+export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user, submittedForReview, onSubmit, isPending, editTarget = null, onCancelEdit, allThreads, people = [], onFilterSearch, onClaimSeat, searchQuery, onSharePrediction }) {
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Compose Card */}
@@ -49,7 +49,7 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
               <MessageSquare className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-display text-lg uppercase tracking-wide">Start a Discussion</h2>
+              <h2 className="font-display text-lg uppercase tracking-wide">{editTarget ? "Edit Discussion" : "Start a Discussion"}</h2>
               <p className="text-[8px] font-mono uppercase tracking-wider text-slate-300">Connect with fellow fans</p>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
               className="w-full rounded-none bg-primary text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_0_10px_rgba(249,115,22,0.15)] transition-all hover:bg-primary/95 hover:shadow-[0_0_18px_rgba(249,115,22,0.45)] group"
             >
               <Send className="mr-2 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-              {isPending ? "Posting…" : "Post to Community"}
+              {isPending ? (editTarget ? "Saving…" : "Posting…") : (editTarget ? "Save Changes" : "Post to Community")}
             </Button>
             <p className="text-[8px] text-center text-slate-400 font-bold">Posts appear instantly &amp; are public — please keep it civil</p>
           </form>

@@ -15,14 +15,15 @@ const OnlineUsersWidget = memo(function OnlineUsersWidget({ threads }) {
     return [...names].slice(0, 8);
   }, [threads]);
 
-  const onlineCount = Math.min(Math.ceil(uniqueUsers.length * 0.6), uniqueUsers.length);
-
   return (
     <div className="border border-border/50 bg-card/20 p-4 mt-4">
+      {/* Honest label: there is no presence system — the old "N fans online"
+          was 60% of all historical authors, invented. These are the people
+          actually posting, which is true and just as social. */}
       <div className="flex items-center gap-2 mb-3">
         <span className="h-2 w-2 rounded-full bg-emerald-400 cmd-pulse" />
         <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          {onlineCount} fans online
+          In the conversation
         </p>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -34,7 +35,7 @@ const OnlineUsersWidget = memo(function OnlineUsersWidget({ threads }) {
             transition={{ delay: i * 0.05 }}
             title={name}
           >
-            <UserAvatar name={name} size="sm" showStatus={i < onlineCount} />
+            <UserAvatar name={name} size="sm" />
           </motion.div>
         ))}
       </div>

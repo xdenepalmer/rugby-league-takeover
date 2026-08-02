@@ -28,7 +28,10 @@ function matchesMention(u: any, tokens: string[]) {
 // deno-lint-ignore no-explicit-any
 async function createForumNotifications(svc: any, { post, parentId, actor, authorName, body }: any) {
   try {
-    const threadId = parentId || post.id;
+    // The deep link must target the ROOT thread: for a reply-to-a-reply,
+    // parentId is the parent REPLY's id, which /forum?thread= can never open
+    // (the handler only matches roots) — the notification tap dead-ended.
+    let threadId = parentId || post.id;
     const recipients = new Map<string, { email: string; type: string; title: string }>();
 
     if (parentId) {
@@ -36,6 +39,12 @@ async function createForumNotifications(svc: any, { post, parentId, actor, autho
       if (parent?.user_id && parent.user_id !== actor?.id) {
         recipients.set(parent.user_id, { email: parent.user_email || '', type: 'reply', title: `${authorName} replied to your post` });
       }
+      // Walk up to the root (bounded — reply depth is shallow by design).
+      let cursor = parent;
+      for (let hop = 0; hop < 6 && cursor?.parent_id; hop += 1) {
+        cursor = await getForumPost(svc, cursor.parent_id);
+      }
+      if (cursor?.id) threadId = cursor.id;
     }
 
     const tokens = extractMentions(body);

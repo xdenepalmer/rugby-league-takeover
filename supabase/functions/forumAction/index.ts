@@ -184,6 +184,10 @@ Deno.serve(async (req) => {
       const user = await getCaller(req, svc);
       if (!user) return json({ error: 'Login required to react' }, 401);
       if (!ALLOWED_REACTIONS.includes(emoji)) return json({ error: 'Unsupported reaction' }, 400);
+      // Reactions earn XP/chips and keep a member visible in the feed — a ban
+      // that only gated posting let blocked accounts keep farming both.
+      const reactBan = await findActiveBan(svc, { ip: resolveClientIp(req), emails: [user?.email], userId: user?.id });
+      if (reactBan) return json({ error: 'Your account has been blocked.', code: 'blocked' }, 403);
 
       const post = await getForumPost(svc, postId);
       if (!post) return json({ error: 'Post not found' }, 404);

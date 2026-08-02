@@ -30,7 +30,7 @@ export default function ForumMedia({ url, type, className = "" }) {
     <>
       <div className={`mt-3 overflow-hidden border border-border bg-secondary/30 ${className}`}>
         {isVid ? (
-          <video src={url} controls playsInline className="max-h-96 w-full object-contain" />
+          <video src={url} controls playsInline preload="metadata" className="max-h-96 w-full object-contain" />
         ) : (
           <button
             type="button"
