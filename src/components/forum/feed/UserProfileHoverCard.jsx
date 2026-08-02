@@ -3,9 +3,7 @@
  */
 import React, { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock } from "lucide-react";
 import UserAvatar from "./UserAvatar";
-import { nameHash } from "./forumHelpers";
 import { getAuthorBadge, BADGE_ICON_MAP } from "./forumBadges";
 
 export default function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, children }) {
@@ -16,9 +14,6 @@ export default function UserProfileHoverCard({ name, authorPostCounts, authorRep
 
   const postCount = authorPostCounts[name] || 0;
   const replyCount = authorReplyCounts[name] || 0;
-  const hash = nameHash(name);
-  const memberDays = (hash % 365) + 30;
-  const memberDate = new Date(Date.now() - memberDays * 24 * 60 * 60 * 1000);
   const badge = getAuthorBadge(name, authorPostCounts);
 
   const handleEnter = useCallback(() => {
@@ -69,10 +64,6 @@ export default function UserProfileHoverCard({ name, authorPostCounts, authorRep
                     </span>
                   )}
                 </div>
-              </div>
-              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-300">
-                <Clock className="h-3 w-3" />
-                <span>Member since {memberDate.toLocaleDateString("en-AU", { month: "short", year: "numeric" })}</span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="border border-border/30 bg-muted/[0.04] p-2.5 text-center">

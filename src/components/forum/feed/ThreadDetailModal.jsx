@@ -2,6 +2,7 @@
  * Extracted verbatim from src/pages/Forum.jsx (behaviour-preserving).
  */
 import React, { useState, useRef, useEffect, memo } from "react";
+import { lockBodyScroll } from "@/lib/scroll-lock";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -44,11 +45,9 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
     return () => document.removeEventListener("mousedown", handler);
   }, [reportOpen]);
 
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+  // Lock body scroll (ref-counted — the compose sheet can open on top of this
+  // modal, and independent overflow writes raced each other on close).
+  useEffect(() => lockBodyScroll(), []);
 
   return (
     <>

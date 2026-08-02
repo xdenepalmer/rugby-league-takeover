@@ -46,6 +46,7 @@ import CollapsibleGuidelines from "@/components/forum/feed/CollapsibleGuidelines
 import FanRankCard from "@/components/forum/feed/FanRankCard";
 import DailyMissions from "@/components/forum/feed/DailyMissions";
 import { hasUnreadReplies, getUnreadReplyCount, getReadTimestamps, markThreadRead } from "@/lib/forum-read-tracker";
+import { lockBodyScroll } from "@/lib/scroll-lock";
 import { successImpact, errorImpact } from "@/lib/native/haptics";
 import { triggerAppStoreReview } from "@/components/AppStoreReviewPrompt";
 
@@ -778,10 +779,21 @@ export default function Forum() {
   const [submittedForReview, setSubmittedForReview] = useState(false);
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState({});
+  const [editTarget, setEditTarget] = useState(null);
   const [showMobileCompose, setShowMobileCompose] = useState(false);
-
-  // Auto-save draft to localStorage (debounced)
+  // The "Posted — you're live!" banner had no reset: after the first post of a
+  // session, every later open of the composer showed a stale success message
+  // above an empty form. Clear it whenever the sheet opens.
   useEffect(() => {
+    if (showMobileCompose) setSubmittedForReview(false);
+  }, [showMobileCompose]);
+
+  // Auto-save draft to localStorage (debounced). Never while editing an
+  // existing post — that wrote someone's published post into the new-thread
+  // draft slot, and the next visit "recovered" it as a fresh draft, priming a
+  // duplicate thread.
+  useEffect(() => {
+    if (editTarget) return;
     const hasDraftContent = draft.title || draft.body;
     if (!hasDraftContent) {
       try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
@@ -791,7 +803,7 @@ export default function Forum() {
       try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)); } catch {}
     }, 2000);
     return () => clearTimeout(timer);
-  }, [draft]);
+  }, [draft, editTarget]);
 
   // "/" keyboard shortcut focuses the forum search (desktop power-user nicety)
   useEffect(() => {
@@ -816,16 +828,17 @@ export default function Forum() {
     return () => { window.removeEventListener("storage", onStorage); window.removeEventListener("rlt_saved_posts_changed", onSaveToggle); };
   }, []);
 
-  // Lock body scroll when mobile compose sheet is open
+  // Lock body scroll while the mobile compose sheet is open. Ref-counted so
+  // the thread modal's delayed cleanup can't unlock the page under this sheet.
   useEffect(() => {
-    if (showMobileCompose) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
+    if (!showMobileCompose) return undefined;
+    return lockBodyScroll();
   }, [showMobileCompose]);
-  const [threadModalPost, setThreadModalPost] = useState(null);
+  // Only the thread ID is stored; the post object is derived from the live
+  // list further down. Storing the object froze a snapshot: a reply posted
+  // from inside the modal cleared your textarea and then never appeared, the
+  // 30s poll never updated the open thread, and deleting it left a ghost.
+  const [threadModalId, setThreadModalId] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
@@ -926,8 +939,6 @@ export default function Forum() {
     },
   });
 
-  const [editTarget, setEditTarget] = useState(null);
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.functions.invoke("forumAction", { action: "update", postId: id, ...data }),
     onSuccess: () => {
@@ -939,6 +950,9 @@ export default function Forum() {
 
   const handlePost = (e) => {
     e.preventDefault();
+    // The button's disabled prop lands a render late — a double-tap (or the
+    // iOS "Go" key firing an implicit submit) could create the thread twice.
+    if (createMutation.isPending || updateMutation.isPending) return;
     if (!isAuthenticated || !user?.id || !draft.title || !draft.body) return;
     if (editTarget) {
       updateMutation.mutate({ id: editTarget.id, data: { title: draft.title, body: draft.body, category: draft.category, media_url: draft.media_url || "" } });
@@ -956,6 +970,7 @@ export default function Forum() {
     e.preventDefault();
     const parentId = String(post?.id || "").trim();
     const reply = replyDrafts[parentId] || emptyReply;
+    if (createMutation.isPending) return; // double-tap guard
     if (!parentId || !isAuthenticated || !user?.id || !reply.body) return;
     // Replying to a reply must not compound the prefix into "Re: Re: Re: …" —
     // strip any existing chain before adding a single "Re:".
@@ -1008,8 +1023,9 @@ export default function Forum() {
   }, [isAuthenticated]);
 
   const handleOpenThread = useCallback((p) => {
-    setThreadModalPost(p);
-    if (p?.id) markThreadRead(p.id);
+    if (!p?.id) return;
+    setThreadModalId(p.id);
+    markThreadRead(p.id);
   }, []);
 
   const handleEditPost = useCallback((post) => {
@@ -1018,7 +1034,25 @@ export default function Forum() {
     setShowMobileCompose(true);
   }, []);
 
-  // Shared API for the recursive ReplyTree (reply to / delete any comment at any depth).
+  const allThreads = useMemo(() => buildForumThreads(posts), [posts]);
+
+  // Mentionable people for @autocomplete — every participant currently in the
+  // forum, plus the logged-in member. Used as a client-side fallback so mentions
+  // work even before the searchUsers function is deployed (MentionTextarea also
+  // merges the full user directory from that function when it's available).
+  const mentionPeople = useMemo(() => {
+    const names = new Set();
+    allThreads.forEach((t) => {
+      if (t.author_name) names.add(t.author_name);
+      (t.replies || []).forEach((r) => { if (r.author_name) names.add(r.author_name); });
+    });
+    if (isAuthenticated && (user?.full_name || user?.email)) names.add(user.full_name || user.email);
+    return [...names].map((name) => ({ name }));
+  }, [allThreads, isAuthenticated, user]);
+
+  // Shared API for the recursive ReplyTree (reply to / delete any comment at
+  // any depth). `people` lives INSIDE the memo — it used to be assigned onto
+  // the memoized object during render, which React may legally discard.
   const replyApi = useMemo(() => ({
     isAuthenticated,
     user,
@@ -1032,6 +1066,7 @@ export default function Forum() {
     timeAgo,
     resolveAvatar: avatarFor,
     resolveMeta: forumMetaFor,
+    people: mentionPeople,
   }), [
     isAuthenticated,
     user,
@@ -1043,10 +1078,16 @@ export default function Forum() {
     handleReply,
     handleDelete,
     avatarFor,
-    forumMetaFor
+    forumMetaFor,
+    mentionPeople
   ]);
 
-  const allThreads = useMemo(() => buildForumThreads(posts), [posts]);
+  // The modal's post, always fresh from the live list; vanishes (closing the
+  // modal) if the thread is deleted out from under it.
+  const threadModalPost = useMemo(
+    () => (threadModalId ? allThreads.find((t) => t.id === threadModalId) || null : null),
+    [allThreads, threadModalId]
+  );
 
   // Deep-link: /forum?thread=<id> (used by notifications) opens that thread, then
   // clears the param so closing the modal doesn't reopen it.
@@ -1055,7 +1096,8 @@ export default function Forum() {
     if (!threadParam || !posts.length) return;
     const target = buildForumThreads(posts).find((t) => t.id === threadParam);
     if (target) {
-      setThreadModalPost(target);
+      setThreadModalId(target.id);
+      markThreadRead(target.id);
       const next = new URLSearchParams(searchParams);
       next.delete("thread");
       setSearchParams(next, { replace: true });
@@ -1075,21 +1117,6 @@ export default function Forum() {
     });
     return { authorPostCounts: postCounts, authorReplyCounts: replyCounts };
   }, [allThreads]);
-
-  // Mentionable people for @autocomplete — every participant currently in the
-  // forum, plus the logged-in member. Used as a client-side fallback so mentions
-  // work even before the searchUsers function is deployed (MentionTextarea also
-  // merges the full user directory from that function when it's available).
-  const mentionPeople = useMemo(() => {
-    const names = new Set();
-    allThreads.forEach((t) => {
-      if (t.author_name) names.add(t.author_name);
-      (t.replies || []).forEach((r) => { if (r.author_name) names.add(r.author_name); });
-    });
-    if (isAuthenticated && (user?.full_name || user?.email)) names.add(user.full_name || user.email);
-    return [...names].map((name) => ({ name }));
-  }, [allThreads, isAuthenticated, user]);
-  replyApi.people = mentionPeople;
 
   // Category counts
   const categoryCounts = useMemo(() => {
@@ -1712,7 +1739,12 @@ export default function Forum() {
           <Suspense fallback={null}>
             <ThreadDetailModal
               post={threadModalPost}
-              onClose={() => setThreadModalPost(null)}
+              onClose={() => {
+                // Stamp on close too, so replies that arrived while the
+                // thread was open don't show as unread.
+                if (threadModalId) markThreadRead(threadModalId);
+                setThreadModalId(null);
+              }}
               isAuthenticated={isAuthenticated}
               user={user}
               isModerator={isModerator}
