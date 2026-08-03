@@ -1,4 +1,4 @@
-import { parseForumDate } from "@/components/forum/feed/forumHelpers";
+import { parseForumDate } from "./forum-dates.js";
 
 const STORAGE_KEY = 'rlt_forum_read';
 

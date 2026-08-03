@@ -328,6 +328,12 @@ const integrations = {
   Core: {
     async UploadFile({ file }) {
       if (!file) throw new Error('No file provided');
+      // Mirrors the media bucket's server-side cap. Pre-checking here turns a
+      // raw storage error into actionable copy before any bytes upload.
+      const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+      if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error('That file is over the 25MB limit — try a shorter clip or a smaller image.');
+      }
       const safeName = String(file.name || 'upload')
         .toLowerCase()
         .replace(/[^a-z0-9._-]+/g, '-')

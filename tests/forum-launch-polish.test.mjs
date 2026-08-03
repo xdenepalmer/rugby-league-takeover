@@ -99,3 +99,37 @@ test("signed-in slot cooldown follows the server day only, and 429s sync the cli
   assert.ok(source.includes("if (isAuthenticated) {\n        const spunToday"), "a stale guest timestamp must not lock out a signed-in user");
   assert.ok(source.includes('err?.status === 429'), "daily-already-used must set the cooldown so the extra-spin offer appears");
 });
+
+// ── Behavioural coverage (pass-2 request: logic, not string greps) ──────────
+
+test("read tracker: tz-less UTC replies from the last hours count as unread", async () => {
+  const { getUnreadReplyCount } = await import("../src/lib/forum-read-tracker.js");
+  const now = Date.now();
+  const iso = (ms) => new Date(ms).toISOString();
+  const tzLess = (ms) => iso(ms).replace("T", " ").replace(/\.\d{3}Z$/, ""); // "2026-08-03 04:00:00"
+  const replies = [
+    { id: "a", created_date: tzLess(now - 60 * 60 * 1000) },        // 1h ago, tz-less UTC
+    { id: "b", created_date: iso(now - 3 * 60 * 60 * 1000) },       // 3h ago, Z-suffixed
+    {
+      id: "c",
+      created_date: iso(now - 30 * 60 * 60 * 1000),                  // old…
+      replies: [{ id: "c1", created_date: tzLess(now - 30 * 60 * 1000) }], // …with a NESTED new reply
+    },
+  ];
+  const lastRead = now - 2 * 60 * 60 * 1000; // read 2h ago
+  // Unread: a (1h, would be MISSED by local-time parsing in any tz ahead of
+  // UTC) and the nested c1 (missed entirely by a flat scan). b was read.
+  assert.equal(getUnreadReplyCount("t", replies, lastRead), 2);
+  assert.equal(getUnreadReplyCount("t", replies, undefined), 4, "no last-read counts every reply incl. nested");
+});
+
+test("thread ordering parses tz-less and Z-suffixed dates identically", async () => {
+  const { buildForumThreads } = await import("../src/lib/public-forms.js");
+  // Same instants written in the two formats the backend emits. Under the old
+  // local-time parse (any tz ahead of UTC) B sorted ABOVE A despite being older.
+  const threads = buildForumThreads([
+    { id: "A", title: "newer", created_date: "2026-02-01 23:30:00" },        // tz-less UTC
+    { id: "B", title: "older", created_date: "2026-02-01T22:00:00.000Z" },   // explicit UTC
+  ]);
+  assert.deepEqual(threads.map((t) => t.id), ["A", "B"], "newest-first must hold across date formats");
+});

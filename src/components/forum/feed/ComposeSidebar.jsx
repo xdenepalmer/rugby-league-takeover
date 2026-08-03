@@ -137,6 +137,19 @@ export default function ComposeSidebar({ draft, setDraft, isAuthenticated, user,
               <Send className="mr-2 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
               {isPending ? (editTarget ? "Saving…" : "Posting…") : (editTarget ? "Save Changes" : "Post to Community")}
             </Button>
+            {/* Without an exit, a latched edit silently rewrote the published
+                post with whatever the sidebar submitted next. */}
+            {editTarget && onCancelEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                size="mobile"
+                onClick={onCancelEdit}
+                className="w-full rounded-none border-border/60 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+              >
+                Cancel edit
+              </Button>
+            )}
             <p className="text-[8px] text-center text-slate-400 font-bold">Posts appear instantly &amp; are public — please keep it civil</p>
           </form>
           )}

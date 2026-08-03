@@ -33,16 +33,11 @@ export const getEngagement = (post) => {
   };
 };
 
-// Base44 returns created_date in UTC, sometimes without a timezone marker. A bare
-// ISO string is parsed as LOCAL time by JS, which shows a just-posted item as
-// "10h ago" in AEST. Normalise to UTC when no timezone is present.
-export function parseForumDate(dateStr) {
-  if (!dateStr) return null;
-  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(String(dateStr).trim());
-  const normalized = hasTz ? dateStr : `${String(dateStr).trim().replace(" ", "T")}Z`;
-  const d = new Date(normalized);
-  return Number.isNaN(d.getTime()) ? new Date(dateStr) : d;
-}
+// Moved to src/lib/forum-dates.js (dependency-free) so the read tracker and
+// tests can import it without JSX/alias tooling; re-exported for consumers.
+// (Imported, not just re-exported — timeAgo/getRecencyScore below use it.)
+import { parseForumDate } from "@/lib/forum-dates";
+export { parseForumDate };
 
 export function timeAgo(dateStr) {
   const date = parseForumDate(dateStr);

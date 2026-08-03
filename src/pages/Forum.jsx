@@ -86,10 +86,19 @@ function loadReplyDrafts() {
 function persistReplyDrafts(drafts) {
   try {
     const now = Date.now();
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem(REPLY_DRAFTS_KEY) || "{}"); } catch { /* fresh */ }
     const entries = Object.entries(drafts)
       .filter(([, d]) => d && d.body)
       .slice(-REPLY_DRAFT_MAX)
-      .map(([id, d]) => [id, { author_name: d.author_name || "", body: d.body, media_url: d.media_url || "", savedAt: now }]);
+      // Unchanged bodies keep their ORIGINAL savedAt — re-stamping on every
+      // write meant merely visiting the forum renewed every TTL forever.
+      .map(([id, d]) => [id, {
+        author_name: d.author_name || "",
+        body: d.body,
+        media_url: d.media_url || "",
+        savedAt: stored[id]?.body === d.body ? (stored[id].savedAt || now) : now,
+      }]);
     if (entries.length === 0) localStorage.removeItem(REPLY_DRAFTS_KEY);
     else localStorage.setItem(REPLY_DRAFTS_KEY, JSON.stringify(Object.fromEntries(entries)));
   } catch { /* storage unavailable */ }
@@ -826,11 +835,20 @@ export default function Forum() {
   const [submittedForReview, setSubmittedForReview] = useState(false);
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [replyDrafts, setReplyDrafts] = useState(loadReplyDrafts);
-  // Debounced persist of reply drafts (see loadReplyDrafts above).
+  const replyDraftsRef = useRef(replyDrafts);
+  useEffect(() => { replyDraftsRef.current = replyDrafts; }, [replyDrafts]);
+  // Debounced persist of reply drafts (see loadReplyDrafts above), with a
+  // flush on pagehide/unmount — a debounce alone dropped the last 1.5s of
+  // typing exactly when the app was backgrounded, the case this exists for.
   useEffect(() => {
     const timer = setTimeout(() => persistReplyDrafts(replyDrafts), 1500);
     return () => clearTimeout(timer);
   }, [replyDrafts]);
+  useEffect(() => {
+    const flush = () => persistReplyDrafts(replyDraftsRef.current);
+    window.addEventListener("pagehide", flush);
+    return () => { window.removeEventListener("pagehide", flush); flush(); };
+  }, []);
   const [editTarget, setEditTarget] = useState(null);
   const [showMobileCompose, setShowMobileCompose] = useState(false);
   // The "Posted — you're live!" banner had no reset: after the first post of a
@@ -899,10 +917,17 @@ export default function Forum() {
     }
     const viewport = window.visualViewport;
     const syncViewport = () => {
-      setComposeViewport({
-        height: Math.max(320, Math.round(viewport.height)),
-        top: Math.max(0, Math.round(viewport.offsetTop)),
-      });
+      // Only override the sheet geometry while the keyboard is actually
+      // shrinking the visual viewport. Unconditional syncing set top:0 the
+      // moment the sheet opened (keyboard closed), pinning the bottom sheet
+      // to the TOP of the screen — the pass-2 review's launch blocker.
+      const keyboardOpen = viewport.height < window.innerHeight - 100;
+      setComposeViewport(keyboardOpen
+        ? {
+            height: Math.max(320, Math.round(viewport.height)),
+            top: Math.max(0, Math.round(viewport.offsetTop)),
+          }
+        : null);
     };
     syncViewport();
     viewport.addEventListener("resize", syncViewport);
@@ -999,7 +1024,19 @@ export default function Forum() {
     onSuccess: (data) => {
       successImpact();
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] }); queryClient.invalidateQueries({ queryKey: ["forumAvatars"] });
-      setDraft(emptyPost); setReplyDrafts({}); setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false); setDraftRecovered(false);
+      setDraft(emptyPost);
+      // Only the draft that was just submitted is cleared — the old blanket
+      // wipe deleted every OTHER thread's persisted reply draft too. Storage
+      // is updated synchronously so the 1.5s debounce can't resurrect the
+      // posted text (or drop the clear) if the page unloads first.
+      setReplyDrafts((current) => {
+        if (!data?.parent_id) return current;
+        const next = { ...current };
+        delete next[data.parent_id];
+        persistReplyDrafts(next);
+        return next;
+      });
+      setActiveReplyId(null); setSubmittedForReview(true); setShowMobileCompose(false); setDraftRecovered(false);
       if (!data?.parent_id) { setSelectedCategory("All"); setSearchQuery(""); setSortBy("latest"); setUserFilter("all"); setMobileTab("feed"); }
       try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch {}
       toast({ title: data?.id ? "Post published" : "Post submitted", description: "Your discussion is now visible in the forum." });
@@ -1048,8 +1085,6 @@ export default function Forum() {
   // REFERENTIALLY STABLE: with the mutation object or replyDrafts in the deps,
   // every keystroke minted a new handleReply → new replyApi → props changed on
   // every card → React.memo defeated for the whole feed on a phone keyboard.
-  const replyDraftsRef = useRef(replyDrafts);
-  useEffect(() => { replyDraftsRef.current = replyDrafts; }, [replyDrafts]);
   const createPendingRef = useRef(false);
   useEffect(() => { createPendingRef.current = createMutation.isPending; }, [createMutation.isPending]);
   const createReply = createMutation.mutate; // stable across renders
@@ -1501,6 +1536,7 @@ export default function Forum() {
                       const home = matchup.home_team;
                       const away = matchup.away_team;
                       const label = matchup.label || "NRL Fixture";
+                      setEditTarget(null); // tool content primes a NEW post, never an edit
                       setDraft((d) => ({
                         ...d,
                         title: `[Tip] ${home} ${homeScore} - ${awayScore} ${away}`,
@@ -1515,6 +1551,7 @@ export default function Forum() {
                   <StadiumSeatPlanner
                     onFilterSearch={(q) => { setSearchQuery(q); setMobileTab("feed"); }}
                     onClaimSeat={(q) => {
+                      setEditTarget(null); // tool content primes a NEW post, never an edit
                       setDraft((d) => ({
                         ...d,
                         title: `[${q}] Supporter Meetup!`,
@@ -1815,6 +1852,7 @@ export default function Forum() {
             <Suspense fallback={<div className="h-96 bg-card/10 animate-pulse border border-border/10" />}>
               <ComposeSidebar
                 editTarget={editTarget}
+                onCancelEdit={() => { setEditTarget(null); setDraft(emptyPost); }}
                 draft={draft} setDraft={setDraft}
                 isAuthenticated={isAuthenticated} user={user}
                 submittedForReview={submittedForReview}
@@ -1823,6 +1861,7 @@ export default function Forum() {
                 people={mentionPeople}
                 onFilterSearch={(q) => setSearchQuery(q)}
                 onClaimSeat={(q) => {
+                  setEditTarget(null); // tool content primes a NEW post, never an edit
                   setDraft((d) => ({
                     ...d,
                     title: `[${q}] Supporter Meetup!`,
@@ -1840,6 +1879,7 @@ export default function Forum() {
                   const home = matchup.home_team;
                   const away = matchup.away_team;
                   const label = matchup.label || "Opening Showdown";
+                  setEditTarget(null); // tool content primes a NEW post, never an edit
                   setDraft((d) => ({
                     ...d,
                     title: `[Prediction] ${home} ${homeScore} - ${awayScore} ${away}`,
@@ -1914,7 +1954,7 @@ export default function Forum() {
               style={{
                 willChange: "transform",
                 ...(composeViewport
-                  ? { top: `${composeViewport.top}px`, bottom: "auto", maxHeight: `${composeViewport.height}px` }
+                  ? { top: `${composeViewport.top}px`, bottom: "auto", height: `${composeViewport.height}px`, maxHeight: `${composeViewport.height}px` }
                   : {}),
               }}
               className="ios-sheet ios-scroll fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto border-t border-border bg-card/95 pb-[calc(1.25rem+var(--safe-bottom))] cmd-scrollbar lg:hidden"

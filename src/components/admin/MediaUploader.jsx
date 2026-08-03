@@ -15,6 +15,7 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
   const [progress, setProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState(null); // null | "success" | "error"
+  const [errorMessage, setErrorMessage] = useState("");
   const [fileName, setFileName] = useState("");
   const inputRef = useRef(null);
   const FileIcon = getFileIcon(accept);
@@ -42,9 +43,10 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
       setStatus("success");
       onUploaded(file_url);
       setTimeout(() => { setStatus(null); setProgress(0); setFileName(""); }, 2500);
-    } catch {
+    } catch (error) {
       clearInterval(progressInterval);
       setStatus("error");
+      setErrorMessage(error?.message || "");
       setProgress(0);
     } finally {
       setUploading(false);
@@ -172,7 +174,7 @@ export default function MediaUploader({ label, accept = "image/*,video/*", onUpl
             {status === "success" ? (
               <p className="text-xs font-bold text-emerald-400">Upload complete</p>
             ) : status === "error" ? (
-              <p className="text-xs font-bold text-destructive">Upload failed — try again</p>
+              <p className="text-xs font-bold text-destructive">{errorMessage || "Upload failed — try again"}</p>
             ) : uploading ? (
               <>
                 <p className="text-xs font-bold text-foreground">Uploading…</p>

@@ -538,6 +538,11 @@ export default function SlotMachineBadgeUnlock() {
       startSpinAnimation(symbols);
     } catch (err) {
       spinLockRef.current = false;
+      // The timer wipe at spin start also killed a pending win-overlay
+      // auto-clear; a failed spin must never leave the celebration stuck up.
+      setIsWin(false);
+      setIsNewBadgeWin(false);
+      setScreenShake(false);
       const payload = err?.data || {};
       if (payload.extra) setExtraInfo(payload.extra);
       // "Daily spin already used" (429): bring the client into agreement with
@@ -925,14 +930,17 @@ export default function SlotMachineBadgeUnlock() {
               owned; the full grid is one tap away. */}
           {!wallExpanded ? (
             <>
-              <div className="flex flex-wrap gap-1.5">
+              {/* Grid, not flex-wrap: the forum shell's `* { min-width: 0 }`
+                  clipping guard nukes min-w-[30%] and crammed all six chips
+                  onto one row. Grid columns are immune to that reset. */}
+              <div className="grid grid-cols-3 gap-1.5">
                 {TIER_ORDER.map((tierName) => {
                   const group = badgesByTier[tierName];
                   if (!group) return null;
                   const style = TIER_STYLES[tierName] || TIER_STYLES.Common;
                   const pct = group.totalCount > 0 ? group.ownedCount / group.totalCount : 0;
                   return (
-                    <div key={tierName} className={`min-w-[30%] flex-1 border ${style.border} ${style.bg} px-2 py-1.5`}>
+                    <div key={tierName} className={`border ${style.border} ${style.bg} px-2 py-1.5`}>
                       <div className="flex items-center justify-between gap-1">
                         <span className={`min-w-0 truncate text-[8px] font-mono font-bold uppercase ${style.text}`}>{tierName}</span>
                         <span className="shrink-0 text-[8px] font-mono text-slate-400">{group.ownedCount}/{group.totalCount}</span>
