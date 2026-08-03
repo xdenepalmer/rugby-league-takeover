@@ -22,6 +22,7 @@ import ReactionPicker from "@/components/forum/ReactionPicker";
 import ForumMedia from "@/components/forum/ForumMedia";
 import MentionTextarea, { toHandle } from "@/components/forum/MentionTextarea";
 import { MarkdownBody } from "@/lib/markdown";
+import { isActiveMember } from "@/lib/membership";
 import MediaAttach from "@/components/forum/MediaAttach";
 import { topBadge, parseBadgeIds, SPIN_COOLDOWN_MS, SLOT_LAST_SPIN_KEY } from "@/lib/slot-badges";
 
@@ -369,7 +370,7 @@ const ForumPostCard = memo(function ForumPostCard({
       {/* Hot badge */}
       {engagement.hot && !post.is_pinned && (
         <div className="absolute top-3 right-3 z-10">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 border border-orange-500/20 text-[9px] font-bold uppercase tracking-wider text-orange-400">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 border border-orange-500/20 text-[11px] font-bold uppercase tracking-wider text-orange-400">
             <Flame className="h-2 w-2" /> Hot
           </span>
         </div>
@@ -386,18 +387,18 @@ const ForumPostCard = memo(function ForumPostCard({
               <span className="min-w-0 truncate text-sm font-bold text-foreground">{post.author_name || "Anonymous"}</span>
               <AuthorBadge name={post.author_name} authorPostCounts={authorPostCounts} />
               {(post.author_role === 'moderator' || (user?.role === 'moderator' && user?.id && String(post.user_id) === String(user.id))) && (
-                <span className="inline-flex items-center gap-0.5 border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400">
+                <span className="inline-flex items-center gap-0.5 border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-violet-400">
                   <Shield className="h-2 w-2" /> Mod
                 </span>
               )}
               <AuthorMeta meta={resolveMeta ? resolveMeta(post.user_id) : null} />
-              <span className="text-[10px] text-slate-300 font-bold">•</span>
-              <span title={parseForumDate(post.created_date)?.toLocaleString("en-AU") || undefined} className="text-[10px] font-mono text-slate-200 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
-              {isEdited && <span className="text-[10px] italic text-muted-foreground">(edited)</span>}
+              <span className="text-[11px] text-slate-400 font-bold">•</span>
+              <span title={parseForumDate(post.created_date)?.toLocaleString("en-AU") || undefined} className="text-[11px] font-mono text-slate-300 font-bold tabular-nums">{timeAgo(post.created_date)}</span>
+              {isEdited && <span className="text-[11px] italic text-slate-400">(edited)</span>}
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               {post.is_pinned && (
-                <span className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+                <span className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary">
                   <Pin className="h-2 w-2" /> Pinned
                 </span>
               )}
@@ -984,7 +985,7 @@ export default function Forum() {
   // display. Built from the forumAvatars function; the viewer's own row is merged
   // in live so their changes show immediately.
   const profileById = useMemo(() => {
-    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { display_name: a.display_name || "Member", avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges), casino_rank: a.casino_rank || "Rookie Punter", casino_xp: Number(a.casino_xp || 0), casino_chips: Number(a.casino_chips || 0), casino_streak: Number(a.casino_streak || 0) }]));
+    const map = new Map((avatarData?.data?.avatars || []).map((a) => [String(a.id), { display_name: a.display_name || "Member", avatar_url: a.avatar_url || "", location: a.location || "", team: a.team || "", badges: parseBadgeIds(a.badges), casino_rank: a.casino_rank || "Rookie Punter", casino_xp: Number(a.casino_xp || 0), casino_chips: Number(a.casino_chips || 0), casino_streak: Number(a.casino_streak || 0), is_member: a.is_member === true }]));
     if (isAuthenticated && user?.id) {
       // The viewer's own row, live — including badges saved to their profile and
       // any just won this session (kept in localStorage).
@@ -997,6 +998,7 @@ export default function Forum() {
         location: user.show_location_on_forum ? [user.city, user.country].filter(Boolean).join(", ") : "",
         team: user.show_team_on_forum ? (user.favourite_team || "") : "",
         badges, casino_rank: user.casino_rank || "Rookie Punter", casino_xp: Number(user.casino_xp || 0), casino_chips: Number(user.casino_chips || 0), casino_streak: Number(user.casino_streak || 0),
+        is_member: isActiveMember(user),
       });
     }
     return map;

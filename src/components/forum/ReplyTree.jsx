@@ -71,7 +71,7 @@ const ReplyTree = memo(function ReplyTree({
             <div className="border border-border/70 bg-card/30 p-3.5 transition-colors hover:border-primary/30">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <ReplyAvatar name={reply.author_name} src={resolveAvatar ? resolveAvatar(reply.user_id, reply.author_avatar) : reply.author_avatar} />
-                <span className="text-xs font-bold text-foreground">{reply.author_name || "Member"}</span>
+                <span className="text-sm font-bold text-foreground">{reply.author_name || "Member"}</span>
                 {(() => {
                   const meta = resolveMeta ? resolveMeta(reply.user_id) : null;
                   if (!meta) return null;
@@ -79,21 +79,21 @@ const ReplyTree = memo(function ReplyTree({
                     <>
                       <MemberBadge meta={meta} size="xs" />
                       {meta.badge && (
-                        <span className="inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300" title={`Slot badge: ${meta.badge.label}`}>
+                        <span className="inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink-300" title={`Slot badge: ${meta.badge.label}`}>
                           {meta.badge.emoji} {meta.badge.label}
                         </span>
                       )}
-                      {meta.casino_xp > 0 && <span className="inline-flex items-center gap-1 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200" title={`${meta.casino_xp} XP · ${meta.casino_chips} chips`}>🎲 {meta.casino_rank}</span>}
-                      {meta.location && <span className="text-[10px] text-slate-300 font-medium" title={meta.location}>📍 {meta.location}</span>}
+                      {meta.casino_xp > 0 && <span className="inline-flex items-center gap-1 border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200" title={`${meta.casino_xp} XP · ${meta.casino_chips} chips`}>🎲 {meta.casino_rank}</span>}
+                      {meta.location && <span className="text-[11px] text-slate-200 font-medium" title={meta.location}>📍 {meta.location}</span>}
                       {meta.team && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 font-medium" title={`Supports ${meta.team}`}>
+                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-200 font-medium" title={`Supports ${meta.team}`}>
                           <TeamCrest name={meta.team} logo={meta.teamLogo} className="h-4 w-4 text-[7px]" /> {meta.team}
                         </span>
                       )}
                     </>
                   );
                 })()}
-                <span className="font-mono text-[9px] text-slate-300 font-bold">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
+                <span className="font-mono text-[11px] text-slate-300 font-bold">{timeAgo ? timeAgo(reply.created_date) : ""}</span>
               </div>
               <MarkdownBody text={reply.body} className="mt-1.5 break-words" />
               <ForumMedia url={reply.media_url} type={reply.media_type} />

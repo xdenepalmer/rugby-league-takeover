@@ -153,6 +153,29 @@ test("the member badge renders from one component on every author surface", () =
   assert.match(read("../src/components/forum/feed/AuthorMeta.jsx"), /!meta\.casino_xp && !meta\.is_member\)\) return null;/);
 });
 
+test("is_member survives the trip from the server to the badge", () => {
+  const forum = read("../src/pages/Forum.jsx");
+  // forumAvatars returns is_member, but the client rebuilds each row field by
+  // field — dropping it there meant NOBODY's badge rendered, however correct
+  // the server was.
+  assert.match(forum, /is_member: a\.is_member === true/, "the server row must carry is_member into the map");
+  // The viewer's OWN row replaces the server row (so their live profile edits
+  // show instantly), which made their badge the one badge they never saw.
+  assert.match(forum, /is_member: isActiveMember\(user\)/, "the viewer's own row must derive membership from their profile");
+  assert.match(forum, /from "@\/lib\/membership"/);
+});
+
+test("attachments size to the image, not to a fixed letterboxed frame", () => {
+  const media = read("../src/components/forum/ForumMedia.jsx");
+  // w-full + object-contain stretched every attachment to the post width and
+  // padded the rest, so portrait photos sat in a slab of empty background.
+  assert.doesNotMatch(media, /className="[^"]*w-full object-contain/, "attachments must not be letterboxed");
+  assert.match(media, /h-auto max-h-\[26rem\] w-auto max-w-full/, "image keeps its own aspect ratio, capped");
+  // The FRAME hugs the image too: leaving it full-width just moved the dead
+  // space from inside the image element to the container behind it.
+  assert.match(media, /flex w-fit max-w-full/, "the frame must size to the image");
+});
+
 test("admins can grant and end memberships, and see who is a member", () => {
   const fn = read("../supabase/functions/adminUsers/index.ts");
   assert.match(fn, /'membership_number', 'membership_started_at', 'membership_expires_at', 'membership_source'/,

@@ -28,17 +28,36 @@ export default function ForumMedia({ url, type, className = "" }) {
 
   return (
     <>
-      <div className={`mt-3 overflow-hidden border border-border bg-secondary/30 ${className}`}>
+      {/* The frame hugs the media instead of boxing it.
+          `w-full object-contain` stretched every attachment to the full post
+          width and letterboxed it inside a 384px-tall box, so a portrait or
+          square photo sat in a wide slab of empty background — the "weird
+          formatting" and dead space on image posts. Sizing to the image's own
+          aspect ratio removes both, with a cap so one huge upload can't push
+          the rest of the thread off screen. */}
+      <div className={`mt-3 flex w-fit max-w-full overflow-hidden border border-border bg-black/20 ${className}`}>
         {isVid ? (
-          <video src={url} controls playsInline preload="metadata" className="max-h-96 w-full object-contain" />
+          <video
+            src={url}
+            controls
+            playsInline
+            preload="metadata"
+            className="max-h-[26rem] w-full"
+          />
         ) : (
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
-            className="w-full cursor-zoom-in"
+            className="max-w-full cursor-zoom-in"
             aria-label="Expand image"
           >
-            <img src={url} alt="attachment" loading="lazy" className="max-h-96 w-full object-contain" />
+            <img
+              src={url}
+              alt="attachment"
+              loading="lazy"
+              decoding="async"
+              className="block h-auto max-h-[26rem] w-auto max-w-full"
+            />
           </button>
         )}
       </div>

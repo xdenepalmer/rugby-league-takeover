@@ -134,7 +134,7 @@ function parseBlock(block, blockIndex) {
     return (
       <ul key={`ul${blockIndex}`} className="list-disc pl-5 my-2 space-y-0.5">
         {lines.map((l, li) => (
-          <li key={li} className="text-sm">
+          <li key={li} className="text-[15px] leading-7 text-slate-100">
             {parseInline(l.replace(/^\s*[-*]\s/, ""))}
           </li>
         ))}
@@ -150,7 +150,7 @@ function parseBlock(block, blockIndex) {
   });
 
   return (
-    <p key={`p${blockIndex}`} className="text-sm leading-7 text-slate-200 my-1">
+    <p key={`p${blockIndex}`} className="text-[15px] leading-7 text-slate-100 my-1">
       {elements}
     </p>
   );
