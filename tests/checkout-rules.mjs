@@ -138,12 +138,11 @@ export function resolveFulfilment({ method, shipping, country, settings, shippin
   const australian = isAustralia(country);
 
   if (choice === "pickup") {
-    if (!pickupEnabled) {
-      return { ok: false, error: "Collection in Las Vegas is not currently available." };
-    }
-    // 'international' restricts collection to overseas supporters; 'everyone'
-    // lets Australian customers collect instead of paying for shipping.
-    if (audience === "international" && australian) {
+    // AusPost is domestic-only, so collection is the ONLY route for an overseas
+    // buyer — it can never be switched off for them, or they cannot order at
+    // all. The admin toggle governs Australian customers only: whether they may
+    // also collect instead of paying postage.
+    if (australian && !(pickupEnabled && audience === "everyone")) {
       return { ok: false, error: "Collection is for international orders only — please choose a shipping method." };
     }
     return { ok: true, method: "pickup", shipping: null };
@@ -158,9 +157,7 @@ export function resolveFulfilment({ method, shipping, country, settings, shippin
   if (country && !australian) {
     return {
       ok: false,
-      error: pickupEnabled
-        ? "We only ship within Australia — choose collection in Las Vegas instead."
-        : "We currently only ship within Australia.",
+      error: "We only ship within Australia — choose collection in Las Vegas instead.",
     };
   }
 

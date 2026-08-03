@@ -10,6 +10,7 @@ import {
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
+import CollectionPass from "./CollectionPass";
 
 const statusConfig = {
   pending:   { label: "Pending",   icon: Clock,        color: "text-amber-400",    bg: "bg-amber-400",    ring: "ring-amber-400/30" },
@@ -140,6 +141,10 @@ export default function OrdersTab() {
         // Shipping method badge
         const methodConf = shippingMethodConfig[order.shipping_method] || null;
 
+        // Collected in person rather than posted — the buyer needs a scannable
+        // pass instead of a tracking number.
+        const isCollection = order.fulfilment_method === "pickup" && isPaidFlow;
+
         return (
           <motion.article
             key={order.id}
@@ -209,6 +214,9 @@ export default function OrdersTab() {
                   <p className="text-sm text-foreground">{order.customer_status_note}</p>
                 </div>
               )}
+
+              {/* Collection pass — pickup orders have no tracking to show */}
+              {isCollection && <CollectionPass order={order} />}
 
               {/* Fulfillment progress stepper */}
               {isPaidFlow && (

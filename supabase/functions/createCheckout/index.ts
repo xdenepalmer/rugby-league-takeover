@@ -413,17 +413,18 @@ function resolveFulfilment(
   const pickupEnabled = settings?.pickup_enabled === true;
   const pickupAudience = trim(settings?.pickup_audience || 'international', 20).toLowerCase();
   if (choice === 'pickup') {
-    if (!pickupEnabled) return { error: 'Collection in Las Vegas is not currently available.' };
-    if (pickupAudience === 'international' && australian) {
+    // AusPost is domestic-only, so collection is the ONLY route for an overseas
+    // buyer — it can never be switched off for them, or they cannot order at
+    // all. The admin toggle governs Australian customers only: whether they may
+    // also collect instead of paying postage.
+    if (australian && !(pickupEnabled && pickupAudience === 'everyone')) {
       return { error: 'Collection is for international orders only — please choose shipping.' };
     }
     return { method: 'pickup', label: trim(settings?.pickup_label || 'Collect in Las Vegas', 120), shipping: null };
   }
   if (choice !== 'shipping') return { error: "Choose how you'd like to receive your order." };
   if (country && !australian) {
-    return { error: pickupEnabled
-      ? 'We only ship within Australia — choose collection in Las Vegas instead.'
-      : 'We currently only ship within Australia.' };
+    return { error: 'We only ship within Australia — choose collection in Las Vegas instead.' };
   }
   // Fixed mode: no AusPost quote to verify — postage is computed server-side
   // from the cart. Stripe still collects the delivery address.
