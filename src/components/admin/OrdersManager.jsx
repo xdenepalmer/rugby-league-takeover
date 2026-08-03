@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AdminConfirmSheet from "./shared/AdminConfirmSheet";
 import OrderLabelSheet from "./OrderLabelSheet";
+import CollectionRedeem from "./CollectionRedeem";
 
 const statuses = ["pending", "paid", "packing", "shipped", "completed", "cancelled", "refunded", "partially_refunded"];
 // Statuses an admin sets by hand via the dropdown. Cancel/refund states are
@@ -1247,6 +1248,11 @@ export default function OrdersManager({ orders }) {
           >
             <Download className="mr-1.5 h-3 w-3" /> Export CSV
           </Button>
+        </div>
+
+        {/* Event-day collection desk */}
+        <div className="mb-5">
+          <CollectionRedeem />
         </div>
 
         {/* Stats */}

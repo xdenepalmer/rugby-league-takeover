@@ -924,13 +924,17 @@ export default function Store() {
   const isFreeShipping = cartSubtotal >= shippingThreshold;
 
   // ── Fulfilment: PAC-priced AusPost shipping or Vegas collection ────────
-  const pickupEnabled = storeSettings.pickup_enabled === true;
-  const pickupAudience = storeSettings.pickup_audience || "international";
+  // AusPost is domestic-only, so "outside Australia" is not a preference — it
+  // decides the whole flow. Collection is therefore always available to an
+  // overseas buyer; the admin toggle only controls whether AUSTRALIAN customers
+  // may also choose to collect instead of paying postage.
+  const pickupForEveryone = storeSettings.pickup_enabled === true
+    && (storeSettings.pickup_audience || "international") === "everyone";
   const pickupLabel = storeSettings.pickup_label || "Collect in Las Vegas at the event";
   const pickupInstructions = storeSettings.pickup_instructions || "";
   const [orderCountry, setOrderCountry] = useState("AU");
   const isAuOrder = orderCountry === "AU";
-  const pickupAvailable = pickupEnabled && (pickupAudience === "everyone" || !isAuOrder);
+  const pickupAvailable = !isAuOrder || pickupForEveryone;
   const shippingAvailable = isAuOrder;
   // Fixed (flat-rate) mode vs live AusPost quotes. In fixed mode postage is
   // deterministic, so the storefront skips the postcode calculator and shows
@@ -1555,7 +1559,7 @@ export default function Store() {
 
                   {/* AusPost ships domestically; optional Vegas collection is
                       controlled in Site Settings for the configured audience. */}
-                  {pickupEnabled && (
+                  {cartNeedsShipping && (
                     <div className="mb-4 border border-border/40 bg-background/35 p-3 space-y-3">
                       <label htmlFor="order-country" className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
                         <MapPin className="h-3 w-3 text-primary" /> Where are you ordering from?

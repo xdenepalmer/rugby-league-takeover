@@ -166,9 +166,13 @@ test("an order can never check out without a fulfilment choice", () => {
 test("pickup obeys the admin toggle and its audience", () => {
   const rate = { code: "X", name: "Parcel", postcode: "4000", price_aud: 10 };
 
-  // feature off → nobody can collect
+  // Collection can never be switched off for an overseas buyer: AusPost is
+  // domestic-only, so it is their ONLY route. Turning the toggle off with a US
+  // customer in the cart used to leave them unable to order at all.
   const off = { pickup_enabled: false, pickup_audience: "everyone" };
-  assert.equal(resolveFulfilment({ method: "pickup", country: "US", settings: off }).ok, false);
+  assert.equal(resolveFulfilment({ method: "pickup", country: "US", settings: off }).ok, true);
+  // ...but it still gates Australians, who have shipping available.
+  assert.equal(resolveFulfilment({ method: "pickup", country: "AU", settings: off }).ok, false);
 
   // international-only → overseas yes, Australians no
   const intl = { pickup_enabled: true, pickup_audience: "international" };
