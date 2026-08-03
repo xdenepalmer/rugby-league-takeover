@@ -2,6 +2,11 @@
 // sole write path and re-checks the deadline server-side. For admin-managed
 // matchups the kickoff is read from the DB; for external-API fixtures we fall
 // back to the client-supplied kickoff.
+//
+// Like every real tipping comp (ESPN footytips, NRL Tipping), a tip is
+// EDITABLE until kickoff: a repeat submission from the same user (or IP for
+// anonymous tippers) updates the existing entry instead of bouncing with 409.
+// The lock is the kickoff, not the first submission.
 import { json, preflight, serviceClient, getCaller, trimToLength, resolveClientIp, findActiveBan } from './shared.ts';
 
 const toScore = (value: unknown) => {
@@ -56,17 +61,38 @@ Deno.serve(async (req) => {
       }
     }
 
-    // One tip per user (or IP for anonymous) per game.
+    // One entry per user (or IP for anonymous) per game — a repeat submission
+    // EDITS that entry while the game is still open.
     const { data: existing } = await svc
       .from('tipping_entries')
-      .select('user_id, ip_address')
+      .select('id, user_id, ip_address, kickoff, settled_at')
       .eq('game_id', gameId)
       .limit(500);
-    const alreadyTipped = (existing || []).some((e) =>
+    const mine = (existing || []).find((e) =>
       (user?.id && String(e.user_id || '') === String(user.id)) ||
       (!user?.id && ip && String(e.ip_address || '') === ip));
-    if (alreadyTipped) {
-      return json({ error: 'You have already tipped this game.', code: 'duplicate' }, 409);
+    if (mine) {
+      // Never rewrite a settled entry (results are already paid out), and for
+      // API fixtures with no DB row the STORED kickoff is authoritative — a
+      // client can't post a fresh future kickoff to edit after the game starts.
+      const storedKickoffMs = mine.kickoff ? new Date(mine.kickoff).getTime() : NaN;
+      const storedLocked = Number.isFinite(storedKickoffMs) && storedKickoffMs <= Date.now();
+      if (mine.settled_at || storedLocked) {
+        return json({ error: 'Tips are locked — this game has kicked off.', code: 'locked' }, 403);
+      }
+      const { error: updateError } = await svc
+        .from('tipping_entries')
+        .update({
+          selected_team: selectedTeam,
+          predicted_home_score: toScore(input?.predicted_home_score),
+          predicted_away_score: toScore(input?.predicted_away_score),
+          margin,
+          tipper_name: trimToLength(user?.full_name || input?.tipper_name, 80) || 'Vegas Fan',
+        })
+        .eq('id', mine.id)
+        .is('settled_at', null); // belt-and-braces against a settle racing this edit
+      if (updateError) throw updateError;
+      return json({ ok: true, id: mine.id, updated: true });
     }
 
     const { data: entry, error } = await svc

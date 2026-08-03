@@ -57,12 +57,17 @@ test("finished matchups trigger server settlement", () => {
 });
 
 test("the ladder ranks on settled points and degrades to participation", () => {
-  const sp = read("src/components/forum/ScorePredictor.jsx");
-  assert.ok(sp.includes("entry.points"), "rival points must come from settled entries");
-  assert.ok(!/points:\s*r\.tips\s*\*\s*2/.test(sp), "must not fabricate points from tip count");
+  // The ladder now lives in its own component (TipLadder) over a pure
+  // aggregation module (ladder.js) with round/season scopes.
+  const ladder = read("src/components/forum/tipping/TipLadder.jsx");
+  const rows = read("src/components/forum/tipping/ladder.js");
+  assert.ok(rows.includes("entry.points"), "rival points must come from settled entries");
+  assert.ok(!/points:\s*r\.tips\s*\*\s*2/.test(rows + ladder), "must not fabricate points from tip count");
   // Before any fixture settles every row is on zero, so the bars fall back to
   // tips rather than all collapsing to the minimum width.
-  assert.ok(sp.includes("anyPoints"), "must handle the pre-settlement case");
+  assert.ok(ladder.includes("anyPoints"), "must handle the pre-settlement case");
+  // Display names collide; accounts don't.
+  assert.ok(rows.includes("entry.user_id || `name:"), "rows must key on user_id when present");
 });
 
 // ── Daily missions ──────────────────────────────────────────────────────

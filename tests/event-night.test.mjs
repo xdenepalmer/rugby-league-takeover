@@ -37,8 +37,13 @@ test("tipping locks at kickoff (no tips after a game starts)", () => {
   const helpers = read("../src/components/forum/tipping/tipHelpers.js");
   assert.match(helpers, /if \(diff < 0\) return \{ label: "Locked"/, "getStatus must return Locked past kickoff");
   const predictor = read("../src/components/forum/ScorePredictor.jsx");
-  assert.match(predictor, /timeLocked\s*=\s*status\.label === "Locked"/, "UI must treat Locked as locked");
-  assert.match(predictor, /canInteract\s*=\s*!timeLocked/, "tip controls must be disabled once locked");
+  // Since tips became editable-until-kickoff, the client lock is isTippable
+  // (kickoff/live/final aware) — the picker only renders for an open game and
+  // handleTip re-checks before accepting anything.
+  assert.match(helpers, /export function isTippable\(game/, "isTippable must be the single client lock");
+  assert.match(predictor, /const open = isTippable\(game\)/, "the card must derive openness from isTippable");
+  assert.match(predictor, /const showPicker = open && \(!alreadyTipped \|\| editing\)/, "tip controls only render while the game is open");
+  assert.match(predictor, /if \(!isTippable\(game\)\) return;/, "handleTip must reject a locked game");
 
   // Behavioural replica of the getStatus thresholds.
   const label = (kickoff, apiStatus) => {

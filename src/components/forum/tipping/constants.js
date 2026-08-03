@@ -4,6 +4,7 @@ export const PROFILE_KEY = "rlt_footy_tipster_profile";
 export const POINTS_KEY = "rlt_footy_points";
 export const TIP_STREAK_KEY = "rlt_tip_streak";
 export const MARGIN_PRESETS = [1, 6, 12, 18, 24, 30, 40];
+export const DEFAULT_MARGIN = 8;
 
 // ── Scoring ─────────────────────────────────────────────────────────
 export const PTS_CORRECT = 3;
