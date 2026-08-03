@@ -138,6 +138,37 @@ Deno.serve(async (req) => {
       })
       .select('id')
       .single();
+    // The one-tip-per-person rule is now held by partial unique indexes
+    // (migration 0031) rather than by the read-then-insert above, which was a
+    // check-then-act: two concurrent requests both saw "no existing tip", both
+    // inserted, and settleTips pays per ROW — so a tipster could back both
+    // teams on one game and be guaranteed a payout. Losing the race is not an
+    // error for the user: their tip already exists, so apply it as an edit and
+    // the two requests converge.
+    if (error?.code === '23505') {
+      let raced = svc
+        .from('tipping_entries')
+        .select('id, settled_at')
+        .eq('game_id', gameId);
+      raced = user?.id ? raced.eq('user_id', user.id) : raced.eq('ip_address', ip).eq('user_id', '');
+      const { data: existingRow } = await raced.limit(1);
+      const row = (existingRow || [])[0];
+      // Unique violation but the row is unreadable: a genuine anomaly, not the
+      // by-design repeat-is-an-edit path. 409 so the client retries rather than
+      // discarding the tip.
+      if (!row) return json({ error: 'That tip collided — please try again.', code: 'conflict' }, 409);
+      await svc
+        .from('tipping_entries')
+        .update({
+          selected_team: selectedTeam,
+          predicted_home_score: toScore(input?.predicted_home_score),
+          predicted_away_score: toScore(input?.predicted_away_score),
+          margin,
+        })
+        .eq('id', row.id)
+        .is('settled_at', null);
+      return json({ ok: true, id: row.id, updated: true });
+    }
     if (error) throw error;
 
     return json({ ok: true, id: entry.id });
