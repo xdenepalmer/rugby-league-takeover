@@ -44,9 +44,9 @@ export default function HeroStats({ totalPoints, correct, checked, streak, tippe
           { label: "Tipped", value: `${tipped}`, sub: `of ${total}` },
         ].map((stat) => (
           <div key={stat.label} className="bg-black/40 p-2 text-center">
-            <p className="text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500">{stat.label}</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">{stat.label}</p>
             <p className="mt-0.5 truncate text-[11px] font-bold text-foreground">{stat.value}</p>
-            <p className="truncate text-[7px] text-slate-500">{stat.sub}</p>
+            <p className="truncate text-[9px] text-slate-400">{stat.sub}</p>
           </div>
         ))}
       </div>
@@ -58,7 +58,7 @@ export default function HeroStats({ totalPoints, correct, checked, streak, tippe
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="shrink-0 text-[8px] text-slate-500">
+          <span className="shrink-0 text-[9px] text-slate-400">
             {next.at - score} pts to {next.label}
           </span>
         </div>

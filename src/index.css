@@ -85,7 +85,10 @@
   body {
     @apply bg-background text-foreground font-sans;
     overscroll-behavior-y: contain;
-    -webkit-font-smoothing: antialiased;
+    /* NOT `antialiased`: grayscale AA thins light text on a near-black
+       background, which is most of this app's text and a large part of why
+       small type read as blurry. Subpixel rendering keeps the stroke weight. */
+    -webkit-font-smoothing: auto;
     text-rendering: optimizeLegibility;
     touch-action: manipulation;
   }
@@ -882,4 +885,38 @@
     color: #000 !important;
     background: #fff !important;
   }
+}
+
+/* ─── Desktop legibility floor ──────────────────────────────────────────────
+ * Every size in this app was tuned on the 390px phone, which is the primary
+ * surface — but the same literal pixel values then render on a 1900px desktop,
+ * where 176 separate text elements land at 11px or below (64 of them at 10px,
+ * 11 at 7px). That is what reads as "small and blurry" on a monitor.
+ *
+ * Scaling here rather than editing ~950 `text-[Npx]` literals keeps the phone
+ * layouts exactly as they were tuned and changes only the wide-viewport
+ * rendering. Font-size only: line-height is left to inherit so line boxes grow
+ * proportionally instead of being pinned and clipping descenders.
+ *
+ * These rules sit outside @layer so they win over Tailwind's utilities at
+ * equal specificity. Sizes stay deliberately modest — the desktop sidebar is
+ * NARROWER than a phone, so this text still has to fit a ~300px column.
+ */
+@media (min-width: 768px) {
+  .text-\[7px\]  { font-size: 9.5px; }
+  .text-\[8px\]  { font-size: 10.5px; }
+  .text-\[9px\]  { font-size: 11px; }
+  .text-\[10px\] { font-size: 11.5px; }
+  .text-\[11px\] { font-size: 12.5px; }
+  .text-2xs      { font-size: 12px; }
+}
+
+/* Wider still: no excuse for micro-type on a full-size monitor. */
+@media (min-width: 1280px) {
+  .text-\[7px\]  { font-size: 10px; }
+  .text-\[8px\]  { font-size: 11px; }
+  .text-\[9px\]  { font-size: 11.5px; }
+  .text-\[10px\] { font-size: 12px; }
+  .text-\[11px\] { font-size: 13px; }
+  .text-2xs      { font-size: 12.5px; }
 }
