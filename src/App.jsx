@@ -31,6 +31,8 @@ const Gallery = lazyWithRetry(() => import("./pages/Gallery"), "gallery");
 const Terms = lazyWithRetry(() => import("./pages/Terms"), "terms");
 const Privacy = lazyWithRetry(() => import("./pages/Privacy"), "privacy");
 const DeleteAccount = lazyWithRetry(() => import("./pages/DeleteAccount"), "delete-account");
+// Standalone (no site chrome): staff open this from a phone camera scan at the bar.
+const VerifyMember = lazyWithRetry(() => import("./pages/VerifyMember"), "verify-member");
 const Login = lazyWithRetry(() => import("./pages/Login"), "login");
 const Register = lazyWithRetry(() => import("./pages/Register"), "register");
 const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"), "forgot-password");
@@ -137,6 +139,7 @@ const AuthenticatedApp = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-member" element={<VerifyMember />} />
         <Route path="/admin/*" element={<RequireAdmin><Admin /></RequireAdmin>} />
         <Route path="/account/*" element={<RequireAuth><Account /></RequireAuth>} />
         <Route path="*" element={<PageNotFound />} />

@@ -378,7 +378,7 @@ const ForumPostCard = memo(function ForumPostCard({
       <div className="relative p-4 sm:p-5 md:p-6">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
+          <UserProfileHoverCard name={post.author_name} meta={resolveMeta ? resolveMeta(post.user_id) : null} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
             <UserAvatar name={post.author_name} showStatus={index < 3} src={resolveAvatar ? resolveAvatar(post.user_id, post.author_avatar) : post.author_avatar} />
           </UserProfileHoverCard>
           <div className="min-w-0 flex-1">

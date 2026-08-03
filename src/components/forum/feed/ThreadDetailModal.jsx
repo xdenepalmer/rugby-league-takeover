@@ -97,7 +97,7 @@ const ThreadDetailModal = memo(function ThreadDetailModal({ post, onClose, isAut
           <div className="p-4 sm:p-6 md:p-8">
             {/* Author info */}
             <div className="flex items-start gap-3 mb-6">
-              <UserProfileHoverCard name={post.author_name} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
+              <UserProfileHoverCard name={post.author_name} meta={resolveMeta ? resolveMeta(post.user_id) : null} authorPostCounts={authorPostCounts} authorReplyCounts={authorReplyCounts}>
                 <UserAvatar name={post.author_name} size="lg" src={resolveAvatar ? resolveAvatar(post.user_id, post.author_avatar) : post.author_avatar} />
               </UserProfileHoverCard>
               <div>

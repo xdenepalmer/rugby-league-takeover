@@ -6,6 +6,7 @@ import MediaAttach from "./MediaAttach";
 import ForumMedia from "./ForumMedia";
 import { MarkdownBody } from "@/lib/markdown";
 import TeamCrest from "@/components/public/TeamCrest";
+import MemberBadge from "@/components/forum/feed/MemberBadge";
 
 const HUES = [15, 45, 160, 220, 280, 330, 190, 30, 120, 350];
 // Compact avatar for a reply: uploaded photo when available, else a colour monogram.
@@ -76,6 +77,7 @@ const ReplyTree = memo(function ReplyTree({
                   if (!meta) return null;
                   return (
                     <>
+                      <MemberBadge meta={meta} size="xs" />
                       {meta.badge && (
                         <span className="inline-flex items-center gap-1 border border-pink-500/30 bg-pink-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-pink-300" title={`Slot badge: ${meta.badge.label}`}>
                           {meta.badge.emoji} {meta.badge.label}

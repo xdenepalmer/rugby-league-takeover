@@ -19,7 +19,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true, flat_shipping_aud: null };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true, flat_shipping_aud: null, membership_months: 0 };
 
 // The largest packaging an item needs. Checkout offers the cart's biggest item's
 // size and nothing above it, so a customer can't put a cap in a large box.
@@ -41,6 +41,29 @@ const shippingRequiredField = (draft, setDraft) => (
       className="h-4 w-4 accent-primary"
     />
     This item ships physically
+  </label>
+);
+
+// Membership term. This is what makes a SKU grant membership at all — the
+// payment webhook reads it off the product row, so membership is data an admin
+// controls rather than a product id hardcoded in the backend.
+const membershipMonthsField = (draft, setDraft) => (
+  <label className="block">
+    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+      Membership granted (months)
+    </span>
+    <input
+      type="number"
+      min="0"
+      max="120"
+      value={draft.membership_months ?? 0}
+      onChange={(e) => setDraft({ ...draft, membership_months: Math.max(0, Math.min(120, Math.floor(Number(e.target.value) || 0))) })}
+      className="mt-1 h-11 w-full rounded-none border border-border/40 bg-secondary/35 px-3 text-sm text-foreground focus-visible:border-primary/65 focus-visible:outline-none"
+    />
+    <span className="mt-1 block text-[10px] text-muted-foreground">
+      0 for ordinary merch. 12 makes this the annual RLT membership — buying it grants a
+      year from purchase (renewals extend the existing term).
+    </span>
   </label>
 );
 
@@ -204,6 +227,7 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
             </div>
             <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
             <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
+            <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
             <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
             <p className="text-[8px] text-muted-foreground/40">Weight/dimensions are used for live AusPost rates (calculated mode). The flat postage override applies only in fixed mode — set it in Site Settings → Shipping.</p>
           </div>
@@ -425,6 +449,8 @@ export default function ProductsManager({ products, loading }) {
                   </div>
                   <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
                   <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
+                  <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
+            <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
                   <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
                   <p className="text-[8px] text-muted-foreground/40">Weight/dimensions are used for live AusPost rates (calculated mode). The flat postage override applies only in fixed mode — set it in Site Settings → Shipping.</p>
                 </div>

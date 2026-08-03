@@ -4,9 +4,10 @@
 import React, { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import UserAvatar from "./UserAvatar";
+import MemberBadge from "./MemberBadge";
 import { getAuthorBadge, BADGE_ICON_MAP } from "./forumBadges";
 
-export default function UserProfileHoverCard({ name, authorPostCounts, authorReplyCounts, children }) {
+export default function UserProfileHoverCard({ name, meta, authorPostCounts, authorReplyCounts, children }) {
   const [show, setShow] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const timerRef = useRef(null);
@@ -58,6 +59,7 @@ export default function UserProfileHoverCard({ name, authorPostCounts, authorRep
                 <UserAvatar name={name} size="xl" />
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-base font-bold text-foreground truncate uppercase tracking-wide">{name || "Anonymous"}</p>
+                  <MemberBadge meta={meta} size="xs" />
                   {badge && (
                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${badge.bg} ${badge.border} ${badge.text} border mt-1`}>
                       {BADGE_ICON_MAP[badge.icon] && React.createElement(BADGE_ICON_MAP[badge.icon], { className: "h-2.5 w-2.5" })} {badge.label}

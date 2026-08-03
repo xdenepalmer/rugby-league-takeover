@@ -36,10 +36,14 @@ function getAvatarGradient(id) {
 
 
 /* ─── Single user card ────────────────────────────────────── */
-function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
+function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser, grantMembership, revokeMembership }) {
   const initial = (u.full_name || u.email || "?").charAt(0).toUpperCase();
   const gradient = getAvatarGradient(u.id);
   const role = u.role || "user";
+  // Membership is judged against the clock on every render — there is no
+  // expiry sweep, so a stored "expired" flag would be a lie in waiting.
+  const memberActive = !!u.membership_expires_at && new Date(u.membership_expires_at).getTime() > Date.now();
+  const memberLapsed = !!u.membership_expires_at && !memberActive;
 
   return (
     <motion.div
@@ -116,6 +120,22 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
                 </span>
               )}
 
+              {/* Membership */}
+              {(memberActive || memberLapsed) && (
+                <span
+                  className={`inline-flex items-center gap-1 border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
+                    memberActive
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-border/40 bg-muted/20 text-muted-foreground"
+                  }`}
+                  title={`${u.membership_number || "No number"} · ${memberActive ? "expires" : "expired"} ${format(new Date(u.membership_expires_at), "dd MMM yyyy")}${u.membership_source ? ` · ${u.membership_source}` : ""}`}
+                >
+                  <ShieldCheck className="h-2.5 w-2.5" />
+                  {memberActive ? "Member" : "Lapsed"}
+                  {u.membership_number ? ` · ${u.membership_number}` : ""}
+                </span>
+              )}
+
               {/* Join date */}
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono text-muted-foreground bg-muted/20 border border-border/40">
                 <Calendar className="h-2.5 w-2.5" />
@@ -137,6 +157,29 @@ function UserCard({ u, isSelf, index, updateUser, banUser, unbanUser }) {
               <SelectItem value="user">User</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button
+            variant="outline"
+            size="mobile"
+            className="w-full rounded-none border-primary/30 text-xs text-primary hover:bg-primary/10 sm:w-auto"
+            disabled={grantMembership.isPending}
+            onClick={() => grantMembership.mutate({ id: u.id, months: 12 })}
+            title="Grant or extend 12 months. Extends from the current expiry if they're still active."
+          >
+            <ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> {memberActive ? "+1 year" : "Make member"}
+          </Button>
+          {memberActive && (
+            <Button
+              variant="outline"
+              size="mobile"
+              className="w-full rounded-none text-xs text-muted-foreground sm:w-auto"
+              disabled={revokeMembership.isPending}
+              onClick={() => revokeMembership.mutate({ id: u.id })}
+              title="End this membership immediately (e.g. after a refund)."
+            >
+              End membership
+            </Button>
+          )}
 
           <div className="hidden flex-1 sm:block" />
 
@@ -211,6 +254,31 @@ export default function UsersManager() {
   const updateUser = useMutation({
     mutationFn: ({ id, data }) => base44.functions.invoke("adminUsers", { action: "update", userId: id, data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
+  const grantMembership = useMutation({
+    mutationFn: ({ id, months }) =>
+      base44.functions.invoke("adminUsers", { action: "grantMembership", userId: id, data: { months } }),
+    onSuccess: ({ data }) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      const expires = data?.membership?.expires_at;
+      toast({
+        title: data?.membership?.renewed ? "Membership extended" : "Membership granted",
+        description: expires
+          ? `${data.membership.membership_number} · valid until ${format(new Date(expires), "dd MMM yyyy")}`
+          : undefined,
+      });
+    },
+    onError: (err) => toast({ title: "Couldn't grant membership", description: err?.message, variant: "destructive" }),
+  });
+
+  const revokeMembership = useMutation({
+    mutationFn: ({ id }) => base44.functions.invoke("adminUsers", { action: "revokeMembership", userId: id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({ title: "Membership ended" });
+    },
+    onError: (err) => toast({ title: "Couldn't end membership", description: err?.message, variant: "destructive" }),
   });
 
   const banUser = useMutation({
@@ -417,6 +485,8 @@ export default function UsersManager() {
                 updateUser={updateUser}
                 banUser={banUser}
                 unbanUser={unbanUser}
+                grantMembership={grantMembership}
+                revokeMembership={revokeMembership}
               />
             ))}
           </AnimatePresence>

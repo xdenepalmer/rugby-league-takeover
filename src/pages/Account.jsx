@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
 const FanHubTab = lazy(() => import("@/components/account/FanHubTab"));
+const MembershipTab = lazy(() => import("@/components/account/MembershipTab"));
 const AchievementsTab = lazy(() => import("@/components/account/AchievementsTab"));
 const LeaderboardTab = lazy(() => import("@/components/account/LeaderboardTab"));
 const ProfileTab = lazy(() => import("@/components/account/ProfileTab"));
@@ -92,7 +93,7 @@ function StatCard({ label, value, icon: Icon, color }) {
   );
 }
 
-const VALID_TABS = ["fanhub", "achievements", "leaderboard", "profile", "orders", "posts", "interest", "security"];
+const VALID_TABS = ["fanhub", "membership", "achievements", "leaderboard", "profile", "orders", "posts", "interest", "security"];
 
 export default function Account() {
   const { user, isAdmin } = useAuth();
@@ -133,6 +134,7 @@ export default function Account() {
   // Tab definitions
   const tabsList = [
     { value: "fanhub", label: "Fan Hub", icon: Sparkles, count: null },
+    { value: "membership", label: "Membership", icon: ShieldCheck, count: null },
     { value: "achievements", label: "Achievements", icon: Trophy, count: null },
     { value: "leaderboard", label: "Leaderboard", icon: Trophy, count: null },
     { value: "profile", label: "Profile", icon: User, count: null },
@@ -426,6 +428,7 @@ export default function Account() {
                 >
                   <Suspense fallback={<AccountTabFallback />}>
                     <TabsContent value="fanhub" className="m-0 focus-visible:outline-none"><FanHubTab /></TabsContent>
+                    <TabsContent value="membership" className="m-0 focus-visible:outline-none"><MembershipTab /></TabsContent>
                     <TabsContent value="achievements" className="m-0 focus-visible:outline-none"><AchievementsTab /></TabsContent>
                     <TabsContent value="leaderboard" className="m-0 focus-visible:outline-none"><LeaderboardTab /></TabsContent>
                     <TabsContent value="profile" className="m-0 focus-visible:outline-none"><ProfileTab /></TabsContent>

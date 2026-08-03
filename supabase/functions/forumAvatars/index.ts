@@ -25,6 +25,12 @@ Deno.serve(async (req) => {
           : '';
         const team = u.show_team_on_forum ? clean(u.favourite_team) : '';
         const badges = Array.isArray(u.badges) ? u.badges.filter(Boolean) : [];
+        // Membership is a BOOLEAN here and nothing more: whether someone pays
+        // is public (they wear the badge), but when they joined, when they
+        // lapse and their member number are not. Evaluated against now() on
+        // every call — there is no expiry sweep, so a lapsed member loses the
+        // badge the moment their term ends.
+        const isMember = !!u.membership_expires_at && new Date(u.membership_expires_at).getTime() > Date.now();
         return {
           id: u.id,
           avatar_url: clean(u.avatar_url),
@@ -32,13 +38,16 @@ Deno.serve(async (req) => {
           location,
           team,
           badges,
+          is_member: isMember,
           casino_rank: clean(u.casino_rank) || 'Rookie Punter',
           casino_xp: num(u.casino_xp),
           casino_chips: num(u.casino_chips),
           casino_streak: num(u.casino_streak),
         };
       })
-      .filter((row) => row.avatar_url || row.location || row.team || row.badges.length || row.casino_xp > 0);
+      // A member with an otherwise-empty profile must still reach the feed, or
+      // they'd pay for a badge that never renders.
+      .filter((row) => row.avatar_url || row.location || row.team || row.badges.length || row.casino_xp > 0 || row.is_member);
 
     return json({ avatars });
   } catch (error) {
