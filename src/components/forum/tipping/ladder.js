@@ -1,26 +1,39 @@
-// Aggregate settled server entries into ladder rows. Rows are keyed by
-// user_id when we have one — display names collide, accounts don't.
+// Ladder aggregation.
+//
+// Rows come from tipping_ladder_view (migration 0029), which groups in the
+// DATABASE by real user_id and per round. That matters twice over:
+//   * tipping_entries_view masks user_id to null for everyone but the row's
+//     owner, so a client-side aggregate could only key rivals by display
+//     name — two accounts sharing a name merged into one row.
+//   * the client's raw-entry fetch is capped, so a client-side season ladder
+//     silently covered only the last couple of rounds.
+// Guests (no account) are not on the ladder: the server can't tell one
+// anonymous tipper from another without exposing IPs, and a shared "Vegas
+// Fan" row that accrues everyone's points is worse than saying so plainly.
+//
 // Pure module (no JSX) so the behaviour is unit-testable under node:test.
-export function buildLadderRows(entries, { myUserId, myName, roundLabel } = {}) {
+export function buildLadderRows(ladderRows, { roundLabel } = {}) {
   const totals = new Map();
-  const seen = new Set();
-  (entries || []).forEach((entry) => {
-    if (roundLabel && entry.game_label !== roundLabel) return;
-    const name = entry.tipper_name || "Mystery Fan";
-    const key = entry.user_id || `name:${name}`;
-    const dedupe = `${entry.game_id}|${key}`;
-    if (seen.has(dedupe)) return;
-    seen.add(dedupe);
-    const row = totals.get(key) || {
-      key, name, tips: 0, points: 0, wins: 0, settled: 0,
-      me: (myUserId && entry.user_id === myUserId) || (!myUserId && myName && name === myName),
+  (ladderRows || []).forEach((row) => {
+    if (roundLabel && row.game_label !== roundLabel) return;
+    const key = row.tipster_key;
+    if (!key) return;
+    const acc = totals.get(key) || {
+      key,
+      name: row.tipper_name || "Mystery Fan",
+      tips: 0,
+      points: 0,
+      wins: 0,
+      settled: 0,
+      me: false,
     };
-    row.name = entry.tipper_name || row.name; // latest name wins
-    row.tips += 1;
-    row.points += Number(entry.points) || 0;
-    if (entry.settled_at) row.settled += 1;
-    if (entry.result === "win" || entry.result === "perfect") row.wins += 1;
-    totals.set(key, row);
+    acc.name = row.tipper_name || acc.name;
+    acc.tips += Number(row.tips) || 0;
+    acc.points += Number(row.points) || 0;
+    acc.wins += Number(row.wins) || 0;
+    acc.settled += Number(row.settled) || 0;
+    acc.me = acc.me || row.is_me === true;
+    totals.set(key, acc);
   });
   return Array.from(totals.values())
     .sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.tips - a.tips) || a.name.localeCompare(b.name))

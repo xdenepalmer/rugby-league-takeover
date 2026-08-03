@@ -52,6 +52,11 @@ const READ_TABLES = {
   ForumPost: 'forum_posts_view',
   Testimonial: 'testimonials_view',
   TippingEntry: 'tipping_entries_view',
+  // Read-only aggregate: the tipster ladder, summed per account per round in
+  // the database (migration 0029). The raw entry feed is capped and masks
+  // other users' ids, so a client-side season ladder was both truncated and
+  // unable to tell two same-named accounts apart.
+  TipLadderRow: 'tipping_ladder_view',
   // Public visitors (anon) can't read the base site_settings table — RLS there
   // is admin-only — so reads must go through the sanitising view, or the whole
   // site falls back to code defaults for logged-out users (wrong logo, ticker,
@@ -82,6 +87,12 @@ function throwIf(error) {
 function makeEntity(name) {
   const readTable = READ_TABLES[name];
   const writeTable = WRITE_TABLES[name];
+  // Some entities are read-only aggregates (a view with no base table of the
+  // same shape). Fail loudly rather than issuing a write against `undefined`.
+  const write = () => {
+    if (!writeTable) throw new Error(`${name} is read-only`);
+    return writeTable;
+  };
   return {
     async list(sort, limit) {
       const { column, ascending } = orderFrom(sort);
@@ -115,7 +126,7 @@ function makeEntity(name) {
     },
     async create(payload) {
       const { data, error } = await supabase
-        .from(writeTable)
+        .from(write())
         .insert(payload)
         .select()
         .single();
@@ -124,21 +135,21 @@ function makeEntity(name) {
     },
     async update(id, payload) {
       const { error } = await supabase
-        .from(writeTable)
+        .from(write())
         .update(payload)
         .eq('id', id);
       throwIf(error);
       return { id, ...payload };
     },
     async delete(id) {
-      const { error } = await supabase.from(writeTable).delete().eq('id', id);
+      const { error } = await supabase.from(write()).delete().eq('id', id);
       throwIf(error);
       return { id };
     },
   };
 }
 
-const entities = Object.fromEntries(Object.keys(WRITE_TABLES).map((n) => [n, makeEntity(n)]));
+const entities = Object.fromEntries(Object.keys(READ_TABLES).map((n) => [n, makeEntity(n)]));
 
 // ---------------------------------------------------------------------------
 // Auth — wraps Supabase Auth; me() merges the auth session with the app-level

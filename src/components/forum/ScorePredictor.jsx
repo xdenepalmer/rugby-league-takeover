@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Trophy, Users, Share2, TrendingUp, Calendar, Shield,
   Target, CheckCircle2, Zap, Crown, Lock, Pencil,
@@ -20,9 +20,10 @@ import {
   isValidTip, sanitizeTips, shortName, deriveScores, getStatus, checkTipResult,
   isFinishedGame, hasKickedOff, isTippable, formatKickoffLocal,
   buildRounds, defaultRoundIndex, computeStreaks, communityFavourite, shortRoundLabel,
+  mergeFixtures, remapTipIds,
 } from "@/components/forum/tipping/tipHelpers";
 import { playLockSound, playSelectSound } from "@/components/forum/tipping/audio";
-import { useCountdown } from "@/components/forum/tipping/hooks";
+import { useCountdown, useSlowClock } from "@/components/forum/tipping/hooks";
 import { successImpact, selectionChanged, warningImpact } from "@/lib/native/haptics";
 import { enqueueTip, removeTipFromQueue, prunedTipQueue } from "@/lib/tip-sync-queue";
 import { toast } from "@/components/ui/use-toast";
@@ -36,7 +37,7 @@ import TipLadder from "@/components/forum/tipping/TipLadder";
 // ── Locked Tip Receipt ──────────────────────────────────────────────
 // Editable until kickoff — the lock is the siren, not the first submission,
 // exactly like the big tipping platforms.
-function LockedTipReceipt({ game, tip, canEdit, onEdit, onShare }) {
+function LockedTipReceipt({ game, tip, canEdit, onEdit, onShare, editRef }) {
   const isHome = tip.selected_team === game.home_team;
   const home = tip.predicted_home_score ?? deriveScores(game, tip.selected_team, tip.margin).home;
   const away = tip.predicted_away_score ?? deriveScores(game, tip.selected_team, tip.margin).away;
@@ -77,6 +78,7 @@ function LockedTipReceipt({ game, tip, canEdit, onEdit, onShare }) {
         {canEdit && (
           <button
             type="button"
+            ref={editRef}
             onClick={onEdit}
             className="flex min-h-8 flex-1 items-center justify-center gap-1 border border-border/40 bg-black/30 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-300 transition-colors hover:border-primary/40 hover:text-primary"
           >
@@ -134,8 +136,10 @@ function CommunityPulse({ game, entries, tip }) {
   const gameEntries = entries.filter((e) => e.game_id === game.id);
   const home = gameEntries.filter((e) => e.selected_team === game.home_team).length;
   const away = gameEntries.filter((e) => e.selected_team === game.away_team).length;
-  const total = Math.max(home + away, 1);
-  const homePct = Math.round((home / total) * 100) || 50;
+  const total = home + away;
+  // `|| 50` treated a legitimate 0 as "no data": a unanimous 0/100 split
+  // rendered as a 50/50 bar, telling fans the room was divided when it wasn't.
+  const homePct = total === 0 ? 50 : Math.round((home / total) * 100);
   const awayPct = 100 - homePct;
   const userPicked = tip?.selected_team;
 
@@ -147,42 +151,92 @@ function CommunityPulse({ game, entries, tip }) {
         </span>
         <span className="text-slate-500">{gameEntries.length || "—"} tips</span>
       </div>
+      {/* Each segment clips its own contents: a 0%-wide flex item still paints
+          its crest, so a unanimous split showed the losing team's badge
+          floating on the winner's bar. Labels only appear once the segment is
+          wide enough to hold them. */}
       <div className="relative flex h-7 overflow-hidden border border-border/20 bg-black/40">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${homePct}%` }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className={`flex items-center justify-start gap-1 bg-gradient-to-r from-primary/50 to-primary/15 pl-1.5 ${
+          className={`flex items-center justify-start gap-1 overflow-hidden bg-gradient-to-r from-primary/50 to-primary/15 ${homePct > 0 ? "pl-1.5" : ""} ${
             userPicked === game.home_team ? "ring-1 ring-inset ring-primary/40" : ""
           }`}
         >
-          <TeamCrest name={game.home_team} className="h-4 w-4 shrink-0 text-[9px]" />
-          <span className="truncate text-[10px] font-bold text-white/90">{homePct}%</span>
+          {homePct >= 20 && <TeamCrest name={game.home_team} className="h-4 w-4 shrink-0 text-[9px]" />}
+          {homePct >= 10 && <span className="truncate text-[10px] font-bold text-white/90">{homePct}%</span>}
         </motion.div>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${awayPct}%` }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-          className={`flex items-center justify-end gap-1 bg-gradient-to-l from-accent/50 to-accent/15 pr-1.5 ${
+          className={`flex items-center justify-end gap-1 overflow-hidden bg-gradient-to-l from-accent/50 to-accent/15 ${awayPct > 0 ? "pr-1.5" : ""} ${
             userPicked === game.away_team ? "ring-1 ring-inset ring-accent/40" : ""
           }`}
         >
-          <span className="truncate text-[10px] font-bold text-white/90">{awayPct}%</span>
-          <TeamCrest name={game.away_team} className="h-4 w-4 shrink-0 text-[9px]" />
+          {awayPct >= 10 && <span className="truncate text-[10px] font-bold text-white/90">{awayPct}%</span>}
+          {awayPct >= 20 && <TeamCrest name={game.away_team} className="h-4 w-4 shrink-0 text-[9px]" />}
         </motion.div>
       </div>
+      {/* Below 10% the number has nowhere to live — state the split in words
+          so a lopsided game still reads accurately. */}
+      {total > 0 && (homePct < 10 || awayPct < 10) && (
+        <p className="mt-1 text-[9px] text-slate-500">
+          {homePct > awayPct ? shortName(game.home_team) : shortName(game.away_team)} backed by{" "}
+          {Math.max(homePct, awayPct)}% of {total} tip{total !== 1 ? "s" : ""}
+        </p>
+      )}
     </div>
   );
 }
 
+function TeamPickButton({ team, gameId, isHome, selected, disabled, onPick }) {
+  return (
+    <motion.button
+      type="button"
+      disabled={disabled}
+      whileTap={disabled ? {} : { scale: 0.95 }}
+      onClick={(e) => { e.stopPropagation(); playSelectSound(isHome); selectionChanged(); onPick(team); }}
+      aria-pressed={selected}
+      aria-label={`Tip ${team} to win`}
+      className={`relative min-h-[64px] min-w-0 border p-2.5 text-center transition-all ${
+        selected
+          ? "border-primary/50 bg-gradient-to-b from-primary/15 to-primary/5 text-foreground"
+          : "border-border/25 bg-black/25 text-slate-400 hover:border-border/40 hover:text-slate-200"
+      }`}
+    >
+      {selected && (
+        <motion.div
+          layoutId={`pick-${gameId}`}
+          className="absolute inset-0 border-2 border-primary/40"
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        />
+      )}
+      <TeamCrest name={team} className="mx-auto h-10 w-10 text-xs" />
+      <p className="mt-1.5 truncate text-[9px] font-bold uppercase tracking-wide">{shortName(team)}</p>
+      {selected && (
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute right-1 top-1">
+          <Star className="h-3 w-3 text-primary" />
+        </motion.div>
+      )}
+    </motion.button>
+  );
+}
+
 // ── Fixture Card ────────────────────────────────────────────────────
-function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancelEdit, onShare }) {
+function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancelEdit, onShare, highlight }) {
   const [selectedTeam, setSelectedTeam] = useState(tip?.selected_team || game.home_team);
   const [margin, setMargin] = useState(tip?.margin || DEFAULT_MARGIN);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStamp, setShowStamp] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
-  const lockingRef = useRef(false);
+  // Locking must be STATE, not a ref: it gates the disabled attribute of every
+  // control, and a ref cleared by a timeout produces no re-render — the picker
+  // could sit frozen with nothing to wake it (offline, kickoff >24h out).
+  const [locking, setLocking] = useState(false);
+  const pointsShownRef = useRef(false);
+  const reduceMotion = useReducedMotion();
   const scores = deriveScores(game, selectedTeam, margin);
   const status = getStatus(game.kickoff, game.status);
   const finished = isFinishedGame(game);
@@ -190,7 +244,7 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
   const open = isTippable(game);
   const alreadyTipped = !!tip;
   const showPicker = open && (!alreadyTipped || editing);
-  const canInteract = showPicker && !lockingRef.current;
+  const canInteract = showPicker && !locking;
   const countdown = useCountdown(game.kickoff);
   const tipResult = checkTipResult(game, tip);
 
@@ -206,15 +260,52 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
     }
   }, [game.id, editing, alreadyTipped, game.home_team]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!locking) return undefined;
+    const t = setTimeout(() => setLocking(false), 1000);
+    return () => clearTimeout(t);
+  }, [locking]);
+
+  // Tapping "Edit tip" / "Cancel" unmounts the button that had focus, dropping
+  // it to <body> — a keyboard or screen-reader user lost their place in the
+  // card entirely. Move focus to whatever replaced it.
+  const editEntryRef = useRef(null);
+  const receiptEditRef = useRef(null);
+  const focusTargetRef = useRef("");
+  useEffect(() => {
+    const target = focusTargetRef.current;
+    if (!target) return;
+    focusTargetRef.current = "";
+    const el = target === "picker" ? editEntryRef.current : receiptEditRef.current;
+    el?.focus?.({ preventScroll: true });
+  }, [editing]);
+
   const handleLock = (e) => {
     e.stopPropagation();
-    if (!canInteract || lockingRef.current) return;
-    lockingRef.current = true;
-    if (!selectedTeam || margin < 1 || margin > 60) {
-      lockingRef.current = false;
+    if (!canInteract) return;
+    if (!selectedTeam || margin < 1 || margin > 60) return;
+    const isEdit = alreadyTipped;
+    setLocking(true);
+    // Celebrate only once the tip is actually ACCEPTED. `open` is computed at
+    // render time, so a card that has been sitting on screen across kickoff
+    // still shows its picker — firing confetti first told that fan their
+    // post-kickoff tip was in when nothing had been saved anywhere.
+    const accepted = onTip(
+      game,
+      { selected_team: selectedTeam, margin, predicted_home_score: scores.home, predicted_away_score: scores.away },
+      { isEdit },
+    );
+    if (!accepted) {
+      warningImpact();
+      toast({
+        title: "Tips are closed for this game",
+        description: "It kicked off while this page was open — your tip wasn't saved.",
+        variant: "destructive",
+      });
+      setLocking(false);
       return;
     }
-    const isEdit = alreadyTipped;
+    successImpact();
     if (!isEdit) {
       setShowConfetti(true);
       setShowStamp(true);
@@ -222,10 +313,7 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
       setTimeout(() => setShowConfetti(false), 1400);
       setTimeout(() => setShowStamp(false), 2000);
     }
-    successImpact();
-    onTip(game, { selected_team: selectedTeam, margin, predicted_home_score: scores.home, predicted_away_score: scores.away }, { isEdit });
     if (isEdit) onCancelEdit?.();
-    setTimeout(() => { lockingRef.current = false; }, 1200);
   };
 
   const bumpMargin = (delta) => {
@@ -234,14 +322,17 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
     setMargin((m) => Math.min(60, Math.max(1, m + delta)));
   };
 
-  // Points pop when the result first lands
+  // Points pop once when the result lands. checkTipResult returns a NEW object
+  // every render, so an effect keyed on it re-ran constantly and its cleanup
+  // cancelled the hide timer it had just set — the overlay stuck forever.
   useEffect(() => {
-    if (tipResult?.points > 0 && !showPoints) {
-      setShowPoints(true);
-      const t = setTimeout(() => setShowPoints(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [tipResult]); // eslint-disable-line react-hooks/exhaustive-deps
+    const points = tipResult?.points || 0;
+    if (points <= 0 || pointsShownRef.current) return undefined;
+    pointsShownRef.current = true;
+    setShowPoints(true);
+    const t = setTimeout(() => setShowPoints(false), 2000);
+    return () => clearTimeout(t);
+  }, [tipResult?.points]);
 
   return (
     <motion.article
@@ -250,10 +341,13 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      data-game-id={game.id}
       className={`relative overflow-hidden border transition-colors ${
-        alreadyTipped && !finished
-          ? "border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.03] to-black/30"
-          : "border-border/30 bg-black/30"
+        highlight
+          ? "border-primary/70 ring-1 ring-primary/40"
+          : alreadyTipped && !finished
+            ? "border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.03] to-black/30"
+            : "border-border/30 bg-black/30"
       } ${status.glow}`}
     >
       <ConfettiBurst active={showConfetti} />
@@ -318,7 +412,7 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
             )}
             {status.label === "Closing" && !alreadyTipped && (
               <motion.span
-                animate={{ opacity: [1, 0.4, 1] }}
+                animate={reduceMotion ? undefined : { opacity: [1, 0.4, 1] }}
                 transition={{ duration: 1.2, repeat: Infinity }}
                 className="flex items-center gap-0.5 font-bold text-red-400"
               >
@@ -375,7 +469,14 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
         /* === STATE 2: TIPPED (receipt — editable until kickoff) === */
         ) : alreadyTipped && !showPicker ? (
           <>
-            <LockedTipReceipt game={game} tip={tip} canEdit={open} onEdit={onStartEdit} onShare={onShare} />
+            <LockedTipReceipt
+              game={game}
+              tip={tip}
+              canEdit={open}
+              editRef={receiptEditRef}
+              onEdit={() => { focusTargetRef.current = "picker"; onStartEdit?.(); }}
+              onShare={onShare}
+            />
             <CommunityPulse game={game} entries={entries} tip={tip} />
           </>
 
@@ -390,44 +491,27 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
         /* === STATE 4: OPEN FOR TIPPING === */
         ) : (
           <>
-            {/* Team Picker */}
+            {/* Team Picker — home / VS / away. Rendering both buttons and THEN
+                the VS filler let grid auto-placement drop the away team into
+                the narrow `auto` middle column with VS floating out right. */}
             <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              {[game.home_team, game.away_team].map((team) => {
-                const selected = selectedTeam === team;
-                return (
-                  <motion.button
-                    key={team}
-                    type="button"
-                    disabled={!canInteract}
-                    whileTap={canInteract ? { scale: 0.95 } : {}}
-                    onClick={(e) => { e.stopPropagation(); playSelectSound(team === game.home_team); selectionChanged(); setSelectedTeam(team); }}
-                    aria-pressed={selected}
-                    className={`relative min-w-0 border p-2.5 text-center transition-all ${
-                      selected
-                        ? "border-primary/50 bg-gradient-to-b from-primary/15 to-primary/5 text-foreground"
-                        : "border-border/25 bg-black/25 text-slate-400 hover:border-border/40 hover:text-slate-200"
-                    }`}
-                  >
-                    {selected && (
-                      <motion.div
-                        layoutId={`pick-${game.id}`}
-                        className="absolute inset-0 border-2 border-primary/40"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <TeamCrest name={team} className="mx-auto h-10 w-10 text-xs" />
-                    <p className="mt-1.5 truncate text-[9px] font-bold uppercase tracking-wide">{shortName(team)}</p>
-                    {selected && (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute right-1 top-1">
-                        <Star className="h-3 w-3 text-primary" />
-                      </motion.div>
-                    )}
-                  </motion.button>
-                );
-              })}
-              <div className="text-center">
-                <p className="font-display text-xl text-primary/80">VS</p>
-              </div>
+              <TeamPickButton
+                team={game.home_team}
+                gameId={game.id}
+                isHome
+                selected={selectedTeam === game.home_team}
+                disabled={!canInteract}
+                onPick={setSelectedTeam}
+              />
+              <p className="text-center font-display text-xl text-primary/80">VS</p>
+              <TeamPickButton
+                team={game.away_team}
+                gameId={game.id}
+                isHome={false}
+                selected={selectedTeam === game.away_team}
+                disabled={!canInteract}
+                onPick={setSelectedTeam}
+              />
             </div>
 
             {/* Margin: stepper + quick-picks + slider */}
@@ -439,10 +523,10 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
                     type="button"
                     disabled={!canInteract || margin <= 1}
                     onClick={(e) => { e.stopPropagation(); bumpMargin(-1); }}
-                    aria-label="Decrease margin"
-                    className="flex h-7 w-7 items-center justify-center border border-border/30 bg-black/30 text-slate-400 transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-30"
+                    aria-label="Decrease margin by 1"
+                    className="flex h-11 w-11 items-center justify-center border border-border/30 bg-black/30 text-slate-400 transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-30"
                   >
-                    <Minus className="h-3 w-3" />
+                    <Minus className="h-4 w-4" />
                   </button>
                   <div className="flex w-14 items-baseline justify-center gap-1">
                     <motion.span
@@ -459,10 +543,10 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
                     type="button"
                     disabled={!canInteract || margin >= 60}
                     onClick={(e) => { e.stopPropagation(); bumpMargin(1); }}
-                    aria-label="Increase margin"
-                    className="flex h-7 w-7 items-center justify-center border border-border/30 bg-black/30 text-slate-400 transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-30"
+                    aria-label="Increase margin by 1"
+                    className="flex h-11 w-11 items-center justify-center border border-border/30 bg-black/30 text-slate-400 transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-30"
                   >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -473,7 +557,9 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
                     type="button"
                     disabled={!canInteract}
                     onClick={(e) => { e.stopPropagation(); selectionChanged(); setMargin(m); }}
-                    className={`min-h-[28px] flex-1 border font-mono text-[10px] font-bold transition-all ${
+                    aria-pressed={margin === m}
+                    aria-label={`Margin ${m} points`}
+                    className={`min-h-11 flex-1 border font-mono text-[11px] font-bold transition-all ${
                       margin === m
                         ? "border-primary/50 bg-primary/20 text-primary"
                         : "border-border/20 bg-black/20 text-slate-500 hover:border-primary/25 hover:text-slate-300"
@@ -483,12 +569,16 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
                   </button>
                 ))}
               </div>
+              {/* Range must span the FULL 1-60 margin the stepper allows: a
+                  40-capped slider silently rewrote a 41-60 margin the moment
+                  it was touched (and misreported the value to assistive tech). */}
               <input
-                type="range" min="1" max="40" value={Math.min(margin, 40)}
+                type="range" min="1" max="60" value={margin}
                 disabled={!canInteract}
                 onChange={(e) => setMargin(Number(e.target.value))}
                 className="mt-2 w-full accent-primary"
                 aria-label="Win margin prediction"
+                aria-valuetext={`${margin} points`}
               />
               <div className="mt-1.5 flex items-center justify-between">
                 <span className="text-[10px] text-slate-500">Your prediction</span>
@@ -507,7 +597,7 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
               {editing && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onCancelEdit?.(); }}
+                  onClick={(e) => { e.stopPropagation(); focusTargetRef.current = "receipt"; onCancelEdit?.(); }}
                   className="flex min-h-[48px] items-center justify-center border border-border/40 bg-black/30 px-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 transition-colors hover:text-foreground"
                 >
                   Cancel
@@ -515,6 +605,7 @@ function FixtureCard({ game, tip, onTip, entries, editing, onStartEdit, onCancel
               )}
               <motion.button
                 type="button"
+                ref={editEntryRef}
                 disabled={!canInteract}
                 whileTap={canInteract ? { scale: 0.96 } : {}}
                 onClick={handleLock}
@@ -555,7 +646,10 @@ function RoundHeader({ round, tips, onAutoFill, autoFilling }) {
             <Clock className="h-3 w-3 shrink-0 text-amber-400" />
             {countdown ? (
               <>
-                <span className="hidden sm:inline">Next lockout in</span>
+                {/* No viewport breakpoint here: the widest container (the
+                    desktop sidebar) is NARROWER than a phone, so `sm:` showed
+                    this label exactly where it doesn't fit. */}
+                <span className="truncate">Locks in</span>
                 <span className="font-mono font-bold tabular-nums text-amber-200">{countdown}</span>
               </>
             ) : (
@@ -571,7 +665,7 @@ function RoundHeader({ round, tips, onAutoFill, autoFilling }) {
           type="button"
           onClick={onAutoFill}
           disabled={autoFilling}
-          className="flex min-h-8 items-center gap-1 border border-primary/30 bg-primary/10 px-2 text-[9px] font-bold uppercase tracking-[0.15em] text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+          className="flex min-h-11 items-center gap-1 border border-primary/30 bg-primary/10 px-2.5 text-[9px] font-bold uppercase tracking-[0.15em] text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
         >
           <Wand2 className="h-3 w-3" />
           {autoFilling ? "Filling…" : `Auto-fill ${untippedOpen.length} tips`}
@@ -659,12 +753,23 @@ export default function ScorePredictor({ onSharePrediction }) {
   const tipperName = (isAuthenticated && (user?.full_name || user?.email)) || "Vegas Fan";
   const [tips, setTips] = useState(() => sanitizeTips(readJson(STORAGE_KEY, {})));
   const [view, setView] = useState("round");
-  const [roundIndex, setRoundIndex] = useState(null); // null = follow the active round
+  // "" = follow the active round. Tracked by LABEL, not index — see below.
+  const [activeRoundLabel, setActiveRoundLabel] = useState("");
   const [editingGameId, setEditingGameId] = useState("");
+  const [highlightGameId, setHighlightGameId] = useState("");
   const [autoFilling, setAutoFilling] = useState(false);
   const [dataCorrupted, setDataCorrupted] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const containerRef = useRef(null);
   const queriesEnabled = appParams.hasBase44Config;
+
+  // Every tip write moves three server-derived views: my entries, the
+  // community feed and the ladder aggregate.
+  const invalidateTipQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["tippingEntries"] });
+    queryClient.invalidateQueries({ queryKey: ["myTippingEntries"] });
+    queryClient.invalidateQueries({ queryKey: ["tippingLadder"] });
+  }, [queryClient]);
 
   // Cross-tab sync
   useEffect(() => {
@@ -702,15 +807,40 @@ export default function ScorePredictor({ onSharePrediction }) {
 
   const { data: matchups = [] } = useQuery({
     queryKey: ["matchups"],
-    queryFn: () => base44.entities.Matchup.list("kickoff", 100),
+    queryFn: () => base44.entities.Matchup.list("kickoff", 300),
     enabled: queriesEnabled,
     retry: false,
     meta: { silent: true },
   });
 
+  // Community entries power the per-game pulse, which only matters before
+  // kickoff — the newest rows are exactly the relevant ones.
   const { data: entries = [] } = useQuery({
     queryKey: ["tippingEntries"],
-    queryFn: () => base44.entities.TippingEntry.list("-created_date", 500),
+    queryFn: () => base44.entities.TippingEntry.list("-created_date", 1000),
+    enabled: queriesEnabled,
+    retry: false,
+    meta: { silent: true },
+  });
+
+  // MY entries are fetched separately and unbounded by other tippers' volume.
+  // Sharing the community list meant that, once the site had a few hundred
+  // tips, my own older entries fell outside it — my season points shrank and
+  // a new device couldn't hydrate what I'd already tipped.
+  const { data: myEntries = [] } = useQuery({
+    queryKey: ["myTippingEntries", user?.id],
+    queryFn: () => base44.entities.TippingEntry.filter({ user_id: user.id }, "-created_date", 1000),
+    enabled: queriesEnabled && isAuthenticated && !!user?.id,
+    retry: false,
+    meta: { silent: true },
+  });
+
+  // The ladder is aggregated in the database (migration 0029): the raw-entry
+  // feed is capped and masks other users' ids, so a client-side season ladder
+  // was both truncated and unable to tell two same-named accounts apart.
+  const { data: ladderRows = [] } = useQuery({
+    queryKey: ["tippingLadder"],
+    queryFn: () => base44.entities.TipLadderRow.list("-points", 2000),
     enabled: queriesEnabled,
     retry: false,
     meta: { silent: true },
@@ -718,30 +848,46 @@ export default function ScorePredictor({ onSharePrediction }) {
 
   // ALL fixtures, unfiltered — points and streaks must never depend on which
   // tab or round the fan happens to be looking at.
-  const allFixtures = useMemo(() => {
+  const { fixtures: allFixtures, idMap } = useMemo(() => {
     const adminGames = (matchups || [])
       .filter((m) => m.is_published !== false && m.home_team && m.away_team)
       .map((m) => ({ ...m, id: m.id || `${m.home_team}-${m.away_team}-${m.kickoff || "tba"}` }));
-    const seen = new Set(adminGames.map((g) => `${g.home_team}-${g.away_team}-${String(g.kickoff).slice(0, 10)}`));
-    const apiGames = (apiFixtures || []).filter(
-      (g) => !seen.has(`${g.home_team}-${g.away_team}-${String(g.kickoff).slice(0, 10)}`)
-    );
-    return [...adminGames, ...apiGames]
-      .sort((a, b) => new Date(a.kickoff || 0) - new Date(b.kickoff || 0));
+    return mergeFixtures(adminGames, apiFixtures || []);
   }, [matchups, apiFixtures]);
 
-  const rounds = useMemo(() => buildRounds(allFixtures), [allFixtures]);
-  const activeRoundIdx = roundIndex ?? defaultRoundIndex(rounds);
-  const activeRound = rounds[Math.min(activeRoundIdx, Math.max(0, rounds.length - 1))] || null;
+  // An admin matchup published for a game already tipped as an API fixture
+  // used to orphan that tip: it vanished from My Tips and from the season
+  // score, and the card invited a duplicate tip on the same real match.
+  useEffect(() => {
+    if (!Object.keys(idMap).length) return;
+    setTips((prev) => {
+      const { tips: next, changed } = remapTipIds(prev, idMap);
+      if (!changed) return prev;
+      writeJson(STORAGE_KEY, next);
+      return next;
+    });
+  }, [idMap]);
+
+  // Round state (open/locked/live) and the lockout countdown are time-derived;
+  // without a tick they froze at first render and advertised kickoffs that had
+  // already passed.
+  const now = useSlowClock(30000);
+  const rounds = useMemo(() => buildRounds(allFixtures, now), [allFixtures, now]);
+  // Track the round by LABEL, never by index: the two fixture queries resolve
+  // independently, so an index silently pointed at a different round the
+  // moment a new one appeared — moving the fan mid-edit.
+  const fallbackRound = rounds[defaultRoundIndex(rounds)] || null;
+  const activeRound = rounds.find((r) => r.label === activeRoundLabel) || fallbackRound;
+  const activeRoundIdx = Math.max(0, rounds.findIndex((r) => r.label === activeRound?.label));
 
   // Tips follow the account: hydrate the local mirror from my server entries,
   // so a new phone (or cleared storage) still shows what I've already tipped.
   const hydratedRef = useRef(false);
   useEffect(() => {
-    if (hydratedRef.current || !isAuthenticated || !user?.id || !entries.length) return;
+    if (hydratedRef.current || !isAuthenticated || !user?.id || !myEntries.length) return;
     const missing = {};
-    entries.forEach((e) => {
-      if (e.user_id !== user.id || tips[e.game_id]) return;
+    myEntries.forEach((e) => {
+      if (tips[e.game_id]) return;
       const candidate = {
         selected_team: e.selected_team,
         margin: Number(e.margin) || DEFAULT_MARGIN,
@@ -763,18 +909,16 @@ export default function ScorePredictor({ onSharePrediction }) {
         return next;
       });
     }
-  }, [entries, isAuthenticated, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [myEntries, isAuthenticated, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Season stats: server-settled points first, local results as fallback ──
   const settledByGame = useMemo(() => {
     const map = new Map();
-    if (isAuthenticated && user?.id) {
-      entries.forEach((e) => {
-        if (e.user_id === user.id && e.settled_at) map.set(e.game_id, e);
-      });
-    }
+    myEntries.forEach((e) => {
+      if (e.settled_at) map.set(e.game_id, e);
+    });
     return map;
-  }, [entries, isAuthenticated, user?.id]);
+  }, [myEntries]);
 
   const { totalPoints, record, streaks } = useMemo(() => {
     let points = 0;
@@ -821,21 +965,25 @@ export default function ScorePredictor({ onSharePrediction }) {
     unsettledFinished.forEach((m) => {
       settleTriggeredRef.current.add(m.id);
       base44.functions.invoke("settleTips", { gameId: m.id })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["tippingEntries"] }))
+        .then(() => invalidateTipQueries())
         .catch(() => { /* another viewer may have settled it first */ });
     });
-  }, [matchups, entries, isAuthenticated, queriesEnabled, queryClient]);
+  }, [matchups, entries, isAuthenticated, queriesEnabled, invalidateTipQueries]);
 
   const createTip = useMutation({
     // Routed through submitTip so the kickoff deadline is enforced server-side;
     // the server treats a repeat submission as an edit while the game is open.
     mutationFn: (payload) => base44.functions.invoke("submitTip", payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tippingEntries"] }),
+    onSuccess: () => invalidateTipQueries(),
   });
 
+  // Returns true when the tip was accepted locally, so the card only
+  // celebrates a tip that actually exists.
   const handleTip = useCallback((game, tip, { isEdit = false } = {}) => {
-    // The only lock is kickoff — edits before then are fair game.
-    if (!isTippable(game)) return;
+    // The only lock is kickoff — edits before then are fair game. Re-checked
+    // here against a fresh clock because the card's `open` flag was computed
+    // whenever it last rendered, which may be well before this tap.
+    if (!isTippable(game)) return false;
 
     const tipObj = {
       ...tip,
@@ -847,7 +995,7 @@ export default function ScorePredictor({ onSharePrediction }) {
     };
     if (!isValidTip(tipObj)) {
       console.warn("[RLT] Invalid tip rejected:", tipObj);
-      return;
+      return false;
     }
 
     setTips((prev) => {
@@ -880,9 +1028,35 @@ export default function ScorePredictor({ onSharePrediction }) {
           if (isEdit) toast({ title: "Tip updated", description: `${shortName(tip.selected_team)} by ${tip.margin} — you can keep editing until kickoff.` });
         },
         onError: (err) => {
-          // Don't lose the tip: queue it for retry on reconnect/next visit.
+          // base44Client.functions.invoke parses the JSON error body onto
+          // err.data and the HTTP status onto err.status.
+          const code = err?.data?.code;
+          const message = String(err?.message || "");
+          // A REJECTION is not a connectivity problem: queueing it would retry
+          // a call the server will always refuse, and telling the fan "it will
+          // sync" leaves them believing a tip exists that never will.
+          const rejected = code === "locked" || code === "no_kickoff"
+            || err?.status === 403 || err?.status === 400
+            || /locked|kicked off|already has a result/i.test(message);
+          if (rejected) {
+            setTips((prev) => {
+              const next = { ...prev };
+              delete next[game.id];
+              writeJson(STORAGE_KEY, next);
+              return next;
+            });
+            removeTipFromQueue(game.id);
+            warningImpact();
+            toast({
+              title: "Tips are closed for this game",
+              description: message || "It kicked off before your tip reached us.",
+              variant: "destructive",
+            });
+            return;
+          }
+          // Otherwise it's a network failure — don't lose the tip.
           console.warn("[RLT] Failed to sync tip to server:", err);
-          enqueueTip(serverPayload);
+          enqueueTip({ ...serverPayload, queued_at: tipObj.tipped_at });
           warningImpact();
           toast({
             title: isEdit ? "Change saved on this device" : "Tip locked on this device",
@@ -891,6 +1065,7 @@ export default function ScorePredictor({ onSharePrediction }) {
         },
       });
     }
+    return true;
   }, [queriesEnabled, createTip, tipperName]);
 
   // One-tap round completion: back the community favourite (or the home side
@@ -919,23 +1094,43 @@ export default function ScorePredictor({ onSharePrediction }) {
   }, [activeRound, autoFilling, tips, entries, handleTip]);
 
   // Flush tips that failed to sync — on mount + reconnect.
+  // A queued payload is a SNAPSHOT of an offline lock-in. Now that a repeat
+  // submission edits the entry, replaying one blindly could overwrite a newer
+  // tip made since — e.g. from another device — with the stale pick. Drop any
+  // queued item the server has already superseded.
+  const myEntriesRef = useRef(myEntries);
+  myEntriesRef.current = myEntries;
   useEffect(() => {
     if (!queriesEnabled) return undefined;
     const flush = () => {
       prunedTipQueue().forEach((payload) => {
+        const server = myEntriesRef.current.find((e) => e.game_id === payload.game_id);
+        const serverTime = new Date(server?.updated_date || server?.created_date || 0).getTime();
+        const queuedTime = new Date(payload.queued_at || 0).getTime();
+        if (server && Number.isFinite(serverTime) && serverTime > queuedTime) {
+          removeTipFromQueue(payload.game_id); // a newer tip already landed
+          return;
+        }
+        const { queued_at: _queuedAt, ...body } = payload;
         base44.functions
-          .invoke("submitTip", payload)
+          .invoke("submitTip", body)
           .then(() => {
             removeTipFromQueue(payload.game_id);
-            queryClient.invalidateQueries({ queryKey: ["tippingEntries"] });
+            invalidateTipQueries();
           })
-          .catch(() => { /* still unreachable — stays queued */ });
+          .catch((err) => {
+            // A server rejection will never succeed on retry — stop replaying.
+            const code = err?.data?.code;
+            if (code === "locked" || code === "no_kickoff" || err?.status === 403 || err?.status === 400) {
+              removeTipFromQueue(payload.game_id);
+            }
+          });
       });
     };
     flush();
     window.addEventListener("online", flush);
     return () => window.removeEventListener("online", flush);
-  }, [queriesEnabled, queryClient]);
+  }, [queriesEnabled, invalidateTipQueries]);
 
   const handleResetTips = useCallback(() => {
     setTips({});
@@ -955,18 +1150,35 @@ export default function ScorePredictor({ onSharePrediction }) {
   }, [tips, onSharePrediction]);
 
   const jumpToGame = useCallback((game) => {
-    const idx = rounds.findIndex((r) => r.games.some((g) => g.id === game.id));
-    if (idx >= 0) setRoundIndex(idx);
-    if (isTippable(game) && tips[game.id]) setEditingGameId(game.id);
+    const round = rounds.find((r) => r.games.some((g) => g.id === game.id));
+    if (round) setActiveRoundLabel(round.label);
+    // Always RESET the edit latch: leaving a previous game's id in place
+    // reopened that card's picker on an unrelated jump, where a stray tap
+    // could submit a change the fan never intended.
+    setEditingGameId(isTippable(game) && tips[game.id] ? game.id : "");
+    setHighlightGameId(game.id);
     setView("round");
   }, [rounds, tips]);
+
+  // Bring the jumped-to game into view once the round has rendered, and let
+  // the highlight fade so it doesn't linger as a permanent selection.
+  useEffect(() => {
+    if (!highlightGameId || view !== "round") return undefined;
+    const raf = requestAnimationFrame(() => {
+      containerRef.current
+        ?.querySelector(`[data-game-id="${CSS.escape(highlightGameId)}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    const clear = setTimeout(() => setHighlightGameId(""), 2500);
+    return () => { cancelAnimationFrame(raf); clearTimeout(clear); };
+  }, [highlightGameId, view]);
 
   const tippedTotal = allFixtures.filter((g) => tips[g.id]).length;
   const openUntipped = allFixtures.filter((g) => !tips[g.id] && isTippable(g)).length;
   const roundGames = activeRound?.games || [];
 
   return (
-    <div className="cmd-glass overflow-hidden border border-border/50 bg-gradient-to-b from-card/40 to-black/60">
+    <div ref={containerRef} className="cmd-glass overflow-hidden border border-border/50 bg-gradient-to-b from-card/40 to-black/60">
       <div className="h-[3px] w-full bg-gradient-to-r from-primary via-accent to-primary" />
 
       <div className="p-4 sm:p-5">
@@ -1091,8 +1303,23 @@ export default function ScorePredictor({ onSharePrediction }) {
           />
         </div>
 
-        {/* View tabs */}
-        <div className="mt-4 grid grid-cols-3 border border-border/30 bg-black/30 p-0.5" role="tablist" aria-label="Tipping views">
+        {/* View tabs. Real tablist semantics: arrow keys move between tabs,
+            only the selected tab is in the tab order, and each view below is
+            the tabpanel it controls. */}
+        <div
+          className="mt-4 grid grid-cols-3 border border-border/30 bg-black/30 p-0.5"
+          role="tablist"
+          aria-label="Tipping views"
+          onKeyDown={(e) => {
+            const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+            if (!dir) return;
+            e.preventDefault();
+            const order = ["round", "mytips", "ladder"];
+            const next = order[(order.indexOf(view) + dir + order.length) % order.length];
+            setView(next);
+            document.getElementById(`tip-tab-${next}`)?.focus();
+          }}
+        >
           {[
             { id: "round", label: "Tipping", icon: Calendar, count: openUntipped },
             { id: "mytips", label: "My Tips", icon: Target, count: tippedTotal },
@@ -1100,11 +1327,14 @@ export default function ScorePredictor({ onSharePrediction }) {
           ].map((item) => (
             <button
               key={item.id}
+              id={`tip-tab-${item.id}`}
               type="button"
               role="tab"
               aria-selected={view === item.id}
+              aria-controls={`tip-panel-${item.id}`}
+              tabIndex={view === item.id ? 0 : -1}
               onClick={() => setView(item.id)}
-              className={`relative flex min-h-9 items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.15em] transition-all ${
+              className={`relative flex min-h-11 items-center justify-center gap-1 px-1 text-[10px] font-bold uppercase tracking-[0.1em] transition-all ${
                 view === item.id ? "text-primary-foreground" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
               }`}
             >
@@ -1115,11 +1345,13 @@ export default function ScorePredictor({ onSharePrediction }) {
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <span className="relative z-10 flex items-center gap-1">
-                <item.icon className="h-3 w-3" />
-                {item.label}
+              {/* min-w-0 + truncate: the desktop sidebar is narrower than a
+                  phone, and three labels with counts collided there. */}
+              <span className="relative z-10 flex min-w-0 items-center gap-1">
+                <item.icon className="h-3 w-3 shrink-0" />
+                <span className="truncate">{item.label}</span>
                 {item.count > 0 && (
-                  <span className={`ml-0.5 text-[9px] ${view === item.id ? "opacity-80" : "text-primary"}`}>
+                  <span className={`shrink-0 text-[9px] ${view === item.id ? "opacity-80" : "text-primary"}`}>
                     ({item.count})
                   </span>
                 )}
@@ -1130,10 +1362,15 @@ export default function ScorePredictor({ onSharePrediction }) {
 
         {/* ── VIEW: Round tipping ── */}
         {view === "round" && (
-          <>
+          <div id="tip-panel-round" role="tabpanel" aria-labelledby="tip-tab-round">
             {rounds.length > 0 && (
               <div className="mt-3">
-                <RoundNav rounds={rounds} index={activeRoundIdx} onSelect={(i) => { setRoundIndex(i); setEditingGameId(""); }} tips={tips} />
+                <RoundNav
+                  rounds={rounds}
+                  index={activeRoundIdx}
+                  onSelect={(i) => { setActiveRoundLabel(rounds[i]?.label || ""); setEditingGameId(""); }}
+                  tips={tips}
+                />
               </div>
             )}
             <RoundHeader round={activeRound} tips={tips} onAutoFill={handleAutoFill} autoFilling={autoFilling} />
@@ -1153,6 +1390,7 @@ export default function ScorePredictor({ onSharePrediction }) {
                     onTip={handleTip}
                     entries={entries}
                     editing={editingGameId === game.id}
+                    highlight={highlightGameId === game.id}
                     onStartEdit={() => setEditingGameId(game.id)}
                     onCancelEdit={() => setEditingGameId("")}
                     onShare={onSharePrediction ? () => handleShare(game) : null}
@@ -1189,24 +1427,23 @@ export default function ScorePredictor({ onSharePrediction }) {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* ── VIEW: My tips ── */}
         {view === "mytips" && (
-          <div className="mt-3">
+          <div id="tip-panel-mytips" role="tabpanel" aria-labelledby="tip-tab-mytips" className="mt-3">
             <MyTipsList fixtures={allFixtures} tips={tips} onJumpToGame={jumpToGame} />
           </div>
         )}
 
         {/* ── VIEW: Ladder ── */}
         {view === "ladder" && (
-          <div className="mt-3 space-y-3">
+          <div id="tip-panel-ladder" role="tabpanel" aria-labelledby="tip-tab-ladder" className="mt-3 space-y-3">
             <TipLadder
-              entries={entries}
+              ladderRows={ladderRows}
               roundLabel={activeRound?.label || null}
-              myUserId={isAuthenticated ? user?.id : null}
-              myName={isAuthenticated ? tipperName : ""}
+              isAuthenticated={isAuthenticated}
               localTipCount={tippedTotal}
               localPoints={totalPoints}
             />

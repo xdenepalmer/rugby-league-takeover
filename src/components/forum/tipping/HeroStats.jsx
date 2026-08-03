@@ -26,7 +26,10 @@ export function rankFor(points, tipped) {
 export default function HeroStats({ totalPoints, correct, checked, streak, tipped, total }) {
   const accuracy = checked > 0 ? Math.round((correct / checked) * 100) : null;
   const { current, next, score } = rankFor(totalPoints, tipped);
-  const progress = next ? Math.min(100, Math.round((score / next.at) * 100)) : 100;
+  // Progress WITHIN the current tier. Measuring from zero made the bar look
+  // nearly full just before a rank-up and then jump backwards after it.
+  const span = next ? Math.max(1, next.at - current.at) : 1;
+  const progress = next ? Math.min(100, Math.max(0, Math.round(((score - current.at) / span) * 100))) : 100;
 
   const animPts = useAnimatedCounter(totalPoints);
   const animAcc = useAnimatedCounter(accuracy || 0);

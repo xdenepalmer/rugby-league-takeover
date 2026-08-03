@@ -104,9 +104,12 @@ export function shortRoundLabel(label) {
   return raw.length > 10 ? `${raw.slice(0, 9)}…` : raw;
 }
 
-const kickoffMs = (g) => {
+// A fixture with no (or an unparseable) kickoff must sort LAST, not first:
+// treating it as epoch 0 put every TBA game ahead of the whole season and
+// handed the default landing round to a fixture nobody can tip yet.
+export const kickoffMs = (g) => {
   const t = new Date(g?.kickoff || 0).getTime();
-  return Number.isFinite(t) ? t : 0;
+  return g?.kickoff && Number.isFinite(t) ? t : Number.POSITIVE_INFINITY;
 };
 
 export function buildRounds(fixtures, now = Date.now()) {
@@ -121,26 +124,84 @@ export function buildRounds(fixtures, now = Date.now()) {
     const finished = games.filter((g) => isFinishedGame(g)).length;
     const live = games.some((g) => g.status === "live");
     const open = games.filter((g) => isTippable(g, now));
-    // Round deadline = the next kickoff still open for tips.
-    const deadline = open.length ? open.reduce((min, g) => {
+    // Round deadline = the next kickoff still open for tips (TBA games have
+    // no deadline to show).
+    const deadline = open.reduce((min, g) => {
       const t = kickoffMs(g);
-      return t > 0 && (min === 0 || t < min) ? t : min;
-    }, 0) : 0;
+      return Number.isFinite(t) && t > now && (min === 0 || t < min) ? t : min;
+    }, 0);
     const state = live ? "live"
       : finished === games.length && games.length > 0 ? "done"
       : open.length === 0 ? "locked"
       : "open";
+    const first = games.length ? kickoffMs(games[0]) : Number.POSITIVE_INFINITY;
     return {
       label,
       games,
       state,
       finishedCount: finished,
       deadline: deadline || null,
-      firstKickoff: games.length ? kickoffMs(games[0]) : 0,
+      firstKickoff: first,
     };
   });
   rounds.sort((a, b) => a.firstKickoff - b.firstKickoff);
   return rounds;
+}
+
+// ── Fixture identity ────────────────────────────────────────────────
+// The same real match can arrive twice: once from the external API
+// (`nrl-api-123`) and once as an admin matchup (a uuid). Dedup used a raw
+// date-string slice, which broke on timezone-boundary kickoffs and on TBA
+// admin games — so one match could render twice and be tipped (and scored)
+// twice. Match on normalised team names plus a kickoff WINDOW instead.
+const DEDUPE_WINDOW_MS = 36 * 60 * 60 * 1000;
+
+const normaliseTeamName = (name) =>
+  String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+export const fixturePairKey = (game) =>
+  `${normaliseTeamName(game?.home_team)}|${normaliseTeamName(game?.away_team)}`;
+
+export function isSameFixture(a, b) {
+  if (fixturePairKey(a) !== fixturePairKey(b)) return false;
+  const ta = kickoffMs(a);
+  const tb = kickoffMs(b);
+  // One side TBA: same teams is enough — the season has one such meeting.
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return true;
+  return Math.abs(ta - tb) <= DEDUPE_WINDOW_MS;
+}
+
+// Merge admin matchups with API fixtures, admin winning. Returns the merged
+// list plus the id remapping (apiId -> adminId) so local tips saved against
+// the API id can follow the game that survived.
+export function mergeFixtures(adminGames, apiGames) {
+  const merged = [...(adminGames || [])];
+  const idMap = {};
+  (apiGames || []).forEach((apiGame) => {
+    const match = merged.find((admin) => isSameFixture(admin, apiGame));
+    if (match) {
+      if (apiGame.id && match.id && apiGame.id !== match.id) idMap[apiGame.id] = match.id;
+      return;
+    }
+    merged.push(apiGame);
+  });
+  merged.sort((a, b) => kickoffMs(a) - kickoffMs(b));
+  return { fixtures: merged, idMap };
+}
+
+// Move tips saved under a superseded fixture id onto the surviving one.
+// Without this, an admin publishing a matchup for a game the fan already
+// tipped made the tip vanish — from My Tips, from the season score, and from
+// the card, which then invited a duplicate tip on the same real match.
+export function remapTipIds(tips, idMap) {
+  const entries = Object.entries(idMap || {}).filter(([from, to]) => tips?.[from] && !tips[to]);
+  if (!entries.length) return { tips, changed: false };
+  const next = { ...tips };
+  entries.forEach(([from, to]) => {
+    next[to] = { ...next[from], game_id: to };
+    delete next[from];
+  });
+  return { tips: next, changed: true };
 }
 
 // Land the fan on the round that needs them: the first round still taking

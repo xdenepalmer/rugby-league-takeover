@@ -58,16 +58,21 @@ test("finished matchups trigger server settlement", () => {
 
 test("the ladder ranks on settled points and degrades to participation", () => {
   // The ladder now lives in its own component (TipLadder) over a pure
-  // aggregation module (ladder.js) with round/season scopes.
+  // aggregation module (ladder.js), fed by a DATABASE aggregate
+  // (tipping_ladder_view) rather than a capped, id-masked entry feed.
   const ladder = read("src/components/forum/tipping/TipLadder.jsx");
   const rows = read("src/components/forum/tipping/ladder.js");
-  assert.ok(rows.includes("entry.points"), "rival points must come from settled entries");
+  const view = read("supabase/migrations/0029_tipping_ladder_view.sql");
+  assert.ok(view.includes("sum(points)"), "points must be summed server-side from settled entries");
   assert.ok(!/points:\s*r\.tips\s*\*\s*2/.test(rows + ladder), "must not fabricate points from tip count");
   // Before any fixture settles every row is on zero, so the bars fall back to
   // tips rather than all collapsing to the minimum width.
   assert.ok(ladder.includes("anyPoints"), "must handle the pre-settlement case");
-  // Display names collide; accounts don't.
-  assert.ok(rows.includes("entry.user_id || `name:"), "rows must key on user_id when present");
+  // Grouping by account (not display name) is what keeps two same-named
+  // tippers apart — and the opaque key keeps the uuid off the wire.
+  assert.ok(view.includes("group by user_id"), "the aggregate must group by account");
+  assert.ok(view.includes("md5(user_id)"), "the ladder key must be opaque, not the raw uuid");
+  assert.ok(rows.includes("row.tipster_key"), "client rows key on the server's opaque id");
 });
 
 // ── Daily missions ──────────────────────────────────────────────────────

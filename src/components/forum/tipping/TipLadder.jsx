@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Crown } from "lucide-react";
+import { Crown, Info } from "lucide-react";
 import { PTS_CORRECT, PTS_MARGIN_BONUS } from "./constants";
 import { shortRoundLabel } from "./tipHelpers";
 import { buildLadderRows } from "./ladder";
@@ -10,32 +10,28 @@ const LADDER_SIZE = 8;
 // ── Tipster ladder ──────────────────────────────────────────────────
 // Season/round scopes, medals for the podium, and YOUR row pinned below the
 // top 8 when you're outside it — you should never have to hunt for yourself.
-export default function TipLadder({ entries, roundLabel, myUserId, myName, localTipCount, localPoints }) {
+export default function TipLadder({ ladderRows, roundLabel, isAuthenticated, localTipCount, localPoints }) {
   const [scope, setScope] = useState("season");
 
   const rows = useMemo(
-    () => buildLadderRows(entries, {
-      myUserId,
-      myName,
-      roundLabel: scope === "round" ? roundLabel : null,
-    }),
-    [entries, myUserId, myName, scope, roundLabel],
+    () => buildLadderRows(ladderRows, { roundLabel: scope === "round" ? roundLabel : null }),
+    [ladderRows, scope, roundLabel],
   );
 
   const myRow = rows.find((r) => r.me);
   const top = rows.slice(0, LADDER_SIZE);
   const mePinned = myRow && myRow.rank > LADDER_SIZE ? myRow : null;
-  // A guest (or a fan whose tips haven't settled) still sees their own line,
-  // fed from local data, so the ladder never looks like they don't exist.
-  const showLocalMe = !myRow && (localTipCount || 0) > 0 && scope === "season";
+  // A guest never appears on the server ladder (their entries carry no
+  // account), so show their own tally separately rather than pretending.
+  const showLocalMe = !isAuthenticated && (localTipCount || 0) > 0 && scope === "season";
 
   const medals = ["🥇", "🥈", "🥉"];
-  const maxPoints = Math.max(1, ...rows.map((r) => r.points));
   const anyPoints = rows.some((r) => r.points > 0);
+  const maxMetric = Math.max(1, ...rows.map((r) => (anyPoints ? r.points : r.tips)));
 
   const renderRow = (row, i) => {
     const metric = anyPoints ? row.points : row.tips;
-    const barWidth = Math.max(6, (metric / (anyPoints ? maxPoints : Math.max(1, ...rows.map((r) => r.tips)))) * 100);
+    const barWidth = Math.max(6, (metric / maxMetric) * 100);
     const accuracy = row.settled > 0 ? Math.round((row.wins / row.settled) * 100) : null;
     return (
       <motion.div
@@ -68,13 +64,13 @@ export default function TipLadder({ entries, roundLabel, myUserId, myName, local
           }`}>
             {row.name}{row.me ? " (you)" : ""}
           </p>
-          <p className="text-[9px] text-slate-500">
+          <p className="truncate text-[9px] text-slate-500">
             {row.tips} tip{row.tips !== 1 ? "s" : ""}
             {row.wins > 0 ? ` · ${row.wins} won` : ""}
             {accuracy != null ? ` · ${accuracy}%` : ""}
           </p>
         </div>
-        <div className="relative flex items-baseline gap-1">
+        <div className="relative flex shrink-0 items-baseline gap-1">
           <span className={`text-[11px] font-bold tabular-nums ${
             row.me ? "text-primary" : row.rank === 1 ? "text-amber-300" : "text-foreground/80"
           }`}>
@@ -89,11 +85,11 @@ export default function TipLadder({ entries, roundLabel, myUserId, myName, local
   return (
     <div className="border border-border/30 bg-black/30 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Crown className="h-3.5 w-3.5 text-amber-400" />
-          <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">Tipster Ladder</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <Crown className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+          <p className="truncate text-[9px] font-bold uppercase tracking-[0.25em] text-slate-300">Tipster Ladder</p>
         </div>
-        <div className="flex border border-border/30 bg-black/30 p-0.5">
+        <div className="flex shrink-0 border border-border/30 bg-black/30 p-0.5">
           {[
             { id: "season", label: "Season" },
             { id: "round", label: roundLabel ? shortRoundLabel(roundLabel) : "Round" },
@@ -103,7 +99,8 @@ export default function TipLadder({ entries, roundLabel, myUserId, myName, local
               type="button"
               onClick={() => setScope(tab.id)}
               disabled={tab.id === "round" && !roundLabel}
-              className={`min-h-7 px-2 text-[9px] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 ${
+              aria-pressed={scope === tab.id}
+              className={`min-h-8 px-2 text-[9px] font-bold uppercase tracking-wider transition-colors disabled:opacity-40 ${
                 scope === tab.id ? "bg-primary text-primary-foreground" : "text-slate-400 hover:text-slate-200"
               }`}
             >
@@ -125,18 +122,24 @@ export default function TipLadder({ entries, roundLabel, myUserId, myName, local
           </>
         )}
         {showLocalMe && (
-          <div className="relative flex items-center gap-2 border border-primary/30 bg-primary/5 p-2">
-            <span className="w-6 shrink-0 text-center text-xs">—</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-primary">You</p>
-              <p className="text-[9px] text-slate-500">
-                {localTipCount} tip{localTipCount !== 1 ? "s" : ""} locked on this device
-              </p>
+          <div className="border border-primary/30 bg-primary/5 p-2">
+            <div className="flex items-center gap-2">
+              <span className="w-6 shrink-0 text-center text-xs">—</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-primary">You (guest)</p>
+                <p className="text-[9px] text-slate-500">
+                  {localTipCount} tip{localTipCount !== 1 ? "s" : ""} on this device
+                </p>
+              </div>
+              <div className="flex shrink-0 items-baseline gap-1">
+                <span className="text-[11px] font-bold tabular-nums text-primary">{localPoints || 0}</span>
+                <span className="text-2xs text-slate-500">pts</span>
+              </div>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[11px] font-bold tabular-nums text-primary">{localPoints || 0}</span>
-              <span className="text-2xs text-slate-500">pts</span>
-            </div>
+            <p className="mt-1.5 flex items-start gap-1 text-[9px] text-slate-500">
+              <Info className="mt-px h-2.5 w-2.5 shrink-0" />
+              Sign in to take your place on the ladder and keep your tips across devices.
+            </p>
           </div>
         )}
       </div>

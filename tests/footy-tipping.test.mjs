@@ -5,7 +5,7 @@ import fs from "node:fs";
 import {
   isFinishedGame, hasKickedOff, isTippable, checkTipResult,
   buildRounds, defaultRoundIndex, computeStreaks, communityFavourite,
-  shortRoundLabel,
+  shortRoundLabel, mergeFixtures, remapTipIds, isSameFixture,
 } from "../src/components/forum/tipping/tipHelpers.js";
 import { buildLadderRows } from "../src/components/forum/tipping/ladder.js";
 
@@ -111,26 +111,30 @@ test("auto-fill backs the community favourite and abstains on silence or a tie",
 
 // ── Ladder ──────────────────────────────────────────────────────────────────
 
-test("ladder rows key on user_id, dedupe per game, and rank by points then wins", () => {
-  const entries = [
-    // Two different accounts sharing a display name must NOT merge.
-    { game_id: "g1", user_id: "u1", tipper_name: "Dane", points: 5, result: "perfect", settled_at: "x", game_label: "NRL Round 23" },
-    { game_id: "g2", user_id: "u1", tipper_name: "Dane", points: 3, result: "win", settled_at: "x", game_label: "NRL Round 24" },
-    { game_id: "g1", user_id: "u2", tipper_name: "Dane", points: 0, result: "loss", settled_at: "x", game_label: "NRL Round 23" },
-    // Duplicate row for the same game+user counts once.
-    { game_id: "g1", user_id: "u1", tipper_name: "Dane", points: 5, result: "perfect", settled_at: "x", game_label: "NRL Round 23" },
-    // Guest entry keyed by name.
-    { game_id: "g1", user_id: "", tipper_name: "Walk-up", points: 3, result: "win", settled_at: "x", game_label: "NRL Round 23" },
+test("ladder sums the DB aggregate per account, scoped to a round on demand", () => {
+  // Rows come from tipping_ladder_view: already grouped per (account, round),
+  // with an opaque tipster_key so two same-named accounts stay distinct and
+  // no user uuid leaks to other viewers.
+  const rows = [
+    { tipster_key: "k1", tipper_name: "Dane", game_label: "NRL Round 23", tips: 3, points: 8, wins: 2, settled: 3, is_me: false },
+    { tipster_key: "k1", tipper_name: "Dane", game_label: "NRL Round 24", tips: 2, points: 3, wins: 1, settled: 2, is_me: false },
+    // Same DISPLAY NAME, different account — must never merge.
+    { tipster_key: "k2", tipper_name: "Dane", game_label: "NRL Round 23", tips: 3, points: 0, wins: 0, settled: 3, is_me: true },
+    { tipster_key: "k3", tipper_name: "Mick", game_label: "NRL Round 24", tips: 1, points: 5, wins: 1, settled: 1, is_me: false },
   ];
-  const rows = buildLadderRows(entries, { myUserId: "u2" });
-  assert.equal(rows.length, 3, "u1, u2 and the guest");
-  assert.equal(rows[0].points, 8, "u1 tops the ladder with 5+3");
-  assert.equal(rows[0].tips, 2, "the duplicate g1 row deduped");
-  assert.equal(rows.find((r) => r.me)?.key, "u2", "me-flag follows user_id, not the shared display name");
-  // Round scope filters by game_label.
-  const roundRows = buildLadderRows(entries, { roundLabel: "NRL Round 24" });
-  assert.equal(roundRows.length, 1);
-  assert.equal(roundRows[0].points, 3);
+  const season = buildLadderRows(rows);
+  assert.equal(season.length, 3, "two same-named accounts stay separate");
+  assert.deepEqual(season.map((r) => r.key), ["k1", "k3", "k2"], "ranked by points");
+  assert.equal(season[0].points, 11, "a season row sums every round");
+  assert.equal(season[0].tips, 5);
+  assert.equal(season.find((r) => r.me)?.key, "k2", "the me-flag comes from the server, not a name match");
+  assert.deepEqual(season.map((r) => r.rank), [1, 2, 3]);
+
+  const round24 = buildLadderRows(rows, { roundLabel: "NRL Round 24" });
+  assert.deepEqual(round24.map((r) => r.key), ["k3", "k1"], "round scope re-ranks on that round alone");
+  assert.equal(round24[0].points, 5);
+
+  assert.deepEqual(buildLadderRows(null), [], "no rows, no ladder");
 });
 
 // ── Editable-until-kickoff (server contract) ────────────────────────────────
@@ -173,8 +177,111 @@ test("season stats come from ALL fixtures + settled entries, never the visible f
   assert.ok(sp.includes("writeJson(TIP_STREAK_KEY, streaks.current)"), "the streak key is finally written");
 });
 
-test("tips hydrate from the account's server entries on a fresh device", () => {
+test("tips hydrate from the account's own entry feed on a fresh device", () => {
   const sp = read("../src/components/forum/ScorePredictor.jsx");
   assert.ok(sp.includes("hydratedRef"), "hydration must run once, not loop");
-  assert.ok(sp.includes("e.user_id !== user.id || tips[e.game_id]"), "only MY missing games hydrate");
+  // My entries come from a dedicated per-user query, not the shared community
+  // feed: that feed is capped by other tippers' volume, so mid-season my own
+  // older tips fell outside it and simply vanished from my score.
+  assert.ok(sp.includes('queryKey: ["myTippingEntries", user?.id]'), "my entries need their own query");
+  assert.ok(sp.includes("TippingEntry.filter({ user_id: user.id }"), "scoped server-side to my account");
+  assert.ok(sp.includes("myEntries.forEach"), "hydration and settled points read the per-user feed");
+});
+
+// ── Fixes from the adversarial verification pass ────────────────────────────
+
+test("a scored or kickoff-less admin game is closed, whatever its status says", () => {
+  const src = submit();
+  // Status alone left a window: admin enters the real score, hasn't flipped
+  // 'final' yet, and a tipper edits to the observed result for a guaranteed
+  // perfect tip (+5 pts, 150 chips, 50 XP).
+  assert.match(src, /matchup\.home_score != null \|\| matchup\.away_score != null/, "a result closes tipping");
+  // No kickoff means no lock can ever apply — the entry would stay writable
+  // forever, including after full time.
+  assert.match(src, /code: 'no_kickoff'/, "a game with no kickoff cannot be tipped");
+  assert.match(src, /!Number\.isFinite\(storedKickoffMs\) \|\| storedKickoffMs <= Date\.now\(\)/, "an entry with no stored kickoff can't be edited");
+});
+
+test("an anonymous submission can never edit a signed-in tipper's entry", () => {
+  const src = submit();
+  // Guests are identified by IP. Behind a NAT/CGNAT that IP is shared, so
+  // matching it against ANY entry let a logged-out visitor rewrite an
+  // account's tip.
+  assert.match(src, /query\.eq\('ip_address', ip\)\.eq\('user_id', ''\)/, "anon matches only other anon entries");
+  assert.match(src, /query\.eq\('user_id', user\.id\)/, "a signed-in caller matches on their account");
+  assert.doesNotMatch(src, /\.limit\(500\)/, "the entry lookup must be targeted, not a 500-row scan");
+});
+
+test("the same real match arriving from both sources resolves to one fixture", () => {
+  // Admin uuid vs `nrl-api-N`: a raw date-string comparison broke on
+  // timezone-boundary kickoffs and on TBA admin games, so one match could
+  // render (and be tipped, and be scored) twice.
+  const admin = { id: "uuid-1", home_team: "Brisbane Broncos", away_team: "Melbourne Storm", kickoff: "2026-08-07T09:50:00Z", label: "NRL Round 23" };
+  const api = { id: "nrl-api-9", home_team: "Brisbane  Broncos", away_team: "Melbourne Storm", kickoff: "2026-08-07T19:50:00+10:00", label: "NRL Round 23" };
+  assert.equal(isSameFixture(admin, api), true, "same teams, same kickoff window");
+
+  const other = { id: "nrl-api-10", home_team: "Sydney Roosters", away_team: "Penrith Panthers", kickoff: "2026-08-08T09:00:00Z", label: "NRL Round 23" };
+  const { fixtures, idMap } = mergeFixtures([admin], [api, other]);
+  assert.deepEqual(fixtures.map((f) => f.id), ["uuid-1", "nrl-api-10"], "the admin row wins, the distinct game survives");
+  assert.deepEqual(idMap, { "nrl-api-9": "uuid-1" });
+
+  // A tip saved against the API id must FOLLOW the game that survived.
+  const tips = { "nrl-api-9": { selected_team: "Melbourne Storm", margin: 6, tipped_at: past(2), game_id: "nrl-api-9" } };
+  const { tips: next, changed } = remapTipIds(tips, idMap);
+  assert.equal(changed, true);
+  assert.equal(next["nrl-api-9"], undefined, "the orphaned id is gone");
+  assert.equal(next["uuid-1"].selected_team, "Melbourne Storm");
+  assert.equal(next["uuid-1"].game_id, "uuid-1", "the tip carries the surviving id");
+  assert.equal(remapTipIds(tips, {}).changed, false, "no map, no rewrite");
+});
+
+test("a TBA fixture sorts last instead of hijacking the default round", () => {
+  const rounds = buildRounds([
+    { id: "tba", label: "NRL Round 30", kickoff: null, status: "upcoming" },
+    { id: "next", label: "NRL Round 23", kickoff: future(3), status: "upcoming" },
+  ]);
+  assert.deepEqual(rounds.map((r) => r.label), ["NRL Round 23", "NRL Round 30"], "undated rounds go to the end");
+  assert.equal(defaultRoundIndex(rounds), 0, "the fan lands on the round they can actually tip");
+  assert.equal(rounds[1].deadline, null, "a TBA round advertises no lockout");
+});
+
+test("the client celebrates only an accepted tip, and drops rejected ones", () => {
+  const sp = read("../src/components/forum/ScorePredictor.jsx");
+  // `open` is computed whenever the card last rendered; a card sitting on
+  // screen across kickoff still showed its picker, and firing confetti before
+  // the guard told the fan a post-kickoff tip was in.
+  assert.ok(sp.includes("const accepted = onTip("), "the card must act on handleTip's verdict");
+  assert.ok(sp.includes("if (!accepted) {"), "a refused tip must not celebrate");
+  assert.ok(sp.includes("if (!isTippable(game)) return false;"), "handleTip re-checks against a fresh clock");
+  // A server rejection is not a connectivity problem.
+  assert.ok(sp.includes('code === "locked" || code === "no_kickoff"'), "rejections must be told apart from outages");
+  assert.ok(sp.includes("removeTipFromQueue(game.id)"), "a rejected tip must not sit in the retry queue");
+});
+
+test("a queued offline tip never overwrites a newer one made elsewhere", () => {
+  const sp = read("../src/components/forum/ScorePredictor.jsx");
+  // Now that a repeat submission EDITS the entry, replaying a stale queued
+  // payload would clobber a newer tip made from another device.
+  assert.ok(sp.includes("queued_at"), "queued payloads must carry their own timestamp");
+  assert.ok(sp.includes("serverTime > queuedTime"), "a superseded queue item is dropped, not replayed");
+});
+
+test("the round in view is tracked by label, and time-derived state ticks", () => {
+  const sp = read("../src/components/forum/ScorePredictor.jsx");
+  // The two fixture queries resolve independently; an index silently pointed
+  // at a different round the moment a new one appeared.
+  assert.ok(sp.includes("activeRoundLabel"), "the selected round must be identified by label");
+  assert.ok(!sp.includes("setRoundIndex"), "the fragile index state is gone");
+  assert.ok(sp.includes("useSlowClock"), "round state and lockout countdown must not freeze at first render");
+});
+
+test("the team picker renders home / VS / away in that order", () => {
+  const sp = read("../src/components/forum/ScorePredictor.jsx");
+  // Rendering both buttons then the VS filler let grid auto-placement drop
+  // the away team into the narrow middle column of grid-cols-[1fr_auto_1fr].
+  const picker = sp.slice(sp.indexOf("{/* Team Picker"), sp.indexOf("{/* Margin:"));
+  const home = picker.indexOf("game.home_team");
+  const vs = picker.indexOf(">VS<");
+  const away = picker.indexOf("game.away_team");
+  assert.ok(home >= 0 && vs > home && away > vs, "DOM order must be home, VS, away");
 });

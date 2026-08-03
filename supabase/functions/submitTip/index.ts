@@ -52,31 +52,55 @@ Deno.serve(async (req) => {
       if (matchup.status !== 'scheduled') {
         return json({ error: 'This game is no longer open for tips.', code: 'locked' }, 403);
       }
+      // A scored game is closed even if nobody has flipped the status yet.
+      // Status alone left a window between "admin enters the result" and
+      // "admin marks it final" in which the real score is public and tips are
+      // still writable — a guaranteed perfect tip worth 150 chips and 50 XP.
+      if (matchup.home_score != null || matchup.away_score != null) {
+        return json({ error: 'This game already has a result.', code: 'locked' }, 403);
+      }
       kickoff = matchup.kickoff || '';
     }
-    if (kickoff) {
-      const kickoffMs = new Date(kickoff).getTime();
-      if (Number.isFinite(kickoffMs) && kickoffMs <= Date.now()) {
-        return json({ error: 'Tips are locked — this game has kicked off.', code: 'locked' }, 403);
-      }
+    // Every tip needs a real kickoff: it is the only lock there is. A game
+    // with no kickoff can never be time-locked, so it would stay writable
+    // forever — including after full time.
+    const kickoffMs = kickoff ? new Date(kickoff).getTime() : NaN;
+    if (!Number.isFinite(kickoffMs)) {
+      return json({ error: 'Tipping opens once the kickoff time is confirmed.', code: 'no_kickoff' }, 400);
+    }
+    if (kickoffMs <= Date.now()) {
+      return json({ error: 'Tips are locked — this game has kicked off.', code: 'locked' }, 403);
     }
 
     // One entry per user (or IP for anonymous) per game — a repeat submission
-    // EDITS that entry while the game is still open.
-    const { data: existing } = await svc
-      .from('tipping_entries')
-      .select('id, user_id, ip_address, kickoff, settled_at')
-      .eq('game_id', gameId)
-      .limit(500);
-    const mine = (existing || []).find((e) =>
-      (user?.id && String(e.user_id || '') === String(user.id)) ||
-      (!user?.id && ip && String(e.ip_address || '') === ip));
+    // EDITS that entry while the game is still open. The lookup is targeted
+    // rather than "scan the game's first 500 rows": on a popular game the
+    // caller's own entry could fall outside that window, and the miss would
+    // insert a duplicate tip instead of editing.
+    let mine = null;
+    if (user?.id || ip) {
+      let query = svc
+        .from('tipping_entries')
+        .select('id, user_id, ip_address, kickoff, settled_at')
+        .eq('game_id', gameId);
+      query = user?.id
+        ? query.eq('user_id', user.id)
+        // Anonymous callers match on IP — but ONLY against other anonymous
+        // entries. Without the empty-user_id guard, anyone sharing a NAT/CGNAT
+        // exit with a signed-in tipper could overwrite that account's tip
+        // just by tipping the same game while logged out.
+        : query.eq('ip_address', ip).eq('user_id', '');
+      const { data: existing } = await query.limit(1);
+      mine = (existing || [])[0] || null;
+    }
     if (mine) {
       // Never rewrite a settled entry (results are already paid out), and for
       // API fixtures with no DB row the STORED kickoff is authoritative — a
       // client can't post a fresh future kickoff to edit after the game starts.
       const storedKickoffMs = mine.kickoff ? new Date(mine.kickoff).getTime() : NaN;
-      const storedLocked = Number.isFinite(storedKickoffMs) && storedKickoffMs <= Date.now();
+      // No stored kickoff means no lock is possible — refuse rather than
+      // leave the entry editable indefinitely.
+      const storedLocked = !Number.isFinite(storedKickoffMs) || storedKickoffMs <= Date.now();
       if (mine.settled_at || storedLocked) {
         return json({ error: 'Tips are locked — this game has kicked off.', code: 'locked' }, 403);
       }

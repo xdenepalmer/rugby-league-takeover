@@ -43,7 +43,7 @@ test("tipping locks at kickoff (no tips after a game starts)", () => {
   assert.match(helpers, /export function isTippable\(game/, "isTippable must be the single client lock");
   assert.match(predictor, /const open = isTippable\(game\)/, "the card must derive openness from isTippable");
   assert.match(predictor, /const showPicker = open && \(!alreadyTipped \|\| editing\)/, "tip controls only render while the game is open");
-  assert.match(predictor, /if \(!isTippable\(game\)\) return;/, "handleTip must reject a locked game");
+  assert.match(predictor, /if \(!isTippable\(game\)\) return false;/, "handleTip must reject a locked game (and report the refusal)");
 
   // Behavioural replica of the getStatus thresholds.
   const label = (kickoff, apiStatus) => {
