@@ -1618,8 +1618,6 @@ export default function Store() {
                     </div>
                   )}
 
-                  {!pickupEnabled && !isAuOrder && null}
-
                   {/* Fixed (flat-rate) shipping — no postcode calculator; the
                       rate is deterministic and re-verified server-side. */}
                   {isFixedShipping && cartNeedsShipping && !isPickup && (
