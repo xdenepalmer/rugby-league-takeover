@@ -19,7 +19,7 @@ const stockBadge = (qty) => {
   return { label: `${n} in stock`, tone: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5" };
 };
 
-const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: 300, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true, flat_shipping_aud: null, membership_months: 0 };
+const emptyProduct = { name: "", description: "", details: "", image_url: "", image_url_2: "", price_aud: 0, stock_quantity: 0, sizes: [], is_active: true, sort_order: 1, weight_grams: null, length_cm: null, width_cm: null, height_cm: null, parcel_size: "satchel", shipping_required: true, flat_shipping_aud: null, membership_months: 0 };
 
 // The largest packaging an item needs. Checkout offers the cart's biggest item's
 // size and nothing above it, so a customer can't put a cap in a large box.
@@ -78,6 +78,30 @@ const parcelSizeField = (draft, setDraft) => (
       <option key={opt.value} value={opt.value}>{opt.label}</option>
     ))}
   </select>
+);
+
+// Weight and dimensions were labelled by PLACEHOLDER only. A placeholder
+// disappears the moment a field has a value, and weight_grams defaults to 300,
+// so the weight box never showed its label at all — four unlabelled number
+// boxes with no way to tell which was which. Labels now sit above the input,
+// where they stay put (and are readable by a screen reader).
+const MeasureField = ({ label, hint, value, placeholder, onChange }) => (
+  <label className="block">
+    <span className="mb-1 block text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+      {label}
+    </span>
+    <Input
+      type="number"
+      min="0"
+      inputMode="decimal"
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      aria-label={label}
+      className="h-11 rounded-none border-border/40 text-sm"
+    />
+    {hint && <span className="mt-0.5 block text-[9px] text-muted-foreground/60">{hint}</span>}
+  </label>
 );
 
 // Fixed-mode per-product flat postage override (e.g. a Membership Package that
@@ -218,18 +242,27 @@ function ProductCard({ product, onUpdate, onDelete, index, saving }) {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment — weight &amp; dimensions</label>
+            <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment — parcel weight &amp; size</label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-              <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-              <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-              <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+              <MeasureField
+                label="Weight (g)"
+                hint="Per item"
+                placeholder="e.g. 40"
+                value={draft.weight_grams ?? ""}
+                onChange={(e) => setDraft({ ...draft, weight_grams: e.target.value === "" ? null : Number(e.target.value) })}
+              />
+              <MeasureField label="Length (cm)" placeholder="Optional" value={draft.length_cm ?? ""}
+                onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} />
+              <MeasureField label="Width (cm)" placeholder="Optional" value={draft.width_cm ?? ""}
+                onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} />
+              <MeasureField label="Height (cm)" placeholder="Optional" value={draft.height_cm ?? ""}
+                onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} />
             </div>
             <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
             <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
             <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
             <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
-            <p className="text-[8px] text-muted-foreground/40">Weight/dimensions are used for live AusPost rates (calculated mode). The flat postage override applies only in fixed mode — set it in Site Settings → Shipping.</p>
+            <p className="text-[8px] text-muted-foreground/40">Weight is per single item and is multiplied by quantity, so a placeholder value overcharges postage on multi-item orders (a t-shirt is roughly 150g, a stubbie cooler 40g). Dimensions are optional — blank assumes a small satchel. Used for live AusPost rates in calculated mode; the flat postage override applies only in fixed mode (Site Settings → Shipping).</p>
           </div>
 
           <div className="space-y-1">
@@ -440,19 +473,28 @@ export default function ProductsManager({ products, loading }) {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment — weight &amp; dimensions</label>
+                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Fulfilment — parcel weight &amp; size</label>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <Input type="number" placeholder="Weight (g)" value={draft.weight_grams ?? 300} onChange={(e) => setDraft({ ...draft, weight_grams: Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-                    <Input type="number" placeholder="Length (cm)" value={draft.length_cm ?? ""} onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-                    <Input type="number" placeholder="Width (cm)" value={draft.width_cm ?? ""} onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
-                    <Input type="number" placeholder="Height (cm)" value={draft.height_cm ?? ""} onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} className="h-11 rounded-none border-border/40 text-sm" />
+                    <MeasureField
+                      label="Weight (g)"
+                      hint="Per item"
+                      placeholder="e.g. 40"
+                      value={draft.weight_grams ?? ""}
+                      onChange={(e) => setDraft({ ...draft, weight_grams: e.target.value === "" ? null : Number(e.target.value) })}
+                    />
+                    <MeasureField label="Length (cm)" placeholder="Optional" value={draft.length_cm ?? ""}
+                      onChange={(e) => setDraft({ ...draft, length_cm: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <MeasureField label="Width (cm)" placeholder="Optional" value={draft.width_cm ?? ""}
+                      onChange={(e) => setDraft({ ...draft, width_cm: e.target.value === "" ? null : Number(e.target.value) })} />
+                    <MeasureField label="Height (cm)" placeholder="Optional" value={draft.height_cm ?? ""}
+                      onChange={(e) => setDraft({ ...draft, height_cm: e.target.value === "" ? null : Number(e.target.value) })} />
                   </div>
                   <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
                   <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
                   <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
             <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
                   <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
-                  <p className="text-[8px] text-muted-foreground/40">Weight/dimensions are used for live AusPost rates (calculated mode). The flat postage override applies only in fixed mode — set it in Site Settings → Shipping.</p>
+                  <p className="text-[8px] text-muted-foreground/40">Weight is per single item and is multiplied by quantity, so a placeholder value overcharges postage on multi-item orders (a t-shirt is roughly 150g, a stubbie cooler 40g). Dimensions are optional — blank assumes a small satchel. Used for live AusPost rates in calculated mode; the flat postage override applies only in fixed mode (Site Settings → Shipping).</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
