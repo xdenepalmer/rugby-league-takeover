@@ -20,6 +20,9 @@ const statusConfig = {
   completed: { label: "Delivered", icon: CheckCircle2, color: "text-emerald-400",  bg: "bg-emerald-400",  ring: "ring-emerald-400/30" },
   cancelled: { label: "Cancelled", icon: Clock,        color: "text-destructive",  bg: "bg-destructive",  ring: "ring-destructive/30" },
   refunded:  { label: "Refunded",  icon: Clock,        color: "text-destructive",  bg: "bg-destructive",  ring: "ring-destructive/30" },
+  // The backend writes this on partial refunds; without an entry the fallback
+  // showed the customer "Pending" on an order they'd been partially refunded.
+  partially_refunded: { label: "Partially refunded", icon: Clock, color: "text-amber-400", bg: "bg-amber-400", ring: "ring-amber-400/30" },
 };
 
 const getStatus = (s) => statusConfig[s] || statusConfig.pending;
@@ -174,7 +177,7 @@ export default function OrdersTab() {
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
                     isPaidFlow
                       ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
-                      : order.status === "cancelled" || order.status === "refunded"
+                      : ["cancelled", "refunded", "partially_refunded"].includes(order.status)
                         ? "border-destructive/30 bg-destructive/5 text-destructive"
                         : "border-amber-500/30 bg-amber-500/5 text-amber-400"
                   }`}>

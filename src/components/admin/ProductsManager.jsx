@@ -492,7 +492,6 @@ export default function ProductsManager({ products, loading }) {
                   <div className="mt-2">{parcelSizeField(draft, setDraft)}</div>
                   <div className="mt-2">{shippingRequiredField(draft, setDraft)}</div>
                   <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
-            <div className="mt-3">{membershipMonthsField(draft, setDraft)}</div>
                   <div className="mt-2">{flatShippingField(draft, setDraft)}</div>
                   <p className="text-[8px] text-muted-foreground/40">Weight is per single item and is multiplied by quantity, so a placeholder value overcharges postage on multi-item orders (a t-shirt is roughly 150g, a stubbie cooler 40g). Dimensions are optional — blank assumes a small satchel. Used for live AusPost rates in calculated mode; the flat postage override applies only in fixed mode (Site Settings → Shipping).</p>
                 </div>

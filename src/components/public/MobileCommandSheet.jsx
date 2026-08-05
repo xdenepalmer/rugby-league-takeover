@@ -363,10 +363,14 @@ const CONTEXT_HEADERS = {
 export default function MobileCommandSheet({ isOpen, onClose, onNavigate, context = "home", cartCount = 0, settings = {} }) {
   const header = CONTEXT_HEADERS[context] || CONTEXT_HEADERS.home;
 
+  // xl:hidden, NOT lg:hidden — the tab bar that opens this sheet
+  // (PublicLayout) is visible to 1279px. With lg:hidden the sheet was
+  // display:none on 1024-1279px viewports (iPad landscape), so the Plan
+  // button opened an invisible sheet and appeared dead.
   return (
     <AnimatePresence>
       {isOpen && (
-        <div key="sheet" className="fixed inset-0 z-50 lg:hidden pointer-events-none">
+        <div key="sheet" className="fixed inset-0 z-50 xl:hidden pointer-events-none">
           {/* Semi-transparent backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

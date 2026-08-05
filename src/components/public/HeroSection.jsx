@@ -168,6 +168,14 @@ export default function HeroSection({ settings = {}, settingsLoading = false }) 
           </a>
           <a
             href="#events"
+            onClick={(e) => {
+              // Route through the shared helper like the sibling CTA above — a
+              // bare hash navigation smooth-scrolls through lazy sections that
+              // hydrate and grow mid-flight, landing the user on Travel
+              // Packages instead of Events (the shipped wrong-section bug).
+              e.preventDefault();
+              scrollToAnchor("#events");
+            }}
             className="group flex items-center justify-center gap-2.5 border border-border bg-secondary/35 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 hover:text-foreground hover:border-primary hover:bg-secondary/50 transition-all duration-300 lg:hover:-translate-y-0.5 cursor-pointer text-center"
           >
             <Calendar className="h-4 w-4" />
