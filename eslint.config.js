@@ -35,6 +35,14 @@ export default [
     },
     rules: {
       "no-unused-vars": "off",
+      // Spreading pluginJs.configs.recommended above does NOT survive: this
+      // `rules` key overwrites the spread object's own `rules`, so every
+      // recommended rule (no-undef included) was silently discarded. A deleted
+      // variable still referenced in JSX therefore passed lint, typecheck, the
+      // whole test suite and the production build, and only threw at runtime —
+      // which took the live store down mid-launch. Declared explicitly here so
+      // it cannot be lost again.
+      "no-undef": "error",
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "error",
       // Catch <Component> used without an import/definition (e.g. a missing
