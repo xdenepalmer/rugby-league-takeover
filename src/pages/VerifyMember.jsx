@@ -18,7 +18,10 @@ import { formatMembershipDate } from "@/lib/membership";
 // the phone in front of you is showing.
 export default function VerifyMember() {
   const [params, setParams] = useSearchParams();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  // isLoadingAuth is the flag AuthContext actually provides — the old
+  // `isLoading` destructure was always undefined, so the spinner never showed
+  // and staff saw the "not authorised" screen flash while auth was resolving.
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const [result, setResult] = useState(null);
   const [checking, setChecking] = useState(false);
   const [manual, setManual] = useState("");
@@ -43,7 +46,7 @@ export default function VerifyMember() {
     if (token && isStaff) check({ token });
   }, [token, isStaff, check]);
 
-  if (isLoading) {
+  if (isLoadingAuth) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />

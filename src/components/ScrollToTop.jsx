@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { scrollToAnchor } from "@/lib/scroll-to-anchor";
 
 const getHashId = (hash) => {
   const rawId = hash.slice(1);
@@ -17,21 +18,13 @@ export default function ScrollToTop() {
 
   useEffect(() => {
     if (hash) {
-      const id = getHashId(hash);
-      // Retry a few times — the target section may still be lazy-loading
-      // when navigating to a hash from another page.
-      let attempts = 0;
-      const tryScroll = () => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth" });
-        } else if (attempts < 10) {
-          attempts += 1;
-          timer = window.setTimeout(tryScroll, 200);
-        }
-      };
-      let timer = window.setTimeout(tryScroll, 50);
-      return () => window.clearTimeout(timer);
+      // The shared helper (not a bare smooth scrollIntoView, which this loop
+      // used to be): it already waits up to 4s for lazily-mounted targets and
+      // re-pins the position while sections hydrate and reflow underneath the
+      // scroll — the exact failure scroll-to-anchor.js exists to prevent.
+      // History is left alone: the router already owns the URL on this path.
+      scrollToAnchor(`#${getHashId(hash)}`, { updateHistory: false });
+      return;
     }
 
     if (navigationType === "POP") return;

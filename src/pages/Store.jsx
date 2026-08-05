@@ -278,6 +278,10 @@ function loadStoredCart() {
         image_url: String(item?.image_url || "").slice(0, 2000),
         stock_quantity: Math.max(0, Math.floor(Number(item?.stock_quantity) || 0)),
         shipping_required: item?.shipping_required !== false,
+        // Must survive the round-trip: the reconciliation effect compares this
+        // field strictly, and undefined !== null flagged every restored cart as
+        // "changed" — showing a false "items were removed" warning on load.
+        flat_shipping_aud: Number.isFinite(Number(item?.flat_shipping_aud)) ? Number(item.flat_shipping_aud) : null,
         max_quantity: Math.max(1, Math.min(20, Math.floor(Number(item?.max_quantity) || 20))),
         quantity,
         size: size || undefined,
@@ -724,22 +728,27 @@ export default function Store() {
     if (isLoading || !appParams.hasBase44Config || cart.length === 0) return;
 
     const productsById = new Map(visibleProducts.map((product) => [product.id, product]));
-    let changed = false;
+    // "Removed" and "refreshed" are different events and must not share a flag:
+    // a silent price/stock refresh is routine, but the warning it used to
+    // trigger — "items were removed" — is not. Every returning visitor with a
+    // saved cart saw that false alarm on page load.
+    let removed = false;
+    let refreshed = false;
     const nextCart = cart.flatMap((item) => {
       const product = productsById.get(item.id);
       if (!product) {
-        changed = true;
+        removed = true;
         return [];
       }
       const stock = Number(product.stock_quantity);
       if (product.coming_soon === true || (Number.isFinite(stock) && stock <= 0)) {
-        changed = true;
+        removed = true;
         return [];
       }
 
       const maxQuantity = getMaximumQuantity(product, item.size);
       if (maxQuantity <= 0) {
-        changed = true;
+        removed = true;
         return [];
       }
       const quantity = Math.max(1, Math.min(Math.floor(Number(item.quantity) || 1), maxQuantity));
@@ -764,13 +773,15 @@ export default function Store() {
         || updated.shipping_required !== item.shipping_required
         || updated.flat_shipping_aud !== item.flat_shipping_aud
       ) {
-        changed = true;
+        refreshed = true;
       }
       return [updated];
     });
 
-    if (changed) {
+    if (removed || refreshed) {
       setCart(nextCart);
+    }
+    if (removed) {
       setCheckoutError("");
       setCheckoutNotice("Some unavailable cart items were removed. Please review your cart before checkout.");
     }
