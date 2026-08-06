@@ -3,7 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 // Self-contained by design: Base44 deploys each function from its own directory
 // and does not support cross-function imports. The forum sanitisation here mirrors
 // buildPendingForumPost() in src/lib/public-forms.js — keep the two in sync.
-const FORUM_CATEGORIES = ['General', 'Travel', 'Events', 'MatchDay', 'VegasTips'];
+const FORUM_CATEGORIES = ['General', 'Travel', 'Events', 'MatchDay', 'VegasTips', 'JerseySwap'];
 
 const trimToLength = (value, maxLength) => String(value ?? '').trim().slice(0, maxLength);
 

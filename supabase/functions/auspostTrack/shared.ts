@@ -221,7 +221,7 @@ const PROFANITY_RE = new RegExp(`\\b(${PROFANITY.join('|')})\\b`, 'gi');
 export const censorProfanity = (text: unknown) =>
   String(text || '').replace(PROFANITY_RE, (match) => match[0] + '*'.repeat(Math.max(match.length - 1, 1)));
 
-export const FORUM_CATEGORIES = ['General', 'Travel', 'Events', 'MatchDay', 'VegasTips'];
+export const FORUM_CATEGORIES = ['General', 'Travel', 'Events', 'MatchDay', 'VegasTips', 'JerseySwap'];
 
 const CASINO_RANKS = [
   { min: 2500, name: 'Vegas Royalty' }, { min: 1500, name: 'Whale' }, { min: 900, name: 'High Roller' },

@@ -1733,6 +1733,26 @@ export default function Forum() {
 
               {/* Seating Planner & Score Predictor for MatchDay category on Desktop Only */}
               <AnimatePresence>
+                {/* Jersey Swap category → the structured board. Threads stay
+                    the negotiation space; the board is where listings and
+                    mutual matches live. */}
+                {selectedCategory === "JerseySwap" && (
+                  <Link
+                    to="/swap"
+                    className="mb-4 flex items-center justify-between gap-3 border border-purple-400/30 bg-purple-500/[0.06] px-4 py-3 transition-colors hover:bg-purple-500/[0.12]"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-purple-300">Swap Board</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        List your jersey, see who wants it, and get matched — confirmed swaps earn chips and a badge.
+                      </p>
+                    </div>
+                    <span className="shrink-0 border border-purple-400/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-purple-300">
+                      Open board
+                    </span>
+                  </Link>
+                )}
+
                 {selectedCategory === "MatchDay" && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}

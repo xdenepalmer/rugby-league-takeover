@@ -5,7 +5,7 @@
  * and used by the extracted feed components to avoid a circular import.
  */
 import {
-  MessageSquare, Globe, Flame, Zap, Plane, MapPin,
+  MessageSquare, Globe, Flame, Zap, Plane, MapPin, Shirt,
 } from "lucide-react";
 import { canonicalizeShareUrl } from "@/hooks/useNativeShare";
 
@@ -16,6 +16,7 @@ export const CATEGORY_META = {
   Events:   { label: "Meetups & Parties",icon: Flame,        gradient: "from-orange-500/25 to-orange-600/5", accent: "text-orange-400", dot: "bg-orange-400",  ring: "ring-orange-400/20",  hue: 25, glow: "rgba(251,146,60,0.2)" },
   MatchDay: { label: "Allegiant Stadium",icon: Zap,          gradient: "from-red-500/25 to-red-600/5",      accent: "text-red-400",    dot: "bg-red-400",     ring: "ring-red-400/20",     hue: 15, glow: "rgba(248,113,113,0.2)" },
   VegasTips:{ label: "Vegas Strip Tips", icon: MapPin,       gradient: "from-amber-500/25 to-amber-600/5",  accent: "text-amber-400",  dot: "bg-amber-400",   ring: "ring-amber-400/20",   hue: 45, glow: "rgba(251,191,36,0.2)" },
+  JerseySwap:{ label: "Jersey Swap",     icon: Shirt,        gradient: "from-purple-500/25 to-purple-600/5", accent: "text-purple-400", dot: "bg-purple-400",  ring: "ring-purple-400/20",  hue: 270, glow: "rgba(192,132,252,0.2)" },
 };
 
 export const getCategoryMeta = (val) => CATEGORY_META[val] || CATEGORY_META.General;
