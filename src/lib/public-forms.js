@@ -1,4 +1,4 @@
-export const FORUM_CATEGORIES = ["General", "Travel", "Events", "MatchDay", "VegasTips"];
+export const FORUM_CATEGORIES = ["General", "Travel", "Events", "MatchDay", "VegasTips", "JerseySwap"];
 export const SUPPORTED_TEAMS = ["Eels", "Tigers", "Titans", "Storm", "Leopards", "Bulls", "Other"];
 
 const trimToLength = (value, maxLength) => String(value ?? "").trim().slice(0, maxLength);

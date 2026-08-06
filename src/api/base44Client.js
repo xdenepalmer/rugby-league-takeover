@@ -57,6 +57,10 @@ const READ_TABLES = {
   // other users' ids, so a client-side season ladder was both truncated and
   // unable to tell two same-named accounts apart.
   TipLadderRow: 'tipping_ladder_view',
+  // Read-only: jersey swap listings, sanitised (other users' ids masked,
+  // opaque swapper_key + is_me instead). Writes go through the swapBoard
+  // edge function only — there is deliberately no write table.
+  SwapListing: 'swap_listings_view',
   // Public visitors (anon) can't read the base site_settings table — RLS there
   // is admin-only — so reads must go through the sanitising view, or the whole
   // site falls back to code defaults for logged-out users (wrong logo, ticker,
