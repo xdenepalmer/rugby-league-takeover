@@ -5,6 +5,7 @@ import { Users as UsersIcon, ShieldAlert, ChevronDown, ChevronUp } from "lucide-
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import AdminOverview from "@/components/admin/AdminOverview";
+import VisitorCounter from "@/components/public/VisitorCounter";
 import ActivityFeed from "@/components/admin/ActivityFeed";
 import RevenueBreakdown from "@/components/admin/RevenueBreakdown";
 import AdminNotepad from "@/components/admin/AdminNotepad";
@@ -148,6 +149,9 @@ export default function OverviewPanel() {
               className="overflow-hidden"
             >
               <div className="grid grid-cols-1 gap-5 pt-4">
+              {/* Site-wide visitor tally — moved off the public footer; the
+                  number is for the team, not the crowd. */}
+              <div className="mb-4 flex justify-end"><VisitorCounter /></div>
               <AdminOverview counts={counts} registrations={registrations} orders={orders} statOverrides={statOverrides} onSaveOverride={handleSaveOverride} />
 
                 {/* ── Additional Stats Row ── */}

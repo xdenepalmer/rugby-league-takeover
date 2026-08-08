@@ -31,7 +31,7 @@ const defaults = {
   ],
   social_facebook_url: "https://www.facebook.com/groups/663237792349090",
   social_instagram_url: "https://www.instagram.com/rugbyleaguetakeover?igsh=MTY1d3lkaWs1NDhnaw==",
-  social_tiktok_url: "https://www.tiktok.com/@nrl_las_vegas?_r=1&_t=ZS-96zem8W4clw",
+  social_tiktok_url: "https://www.tiktok.com/@rugbyleaguetakeover",
   news_eyebrow: "Latest News",
   news_title: "From the strip",
   news_description: "Fresh updates, announcements and supporter news for Rugby League Las Vegas.",
@@ -76,6 +76,9 @@ const defaults = {
   card_fee_fixed_aud: 0.3,
   card_fee_mode: "absorbed",
   card_fee_label: "Card processing fee",
+  store_show_stock_numbers: false,
+  legal_shipping: "",
+  legal_refunds: "",
   footer_text: "Rugby League Takeover Las Vegas © 2026",
   footer_powered_by: "DENEO.AI",
   contact_email: "",
@@ -580,6 +583,9 @@ export default function SiteSettingsManager({ settings }) {
                         <LabeledField label="Merch Title">
                           <Input placeholder="Wear the takeover" value={draft.merch_title || ""} onChange={(e) => update("merch_title", e.target.value)} />
                         </LabeledField>
+                        <LabeledField label="Show stock numbers on the store" help="On: shoppers see exact counts like '121 left'. Off (default): only In Stock / Low stock / Sold Out — exact counts stay in the Products manager.">
+                          <Switch checked={draft.store_show_stock_numbers === true} onCheckedChange={(v) => update("store_show_stock_numbers", v)} />
+                        </LabeledField>
                       </div>
                       <LabeledField label="Merch Description" fullWidth>
                         <Textarea placeholder="Browse official merch and checkout securely..." value={draft.merch_description || ""} onChange={(e) => update("merch_description", e.target.value)} />
@@ -951,6 +957,12 @@ export default function SiteSettingsManager({ settings }) {
                           </LabeledField>
                           <LabeledField label="Privacy Policy" help="Shown at /privacy. Same formatting rules as above." fullWidth>
                             <Textarea placeholder="Your Privacy Policy…" value={draft.legal_privacy || ""} onChange={(e) => update("legal_privacy", e.target.value)} className="min-h-40" />
+                          </LabeledField>
+                          <LabeledField label="Shipping Policy" help="Shown at /shipping. Same formatting rules as above." fullWidth>
+                            <Textarea placeholder="Your Shipping Policy…" value={draft.legal_shipping || ""} onChange={(e) => update("legal_shipping", e.target.value)} className="min-h-40" />
+                          </LabeledField>
+                          <LabeledField label="Refunds & Exchanges" help="Shown at /refunds. Same formatting rules as above." fullWidth>
+                            <Textarea placeholder="Your Refunds & Exchanges policy…" value={draft.legal_refunds || ""} onChange={(e) => update("legal_refunds", e.target.value)} className="min-h-40" />
                           </LabeledField>
                         </div>
                       </div>

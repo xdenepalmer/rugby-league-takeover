@@ -55,7 +55,7 @@ const STRIPE_CHECKOUT_SESSION_ID_PATTERN = /^cs_(?:test|live)_[A-Za-z0-9_]{10,}$
 /* ── 3D Product Card Component ── */
 const isTouch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)")?.matches;
 
-const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease, onOpenQuickView }) {
+const ProductCard = React.memo(function ProductCard({ product, index, addToCart, cart, user, onSubscribeRelease, onOpenQuickView, showStockNumbers = false }) {
   const stock = Number(product.stock_quantity);
   const comingSoon = product.coming_soon === true;
   const soldOut = !comingSoon && Number.isFinite(stock) && stock <= 0;
@@ -98,7 +98,9 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
     : soldOut
       ? "Sold Out"
       : stock <= 5
-        ? `Only ${stock} left!`
+        // Exact counts are admin-controlled (Site Settings → Store); with the
+        // toggle off the urgency reads qualitatively so inventory isn't public.
+        ? (showStockNumbers ? `Only ${stock} left!` : "Low stock")
         : "In Stock";
 
   // Badge determination
@@ -181,7 +183,9 @@ const ProductCard = React.memo(function ProductCard({ product, index, addToCart,
             <span className={comingSoon ? "text-primary" : soldOut ? "text-destructive" : stock <= 5 ? "text-amber-400" : "text-emerald-400"}>
               {stockLabel}
             </span>
-            <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : stock} left`}</span>
+            {(comingSoon || showStockNumbers) && (
+              <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : stock} left`}</span>
+            )}
           </div>
           <div className="h-1 w-full bg-border overflow-hidden">
             <motion.div 
@@ -292,7 +296,7 @@ function loadStoredCart() {
   }
 }
 
-function ProductQuickViewModal({ product, isOpen, onClose, addToCart }) {
+function ProductQuickViewModal({ product, isOpen, onClose, addToCart, showStockNumbers = false }) {
   const [quantity, setQuantity] = useState(1);
   const variants = useMemo(() => normalizeSizeVariants(product?.sizes), [product?.sizes]);
   const variantLabels = useMemo(() => variants.map(v => v.size), [variants]);
@@ -416,9 +420,11 @@ function ProductQuickViewModal({ product, isOpen, onClose, addToCart }) {
                   {/* Stock status indicator */}
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
                     <span className={comingSoon ? "text-primary" : soldOut ? "text-destructive" : totalStock <= 5 ? "text-amber-400" : "text-emerald-400"}>
-                      {comingSoon ? "Coming Soon" : soldOut ? "Sold Out" : totalStock <= 5 ? `Only ${totalStock} left!` : "In Stock"}
+                      {comingSoon ? "Coming Soon" : soldOut ? "Sold Out" : totalStock <= 5 ? (showStockNumbers ? `Only ${totalStock} left!` : "Low stock") : "In Stock"}
                     </span>
-                    <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : totalStock} left`}</span>
+                    {(comingSoon || showStockNumbers) && (
+                      <span className="text-slate-300 font-bold">{comingSoon ? "Preview" : `${soldOut ? "0" : totalStock} left`}</span>
+                    )}
                   </div>
                   <div className="h-1 w-full bg-border overflow-hidden mt-1.5">
                     <div className={`h-full ${comingSoon ? "bg-primary" : soldOut ? "bg-destructive" : totalStock <= 5 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${comingSoon ? 100 : Number.isFinite(totalStock) ? Math.min(100, Math.max(0, (totalStock / 15) * 100)) : 100}%` }} />
@@ -1384,6 +1390,7 @@ export default function Store() {
                   addToCart={addToCart}
                   cart={cart}
                   user={user}
+                  showStockNumbers={storeSettings.store_show_stock_numbers === true}
                   onSubscribeRelease={subscribeToRelease}
                   onOpenQuickView={setQuickViewProduct}
                 />
@@ -1936,6 +1943,7 @@ export default function Store() {
         isOpen={!!quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
         addToCart={addToCart}
+        showStockNumbers={storeSettings.store_show_stock_numbers === true}
       />
     </main>
   );
