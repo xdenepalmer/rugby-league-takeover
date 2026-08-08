@@ -4,8 +4,16 @@ import { Music2 } from "lucide-react";
 export const DEFAULT_SOCIAL_LINKS = {
   facebook: "https://www.facebook.com/groups/663237792349090",
   instagram: "https://www.instagram.com/rugbyleaguetakeover?igsh=MTY1d3lkaWs1NDhnaw==",
-  tiktok: "https://www.tiktok.com/@nrl_las_vegas?_r=1&_t=ZS-96zem8W4clw",
+  tiktok: "https://www.tiktok.com/@rugbyleaguetakeover",
 };
+
+// The handle shown under a link is derived from its URL, so changing the URL
+// in Site Settings updates the footer text too. The old hardcoded "@nrl_las_vegas"
+// detail kept showing after the admin had already fixed the URL in settings.
+export function handleFromUrl(url, fallback) {
+  const match = /@([A-Za-z0-9._-]+)/.exec(String(url || ""));
+  return match ? `@${match[1]}` : fallback;
+}
 
 const FacebookIcon = ({ className = "" }) => (
   <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
@@ -34,7 +42,7 @@ export function getSocialLinks(settings = {}) {
     {
       key: "instagram",
       label: "Instagram",
-      detail: "@rugbyleaguetakeover",
+      detail: handleFromUrl(settings.social_instagram_url || DEFAULT_SOCIAL_LINKS.instagram, "@rugbyleaguetakeover"),
       url: settings.social_instagram_url || DEFAULT_SOCIAL_LINKS.instagram,
       color: "#E1306C",
       icon: InstagramIcon,
@@ -42,7 +50,7 @@ export function getSocialLinks(settings = {}) {
     {
       key: "tiktok",
       label: "TikTok",
-      detail: "@nrl_las_vegas",
+      detail: handleFromUrl(settings.social_tiktok_url || DEFAULT_SOCIAL_LINKS.tiktok, "@rugbyleaguetakeover"),
       url: settings.social_tiktok_url || DEFAULT_SOCIAL_LINKS.tiktok,
       color: "#25F4EE",
       icon: Music2,

@@ -32,9 +32,13 @@ test("visitor counter renders nothing until it has a real number", () => {
   assert.ok(src.includes("toLocaleString()"), "thousands-formatted");
 });
 
-test("the counter is mounted in both footers (site-wide)", () => {
+test("the counter lives in the admin overview, NOT the public footers", () => {
+  // Owner call: the visitor tally is for the team, not the crowd. It moved off
+  // both public footers into the Command Centre overview.
   const home = read("../src/pages/Home.jsx");
   const layout = read("../src/components/public/PublicLayout.jsx");
-  assert.ok(home.includes("<VisitorCounter"), "home footer shows the counter");
-  assert.ok(layout.includes("<VisitorCounter"), "non-home footer shows the counter");
+  const overview = read("../src/components/admin/panels/OverviewPanel.jsx");
+  assert.ok(!home.includes("<VisitorCounter"), "home footer must not show the counter");
+  assert.ok(!layout.includes("<VisitorCounter"), "non-home footer must not show the counter");
+  assert.ok(overview.includes("<VisitorCounter"), "admin overview shows the counter");
 });

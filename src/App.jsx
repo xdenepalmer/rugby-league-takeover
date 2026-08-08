@@ -32,6 +32,8 @@ const Terms = lazyWithRetry(() => import("./pages/Terms"), "terms");
 const Privacy = lazyWithRetry(() => import("./pages/Privacy"), "privacy");
 const DeleteAccount = lazyWithRetry(() => import("./pages/DeleteAccount"), "delete-account");
 const SwapBoard = lazyWithRetry(() => import("./pages/SwapBoard"), "swap-board");
+const Shipping = lazyWithRetry(() => import("./pages/Shipping"), "shipping");
+const Refunds = lazyWithRetry(() => import("./pages/Refunds"), "refunds");
 // Standalone (no site chrome): staff open this from a phone camera scan at the bar.
 const VerifyMember = lazyWithRetry(() => import("./pages/VerifyMember"), "verify-member");
 const Login = lazyWithRetry(() => import("./pages/Login"), "login");
@@ -134,6 +136,8 @@ const AuthenticatedApp = () => {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/swap" element={<SwapBoard />} />
+          <Route path="/shipping" element={<Shipping />} />
+          <Route path="/refunds" element={<Refunds />} />
         </Route>
         {/* Auth screens render standalone (full-screen AuthLayout) — no site
             nav, ads, footer, or bottom tab bar overlaying the form. */}
