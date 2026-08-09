@@ -1,16 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { hideBrokenImage } from "@/lib/img-fallback";
+import {
+  WATCHDOG_INTERVAL_MS,
+  claimReload,
+  createWatchdogState,
+  decideVideoAction,
+} from "@/lib/video-watchdog";
 
-// WCAG 2.2.2 (Pause, Stop, Hide): the user's choice to pause the ambient
-// background video persists across pages and visits.
+// WCAG 2.2.2 (Pause, Stop, Hide): the user's choice about the ambient
+// background video persists across pages and visits. Tri-state on purpose:
+//   "1"  — explicitly paused
+//   "0"  — explicitly playing, which OVERRIDES the environment gate below
+//   null — no preference, follow the environment
+// The override exists because "the video stopped moving" has more than once
+// turned out to be Low Power Mode, iOS Reduce Motion, or Chrome's data saver
+// doing their job. Those are worth respecting by default, but the user must be
+// able to say "no, play it" — previously the control was hidden in exactly the
+// cases where the video was not moving, which is when it was needed most.
 const PAUSE_STORAGE_KEY = "rlt_bg_video_paused";
 
-const readStoredPause = () => {
+const readStoredPref = () => {
   try {
-    return localStorage.getItem(PAUSE_STORAGE_KEY) === "1";
+    const value = localStorage.getItem(PAUSE_STORAGE_KEY);
+    return value === "1" || value === "0" ? value : null;
   } catch {
-    return false;
+    return null;
   }
 };
 
@@ -54,10 +69,8 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [userPaused, setUserPaused] = useState(readStoredPause);
-  // Whether the environment (data-saver / reduced-motion) already suppresses
-  // the video — when it does, nothing is moving, so no pause control is shown.
-  const [envBlocked, setEnvBlocked] = useState(false);
+  const [pref, setPref] = useState(readStoredPref);
+  const userPaused = pref === "1";
 
   const ordered = useMemo(() => {
     const list = normalizeVideoSources(sources, src);
@@ -80,24 +93,26 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     // (muted+playsInline autoplay is expected on mobile by design).
     const isSaveData = !!(navigator.connection && navigator.connection.saveData);
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setEnvBlocked(isSaveData || prefersReducedMotion);
-    if (isSaveData || prefersReducedMotion || userPaused) {
+    // An explicit "play" beats the environment gate; an explicit "pause" beats
+    // everything. With no preference stored, the environment decides.
+    if (userPaused || ((isSaveData || prefersReducedMotion) && pref !== "0")) {
       setShouldPlayVideo(false);
       return;
     }
     setShouldPlayVideo(true);
-  }, [key, userPaused]);
+  }, [key, userPaused, pref]);
 
+  // Toggle against what the user can actually see, not against the stored
+  // preference: with no preference stored and the environment suppressing
+  // playback, the button is a Play button and must store "play".
   const togglePaused = () => {
-    setUserPaused((paused) => {
-      const next = !paused;
-      try {
-        localStorage.setItem(PAUSE_STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* private browsing — the choice just won't persist */
-      }
-      return next;
-    });
+    const next = shouldPlayVideo ? "1" : "0";
+    try {
+      localStorage.setItem(PAUSE_STORAGE_KEY, next);
+    } catch {
+      /* private browsing — the choice just won't persist */
+    }
+    setPref(next);
   };
 
   useEffect(() => {
@@ -115,10 +130,6 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
 
-    const advanceVideo = () => {
-      if (ordered.length > 1) setCurrentIndex((index) => (index + 1) % ordered.length);
-    };
-
     const playVideo = () => {
       video.muted = true;
       video.defaultMuted = true;
@@ -134,12 +145,21 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       });
     };
 
-    // Full recovery for a stalled/errored/frozen media pipeline: play() alone
-    // cannot fix a broken buffer — re-load the source, then play.
+    // Full recovery for a stalled/frozen media pipeline: play() alone cannot fix
+    // a broken buffer — re-load the source, then play. Every caller goes through
+    // claimReload() so the watchdog and the event listeners share one budget;
+    // an unbudgeted load() on a timer is what froze the video last time.
+    let watchdogState = createWatchdogState();
     const recover = () => {
       if (cancelled) return;
       try { video.load(); } catch { /* ignore */ }
       playVideo();
+    };
+    const recoverIfAllowed = () => {
+      if (cancelled) return;
+      const { allowed, state } = claimReload(watchdogState, Date.now());
+      watchdogState = state;
+      if (allowed) recover();
     };
 
     video.load();
@@ -158,32 +178,40 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
 
     // Self-healing keep-alive. Desktop browsers pause OR silently FREEZE a
     // background video (tab-switch throttle, GPU/power saving, a network stall on
-    // the remote asset). A frozen video is NOT `paused` — it plays a stuck frame
+    // the remote asset). A frozen video is NOT `paused` — it holds a stuck frame
     // with currentTime not advancing — so checking `paused` alone misses it and
-    // it "never comes back". Detect not-advancing / low-readyState and fully
-    // recover (reload the buffer, not just play()).
-    let lastTime = -1;
+    // it "never comes back". decideVideoAction() owns the rules for telling a
+    // real freeze apart from ordinary buffering; see the note in video-watchdog.
     const keepAlive = window.setInterval(() => {
-      if (cancelled || document.hidden) return;
+      if (cancelled) return;
       const v = videoRef.current;
       if (!v) return;
-      if (v.paused) {
-        playVideo();
-      } else if (v.currentTime === lastTime || v.readyState < 2) {
-        recover();
-      }
-      lastTime = v.currentTime;
-    }, 5000);
+      const { action, state } = decideVideoAction(
+        {
+          hidden: document.hidden,
+          paused: v.paused,
+          ended: v.ended,
+          currentTime: v.currentTime,
+          readyState: v.readyState,
+        },
+        watchdogState,
+        Date.now(),
+      );
+      watchdogState = state;
+      if (action === "play") playVideo();
+      else if (action === "reload") recover();
+    }, WATCHDOG_INTERVAL_MS);
 
-    // Recover from media stalls/errors (common with remote-hosted video on
-    // desktop). Debounced so ordinary buffering does not thrash a reload.
+    // Recover from media stalls (common with remote-hosted video on desktop).
+    // Debounced, and budgeted through claimReload. `error` is deliberately NOT
+    // wired here: the element's own onError advances to the next source, and
+    // reloading a file the browser has already rejected only wastes the budget.
     let recoverTimer = null;
     const scheduleRecover = () => {
       if (recoverTimer || cancelled) return;
-      recoverTimer = window.setTimeout(() => { recoverTimer = null; recover(); }, 1500);
+      recoverTimer = window.setTimeout(() => { recoverTimer = null; recoverIfAllowed(); }, 1500);
     };
     video.addEventListener("stalled", scheduleRecover);
-    video.addEventListener("error", scheduleRecover);
 
     window.addEventListener("touchstart", playVideo, { once: true });
     window.addEventListener("click", playVideo, { once: true });
@@ -208,7 +236,6 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
       window.clearInterval(keepAlive);
       window.clearTimeout(recoverTimer);
       video.removeEventListener("stalled", scheduleRecover);
-      video.removeEventListener("error", scheduleRecover);
       window.removeEventListener("touchstart", playVideo);
       window.removeEventListener("click", playVideo);
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -280,21 +307,23 @@ export default function BackgroundVideo({ src, sources, poster = DEFAULT_POSTER 
     </div>
 
     {/* WCAG 2.2.2 pause/play control. A sibling of the aria-hidden layer so it
-        stays reachable by keyboard and screen readers. Hidden when data-saver
-        or reduced-motion already stops the video (nothing moving to pause).
+        stays reachable by keyboard and screen readers. Always rendered: it used
+        to be hidden whenever data-saver or reduced-motion suppressed playback,
+        which meant the one control that could start the video disappeared in
+        precisely the situations where the video was not moving. It doubles as
+        the manual start for iOS Low Power Mode, where autoplay is blocked
+        outright but a tap (a user gesture) is still allowed to play.
         Sits bottom-left, clear of the cart/scroll FABs on the right, above the
         mobile tab bar. */}
-    {!envBlocked && (
-      <button
-        type="button"
-        onClick={togglePaused}
-        aria-label={userPaused ? "Play background video" : "Pause background video"}
-        aria-pressed={userPaused}
-        className="fixed bottom-[calc(5.5rem+var(--safe-bottom))] left-4 z-30 flex h-11 w-11 items-center justify-center border border-border/60 bg-background/60 text-slate-300 backdrop-blur-sm transition-colors hover:border-primary/50 hover:text-white focus-visible:ring-2 focus-visible:ring-primary lg:bottom-[calc(1.5rem+var(--safe-bottom))]"
-      >
-        {userPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-      </button>
-    )}
+    <button
+      type="button"
+      onClick={togglePaused}
+      aria-label={shouldPlayVideo ? "Pause background video" : "Play background video"}
+      aria-pressed={!shouldPlayVideo}
+      className="fixed bottom-[calc(5.5rem+var(--safe-bottom))] left-4 z-30 flex h-11 w-11 items-center justify-center border border-border/60 bg-background/60 text-slate-300 backdrop-blur-sm transition-colors hover:border-primary/50 hover:text-white focus-visible:ring-2 focus-visible:ring-primary lg:bottom-[calc(1.5rem+var(--safe-bottom))]"
+    >
+      {shouldPlayVideo ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+    </button>
     </>
   );
 }

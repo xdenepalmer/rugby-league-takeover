@@ -59,11 +59,37 @@ test("keep-alive self-heals a FROZEN video, not just a paused one (desktop 'neve
   // power saving, network stall). A frozen video is not `paused`, and play()
   // alone can't fix a broken buffer. Guard the frozen-detection + reload recovery
   // so a future auto-sync rewrite can't reintroduce the "never comes back" bug.
-  assert.match(src, /v\.currentTime === lastTime|currentTime === lastTime/, "keep-alive must detect a not-advancing (frozen) video");
+  // The rules themselves now live in src/lib/video-watchdog.js and are tested
+  // behaviourally in background-video-watchdog.test.mjs.
+  assert.match(src, /decideVideoAction/, "keep-alive must delegate to the watchdog state machine");
   assert.match(src, /const recover = \(\) =>/, "must have a full recover() helper");
-  assert.match(src, /recover\(\)/, "keep-alive must call recover() when frozen/stalled");
   // recover must re-load the media buffer, not merely call play().
   const recoverBlock = src.slice(src.indexOf("const recover = () =>"), src.indexOf("const recover = () =>") + 160);
   assert.match(recoverBlock, /video\.load\(\)/, "recover() must re-load the source buffer");
   assert.match(src, /addEventListener\("stalled"/, "must recover on media 'stalled' events");
+});
+
+test("every reload path is budgeted — no unlimited load() on a timer", () => {
+  // The third outage's cause: an unbudgeted video.load() on a 5s interval, which
+  // restarted the download before a large clip could become playable. Any future
+  // recovery path must claim from the shared budget.
+  assert.match(src, /claimReload/, "event-driven recovery must share the reload budget");
+
+  // A low readyState means "still fetching", and may only ever trigger the cheap
+  // playVideo() nudge — never a reload, which throws the download away.
+  for (const line of src.split("\n")) {
+    if (!line.includes("readyState")) continue;
+    assert.ok(
+      !/recover\s*\(/.test(line) && !/\.load\s*\(/.test(line),
+      `a buffering video must not trigger a reload: ${line.trim()}`,
+    );
+  }
+});
+
+test("the play/pause control is always reachable, even when the environment blocks playback", () => {
+  // It used to be hidden whenever data-saver or reduced-motion suppressed the
+  // video — removing the only control that could start it in exactly the case
+  // where the user is looking at a still image and asking why.
+  assert.doesNotMatch(src, /\{!envBlocked && \(/, "the control must not be conditionally hidden");
+  assert.match(src, /aria-label=\{shouldPlayVideo \? "Pause/, "label must track actual playback");
 });
