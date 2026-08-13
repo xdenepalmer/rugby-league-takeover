@@ -9,7 +9,10 @@ test("visitor-counter migration is safe: RLS on, read-only policy, guarded write
   assert.ok(/create table if not exists public\.site_visit_stats/.test(sql), "counter table");
   assert.ok(/id = 1/.test(sql), "single-row (singleton) counter");
   assert.ok(/enable row level security/.test(sql), "RLS enabled");
-  assert.ok(/for select\s+using \(true\)/.test(sql), "count is world-readable");
+  // 0010 shipped the count as world-readable; 0035 narrows that to admins when
+  // the metric moved off the public footer. Both assertions are checked against
+  // their own migration — see visit-stats.test.mjs for the current policy.
+  assert.ok(/for select\s+using \(true\)/.test(sql), "0010's original policy");
   // No write policies — the only mutation path is the SECURITY DEFINER function.
   assert.ok(!/for (insert|update|delete)/i.test(sql), "no direct write policies");
   assert.ok(/security definer/.test(sql), "increment runs as definer to bypass RLS for the update");
@@ -17,18 +20,23 @@ test("visitor-counter migration is safe: RLS on, read-only policy, guarded write
   assert.ok(/grant execute on function public\.increment_site_visits\(\) to anon/.test(sql), "anon may increment");
 });
 
-test("visitor hook dedups per device per day and fails closed", () => {
+test("visitor hook records views and fails closed", () => {
+  // The per-day localStorage dedup this used to assert was deliberately dropped
+  // in 0035: it produced a number that was neither views nor uniques, and the
+  // browser is not a trustworthy place to decide who is new. Dedup is now
+  // server-side — see visit-stats.test.mjs.
   const src = read("../src/hooks/use-visitor-count.js");
-  assert.ok(src.includes('supabase.rpc("increment_site_visits")'), "increments via the RPC");
-  assert.ok(src.includes("localStorage") && src.includes("todayKey"), "dedups per calendar day");
+  assert.ok(src.includes('supabase.rpc("record_site_visit"'), "records via the RPC");
   assert.ok(src.includes("useState(null)"), "starts null so the UI can hide until known");
   // Every backend path is wrapped so an error never throws into render.
-  assert.ok(/catch\s*\{/.test(src), "backend failures are swallowed (count stays null)");
+  assert.ok(/catch\s*\{|\) => \{\s*\n\s*\/\* leave null/.test(src), "backend failures are swallowed");
 });
 
-test("visitor counter renders nothing until it has a real number", () => {
+test("visitor counters render nothing until they have real numbers", () => {
   const src = read("../src/components/public/VisitorCounter.jsx");
-  assert.ok(/count === null \|\| !Number\.isFinite\(count\)/.test(src), "hides when count is unknown");
+  assert.ok(/if \(!stats/.test(src), "hides when the stats are unknown");
+  assert.ok(/!Number\.isFinite\(stats\.totalViews\)/.test(src), "hides on a non-numeric view count");
+  assert.ok(/!Number\.isFinite\(stats\.uniqueVisitors\)/.test(src), "hides on a non-numeric unique count");
   assert.ok(src.includes("toLocaleString()"), "thousands-formatted");
 });
 

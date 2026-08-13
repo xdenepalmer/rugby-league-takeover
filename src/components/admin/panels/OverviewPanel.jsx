@@ -149,9 +149,11 @@ export default function OverviewPanel() {
               className="overflow-hidden"
             >
               <div className="grid grid-cols-1 gap-5 pt-4">
-              {/* Site-wide visitor tally — moved off the public footer; the
-                  number is for the team, not the crowd. */}
-              <div className="mb-4 flex justify-end"><VisitorCounter /></div>
+              {/* Site traffic — moved off the public footer; the numbers are
+                  for the team, not the crowd. Two metrics, because one combined
+                  figure answered neither question: total views is how much the
+                  site is being read, unique visitors is how many people. */}
+              <VisitorCounter className="mb-4" />
               <AdminOverview counts={counts} registrations={registrations} orders={orders} statOverrides={statOverrides} onSaveOverride={handleSaveOverride} />
 
                 {/* ── Additional Stats Row ── */}
