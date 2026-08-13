@@ -13,6 +13,7 @@ import RequireAuth from '@/components/RequireAuth';
 import RequireAdmin from '@/components/RequireAdmin';
 import NativeAppBootstrap from '@/components/NativeAppBootstrap';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
+import { useRecordVisit } from '@/hooks/use-visitor-count';
 
 // Lazy-loaded pages
 const PageNotFound = lazy(() => import('./lib/PageNotFound'));
@@ -92,6 +93,14 @@ const DeepLinkHandler = () => {
     };
   }, [navigate]);
 
+  return null;
+};
+
+// Records a page view on each navigation. Must live inside <Router> (it reads
+// the location) and outside the Suspense boundary, so a slow route chunk does
+// not delay or drop the view it belongs to.
+const VisitTracker = () => {
+  useRecordVisit();
   return null;
 };
 
@@ -219,6 +228,7 @@ function App() {
         <MotionConfig reducedMotion="user">
           <Router>
             <ScrollToTop />
+            <VisitTracker />
             <NativeAppBootstrap />
             <AuthenticatedApp />
             {showDeferredUi && (

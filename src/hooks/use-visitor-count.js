@@ -1,81 +1,83 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
-
-const DEDUP_KEY = "rlt_visit_counted_on";
-
-// UTC calendar day, so a device is counted at most once per day.
-const todayKey = () => {
-  try {
-    return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  } catch {
-    return "";
-  }
-};
+import { getVisitorKey, isUncountedPath } from "@/lib/visitor-key";
 
 /**
- * Site-wide visitor count. Reads the running total from Supabase and bumps it at
- * most once per device per calendar day (localStorage dedup), so the number
- * approximates unique daily visitors rather than raw page hits.
+ * Records a page view on every navigation.
  *
- * Returns null until a real count is known — and stays null if the backend is
- * unreachable or the 0010_site_visit_counter migration hasn't been applied yet —
- * so the footer can hide the counter gracefully instead of showing a zero it
- * can't stand behind.
+ * Recording is write-only by design: record_site_visit() returns nothing, so the
+ * path anonymous visitors can call never hands the counts back. The totals are a
+ * private business metric and are readable only by an admin (see useVisitorStats).
+ *
+ * The server does the unique dedup against the visitor key, so this hook does not
+ * try to be clever about what counts — the browser is not a trustworthy place to
+ * decide whether someone is new.
  */
-export function useVisitorCount() {
-  const [count, setCount] = useState(null);
+export function useRecordVisit() {
+  const { pathname } = useLocation();
+  const lastRecorded = useRef(null);
+
+  useEffect(() => {
+    if (isUncountedPath(pathname)) return;
+    // React 18 StrictMode double-invokes effects in development, and a
+    // replaced-in-place route can re-fire with an identical path. Neither is a
+    // second view.
+    if (lastRecorded.current === pathname) return;
+    lastRecorded.current = pathname;
+
+    const visitorKey = getVisitorKey();
+    if (!visitorKey) return; // storage blocked — see getVisitorKey
+
+    supabase.rpc("record_site_visit", { p_visitor_key: visitorKey }).then(
+      () => {},
+      () => {
+        /* a missed view is not worth surfacing to anyone */
+      },
+    );
+  }, [pathname]);
+}
+
+/**
+ * Admin-only read of the two site counters.
+ *
+ *   totalViews     — every page view, all time.
+ *   uniqueVisitors — distinct devices, deduped server-side.
+ *   uniqueSince    — when unique tracking began. The site ran a single combined
+ *                    counter before that, which cannot be split retrospectively,
+ *                    so the UI dates the figure instead of implying it is
+ *                    all-time.
+ *
+ * Returns null until real numbers are known (and stays null if the backend is
+ * unreachable or the migration has not been applied), so the UI can hide rather
+ * than show a zero it cannot stand behind.
+ */
+export function useVisitorStats() {
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const readTotal = async () => {
-      const { data, error } = await supabase
-        .from("site_visit_stats")
-        .select("total_visits")
-        .eq("id", 1)
-        .maybeSingle();
-      if (error || !data) return null;
-      return Number(data.total_visits);
-    };
+    supabase
+      .from("site_visit_stats")
+      .select("total_views, unique_visitors, unique_tracking_started_at")
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        setStats({
+          totalViews: Number(data.total_views),
+          uniqueVisitors: Number(data.unique_visitors),
+          uniqueSince: data.unique_tracking_started_at || null,
+        });
+      }, () => {
+        /* leave null → the tiles stay hidden */
+      });
 
-    const run = async () => {
-      let countedToday = false;
-      try {
-        countedToday = localStorage.getItem(DEDUP_KEY) === todayKey();
-      } catch {
-        /* private mode / storage blocked — treat as not counted */
-      }
-
-      try {
-        if (countedToday) {
-          const total = await readTotal();
-          if (!cancelled && total !== null) setCount(total);
-          return;
-        }
-
-        const { data, error } = await supabase.rpc("increment_site_visits");
-        if (!cancelled && !error && data != null) {
-          setCount(Number(data));
-          try {
-            localStorage.setItem(DEDUP_KEY, todayKey());
-          } catch {
-            /* best-effort — a missed dedup just double-counts one device once */
-          }
-        } else if (!cancelled) {
-          // Increment unavailable (offline / not yet migrated) — try a read.
-          const total = await readTotal();
-          if (total !== null) setCount(total);
-        }
-      } catch {
-        /* leave count null → the counter UI stays hidden */
-      }
-    };
-
-    run();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return count;
+  return stats;
 }

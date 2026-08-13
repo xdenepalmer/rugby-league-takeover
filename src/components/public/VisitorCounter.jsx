@@ -1,23 +1,63 @@
-import { Eye } from "lucide-react";
-import { useVisitorCount } from "@/hooks/use-visitor-count";
+import { Eye, Users } from "lucide-react";
+import { useVisitorStats } from "@/hooks/use-visitor-count";
+
+const StatTile = ({ label, value, hint, icon: Icon, accent }) => (
+  <div className="group relative overflow-hidden border border-border bg-card/60 cmd-glass transition-all duration-300 hover:border-primary/30">
+    <div className={`h-[2px] w-full bg-gradient-to-r ${accent}`} />
+    <div className="flex items-center justify-between p-5">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
+        <p className="mt-1 font-display text-3xl tabular-nums text-foreground">{value.toLocaleString()}</p>
+        <p className="mt-1 text-[9px] font-mono text-muted-foreground">{hint}</p>
+      </div>
+      <div className="border border-border/50 bg-muted/30 p-2">
+        <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
+      </div>
+    </div>
+  </div>
+);
+
+const sinceLabel = (iso) => {
+  if (!iso) return "Distinct devices";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Distinct devices";
+  return `Distinct devices since ${date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
+};
 
 /**
- * Compact site-wide visitor counter for the footer. Renders nothing until a real
- * count is known (and nothing at all if the backend is unreachable), so it never
- * shows a placeholder or a zero it can't stand behind.
+ * The two site traffic counters, for the team only — this deliberately does not
+ * appear on the public site.
+ *
+ * They measure different things and will diverge: total views counts every page
+ * a person opens, so one enthusiastic supporter clicking through the store adds
+ * a dozen. Unique visitors counts the device once, however long they stay. Views
+ * divided by visitors is roughly how deep people are browsing.
+ *
+ * Renders nothing until real numbers are known, so it never shows a placeholder
+ * or a zero it can't stand behind.
  */
 export default function VisitorCounter({ className = "" }) {
-  const count = useVisitorCount();
-  if (count === null || !Number.isFinite(count)) return null;
+  const stats = useVisitorStats();
+  if (!stats || !Number.isFinite(stats.totalViews) || !Number.isFinite(stats.uniqueVisitors)) {
+    return null;
+  }
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 ${className}`}
-      title="Total visitors to rugbyleaguetakeover.com"
-    >
-      <Eye className="h-3.5 w-3.5 text-primary/70" aria-hidden="true" />
-      <span className="tabular-nums text-foreground/80">{count.toLocaleString()}</span>
-      <span>visitors</span>
-    </span>
+    <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${className}`}>
+      <StatTile
+        label="Total views"
+        value={stats.totalViews}
+        hint="Every page opened"
+        icon={Eye}
+        accent="from-cyan-500 via-cyan-400 to-cyan-500"
+      />
+      <StatTile
+        label="Unique visitors"
+        value={stats.uniqueVisitors}
+        hint={sinceLabel(stats.uniqueSince)}
+        icon={Users}
+        accent="from-sky-500 via-sky-400 to-sky-500"
+      />
+    </div>
   );
 }
