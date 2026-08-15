@@ -95,7 +95,7 @@ export default function PwaUpdatePrompt() {
   if (!waiting) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[100] flex justify-center px-3 pb-[max(1rem,calc(1rem+var(--safe-bottom)))] lg:pb-4 pointer-events-none">
+    <div className="fixed inset-x-0 bottom-0 z-[45] flex justify-center px-3 pb-[max(1rem,calc(1rem+var(--safe-bottom)))] lg:pb-4 pointer-events-none">
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 border border-primary/40 bg-card/95 cmd-glass p-3 shadow-2xl shadow-black/40">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-primary/30 bg-primary/10 text-primary">
           <RefreshCw className="h-4 w-4" />

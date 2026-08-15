@@ -60,7 +60,7 @@ export default function InstallAppPrompt() {
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 110, opacity: 0, scale: 0.96 }}
           transition={{ type: "spring", stiffness: 360, damping: 34 }}
-          className="fixed inset-x-3 bottom-[calc(0.85rem+var(--safe-bottom))] z-[60] mx-auto max-w-md border border-border/70 bg-background/92 shadow-2xl shadow-black/45 backdrop-blur lg:hidden"
+          className="fixed inset-x-3 bottom-[calc(0.85rem+var(--safe-bottom))] z-[45] mx-auto max-w-md border border-border/70 bg-background/92 shadow-2xl shadow-black/45 backdrop-blur lg:hidden"
           role="status"
         >
           <div className="cmd-accent-bar h-[2px] w-full" />

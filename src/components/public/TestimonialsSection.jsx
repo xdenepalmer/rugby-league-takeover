@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import SectionHeader from "./SectionHeader";
 
-const defaultTestimonials = [
-  { id: "d1", author_name: "Jacko", author_role: "Eels fan · Western Sydney", quote: "Best week of my life. Footy, mates and Vegas — the Takeover crew sorted everything.", rating: 5, is_published: true, sort_order: 1 },
-  { id: "d2", author_name: "Mel & Dave", author_role: "Vegas 2025 travellers", quote: "Stadium Swim, the games, the meetups — unreal vibe the whole time. Already booking the next one.", rating: 5, is_published: true, sort_order: 2 },
-  { id: "d3", author_name: "Tom", author_role: "Storm supporter", quote: "Travel, tickets and accommodation all in one place. Couldn't fault it.", rating: 5, is_published: true, sort_order: 3 },
-];
+// NOTE: there is deliberately no hardcoded fallback list here. This section
+// previously shipped three invented 5-star reviews attributed to named "fans",
+// which went live automatically whenever no real testimonial was published —
+// fabricated social proof on a commercial page. With none published we show the
+// "Share your experience" call to action and no cards at all.
 
 const initials = (name) => String(name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
@@ -136,11 +136,15 @@ export default function TestimonialsSection({ settings = {} }) {
     submitMutation.mutate(draft);
   };
 
-  const visible = testimonials.filter((t) => t.is_published !== false && t.quote);
-  const display = visible.length > 0 ? visible : defaultTestimonials;
+  const display = testimonials.filter((t) => t.is_published !== false && t.quote);
 
-  /* Duplicate the list so the marquee has a seamless loop (animate-marquee translates -50%) */
-  const loopCards = [...display, ...display];
+  /* The marquee translates -50%, so it needs the list duplicated to loop
+     seamlessly — but with only one or two real testimonials that means showing
+     the SAME quote twice with a large empty gap scrolling past. Below three,
+     render a static centred row instead; the marquee only earns its place once
+     there is genuinely enough content to scroll. */
+  const useMarquee = display.length >= 3;
+  const loopCards = useMarquee ? [...display, ...display] : display;
 
   return (
     <section id="testimonials" className="border-t border-border bg-background/80 px-5 py-24 md:px-8 md:py-32">
@@ -149,7 +153,18 @@ export default function TestimonialsSection({ settings = {} }) {
           {settings.testimonials_description || "Real words from the supporters who've made the trip."}
         </SectionHeader>
 
-        {/* ── Infinite Marquee Carousel ────────────────────────────── */}
+        {/* One or two real testimonials: a centred static row. No duplicate
+            card, no scrolling void. */}
+        {display.length > 0 && !useMarquee && (
+          <div className="mt-10 flex flex-wrap justify-center gap-5">
+            {display.map((t) => (
+              <TestimonialCard key={t.id} t={t} />
+            ))}
+          </div>
+        )}
+
+        {/* ── Infinite Marquee Carousel (3+ testimonials only) ──────── */}
+        {useMarquee && (
         <div className="group/carousel relative mt-10 overflow-hidden">
           {/* Left gradient fade */}
           <div
@@ -181,6 +196,7 @@ export default function TestimonialsSection({ settings = {} }) {
             ))}
           </div>
         </div>
+        )}
 
         {/* Visitor submission — created unpublished, then moderated in the admin panel */}
         <div className="mt-10 flex flex-col items-center">
