@@ -5,6 +5,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "android:build": "vite build && cap sync android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android",
+    "android:run": "cap run android",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --quiet",
@@ -24,6 +28,7 @@
     "@capacitor/app-launcher": "^8.0.1",
     "@capacitor/browser": "^8.0.3",
     "@capacitor/camera": "^8.2.1",
+    "@capacitor/android": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.4.1",

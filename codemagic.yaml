@@ -79,3 +79,59 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false
+
+  # Android / Google Play (Capacitor shell).
+  #
+  # The Android project lived on an unmerged branch for weeks, so the app on Play
+  # was shipping a web build far older than the live site. It is on main now so a
+  # rebuild always carries the current site, exactly like the iOS workflow above.
+  #
+  # Produces a signed .aab as an artifact — it does NOT auto-publish. Download it
+  # from the build and upload to the Play Console yourself.
+  android-capacitor:
+    name: Android build (Capacitor shell)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      groups:
+        - rugby_env
+      android_signing:
+        # One-time Codemagic setup: upload the private Android upload keystore
+        # under this reference. Google Play App Signing keeps the app-signing
+        # key separate from this upload key.
+        - rlt_android_upload
+      node: 22
+      java: 21
+      vars:
+        PACKAGE_NAME: "com.rugbyleaguetakeover.app"
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      - name: Validation gate (same as GitHub CI)
+        script: npm run lint && npm run typecheck && npm test
+      - name: Set up Android SDK and optional Firebase config
+        script: |
+          set -e
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+          if [ -n "${FIREBASE_ANDROID_CONFIG:-}" ]; then
+            printf '%s' "$FIREBASE_ANDROID_CONFIG" | base64 --decode > "$CM_BUILD_DIR/android/app/google-services.json"
+          fi
+      - name: Build web assets and sync into the Android shell
+        script: npm run android:build
+      - name: Build signed Android App Bundle
+        script: |
+          set -e
+          cd android
+          chmod +x gradlew
+          # Play rejects an upload whose versionCode is not higher than the last
+          # one, so mirror the iOS approach: Codemagic's incrementing counter,
+          # falling back to a Unix timestamp (safely under Play's 2100000000 cap).
+          VC="${BUILD_NUMBER:-$(date +%s)}"
+          echo "versionCode ${VC}"
+          ./gradlew bundleRelease \
+            -PversionCode="${VC}" \
+            -PversionName="1.0.${VC}"
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
+      - android/app/build/reports/**

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rugby League Takeover</string>
+    <string name="title_activity_main">Rugby League Takeover</string>
+    <string name="package_name">com.rugbyleaguetakeover.app</string>
+    <string name="custom_url_scheme">com.rugbyleaguetakeover.app</string>
+</resources>
