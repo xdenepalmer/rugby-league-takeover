@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Share2, Calendar, Clock, User, Check } from "lucide-react";
 import { useNativeShare } from "@/hooks/useNativeShare";
+import { MarkdownBody } from "@/lib/markdown";
 
 export default function PublicDetailSheet({ isOpen, onClose, title, category, date, author, image, body, readingTime, shareUrl, ctaLabel, onCtaClick, extraContent }) {
   const [copied, setCopied] = useState(false);
@@ -151,12 +152,14 @@ export default function PublicDetailSheet({ isOpen, onClose, title, category, da
                 {title}
               </h3>
 
-              {/* Paragraphs */}
-              <div className="text-sm md:text-base leading-relaxed text-slate-300 space-y-4 font-normal">
+              {/* Body. Rendered through MarkdownBody so the author's own
+                  formatting survives: single line breaks stay line breaks
+                  (writing a list one item per line used to collapse into one
+                  run-on paragraph), and -/* lines become a real bullet list.
+                  Also gives admins **bold**, headings and inline images. */}
+              <div className="rlt-article-body text-sm md:text-base leading-relaxed text-slate-300 font-normal">
                 {body ? (
-                  body.split("\n\n").map((para, idx) => (
-                    <p key={idx}>{para}</p>
-                  ))
+                  <MarkdownBody text={body} />
                 ) : (
                   <p className="text-muted-foreground italic">No description details provided.</p>
                 )}

@@ -11,6 +11,7 @@ import SectionHeader from "./SectionHeader";
 import PublicDetailSheet from "./PublicDetailSheet";
 import FeaturedNewsCard from "./FeaturedNewsCard";
 import { scrollToAnchor } from "@/lib/scroll-to-anchor";
+import { plainExcerpt } from "@/lib/markdown";
 
 /* ── Reading time estimator ── */
 const readingTime = (text) => {
@@ -125,7 +126,7 @@ function NewsCard({ article, index, onClick }) {
             {article.title}
           </h3>
           <p className="mt-4 line-clamp-4 text-sm leading-relaxed text-muted-foreground">
-            {article.body}
+            {plainExcerpt(article.body)}
           </p>
         </div>
 

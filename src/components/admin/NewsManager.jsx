@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import RichTextField from "./RichTextField";
+import { MarkdownBody, plainExcerpt } from "@/lib/markdown";
 import { Switch } from "@/components/ui/switch";
 import {
   Trash2, Save, Newspaper, Plus, ChevronDown, Calendar,
@@ -83,7 +84,7 @@ function EditForm({ article, updateMutation, onClose }) {
         </div>
         <ImageField label="Article image" value={editDraft.image_url} onChange={(url) => setEditDraft({ ...editDraft, image_url: url })} className="md:col-span-2" />
         <FieldLabel label="Article Body" className="md:col-span-2">
-          <Textarea value={editDraft.body} onChange={(e) => setEditDraft({ ...editDraft, body: e.target.value })} className="min-h-24 rounded-none" />
+          <RichTextField value={editDraft.body} onChange={(body) => setEditDraft({ ...editDraft, body })} minHeight="min-h-40" />
         </FieldLabel>
         <div className="md:col-span-2 flex justify-end">
           <Button
@@ -111,9 +112,8 @@ function ArticleCard({ article, index, updateMutation, deleteMutation }) {
     ? new Date(article.published_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })
     : "No date";
 
-  const bodyPreview = article.body?.length > 140
-    ? article.body.slice(0, 140) + "…"
-    : article.body;
+  // Collapsed: strip the markdown so the admin list stays scannable.
+  const bodyPreview = plainExcerpt(article.body, 140);
 
   return (
     <motion.div
@@ -232,9 +232,11 @@ function ArticleCard({ article, index, updateMutation, deleteMutation }) {
             {/* Body preview */}
             {article.body && (
               <div className="mt-3 border-t border-border/30 pt-3">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {expanded ? article.body : bodyPreview}
-                </p>
+                {expanded ? (
+                  <MarkdownBody text={article.body} className="text-sm leading-relaxed text-muted-foreground" />
+                ) : (
+                  <p className="text-sm leading-relaxed text-muted-foreground">{bodyPreview}</p>
+                )}
                 {article.body?.length > 140 && (
                   <button
                     onClick={() => setExpanded(!expanded)}
@@ -386,7 +388,7 @@ export default function NewsManager({ articles }) {
                   </FieldLabel>
                   <ImageField label="Article image" value={draft.image_url} onChange={(url) => setDraft({ ...draft, image_url: url })} className="md:col-span-2" />
                   <FieldLabel label="Article Body" className="md:col-span-2">
-                    <Textarea placeholder="Write the article body…" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} className="min-h-28 rounded-none" />
+                    <RichTextField value={draft.body} onChange={(body) => setDraft({ ...draft, body })} placeholder="Write the article body…" minHeight="min-h-48" />
                   </FieldLabel>
                   <div className="md:col-span-2">
                     <Button

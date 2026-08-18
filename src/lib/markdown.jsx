@@ -8,6 +8,7 @@ import { safeUserHref } from "@/lib/safe-url";
  * Supported syntax:
  *   **bold**  *italic*  `inline code`  ~~strikethrough~~
  *   [link text](url)  > blockquote  - / * list items
+ *   ## heading  ### smaller heading  ![alt](https://image-url)
  *   Blank lines → paragraph breaks, line breaks preserved.
  */
 
@@ -113,8 +114,54 @@ function parseInline(text) {
 
 /* ── Block parsing ───────────────────────────────────────── */
 
+// Only http(s) images we can actually render. Anything else (javascript:,
+// data:, a bare filename) is dropped rather than emitted as a broken <img>.
+function safeImageSrc(raw) {
+  try {
+    const url = new URL(String(raw || "").trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
 function parseBlock(block, blockIndex) {
   const lines = block.split("\n");
+
+  // Image on its own line: ![alt](url)
+  const imageMatch = block.trim().match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+  if (imageMatch) {
+    const src = safeImageSrc(imageMatch[2]);
+    if (src) {
+      return (
+        <img
+          key={`img${blockIndex}`}
+          src={src}
+          alt={imageMatch[1] || ""}
+          loading="lazy"
+          decoding="async"
+          className="my-4 h-auto w-full border border-border/60 object-cover"
+        />
+      );
+    }
+  }
+
+  // Headings: ## Big  ### Smaller. Rendered with the display face so they read
+  // as section titles rather than just bigger body text.
+  const headingMatch = block.trim().match(/^(#{2,3})\s+(.+)$/);
+  if (headingMatch) {
+    const level = headingMatch[1].length;
+    const Tag = level === 2 ? "h2" : "h3";
+    const size = level === 2 ? "text-2xl md:text-3xl" : "text-xl md:text-2xl";
+    return (
+      <Tag
+        key={`h${blockIndex}`}
+        className={`font-display uppercase tracking-wide text-foreground ${size} mt-6 mb-2 leading-tight`}
+      >
+        {parseInline(headingMatch[2])}
+      </Tag>
+    );
+  }
 
   // Blockquote: every line starts with >
   if (lines.every((l) => l.trimStart().startsWith(">"))) {
@@ -172,6 +219,36 @@ export function MarkdownBody({ text, className }) {
       {blocks.map((block, i) => parseBlock(block.trim(), i))}
     </div>
   );
+}
+
+/**
+ * Plain-text excerpt for teaser cards.
+ *
+ * Cards are line-clamped one-liners, so the raw body leaked its markup into
+ * them: a list written one item per line rendered as
+ * "... $50 * Bucket hat * Tote bag * Stubby Cooler ...". This strips the
+ * syntax (bullets, headings, emphasis, links, images) and collapses
+ * whitespace, leaving readable prose for the preview. The full article still
+ * renders through MarkdownBody with all formatting intact.
+ */
+export function plainExcerpt(text, maxChars = 0) {
+  if (!text) return "";
+  const clean = String(text)
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")        // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")      // links → label
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")            // headings
+    .replace(/^\s*[-*]\s+/gm, "")                  // list bullets
+    .replace(/^\s*>\s?/gm, "")                     // blockquotes
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")            // bold
+    .replace(/(^|[^*])\*(?!\s)([^*]+)\*/g, "$1$2") // italic
+    .replace(/~~(.*?)~~/g, "$1")                   // strikethrough
+    .replace(/`([^`]*)`/g, "$1")                   // inline code
+    .replace(/\s+/g, " ")
+    .trim();
+  if (maxChars > 0 && clean.length > maxChars) {
+    return clean.slice(0, maxChars).trimEnd() + "…";
+  }
+  return clean;
 }
 
 export default MarkdownBody;

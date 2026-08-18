@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar, ArrowRight, Clock, Newspaper, Star } from "lucide-react";
+import { plainExcerpt } from "@/lib/markdown";
 
 const safeFormatDate = (dateStr, fmt = "dd MMM yyyy") => {
   if (!dateStr) return null;
@@ -72,7 +73,7 @@ export default function FeaturedNewsCard({ article, onClick }) {
           {article.title}
         </h3>
         <p className="mt-5 line-clamp-4 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-          {article.body}
+          {plainExcerpt(article.body)}
         </p>
 
         <div className="mt-8 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
